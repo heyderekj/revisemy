@@ -41,7 +41,10 @@ new class extends Component
 
 <div
     class="rm-wash relative min-h-screen"
-    x-data="{ mobileNav: false }"
+    x-data="{
+        mobileNav: false,
+        showTaylor: localStorage.getItem('rm-taylor-mention') !== '0'
+    }"
     x-on:scroll-to-setup.window="$nextTick(() => document.getElementById('setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
 >
     <div class="rm-grid pointer-events-none absolute inset-0"></div>
@@ -82,6 +85,14 @@ new class extends Component
                                 Connectors
                                 <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">MCP</span>
                             </a>
+                        </li>
+                        <li>
+                            <a
+                                href="https://x.com/taylorotwell/status/2075667366646858222"
+                                class="transition hover:text-zinc-900"
+                                target="_blank"
+                                rel="noreferrer"
+                            >Taylor’s challenge</a>
                         </li>
                     </ul>
                 </div>
@@ -261,5 +272,60 @@ new class extends Component
                 Open source · Laravel + Livewire Flux · Built for Laravel Cloud
             </footer>
         </main>
+    </div>
+
+    {{-- Floating mention: Taylor's Laravel Cloud weekend challenge --}}
+    <div
+        x-show="showTaylor"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-3"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-2"
+        class="fixed bottom-4 right-4 z-40 w-[min(100%-2rem,22rem)] sm:bottom-6 sm:right-6"
+        style="display: none;"
+    >
+        <div class="relative">
+        <a
+            href="https://x.com/taylorotwell/status/2075667366646858222"
+            target="_blank"
+            rel="noreferrer"
+            class="group relative block overflow-hidden rounded-2xl border border-zinc-900/10 bg-white/95 p-3 shadow-[0_20px_50px_-24px_rgba(24,24,27,0.55)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-rose-300/80"
+        >
+            <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 via-rose-500 to-pink-400"></div>
+
+            <div class="flex gap-3">
+                <img
+                    src="{{ asset('images/taylor-otwell.png') }}"
+                    alt="Taylor Otwell"
+                    class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-zinc-900/10"
+                    width="56"
+                    height="56"
+                />
+                <div class="min-w-0 pr-5">
+                    <p class="text-[11px] font-medium uppercase tracking-[0.12em] text-rose-500">Why this exists</p>
+                    <p class="mt-1 text-[13px] font-semibold leading-snug text-zinc-900">
+                        Taylor Otwell’s Laravel Cloud weekend challenge
+                    </p>
+                    <p class="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
+                        “Best side project shipped on Laravel Cloud this weekend… reply with a laravel.cloud URL.”
+                    </p>
+                    <p class="mt-2 font-mono text-[10px] text-zinc-400 transition group-hover:text-rose-500">
+                        @taylorotwell ↗
+                    </p>
+                </div>
+            </div>
+        </a>
+
+        <button
+            type="button"
+            class="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+            aria-label="Dismiss"
+            x-on:click.stop="showTaylor = false; localStorage.setItem('rm-taylor-mention', '0')"
+        >
+            <span class="text-lg leading-none">&times;</span>
+        </button>
+        </div>
     </div>
 </div>
