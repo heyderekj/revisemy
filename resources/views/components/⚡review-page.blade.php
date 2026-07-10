@@ -152,7 +152,9 @@ new class extends Component
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
             <div class="min-w-0">
                 <div class="flex items-center gap-2 text-sm text-zinc-500">
-                    <a href="/" class="font-semibold text-rose-600 hover:underline dark:text-rose-400">ReviseMy</a>
+                    <a href="/" class="hover:opacity-90">
+                        <x-logo size="sm" class="!text-[1.35rem] !text-rose-600" />
+                    </a>
                     <span>/</span>
                     <span class="truncate">{{ $review->title }}</span>
                 </div>

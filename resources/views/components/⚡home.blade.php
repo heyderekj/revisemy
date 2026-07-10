@@ -52,8 +52,8 @@ new class extends Component
     <div class="relative z-10 mx-auto flex min-h-screen max-w-[1200px]">
         {{-- Agentation-style sidebar --}}
         <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-900/8 px-6 py-8 lg:flex">
-            <a href="/" class="font-mark text-[2.35rem] leading-none tracking-tight text-rose-500">
-                ReviseMy
+            <a href="/" class="inline-block">
+                <x-logo />
             </a>
 
             <nav class="mt-12 flex flex-1 flex-col gap-8 text-[14px]">
@@ -105,7 +105,9 @@ new class extends Component
         <main id="top" class="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10">
             {{-- Mobile top bar --}}
             <div class="mb-8 flex items-center justify-between lg:hidden">
-                <a href="/" class="font-mark text-3xl leading-none text-rose-500">ReviseMy</a>
+                <a href="/" class="inline-block">
+                    <x-logo size="sm" />
+                </a>
                 <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
             </div>
             <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
