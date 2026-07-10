@@ -178,11 +178,11 @@ new class extends Component
                 </div>
                 <p class="mt-1 text-sm text-zinc-500">
                     @if ($review->effectiveStatus() === 'pending')
-                        Waiting on your eye — you own approve / request changes
+                        Pass {{ $review->pass }} — pin feedback, then approve or request changes
                     @elseif ($review->effectiveStatus() === 'changes_requested')
-                        Changes requested
+                        Changes requested — agent should apply your pins and open the next pass
                     @elseif ($review->effectiveStatus() === 'approved')
-                        Looks good — approved
+                        Looks good — approved (pass {{ $review->pass }})
                     @else
                         This review link expired
                     @endif
@@ -335,6 +335,18 @@ new class extends Component
             @elseif ($review->decision_note)
                 <flux:callout>
                     <strong class="font-medium">Note to the agent:</strong> {{ $review->decision_note }}
+                </flux:callout>
+            @endif
+
+            @if ($review->effectiveStatus() === 'changes_requested')
+                <flux:callout>
+                    <strong class="font-medium">What’s next:</strong>
+                    The agent should apply your pins, then open a new checkup pass with fresh screenshots (linked to this review). You’ll get another link to approve.
+                </flux:callout>
+            @elseif ($review->effectiveStatus() === 'approved')
+                <flux:callout>
+                    <strong class="font-medium">Loop complete for this pass.</strong>
+                    Ask the agent for another checkup anytime if the UI changes again.
                 </flux:callout>
             @endif
         </section>

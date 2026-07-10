@@ -35,6 +35,7 @@ class ReviewController extends Controller
             'title' => ['required', 'string', 'max:160'],
             'context' => ['nullable', 'string', 'max:5000'],
             'page_url' => ['nullable', 'string', 'max:2048'],
+            'parent_id' => ['nullable', 'string'],
             'images' => ['required', 'array', 'min:1', 'max:5'],
             'images.*' => ['required'],
         ]);
@@ -45,6 +46,7 @@ class ReviewController extends Controller
             $data['context'] ?? null,
             $data['images'],
             $data['page_url'] ?? null,
+            $data['parent_id'] ?? null,
         );
 
         return response()->json($review->toAgentPayload(), 201);

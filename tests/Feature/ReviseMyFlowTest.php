@@ -182,6 +182,48 @@ class ReviseMyFlowTest extends TestCase
         $this->assertSame('pending', $payload['status']);
     }
 
+    public function test_next_action_and_follow_up_pass(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+
+        $first = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Pass 1',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->assertCreated()->json();
+
+        $this->assertSame('wait_for_human', $first['next_action']['action']);
+        $this->assertSame(1, $first['pass']);
+
+        $review = Review::query()->where('public_id', $first['id'])->firstOrFail();
+        $review->update([
+            'status' => Review::STATUS_CHANGES_REQUESTED,
+            'decision_at' => now(),
+            'decision_note' => 'Fix the CTA',
+        ]);
+
+        $payload = $review->fresh()->toAgentPayload();
+        $this->assertSame('apply_pins_then_next_pass', $payload['next_action']['action']);
+        $this->assertTrue($payload['next_action']['create_next_pass']);
+        $this->assertFalse($review->fresh()->isOpenForFeedback());
+
+        $second = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Pass 2',
+            'parent_id' => $first['id'],
+            'images' => [$this->tinyPngDataUrl()],
+        ])->assertCreated()->json();
+
+        $this->assertSame(2, $second['pass']);
+        $this->assertSame($first['id'], $second['parent_id']);
+        $this->assertSame('wait_for_human', $second['next_action']['action']);
+        $this->assertSame('pending', $second['status']);
+    }
+
     public function test_reviews_are_scoped_to_try_token(): void
     {
         Storage::fake('public');

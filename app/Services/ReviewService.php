@@ -18,8 +18,14 @@ class ReviewService
     /**
      * @param  list<string|UploadedFile>  $images
      */
-    public function create(Workspace $workspace, string $title, ?string $context, array $images, ?string $pageUrl = null): Review
-    {
+    public function create(
+        Workspace $workspace,
+        string $title,
+        ?string $context,
+        array $images,
+        ?string $pageUrl = null,
+        ?string $parentPublicId = null,
+    ): Review {
         if ($images === []) {
             throw ValidationException::withMessages([
                 'images' => 'Add at least one screenshot so there is something to look at.',
@@ -32,10 +38,29 @@ class ReviewService
             ]);
         }
 
+        $parent = null;
+        $pass = 1;
+
+        if ($parentPublicId) {
+            $parent = $this->findForWorkspace($workspace, $parentPublicId);
+
+            if (! $parent) {
+                throw ValidationException::withMessages([
+                    'parent_id' => 'No parent review with that id for this try token.',
+                ]);
+            }
+
+            $pass = ((int) $parent->pass) + 1;
+            $context ??= $parent->context;
+            $pageUrl ??= $parent->page_url;
+        }
+
         $review = $workspace->reviews()->create([
+            'parent_id' => $parent?->id,
             'title' => $title,
             'context' => $context,
             'page_url' => $pageUrl,
+            'pass' => $pass,
         ]);
 
         foreach (array_values($images) as $index => $image) {
@@ -43,14 +68,14 @@ class ReviewService
             $this->opinions->queue($shot);
         }
 
-        return $review->fresh(['screenshots.annotations', 'screenshots.findings']) ?? $review;
+        return $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent']) ?? $review;
     }
 
     public function addScreenshot(Review $review, string|UploadedFile $image): Screenshot
     {
         if (! $review->isOpenForFeedback()) {
             throw ValidationException::withMessages([
-                'review' => 'This review is closed — start a fresh one if you need another pass.',
+                'review' => 'This review is closed — start a fresh pass with create_review (and parent_id if this is a follow-up).',
             ]);
         }
 
@@ -72,7 +97,7 @@ class ReviewService
     {
         return $workspace->reviews()
             ->where('public_id', $publicId)
-            ->with(['screenshots.annotations', 'screenshots.findings'])
+            ->with(['screenshots.annotations', 'screenshots.findings', 'parent'])
             ->first();
     }
 }

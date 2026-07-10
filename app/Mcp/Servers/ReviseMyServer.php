@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Prompts\DesignCheckupLoop;
 use App\Mcp\Tools\AddFindingsTool;
 use App\Mcp\Tools\AddScreenshotTool;
 use App\Mcp\Tools\CreateReviewTool;
@@ -14,8 +15,8 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('ReviseMy')]
-#[Version('1.1.0')]
-#[Instructions('ReviseMy is human-in-the-loop design review for agents on Laravel Cloud. After UI work, call create_review with screenshots (optional page_url). A second-opinion job queues automatically. You may call add_findings as a design-reviewer subagent (suggestion/a11y/polish only) before sharing the review_url. Share the link with the human. Poll get_review until status is approved or changes_requested. Apply human pins first; treat second_opinion as hints only. Never claim the UI is done until the human has weighed in.')]
+#[Version('1.2.0')]
+#[Instructions('ReviseMy is a design checkup loop for agents + humans on Laravel Cloud. Loop: create_review (screenshots) → optional add_findings → share review_url → poll get_review → follow next_action. If changes_requested: apply human pins first, then create_review with parent_id and new screenshots for the next pass. If approved: stop. Human pins are authoritative; second_opinion is hints only. Never claim the UI is done while status is pending. Use the design_checkup_loop prompt when starting a checkup.')]
 class ReviseMyServer extends Server
 {
     protected array $tools = [
@@ -29,5 +30,7 @@ class ReviseMyServer extends Server
 
     protected array $resources = [];
 
-    protected array $prompts = [];
+    protected array $prompts = [
+        DesignCheckupLoop::class,
+    ];
 }

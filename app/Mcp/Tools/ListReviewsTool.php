@@ -35,8 +35,10 @@ class ListReviewsTool extends Tool
             ->map(fn (Review $review) => [
                 'id' => $review->public_id,
                 'title' => $review->title,
+                'pass' => $review->pass,
                 'status' => $review->effectiveStatus(),
                 'status_label' => $review->toAgentPayload()['status_label'],
+                'next_action' => $review->nextAction()['action'],
                 'review_url' => $review->reviewUrl(),
                 'created_at' => $review->created_at?->toIso8601String(),
             ]);

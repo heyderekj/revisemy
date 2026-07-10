@@ -21,12 +21,14 @@ No account required for the human reviewer — secret `/r/{token}` links.
 
 | Tool | Purpose |
 |------|---------|
-| `create_review` | title + screenshots (+ optional `page_url`) → review URL; queues second opinion |
-| `get_review` | work packets: human pins + `second_opinion` + decision |
+| `create_review` | title + screenshots (+ optional `page_url`, `parent_id` for next pass) → review URL; queues second opinion |
+| `get_review` | work packets + `next_action` (wait / apply pins / done) |
 | `list_reviews` | recent reviews for this try token |
 | `add_screenshot` | append a shot to an open review |
 | `add_findings` | agent subagent — push suggestion/a11y/polish into the review |
 | `request_second_opinion` | re-queue Cloud checklist (+ vision if keyed) |
+
+Prompt: `design_checkup_loop` — full agent↔human checkup cycle.
 
 Screenshots accept **https URLs**, **data URLs**, or **base64**.
 
@@ -54,7 +56,7 @@ Same URL + Bearer header works for Claude connectors and other MCP hosts. See [d
 ### REST API (same auth)
 
 - `POST /api/try-token` — create a try workspace + token
-- `POST /api/reviews` — `{ "title", "context?", "page_url?", "images": [...] }`
+- `POST /api/reviews` — `{ "title", "context?", "page_url?", "parent_id?", "images": [...] }`
 - `GET /api/reviews/{id}`
 - `GET /api/reviews`
 - `POST /api/reviews/{id}/screenshots` — `{ "image" }`

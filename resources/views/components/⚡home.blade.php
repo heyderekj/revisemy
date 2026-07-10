@@ -61,7 +61,7 @@ new class extends Component
                     <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Overview</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#top" class="transition hover:text-zinc-900">Home</a></li>
-                        <li><a href="#how" class="transition hover:text-zinc-900">How you use it</a></li>
+                        <li><a href="#how" class="transition hover:text-zinc-900">The loop</a></li>
                         <li><a href="#cloud" class="transition hover:text-zinc-900">Not just pins</a></li>
                         <li><a href="#agents" class="transition hover:text-zinc-900">How agents use it</a></li>
                     </ul>
@@ -110,7 +110,7 @@ new class extends Component
                 <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
             </div>
             <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
-                <a href="#how" class="block" x-on:click="mobileNav = false">How you use it</a>
+                <a href="#how" class="block" x-on:click="mobileNav = false">The loop</a>
                 <a href="#cloud" class="block" x-on:click="mobileNav = false">Not just pins</a>
                 <a href="#agents" class="block" x-on:click="mobileNav = false">How agents use it</a>
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try token</a>
@@ -249,15 +249,16 @@ new class extends Component
 
             {{-- How you use it --}}
             <section id="how" class="mt-20 scroll-mt-8 sm:mt-24">
-                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">How you use it</h2>
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">The design checkup loop</h2>
                 <ol class="mt-6 max-w-2xl space-y-3 text-[15px] leading-relaxed text-zinc-600">
-                    <li><span class="font-medium text-zinc-900">1.</span> Get a try token and paste the MCP config into Cursor (any project).</li>
-                    <li><span class="font-medium text-zinc-900">2.</span> Ask your agent to screenshot UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code>.</li>
-                    <li><span class="font-medium text-zinc-900">3.</span> Open the <code class="font-mono text-[13px]">laravel.cloud</code> link — second opinion may already be on the shot. Pin what you care about.</li>
-                    <li><span class="font-medium text-zinc-900">4.</span> Approve or request changes — the agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code>.</li>
+                    <li><span class="font-medium text-zinc-900">1.</span> Agent screenshots UI and opens a review (<code class="font-mono text-[13px] text-rose-600">create_review</code>).</li>
+                    <li><span class="font-medium text-zinc-900">2.</span> Optional: agent drops a second opinion / subagent notes into the same review.</li>
+                    <li><span class="font-medium text-zinc-900">3.</span> You open the <code class="font-mono text-[13px]">laravel.cloud</code> link, pin what matters, approve or request changes.</li>
+                    <li><span class="font-medium text-zinc-900">4.</span> Agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code>, follows <code class="font-mono text-[13px]">next_action</code> — apply pins, then a new pass if needed.</li>
+                    <li><span class="font-medium text-zinc-900">5.</span> Repeat until you approve. You stay in charge every pass.</li>
                 </ol>
                 <p class="rm-note mt-6 inline max-w-2xl text-[15px] leading-relaxed text-zinc-700">
-                    <span class="font-medium">Note:</span> With MCP, you skip the copy-paste loop. Just say “address my feedback” or “fix pin 1.”
+                    <span class="font-medium">Note:</span> Say “run a design checkup” or “address my feedback” — MCP carries the work packets; you don’t paste screenshots around.
                 </p>
             </section>
 
@@ -278,13 +279,13 @@ new class extends Component
             <section id="agents" class="mt-16 scroll-mt-8 sm:mt-20">
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">How agents use it</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                    <code class="font-mono text-[13px] text-rose-600">get_review</code> returns work packets — human intent first, second opinion as hints.
+                    <code class="font-mono text-[13px] text-rose-600">get_review</code> returns work packets plus a clear <code class="font-mono text-[13px]">next_action</code> so the agent knows whether to wait, fix, open the next pass, or stop.
                 </p>
                 <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
                     <li>Human pins with severity <span class="font-medium text-zinc-800">must-fix</span> or <span class="font-medium text-zinc-800">nit</span> (apply these first)</li>
-                    <li><span class="font-medium text-zinc-800">second_opinion</span> findings: suggestion / a11y / polish from checklist, vision, or the agent subagent</li>
-                    <li>Optional <span class="font-medium text-zinc-800">page_url</span> for later DOM grounding</li>
-                    <li>A stable review URL on Laravel Cloud</li>
+                    <li><span class="font-medium text-zinc-800">second_opinion</span> findings: suggestion / a11y / polish — hints only</li>
+                    <li>After changes requested: <code class="font-mono text-[13px] text-rose-600">create_review</code> with <code class="font-mono text-[13px]">parent_id</code> for pass 2+</li>
+                    <li>MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code> encodes the full cycle</li>
                 </ul>
             </section>
 

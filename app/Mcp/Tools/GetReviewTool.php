@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_review')]
-#[Description('Read a design review work packet: status, human pins (authoritative), second_opinion findings (hints only), and approve / request-changes decision. Apply pins first.')]
+#[Description('Poll the design checkup: status, next_action, human pins (authoritative), second_opinion hints. Follow next_action — wait, apply pins + create next pass, or stop when approved.')]
 #[IsReadOnly]
 class GetReviewTool extends Tool
 {
@@ -40,9 +40,11 @@ class GetReviewTool extends Tool
         }
 
         $payload = $review->toAgentPayload();
+        $next = $payload['next_action'];
 
         return Response::text(
-            "Status: {$payload['status_label']}\n\n".
+            "Status: {$payload['status_label']}\n".
+            "Next action: {$next['action']} — {$next['summary']}\n\n".
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
