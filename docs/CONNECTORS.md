@@ -6,8 +6,11 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 | Host | How |
 |------|-----|
-| **Cursor** | MCP server config with `url` + `Authorization: Bearer …` header (homepage copies this for you) |
-| **Claude Code / Desktop** | Remote MCP / custom connector with the same URL + Bearer token |
+| **Cursor** | Paste `mcpServers` JSON into Settings → MCP (homepage tab) |
+| **Claude Code** | `claude mcp add --transport http …` (homepage copies the command) |
+| **Claude Desktop** | Same `mcpServers` JSON as Cursor |
+| **VS Code** | Paste into `.vscode/mcp.json` using the `servers` key |
+| **ChatGPT** | Remote MCP / connector with URL + Bearer, or REST `/api/reviews` |
 | **Any MCP client** | HTTP MCP at `/mcp/revisemy` |
 | **REST-only agents** | `/api/reviews` with Sanctum Bearer token |
 
@@ -38,6 +41,8 @@ Add a small `SKILL.md` that teaches agents *when* to call ReviseMy:
 - When a stakeholder needs a link without installing Cursor
 
 The skill should not reimplement tools — it only points at the MCP server.
+
+For **taste while implementing** (animation easing, press feedback, depth), pair with [emilkowalski/skills](https://github.com/emilkowalski/skills) (`npx skills@latest add emilkowalski/skills`). Those skills guide the coding agent; ReviseMy second opinion stays hints only and never overrides human marks.
 
 ## Design rule
 

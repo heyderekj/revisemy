@@ -2,10 +2,13 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "heyderekj/revisemy",
     "type": "project",
-    "description": "Pin feedback for your agent \u2014 human-in-the-loop design review over Laravel MCP",
+    "description": "Mark feedback for your agent — human-in-the-loop design review over Laravel MCP",
     "keywords": [
         "laravel",
-        "framework"
+        "mcp",
+        "design-review",
+        "livewire",
+        "human-in-the-loop"
     ],
     "license": "MIT",
     "require": {

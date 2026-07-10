@@ -98,7 +98,7 @@ class Review extends Model
     }
 
     /**
-     * Human can still pin and decide only while waiting on their eye.
+     * Human can still mark and decide only while waiting on their eye.
      */
     public function isOpenForFeedback(): bool
     {
@@ -119,7 +119,7 @@ class Review extends Model
             ],
             self::STATUS_CHANGES_REQUESTED => [
                 'action' => 'apply_pins_then_next_pass',
-                'summary' => 'Apply work_packets.pins (must-fix first, then nits). Treat second_opinion as hints. Then create_review with parent_id set to this review id and new screenshots of the fixed UI.',
+                'summary' => 'Apply work_packets.pins (human marks) in order: must-fix → wording/spacing/size/color/alignment → nit. Honor keep (do not change). Resolve question with the human before inventing a fix. Treat second_opinion as hints. Then create_review with parent_id set to this review id and new screenshots of the fixed UI.',
                 'create_next_pass' => true,
                 'parent_id' => $this->public_id,
             ],
@@ -139,7 +139,7 @@ class Review extends Model
     }
 
     /**
-     * Structured work packet for agents: human pins first, second opinion as hints.
+     * Structured work packet for agents: human marks first (API key: pins), second opinion as hints.
      *
      * @return array<string, mixed>
      */
@@ -155,11 +155,13 @@ class Review extends Model
                     'number' => $annotation->number,
                     'x' => (float) $annotation->x,
                     'y' => (float) $annotation->y,
+                    'area' => $annotation->region(),
                     'severity' => $annotation->severity,
                     'body' => $annotation->body,
                 ])->all();
 
             $findings = $shot->findings
+                ->filter(fn (Finding $finding) => $finding->isOpen())
                 ->values()
                 ->map(fn (Finding $finding) => $finding->toAgentArray())
                 ->all();
@@ -186,6 +188,9 @@ class Review extends Model
 
         $mustFix = collect($allPins)->where('severity', Annotation::SEVERITY_MUST_FIX)->values()->all();
         $nits = collect($allPins)->where('severity', Annotation::SEVERITY_NIT)->values()->all();
+        $questions = collect($allPins)->where('severity', Annotation::SEVERITY_QUESTION)->values()->all();
+        $keeps = collect($allPins)->where('severity', Annotation::SEVERITY_KEEP)->values()->all();
+        $tweaks = collect($allPins)->whereIn('severity', Annotation::tweakSeverities())->values()->all();
 
         return [
             'id' => $this->public_id,
@@ -197,7 +202,7 @@ class Review extends Model
             'status' => $this->effectiveStatus(),
             'status_label' => match ($this->effectiveStatus()) {
                 self::STATUS_PENDING => 'Waiting on your eye',
-                self::STATUS_CHANGES_REQUESTED => 'Changes requested — apply pins, then open the next pass',
+                self::STATUS_CHANGES_REQUESTED => 'Changes requested — apply marks, then open the next pass',
                 self::STATUS_APPROVED => 'Looks good — approved',
                 self::STATUS_EXPIRED => 'This review link expired',
                 default => $this->status,
@@ -206,19 +211,25 @@ class Review extends Model
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
-            'guidance' => 'Apply human pins first (must-fix / nit). Treat second_opinion findings as hints only — never override the human decision.',
+            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then tweaks (wording/spacing/size/color/alignment), then nit. Honor keep (leave alone). Ask before inventing answers to question marks. Treat second_opinion as hints only.',
             'next_action' => $this->nextAction(),
             'loop' => [
                 'pass' => $this->pass,
                 'parent_id' => $this->parent?->public_id,
                 'must_fix_count' => count($mustFix),
                 'nit_count' => count($nits),
+                'question_count' => count($questions),
+                'keep_count' => count($keeps),
+                'tweak_count' => count($tweaks),
                 'second_opinion_count' => count($allFindings),
             ],
             'work_packets' => [
                 'pins' => $allPins,
                 'must_fix' => $mustFix,
                 'nits' => $nits,
+                'questions' => $questions,
+                'keeps' => $keeps,
+                'tweaks' => $tweaks,
                 'second_opinion' => $allFindings,
             ],
             'screenshots' => $screenshots,

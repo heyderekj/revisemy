@@ -58,7 +58,7 @@ class CreateReviewTool extends Tool
 
         return Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
-            "Loop: share the link → human pins + decides → you poll get_review → follow next_action.\n\n".
+            "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
             "Open this link:\n{$payload['review_url']}\n\n".
             "Then poll get_review with id `{$payload['id']}`.\n\n".

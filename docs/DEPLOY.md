@@ -21,7 +21,7 @@ Repo: https://github.com/heyderekj/revisemy
 
 ## Why the queue worker matters
 
-Every screenshot upload dispatches `GenerateSecondOpinionJob` (free design checklist; OpenAI when keyed). Without a worker, reviews still work for human pins — second opinion stays `queued`.
+Every screenshot upload dispatches `GenerateSecondOpinionJob` (free design checklist; OpenAI when keyed). Without a worker, reviews still work for human marks — second opinion stays `queued`.
 
 ## Local verify before Cloud
 

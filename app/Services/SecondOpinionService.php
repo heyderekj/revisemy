@@ -193,6 +193,19 @@ class SecondOpinionService
             'area' => ['x' => 0.05, 'y' => 0.28, 'w' => 0.9, 'h' => 0.2],
         ];
 
+        // Emil Kowalski / design-engineering taste (static-frame heuristics)
+        $findings[] = [
+            'severity' => Finding::SEVERITY_POLISH,
+            'body' => 'Taste check (emilkowalski/skills): primary pressables should feel responsive — confirm a clear pressed/active treatment (subtle scale ~0.97), not only a hover color swap.',
+            'area' => ['x' => 0.28, 'y' => 0.58, 'w' => 0.44, 'h' => 0.14],
+        ];
+
+        $findings[] = [
+            'severity' => Finding::SEVERITY_POLISH,
+            'body' => 'Taste check: floating surfaces (cards, popovers, toolbars) often read better with soft depth (semi-transparent shadow/ring) than a hard opaque border — flag harsh boxes that fight the background.',
+            'area' => ['x' => 0.12, 'y' => 0.18, 'w' => 0.76, 'h' => 0.28],
+        ];
+
         if ($width > 0 && $height > 0) {
             $ratio = $width / max($height, 1);
             if ($ratio < 0.7) {
@@ -223,6 +236,22 @@ class SecondOpinionService
                 'severity' => Finding::SEVERITY_A11Y,
                 'body' => 'Context mentions navigation — check focus order, link names, and that the current section is obvious without color alone.',
                 'area' => ['x' => 0.05, 'y' => 0.02, 'w' => 0.9, 'h' => 0.1],
+            ];
+        }
+
+        if (
+            str_contains($haystack, 'animat')
+            || str_contains($haystack, 'modal')
+            || str_contains($haystack, 'drawer')
+            || str_contains($haystack, 'toast')
+            || str_contains($haystack, 'popover')
+            || str_contains($haystack, 'dropdown')
+            || str_contains($haystack, 'motion')
+        ) {
+            $findings[] = [
+                'severity' => Finding::SEVERITY_POLISH,
+                'body' => 'Motion context (emilkowalski/skills): prefer ease-out under ~300ms for UI chrome; never ease-in; don’t animate keyboard-triggered actions; popovers should scale from the trigger (modals stay centered).',
+                'area' => null,
             ];
         }
 
@@ -272,6 +301,16 @@ Rules:
 - severity must be suggestion, a11y, or polish — never must-fix.
 - area is normalized 0–1 relative to the image; null if global.
 - Do not approve or reject the design; suggestions only.
+- Human marks stay authoritative; you only hint.
+
+Taste lens (Emil Kowalski design-engineering / emilkowalski/skills — apply when visible in the still):
+- Hierarchy & restraint: one clear primary action; avoid competing chrome.
+- Pressables: look for missing pressed/active affordance; hover-only feedback is weak.
+- Depth: soft shadow/ring often beats hard opaque borders on floating surfaces.
+- Motion (if UI implies modals/drawers/toasts/popovers): ease-out, under ~300ms for chrome; never ease-in; no motion on keyboard-triggered actions; popovers origin from trigger (modals centered); never scale(0) — use ~0.95 + opacity.
+- Accessibility: contrast, focus visibility, reduced-motion awareness when motion is implied.
+- Prefer concrete CSS/layout fixes in the body when possible.
+
 Title: {$title}
 Context: {$context}
 PROMPT;

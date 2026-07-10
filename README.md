@@ -1,28 +1,39 @@
 # ReviseMy
 
-**Pin feedback for your agent.**
+**Mark feedback for your agent.**
 
-ReviseMy is an open-source human-in-the-loop design review tool. Your agent uploads UI screenshots over [Laravel MCP](https://laravel.com/docs/mcp), you open a review link, pin notes like a design critique, then approve or request changes. The agent reads structured feedback and keeps going.
+ReviseMy is an open-source human-in-the-loop design review tool. Your agent uploads UI screenshots over [Laravel MCP](https://laravel.com/docs/mcp), you open a review link, **mark** what matters like a design critique, then approve or request changes. The agent reads structured work packets and keeps going.
 
-Built with Laravel, Livewire, [Flux](https://fluxui.dev/) (the official Livewire UI kit), Sanctum, and Laravel MCP — ready for [Laravel Cloud](https://cloud.laravel.com).
+Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel MCP — ready for [Laravel Cloud](https://cloud.laravel.com).
+
+## Features
+
+- **Marks, not pins** — product UI speaks in marks (rose rectangles + M1/M2 badges). Human marks are authoritative; API keys stay `pins` for compatibility.
+- **Rectangle-first review** — drag to outline a region or click for a point note; zoom with +/− and pan with Space+drag (or middle mouse).
+- **Second opinion (hints only)** — Cloud-queued design checklist on every screenshot; optional OpenAI vision when keyed. Sky S-markers never override your marks.
+- **Agent subagent path** — `add_findings` drops suggestion / a11y / polish notes into the same review before you look.
+- **Work packets + `next_action`** — agents know whether to wait, apply marks, open the next pass, or stop.
+- **Multi-pass checkups** — `create_review` with `parent_id` for pass 2+ after you request changes.
+- **Try token, no account** — one-click token on the homepage; paste MCP config for Cursor, Claude Code, VS Code, or ChatGPT.
+- **Secret review links** — humans open `/r/{token}` without signing up.
 
 ## Try it on any project (~2 minutes)
 
 1. Open the hosted app (your `*.laravel.cloud` URL after deploy).
 2. Click **Get a try token**.
-3. Paste the Cursor MCP config into any local project.
+3. Copy the MCP config for your client (Cursor, Claude, VS Code, or ChatGPT).
 4. Ask your agent to screenshot UI work and call `create_review`.
-5. Open the review link, pin feedback, approve or request changes.
-6. Ask the agent to call `get_review` and apply the notes.
+5. Open the review link, mark feedback, approve or request changes.
+6. Ask the agent to call `get_review` and follow `next_action`.
 
-No account required for the human reviewer — secret `/r/{token}` links.
+No account required for the human reviewer.
 
 ## MCP tools
 
 | Tool | Purpose |
 |------|---------|
 | `create_review` | title + screenshots (+ optional `page_url`, `parent_id` for next pass) → review URL; queues second opinion |
-| `get_review` | work packets + `next_action` (wait / apply pins / done) |
+| `get_review` | work packets + `next_action` (`wait_for_human` / `apply_pins_then_next_pass` / `done`) |
 | `list_reviews` | recent reviews for this try token |
 | `add_screenshot` | append a shot to an open review |
 | `add_findings` | agent subagent — push suggestion/a11y/polish into the review |
@@ -32,9 +43,9 @@ Prompt: `design_checkup_loop` — full agent↔human checkup cycle.
 
 Screenshots accept **https URLs**, **data URLs**, or **base64**.
 
-Human pins are authoritative. Second opinion is suggestions only — see [docs/SECOND-OPINION.md](docs/SECOND-OPINION.md).
+**Terminology:** UI copy uses *marks*; JSON still uses `work_packets.pins`, `related_pin`, and `apply_pins_then_next_pass`. Second opinion is suggestions only — see [docs/SECOND-OPINION.md](docs/SECOND-OPINION.md).
 
-### Cursor MCP config
+### MCP config (Cursor example)
 
 After you get a try token from the homepage:
 
@@ -51,7 +62,7 @@ After you get a try token from the homepage:
 }
 ```
 
-Same URL + Bearer header works for Claude connectors and other MCP hosts. See [docs/CONNECTORS.md](docs/CONNECTORS.md).
+The homepage also copies configs for Claude Code, VS Code (`servers` key), and ChatGPT. Same URL + Bearer header works for any MCP host — see [docs/CONNECTORS.md](docs/CONNECTORS.md).
 
 ### REST API (same auth)
 
@@ -106,7 +117,7 @@ Point MCP at your own origin. Use S3-compatible storage for screenshots in produ
 
 ## Docs
 
-- [CONNECTORS.md](docs/CONNECTORS.md) — Cursor / Claude / ChatGPT packaging  
+- [CONNECTORS.md](docs/CONNECTORS.md) — Cursor / Claude / VS Code / ChatGPT packaging  
 - [SECOND-OPINION.md](docs/SECOND-OPINION.md) — second opinion, agent subagent findings, work packets  
 - [DEPLOY.md](docs/DEPLOY.md) — Laravel Cloud contest deploy  
 

@@ -1,21 +1,23 @@
 # Second opinion & work packets
 
-ReviseMy’s **human pins stay authoritative**. Second opinion is optional, labeled, and never flips approve / request-changes.
+ReviseMy’s **human marks stay authoritative**. Second opinion is optional, labeled, and never flips approve / request-changes.
+
+**Product term:** marks (draw a mark / your marks). **API keys are unchanged** for compatibility: `work_packets.pins`, `related_pin`, action `apply_pins_then_next_pass`.
 
 ## What ships today (v1.1)
 
 On every screenshot upload, Laravel Cloud queues `GenerateSecondOpinionJob`:
 
-1. **Free checklist** — hierarchy, contrast, spacing, mobile/desktop heuristics from dimensions + review context keywords.
-2. **OpenAI vision upgrade** — when `OPENAI_API_KEY` is set, the same job merges vision findings (`suggestion` / `a11y` / `polish` only).
+1. **Free checklist** — hierarchy, contrast, spacing, mobile/desktop heuristics, plus Emil Kowalski taste checks (press feedback, soft depth vs hard borders; motion hints when context mentions modals/drawers/toasts).
+2. **OpenAI vision upgrade** — when `OPENAI_API_KEY` is set, the same job merges vision findings (`suggestion` / `a11y` / `polish` only), guided by the same taste lens.
 
 Agents can also act as a **design-reviewer subagent** via `add_findings` before the human opens the link. Those land in the same review UI with an `Agent` badge.
 
 ### Non-contradiction rules
 
-1. Human pins = **intent** (`must-fix` / `nit` / decision).
+1. Human marks = **intent** (`must-fix` / `wording` / `spacing` / `size` / `color` / `alignment` / `nit` / `question` / `keep` / decision). Exposed to agents as `work_packets.pins`.
 2. Findings = **suggestions** only (`suggestion` / `a11y` / `polish`) — never auto-flip review status.
-3. If a finding overlaps a human pin, enrich under `related_pin` — don’t invent a conflicting must-fix.
+3. If a finding overlaps a human mark, enrich under `related_pin` — don’t invent a conflicting must-fix.
 4. Second opinion is scoped to **this screenshot** (+ optional `page_url`), not the whole product.
 
 ### MCP tools
@@ -32,16 +34,16 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 ### The loop
 
 1. Agent: `create_review` → share `review_url`
-2. Human: pin + approve / request changes
+2. Human: mark + approve / request changes
 3. Agent: `get_review` → follow `next_action`
-4. If changes requested: apply pins → `create_review` with `parent_id` + new screenshots
+4. If changes requested: apply marks (`work_packets.pins`) → `create_review` with `parent_id` + new screenshots
 5. Repeat until approved
 
 ### Review UI
 
-- Solid rose/amber markers = **your pins**
+- Solid rose selection rectangles = **your marks**
 - Dashed sky markers / areas = **second opinion**
-- Sidebar: **Your pins** vs **Second opinion** (Refresh re-queues the Cloud job)
+- Sidebar: **Your marks** vs **Second opinion** (Refresh re-queues the Cloud job)
 - After a decision: clear copy for “next pass” vs “loop complete”
 
 ### Agent payload shape
@@ -50,7 +52,7 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 {
   "pass": 1,
   "next_action": { "action": "wait_for_human", "summary": "…" },
-  "guidance": "Apply human pins first…",
+  "guidance": "Apply human marks first (work_packets.pins)…",
   "work_packets": {
     "pins": [{ "number": 1, "severity": "must-fix", "body": "…", "screenshot_index": 0 }],
     "must_fix": [],
@@ -80,6 +82,7 @@ Enable a **queue worker** on Laravel Cloud so jobs run after upload.
 
 Research references (implementer skills for consumer repos):
 
+- [emilkowalski/skills](https://github.com/emilkowalski/skills) — design-engineering taste (animation decisions, press feedback, depth, reduced motion). Install: `npx skills@latest add emilkowalski/skills`. ReviseMy’s free checklist + vision prompt already borrow these rules as **hints only**.
 - [design-review-skill](https://github.com/aslanmazhidov/design-review-skill)
 - [ui-craft](https://github.com/educlopez/ui-craft)
 - [OmniParser](https://github.com/microsoft/OmniParser) / [UIPE](https://github.com/dirkknibbe/uipe) / [Playwright MCP](https://github.com/microsoft/playwright-mcp)

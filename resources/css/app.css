@@ -20,11 +20,38 @@
     --color-mist: #ebebef;
     --color-mark: #fb7185;
     --color-highlight: #fecdd3;
+    --color-selection: rgb(254 240 138 / 0.55);
 }
 
 @layer base {
     html {
         scroll-behavior: smooth;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']) {
+        cursor: pointer;
+    }
+
+    [data-flux-textarea]:focus,
+    [data-flux-textarea]:focus-visible,
+    [data-flux-control]:focus,
+    [data-flux-control]:focus-visible {
+        outline: none;
+        border-color: rgb(228 228 231);
+        box-shadow: 0 0 0 3px rgb(24 24 27 / 0.06);
+    }
+
+    .dark [data-flux-textarea]:focus,
+    .dark [data-flux-textarea]:focus-visible,
+    .dark [data-flux-control]:focus,
+    .dark [data-flux-control]:focus-visible {
+        border-color: rgb(255 255 255 / 0.15);
+        box-shadow: 0 0 0 3px rgb(255 255 255 / 0.08);
     }
 }
 
@@ -76,8 +103,8 @@
         background: linear-gradient(
             180deg,
             transparent 10%,
-            rgb(254 240 138 / 0.55) 10%,
-            rgb(254 240 138 / 0.55) 90%,
+            var(--color-selection) 10%,
+            var(--color-selection) 90%,
             transparent 90%
         );
     }
@@ -99,11 +126,31 @@
     }
 
     .rm-pin-pop-2 {
-        animation: rm-pin-pop 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) 0.35s both;
+        animation: rm-pin-pop 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) 0.2s both;
     }
 
     .rm-pin-pop-3 {
-        animation: rm-pin-pop 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) 0.7s both;
+        animation: rm-pin-pop 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) 0.4s both;
+    }
+
+    .rm-pulse-soft {
+        animation: rm-pulse-soft 1.6s ease-in-out 1;
+    }
+
+    .rm-pulse-amber {
+        animation: rm-pulse-amber 1.4s ease-in-out infinite;
+    }
+
+    .rm-packet-chip {
+        animation: rm-packet-slide 1.8s ease-in-out both;
+    }
+
+    .rm-msg {
+        animation: rm-msg-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .rm-checkpoint {
+        scroll-snap-align: start;
     }
 }
 
@@ -121,10 +168,89 @@
 @keyframes rm-pin-pop {
     from {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(0.4);
+        transform: scale(0.85);
     }
     to {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
+        transform: scale(1);
     }
+}
+
+@keyframes rm-pulse-soft {
+    0%,
+    100% {
+        opacity: 0.55;
+        box-shadow: 0 0 0 0 rgb(56 189 248 / 0);
+    }
+    50% {
+        opacity: 1;
+        box-shadow: 0 0 0 4px rgb(56 189 248 / 0.2);
+    }
+}
+
+@keyframes rm-pulse-amber {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgb(251 191 36 / 0.35);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgb(251 191 36 / 0);
+    }
+}
+
+@keyframes rm-msg-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes rm-packet-slide {
+    0% {
+        opacity: 0;
+        transform: translate(12px, -50%);
+    }
+    25% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.85;
+        transform: translate(-8px, -50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rm-fade-up,
+    .rm-fade-up-delay,
+    .rm-fade-up-delay-2,
+    .rm-pin-pop,
+    .rm-pin-pop-2,
+    .rm-pin-pop-3,
+    .rm-pulse-soft,
+    .rm-pulse-amber,
+    .rm-packet-chip,
+    .rm-msg {
+        animation: none !important;
+    }
+}
+
+/* Outside @layer — ::selection ignores themed CSS variables in some browsers */
+html ::selection,
+body ::selection,
+*::selection {
+    background: #fef08a;
+    background-color: #fef08a;
+    color: #3f3f46;
+}
+
+html ::-moz-selection,
+body ::-moz-selection,
+*::-moz-selection {
+    background: #fef08a;
+    background-color: #fef08a;
+    color: #3f3f46;
 }

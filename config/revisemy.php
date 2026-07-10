@@ -9,7 +9,7 @@ return [
     |
     | After each screenshot upload, a queued job runs a free design checklist.
     | When OPENAI_API_KEY is set, the same job upgrades with a vision pass.
-    | Findings are suggestions only — human pins stay authoritative.
+    | Findings are suggestions only — human marks stay authoritative.
     |
     */
 

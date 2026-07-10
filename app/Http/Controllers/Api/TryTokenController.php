@@ -29,11 +29,14 @@ class TryTokenController extends Controller
             'mcp_url' => $result['mcp_url'],
             'workspace_id' => $result['workspace']->public_id,
             'cursor_config' => $result['cursor_config'],
-            'claude_desktop_hint' => 'Add the same URL and Authorization header to your Claude MCP / connector settings.',
+            'claude_desktop_config' => $result['claude_desktop_config'],
+            'vscode_config' => $result['vscode_config'],
+            'claude_code_command' => $result['claude_code_command'],
+            'chatgpt_hint' => $result['chatgpt_hint'],
             'next_steps' => [
-                'Paste the Cursor MCP config into your project settings.',
+                'Pick your client on the homepage (Cursor, Claude, VS Code, or ChatGPT) and paste the matching config.',
                 'Ask your agent to screenshot UI work and call create_review.',
-                'Open the laravel.cloud review link, pin feedback, then approve or request changes.',
+                'Open the laravel.cloud review link, mark feedback, then approve or request changes.',
             ],
         ], 201);
     }

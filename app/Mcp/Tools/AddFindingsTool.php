@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('add_findings')]
-#[Description('Act as a design-reviewer subagent: push suggestion/a11y/polish findings into an open review for the human to see alongside their pins. Never use must-fix — human pins stay authoritative.')]
+#[Description('Act as a design-reviewer subagent: push suggestion/a11y/polish findings into an open review for the human to see alongside their marks. Never use must-fix — human marks stay authoritative.')]
 class AddFindingsTool extends Tool
 {
     use ResolvesWorkspace;

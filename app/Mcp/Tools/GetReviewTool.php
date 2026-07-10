@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_review')]
-#[Description('Poll the design checkup: status, next_action, human pins (authoritative), second_opinion hints. Follow next_action — wait, apply pins + create next pass, or stop when approved.')]
+#[Description('Poll the design checkup: status, next_action, human marks in work_packets.pins (authoritative), second_opinion hints. Follow next_action — wait, apply marks + create next pass, or stop when approved.')]
 #[IsReadOnly]
 class GetReviewTool extends Tool
 {

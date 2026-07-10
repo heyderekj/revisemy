@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('ReviseMy')]
 #[Version('1.2.0')]
-#[Instructions('ReviseMy is a design checkup loop for agents + humans on Laravel Cloud. Loop: create_review (screenshots) → optional add_findings → share review_url → poll get_review → follow next_action. If changes_requested: apply human pins first, then create_review with parent_id and new screenshots for the next pass. If approved: stop. Human pins are authoritative; second_opinion is hints only. Never claim the UI is done while status is pending. Use the design_checkup_loop prompt when starting a checkup.')]
+#[Instructions('ReviseMy is a design checkup loop for agents + humans on Laravel Cloud. Loop: create_review (screenshots) → optional add_findings → share review_url → poll get_review → follow next_action. If changes_requested: apply human marks first (work_packets.pins), then create_review with parent_id and new screenshots for the next pass. If approved: stop. Human marks are authoritative; second_opinion is hints only. Never claim the UI is done while status is pending. Use the design_checkup_loop prompt when starting a checkup.')]
 class ReviseMyServer extends Server
 {
     protected array $tools = [

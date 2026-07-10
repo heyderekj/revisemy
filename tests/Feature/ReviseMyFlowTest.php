@@ -28,7 +28,7 @@ class ReviseMyFlowTest extends TestCase
 
     public function test_homepage_loads(): void
     {
-        $this->get('/')->assertOk()->assertSee('Pin feedback for your agent');
+        $this->get('/')->assertOk()->assertSee('Mark feedback for your agent');
     }
 
     public function test_try_token_create_review_and_open_secret_link(): void
@@ -49,7 +49,7 @@ class ReviseMyFlowTest extends TestCase
             ->assertJsonPath('status', 'pending')
             ->assertJsonPath('status_label', 'Waiting on your eye');
 
-        $this->assertStringContainsString('Apply human pins first', (string) $reviewResponse->json('guidance'));
+        $this->assertStringContainsString('Apply human marks first', (string) $reviewResponse->json('guidance'));
 
         $url = $reviewResponse->json('review_url');
         $this->assertStringContainsString('/r/', $url);
@@ -140,6 +140,57 @@ class ReviseMyFlowTest extends TestCase
         $this->assertEmpty($response->json('work_packets.pins'));
     }
 
+    public function test_accepting_a_finding_promotes_it_to_a_human_pin(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Accept finding',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $this->withToken($token)->postJson('/api/reviews/'.$id.'/findings', [
+            'findings' => [
+                [
+                    'severity' => 'a11y',
+                    'body' => 'Icon button needs an accessible name.',
+                    'area' => ['x' => 0.1, 'y' => 0.2, 'w' => 0.15, 'h' => 0.1],
+                    'screenshot_index' => 0,
+                ],
+                [
+                    'severity' => 'polish',
+                    'body' => 'Tighten spacing near the footer.',
+                    'screenshot_index' => 0,
+                ],
+            ],
+        ])->assertCreated();
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+        $finding = $review->screenshots()->firstOrFail()->findings()->where('severity', 'a11y')->firstOrFail();
+        $dismiss = $review->screenshots()->firstOrFail()->findings()->where('severity', 'polish')->firstOrFail();
+
+        $component = \Livewire\Livewire::test('review-page', ['token' => $review->token])
+            ->call('acceptFinding', $finding->id)
+            ->call('dismissFinding', $dismiss->id);
+
+        $component->assertOk();
+
+        $payload = $review->fresh(['screenshots.annotations', 'screenshots.findings'])->toAgentPayload();
+
+        $this->assertCount(1, $payload['work_packets']['pins']);
+        $this->assertSame('must-fix', $payload['work_packets']['pins'][0]['severity']);
+        $this->assertSame('Icon button needs an accessible name.', $payload['work_packets']['pins'][0]['body']);
+        $this->assertSame(0.1, $payload['work_packets']['pins'][0]['area']['x']);
+        $this->assertEmpty($payload['work_packets']['second_opinion']);
+        $this->assertSame(Finding::STATUS_ACCEPTED, $finding->fresh()->status);
+        $this->assertSame(Finding::STATUS_DISMISSED, $dismiss->fresh()->status);
+    }
+
     public function test_to_agent_payload_separates_pins_from_second_opinion(): void
     {
         Storage::fake('public');
@@ -160,6 +211,7 @@ class ReviseMyFlowTest extends TestCase
         $shot->annotations()->create([
             'x' => 0.5,
             'y' => 0.5,
+            'area' => ['x' => 0.4, 'y' => 0.4, 'w' => 0.2, 'h' => 0.2],
             'severity' => 'must-fix',
             'body' => 'Human says fix this',
             'number' => 1,
@@ -177,6 +229,8 @@ class ReviseMyFlowTest extends TestCase
 
         $this->assertCount(1, $payload['work_packets']['pins']);
         $this->assertSame('must-fix', $payload['work_packets']['pins'][0]['severity']);
+        $this->assertSame(0.4, $payload['work_packets']['pins'][0]['area']['x']);
+        $this->assertSame(0.2, $payload['work_packets']['pins'][0]['area']['w']);
         $this->assertCount(1, $payload['work_packets']['second_opinion']);
         $this->assertSame('agent', $payload['work_packets']['second_opinion'][0]['source']);
         $this->assertSame('pending', $payload['status']);
