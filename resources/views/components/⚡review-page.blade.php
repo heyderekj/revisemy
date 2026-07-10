@@ -152,7 +152,7 @@ new class extends Component
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
             <div class="min-w-0">
                 <div class="flex items-center gap-2 text-sm text-zinc-500">
-                    <a href="/" class="font-semibold text-teal-700 hover:underline dark:text-teal-400">ReviseMy</a>
+                    <a href="/" class="font-semibold text-rose-600 hover:underline dark:text-rose-400">ReviseMy</a>
                     <span>/</span>
                     <span class="truncate">{{ $review->title }}</span>
                 </div>
@@ -172,7 +172,7 @@ new class extends Component
             @if ($review->isOpenForFeedback())
                 <div class="flex shrink-0 items-center gap-2">
                     <flux:button variant="ghost" wire:click="requestChanges">Request changes</flux:button>
-                    <flux:button variant="primary" wire:click="approve" class="!bg-teal-700 hover:!bg-teal-800">Looks good — approve</flux:button>
+                    <flux:button variant="primary" wire:click="approve" class="!bg-rose-600 hover:!bg-rose-700">Looks good — approve</flux:button>
                 </div>
             @endif
         </div>
@@ -193,7 +193,7 @@ new class extends Component
                             size="sm"
                             variant="{{ $activeScreenshotIndex === $index ? 'primary' : 'ghost' }}"
                             wire:click="selectScreenshot({{ $index }})"
-                            class="{{ $activeScreenshotIndex === $index ? '!bg-teal-700' : '' }}"
+                            class="{{ $activeScreenshotIndex === $index ? '!bg-rose-600' : '' }}"
                         >
                             Shot {{ $index + 1 }}
                         </flux:button>
@@ -228,7 +228,7 @@ new class extends Component
                         <button
                             type="button"
                             class="absolute z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-semibold text-white shadow-lg ring-2 ring-white
-                                {{ $annotation->severity === 'nit' ? 'bg-amber-500' : 'bg-teal-700' }}"
+                                {{ $annotation->severity === 'nit' ? 'bg-amber-500' : 'bg-rose-600' }}"
                             style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
                             title="{{ $annotation->body }}"
                         >
@@ -260,7 +260,7 @@ new class extends Component
                         <flux:textarea wire:model="draftBody" rows="3" placeholder="Be specific — what feels off, and what would be better?" />
                         <div class="flex flex-wrap gap-3">
                             <label class="flex items-center gap-2 text-sm">
-                                <input type="radio" wire:model="draftSeverity" value="must-fix" class="accent-teal-700">
+                                <input type="radio" wire:model="draftSeverity" value="must-fix" class="accent-rose-600">
                                 Must fix
                             </label>
                             <label class="flex items-center gap-2 text-sm">
@@ -269,7 +269,7 @@ new class extends Component
                             </label>
                         </div>
                         <div class="flex gap-2">
-                            <flux:button variant="primary" wire:click="savePin" class="!bg-teal-700">Pin feedback</flux:button>
+                            <flux:button variant="primary" wire:click="savePin" class="!bg-rose-600">Pin feedback</flux:button>
                             <flux:button variant="ghost" wire:click="cancelPin">Cancel</flux:button>
                         </div>
                     </div>
@@ -302,7 +302,7 @@ new class extends Component
                             <li class="rounded-xl border border-zinc-100 p-3 dark:border-zinc-800">
                                 <div class="mb-1 flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2">
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold text-white {{ $pin->severity === 'nit' ? 'bg-amber-500' : 'bg-teal-700' }}">{{ $pin->number }}</span>
+                                        <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold text-white {{ $pin->severity === 'nit' ? 'bg-amber-500' : 'bg-rose-600' }}">{{ $pin->number }}</span>
                                         <span class="text-xs uppercase tracking-wide text-zinc-500">{{ $pin->severity === 'nit' ? 'Nit' : 'Must fix' }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback())

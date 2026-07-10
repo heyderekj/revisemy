@@ -40,267 +40,226 @@ new class extends Component
 ?>
 
 <div
-    class="rm-wash relative overflow-x-hidden"
-    x-data
+    class="rm-wash relative min-h-screen"
+    x-data="{ mobileNav: false }"
     x-on:scroll-to-setup.window="$nextTick(() => document.getElementById('setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
 >
     <div class="rm-grid pointer-events-none absolute inset-0"></div>
 
-    {{-- Nav --}}
-    <header class="relative z-20 mx-auto flex max-w-6xl items-center justify-between px-6 py-5 sm:px-8">
-        <a href="/" class="group flex items-center gap-3">
-            <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-800 text-sm font-semibold text-white transition group-hover:bg-teal-700">R</span>
-            <span class="text-[15px] font-semibold tracking-tight">ReviseMy</span>
-        </a>
-        <nav class="flex items-center gap-6 text-sm text-zinc-600">
-            <a href="#how" class="transition hover:text-zinc-900">How it works</a>
-            <a href="#setup" class="transition hover:text-zinc-900">Setup</a>
-            <a href="https://github.com/heyderekj/revisemy" class="transition hover:text-zinc-900" target="_blank" rel="noreferrer">GitHub</a>
-        </nav>
-    </header>
+    <div class="relative z-10 mx-auto flex min-h-screen max-w-[1200px]">
+        {{-- Agentation-style sidebar --}}
+        <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-900/8 px-6 py-8 lg:flex">
+            <a href="/" class="font-mark text-[2.35rem] leading-none tracking-tight text-rose-500">
+                ReviseMy
+            </a>
 
-    {{-- Hero: one composition — brand, line, CTA, product stage in first viewport --}}
-    <section class="relative z-10 mx-auto flex min-h-[calc(100svh-4.5rem)] max-w-6xl flex-col px-6 pb-10 pt-4 sm:px-8 sm:pb-14 sm:pt-6">
-        <div class="rm-fade-up grid items-end gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-10">
-            <div class="max-w-xl pb-1">
-                <p class="font-display text-[clamp(2.75rem,7vw,4.75rem)] leading-[0.92] tracking-tight text-zinc-900">
-                    ReviseMy
-                </p>
-                <p class="rm-fade-up-delay mt-4 max-w-md text-base leading-relaxed text-zinc-600 sm:text-lg">
-                    Pin feedback for your agent — screenshots in, structured notes out over MCP.
-                </p>
-                <div class="rm-fade-up-delay-2 mt-6 flex flex-wrap items-center gap-3">
-                    @if (! $token)
-                        <flux:button variant="primary" wire:click="getTryToken" class="!h-11 !bg-teal-800 !px-5 hover:!bg-teal-700">
-                            Get a try token
-                        </flux:button>
-                        <span class="text-sm text-zinc-500">Any project · no account</span>
-                    @else
-                        <a href="#setup" class="inline-flex h-11 items-center rounded-lg bg-teal-800 px-5 text-sm font-medium text-white transition hover:bg-teal-700">
-                            Jump to your config
-                        </a>
-                    @endif
+            <nav class="mt-12 flex flex-1 flex-col gap-8 text-[14px]">
+                <div>
+                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Overview</p>
+                    <ul class="space-y-2.5 text-zinc-600">
+                        <li><a href="#top" class="transition hover:text-zinc-900">Home</a></li>
+                        <li><a href="#how" class="transition hover:text-zinc-900">How you use it</a></li>
+                        <li><a href="#agents" class="transition hover:text-zinc-900">How agents use it</a></li>
+                    </ul>
                 </div>
-                @if ($error)
-                    <p class="mt-4 text-sm text-rose-700">{{ $error }}</p>
-                @endif
+                <div>
+                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Tools</p>
+                    <ul class="space-y-2.5 text-zinc-600">
+                        <li><a href="#setup" class="transition hover:text-zinc-900">Try token</a></li>
+                        <li><a href="#setup" class="transition hover:text-zinc-900">MCP config</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Resources</p>
+                    <ul class="space-y-2.5 text-zinc-600">
+                        <li>
+                            <a href="https://github.com/heyderekj/revisemy" class="inline-flex items-center gap-2 transition hover:text-zinc-900" target="_blank" rel="noreferrer">
+                                GitHub
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/heyderekj/revisemy/blob/main/docs/CONNECTORS.md" class="inline-flex items-center gap-2 transition hover:text-zinc-900" target="_blank" rel="noreferrer">
+                                Connectors
+                                <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">MCP</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <p class="mt-auto pt-8 font-mono text-[11px] text-zinc-400">v1.0.0</p>
+        </aside>
+
+        {{-- Main --}}
+        <main id="top" class="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10">
+            {{-- Mobile top bar --}}
+            <div class="mb-8 flex items-center justify-between lg:hidden">
+                <a href="/" class="font-mark text-3xl leading-none text-rose-500">ReviseMy</a>
+                <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
+            </div>
+            <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
+                <a href="#how" class="block" x-on:click="mobileNav = false">How you use it</a>
+                <a href="#agents" class="block" x-on:click="mobileNav = false">How agents use it</a>
+                <a href="#setup" class="block" x-on:click="mobileNav = false">Try token</a>
+                <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub</a>
             </div>
 
-            {{-- Dominant product stage sits beside brand on desktop --}}
-            <div class="rm-fade-up-delay-2 relative min-w-0 lg:row-span-1">
-                <div class="pointer-events-none absolute -inset-6 bg-[radial-gradient(ellipse_at_center,_rgb(15_118_110_/_0.16),_transparent_70%)] rm-stage-shine"></div>
+            {{-- Hero --}}
+            <section class="rm-fade-up">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <h1 class="max-w-xl text-[clamp(2.4rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900">
+                        <span class="rm-highlight">Pin feedback.</span>
+                        <span class="rm-underline-mark"> For agents.</span>
+                    </h1>
+                    <button
+                        type="button"
+                        wire:click="getTryToken"
+                        class="shrink-0 self-start font-mono text-[12px] text-zinc-500 transition hover:text-rose-600 sm:mt-3"
+                    >
+                        get a try token ↗
+                    </button>
+                </div>
 
-                <div class="relative overflow-hidden rounded-2xl border border-zinc-900/10 bg-zinc-900 shadow-[0_40px_80px_-40px_rgba(24,24,27,0.55)]">
-                    <div class="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2.5 sm:px-4">
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2 text-[11px] text-zinc-400">
-                                <span class="font-medium text-teal-400">ReviseMy</span>
-                                <span>/</span>
-                                <span class="truncate text-zinc-300">Checkout redesign</span>
-                            </div>
-                            <p class="mt-0.5 text-[11px] text-zinc-500">Waiting on your eye</p>
-                        </div>
-                        <div class="hidden items-center gap-1.5 sm:flex">
-                            <span class="rounded-md px-2.5 py-1 text-[11px] text-zinc-300 ring-1 ring-white/10">Request changes</span>
-                            <span class="rounded-md bg-teal-700 px-2.5 py-1 text-[11px] font-medium text-white">Approve</span>
-                        </div>
-                    </div>
+                <p class="rm-fade-up-delay mt-5 max-w-xl text-[15px] leading-relaxed text-zinc-600 sm:text-base">
+                    Drop screenshots from any project. Leave pins like a markup pen. Approve or request changes — your agent reads the notes over MCP.
+                </p>
 
-                    <div class="grid sm:grid-cols-[1fr_200px]">
-                        <div class="relative h-[240px] bg-[#1c1917] sm:h-[300px] lg:h-[340px]">
-                            <div class="absolute inset-3 overflow-hidden rounded-xl bg-[#fafaf9] sm:inset-4">
-                                <div class="flex h-full flex-col">
-                                    <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-2.5">
-                                        <span class="text-sm font-semibold text-zinc-800">Northwind</span>
-                                        <span class="text-[11px] text-zinc-400">Cart · 2 items</span>
+                @if ($error)
+                    <p class="mt-3 text-sm text-rose-600">{{ $error }}</p>
+                @endif
+
+                {{-- Product stage: browser mock + annotation popover --}}
+                <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
+                    <div class="overflow-hidden rounded-xl border border-zinc-900/10 bg-white shadow-[0_18px_50px_-28px_rgba(24,24,27,0.45)]">
+                        <div class="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2">
+                            <span class="h-2.5 w-2.5 rounded-full bg-zinc-300"></span>
+                            <span class="h-2.5 w-2.5 rounded-full bg-zinc-300"></span>
+                            <span class="h-2.5 w-2.5 rounded-full bg-zinc-300"></span>
+                            <span class="ml-2 font-mono text-[11px] text-zinc-400">laravel.cloud/r/…</span>
+                        </div>
+
+                        <div class="relative min-h-[280px] bg-zinc-100 sm:min-h-[360px]">
+                            {{-- Fake reviewed UI --}}
+                            <div class="absolute inset-4 overflow-hidden rounded-lg border border-zinc-200 bg-[#fafafa] sm:inset-6">
+                                <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+                                    <span class="text-sm font-semibold text-zinc-800">Northwind</span>
+                                    <span class="text-xs text-zinc-400">Cart · 2 items</span>
+                                </div>
+                                <div class="grid gap-4 p-4 sm:grid-cols-[1.2fr_0.8fr] sm:p-5">
+                                    <div class="space-y-3">
+                                        <div class="h-24 rounded-md bg-gradient-to-br from-zinc-200 via-zinc-100 to-rose-100/70 sm:h-32"></div>
+                                        <div class="h-2.5 w-2/3 rounded bg-zinc-200"></div>
+                                        <div class="h-2.5 w-1/2 rounded bg-zinc-100"></div>
                                     </div>
-                                    <div class="grid flex-1 gap-3 p-4 sm:grid-cols-[1.15fr_0.85fr]">
-                                        <div class="space-y-2.5">
-                                            <div class="h-20 rounded-lg bg-gradient-to-br from-zinc-200 via-stone-100 to-teal-100/80 sm:h-28"></div>
-                                            <div class="h-2.5 w-2/3 rounded bg-zinc-200"></div>
-                                            <div class="h-2.5 w-1/2 rounded bg-zinc-100"></div>
-                                        </div>
-                                        <div class="flex flex-col justify-between rounded-lg border border-zinc-200 bg-white p-3">
-                                            <div>
-                                                <p class="text-[10px] uppercase tracking-wide text-zinc-400">Total</p>
-                                                <p class="mt-0.5 text-xl font-semibold text-zinc-900">$128</p>
-                                            </div>
-                                            <button type="button" class="mt-3 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-medium text-white">
-                                                Continue to payment
-                                            </button>
-                                        </div>
+                                    <div class="rounded-md border border-zinc-200 bg-white p-4">
+                                        <p class="text-[10px] uppercase tracking-wide text-zinc-400">Total</p>
+                                        <p class="mt-1 text-2xl font-semibold text-zinc-900">$128</p>
+                                        <button type="button" class="mt-4 w-full rounded-md bg-zinc-900 px-3 py-2.5 text-sm font-medium text-white">
+                                            Continue to payment
+                                        </button>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="rm-pin-pop absolute left-[62%] top-[72%] z-10 flex h-6 w-6 items-center justify-center rounded-full bg-teal-700 text-[10px] font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)">1</div>
-                                <div class="rm-pin-pop-2 absolute left-[28%] top-[38%] z-10 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-[10px] font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)">2</div>
-                                <div class="rm-pin-pop-3 absolute left-[18%] top-[18%] z-10 flex h-6 w-6 items-center justify-center rounded-full bg-teal-700 text-[10px] font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)">3</div>
+                            {{-- Pins --}}
+                            <div class="rm-pin-pop absolute left-[68%] top-[68%] z-20 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white ring-[3px] ring-white" style="transform: translate(-50%, -50%)">1</div>
+                            <div class="rm-pin-pop-2 absolute left-[30%] top-[36%] z-10 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white ring-[3px] ring-white" style="transform: translate(-50%, -50%)">2</div>
+
+                            {{-- Annotation popover (Agentation-style) --}}
+                            <div class="absolute bottom-[18%] left-[42%] z-30 w-[min(100%,240px)] -translate-x-1/2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-xl sm:left-[58%] sm:bottom-[22%]">
+                                <p class="font-mono text-[10px] text-zinc-400">button.checkout-cta</p>
+                                <p class="mt-2 text-[13px] leading-snug text-zinc-100">CTA feels light — bump weight or contrast.</p>
+                                <div class="mt-3 flex items-center justify-end gap-3">
+                                    <span class="text-xs text-zinc-500">Cancel</span>
+                                    <span class="rounded bg-rose-500 px-2.5 py-1 text-xs font-medium text-white">Add</span>
+                                </div>
+                            </div>
+
+                            {{-- Floating toolbar --}}
+                            <div class="absolute bottom-3 right-3 z-20 flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-1.5 text-white shadow-lg sm:bottom-4 sm:right-4">
+                                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-[11px] font-semibold">R</span>
+                                <span class="px-1 font-mono text-[10px] text-zinc-400">3 pins</span>
                             </div>
                         </div>
-
-                        <aside class="hidden border-l border-white/10 bg-zinc-950/80 p-3 sm:block">
-                            <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Pins</p>
-                            <ul class="mt-3 space-y-2">
-                                <li class="rounded-lg border border-white/10 bg-white/5 p-2.5">
-                                    <div class="mb-1 flex items-center gap-1.5">
-                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-teal-700 text-[9px] font-semibold text-white">1</span>
-                                        <span class="text-[9px] uppercase tracking-wide text-zinc-500">Must fix</span>
-                                    </div>
-                                    <p class="text-[11px] leading-snug text-zinc-300">CTA feels light — bump weight.</p>
-                                </li>
-                                <li class="rounded-lg border border-white/10 bg-white/5 p-2.5">
-                                    <div class="mb-1 flex items-center gap-1.5">
-                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-semibold text-white">2</span>
-                                        <span class="text-[9px] uppercase tracking-wide text-zinc-500">Nit</span>
-                                    </div>
-                                    <p class="text-[11px] leading-snug text-zinc-300">Image ratio feels tall.</p>
-                                </li>
-                                <li class="rounded-lg border border-white/10 bg-white/5 p-2.5">
-                                    <div class="mb-1 flex items-center gap-1.5">
-                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-teal-700 text-[9px] font-semibold text-white">3</span>
-                                        <span class="text-[9px] uppercase tracking-wide text-zinc-500">Must fix</span>
-                                    </div>
-                                    <p class="text-[11px] leading-snug text-zinc-300">Wordmark competes with title.</p>
-                                </li>
-                            </ul>
-                        </aside>
                     </div>
                 </div>
-            </div>
-        </div>
-    </section>
+            </section>
 
-    {{-- How it works — Agentation cadence --}}
-    <section id="how" class="relative z-10 border-t border-zinc-900/8 bg-white/50">
-        <div class="mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-28">
-            <p class="text-sm font-medium uppercase tracking-[0.16em] text-teal-800">How you use it</p>
-            <h2 class="font-display mt-3 max-w-2xl text-3xl tracking-tight text-zinc-900 sm:text-4xl">
-                From screenshot to sign-off in one loop.
-            </h2>
-
-            <ol class="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                @foreach ([
-                    ['01', 'Agent captures UI', 'Your agent screenshots the work and calls create_review over MCP.'],
-                    ['02', 'You get a link', 'Open the laravel.cloud review URL — no account, no install.'],
-                    ['03', 'Pin like a critique', 'Click the shot, leave notes, mark must-fix or nit.'],
-                    ['04', 'Agent reads pins', 'Approve or request changes. get_review returns structured feedback.'],
-                ] as [$num, $title, $body])
-                    <li>
-                        <p class="font-mono text-xs text-teal-800/80">{{ $num }}</p>
-                        <h3 class="mt-3 text-base font-semibold text-zinc-900">{{ $title }}</h3>
-                        <p class="mt-2 text-sm leading-relaxed text-zinc-600">{{ $body }}</p>
-                    </li>
-                @endforeach
-            </ol>
-        </div>
-    </section>
-
-    {{-- What agents get — Filament-style code craft --}}
-    <section class="relative z-10 border-t border-zinc-900/8">
-        <div class="mx-auto grid max-w-6xl gap-12 px-6 py-20 sm:px-8 sm:py-28 lg:grid-cols-2 lg:items-center">
-            <div>
-                <p class="text-sm font-medium uppercase tracking-[0.16em] text-teal-800">What the agent gets</p>
-                <h2 class="font-display mt-3 text-3xl tracking-tight text-zinc-900 sm:text-4xl">
-                    Feedback as data, not a Slack thread.
-                </h2>
-                <p class="mt-5 max-w-md text-base leading-relaxed text-zinc-600">
-                    Pins come back with coordinates, severity, and your words — so the agent can fix the right spot instead of guessing which “blue button” you meant.
+            {{-- How you use it --}}
+            <section id="how" class="mt-20 scroll-mt-8 sm:mt-24">
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">How you use it</h2>
+                <ol class="mt-6 max-w-2xl space-y-3 text-[15px] leading-relaxed text-zinc-600">
+                    <li><span class="font-medium text-zinc-900">1.</span> Get a try token and paste the MCP config into Cursor (any project).</li>
+                    <li><span class="font-medium text-zinc-900">2.</span> Ask your agent to screenshot UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code>.</li>
+                    <li><span class="font-medium text-zinc-900">3.</span> Open the <code class="font-mono text-[13px]">laravel.cloud</code> link and click to pin feedback.</li>
+                    <li><span class="font-medium text-zinc-900">4.</span> Approve or request changes — the agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code>.</li>
+                </ol>
+                <p class="rm-note mt-6 inline max-w-2xl text-[15px] leading-relaxed text-zinc-700">
+                    <span class="font-medium">Note:</span> With MCP, you skip the copy-paste loop. Just say “address my feedback” or “fix pin 1.”
                 </p>
-            </div>
-            <div class="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-[0_24px_60px_-30px_rgba(24,24,27,0.5)]">
-                <div class="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
-                    <span class="h-2.5 w-2.5 rounded-full bg-zinc-600"></span>
-                    <span class="h-2.5 w-2.5 rounded-full bg-zinc-600"></span>
-                    <span class="h-2.5 w-2.5 rounded-full bg-zinc-600"></span>
-                    <span class="ml-2 font-mono text-[11px] text-zinc-500">get_review →</span>
-                </div>
-                <pre class="overflow-x-auto p-5 font-mono text-[12px] leading-relaxed text-teal-100/90 sm:text-[13px]"><code>{
-  "status": "changes_requested",
-  "status_label": "Changes requested",
-  "review_url": "https://….laravel.cloud/r/…",
-  "screenshots": [{
-    "annotations": [{
-      "number": 1,
-      "x": 0.62,
-      "y": 0.72,
-      "severity": "must-fix",
-      "body": "CTA feels light — bump weight."
-    }]
-  }]
-}</code></pre>
-            </div>
-        </div>
-    </section>
+            </section>
 
-    {{-- Setup / try token --}}
-    <section id="setup" class="relative z-10 border-t border-zinc-900/8 bg-zinc-900 text-zinc-100">
-        <div class="mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-28">
-            <p class="text-sm font-medium uppercase tracking-[0.16em] text-teal-400">Try on any project</p>
-            <h2 class="font-display mt-3 max-w-2xl text-3xl tracking-tight text-white sm:text-4xl">
-                Add ReviseMy to Cursor in two minutes.
-            </h2>
+            {{-- How agents use it --}}
+            <section id="agents" class="mt-16 scroll-mt-8 sm:mt-20">
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">How agents use it</h2>
+                <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                    When the agent reads a review, it gets coordinates and intent — not “the blue button on the right.”
+                </p>
+                <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
+                    <li>Normalized pin positions on each screenshot</li>
+                    <li>Severity: <span class="font-medium text-zinc-800">must-fix</span> or <span class="font-medium text-zinc-800">nit</span></li>
+                    <li>Your exact note, plus an overall decision</li>
+                    <li>A stable review URL on Laravel Cloud</li>
+                </ul>
+            </section>
 
-            @if (! $token)
-                <div class="mt-10 flex flex-wrap items-center gap-4">
-                    <flux:button variant="primary" wire:click="getTryToken" class="!h-11 !bg-teal-600 !px-5 hover:!bg-teal-500">
-                        Get a try token
-                    </flux:button>
-                    <p class="max-w-sm text-sm text-zinc-400">
-                        One click creates a scoped workspace. Paste the MCP config into any repo and start reviewing.
-                    </p>
-                </div>
-                @if ($error)
-                    <p class="mt-4 text-sm text-rose-300">{{ $error }}</p>
+            {{-- Setup --}}
+            <section id="setup" class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16">
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Try it on any project</h2>
+                <p class="mt-3 max-w-xl text-[15px] text-zinc-600">
+                    One click. No account. Paste into Cursor and start reviewing.
+                </p>
+
+                @if (! $token)
+                    <div class="mt-8">
+                        <flux:button variant="primary" wire:click="getTryToken" class="!h-11 !bg-rose-600 !px-5 hover:!bg-rose-500">
+                            Get a try token
+                        </flux:button>
+                    </div>
+                @else
+                    <div class="mt-8 space-y-5">
+                        <p class="max-w-2xl text-[15px] text-zinc-600">
+                            Paste this into Cursor MCP settings, then ask your agent to call <code class="font-mono text-rose-600">create_review</code>.
+                        </p>
+                        <div>
+                            <div class="mb-2 flex items-center justify-between">
+                                <p class="text-sm font-medium text-zinc-700">Cursor MCP config</p>
+                                <button
+                                    type="button"
+                                    class="text-sm text-rose-600 hover:text-rose-500"
+                                    x-data
+                                    x-on:click="navigator.clipboard.writeText($refs.config.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                >Copy</button>
+                            </div>
+                            <pre x-ref="config" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $cursorConfigJson }}</pre>
+                        </div>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div class="rounded-xl border border-zinc-200 bg-white p-4">
+                                <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">MCP URL</p>
+                                <p class="mt-2 break-all font-mono text-sm text-zinc-700">{{ $mcpUrl }}</p>
+                            </div>
+                            <div class="rounded-xl border border-zinc-200 bg-white p-4">
+                                <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Bearer token</p>
+                                <p class="mt-2 break-all font-mono text-sm text-zinc-700">{{ $token }}</p>
+                            </div>
+                        </div>
+                    </div>
                 @endif
-            @else
-                <div class="mt-10 space-y-8">
-                    <p class="max-w-2xl text-base text-zinc-300">
-                        Your try token is ready. Paste this into Cursor MCP settings, then ask your agent to screenshot UI work and call <code class="font-mono text-teal-300">create_review</code>.
-                    </p>
+            </section>
 
-                    <div>
-                        <div class="mb-3 flex items-center justify-between gap-3">
-                            <p class="text-sm font-medium text-zinc-300">Cursor MCP config</p>
-                            <button
-                                type="button"
-                                class="text-sm text-teal-400 transition hover:text-teal-300"
-                                x-data
-                                x-on:click="navigator.clipboard.writeText($refs.config.textContent); $el.textContent = 'Copied'; setTimeout(() => $el.textContent = 'Copy', 1600)"
-                            >
-                                Copy
-                            </button>
-                        </div>
-                        <pre
-                            x-ref="config"
-                            class="overflow-x-auto rounded-xl border border-white/10 bg-black/40 p-4 font-mono text-[12px] leading-relaxed text-teal-100/90 sm:text-[13px]"
-                        >{{ $cursorConfigJson }}</pre>
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                            <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-500">MCP URL</p>
-                            <p class="mt-2 break-all font-mono text-sm text-zinc-200">{{ $mcpUrl }}</p>
-                        </div>
-                        <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                            <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Bearer token</p>
-                            <p class="mt-2 break-all font-mono text-sm text-zinc-200">{{ $token }}</p>
-                        </div>
-                    </div>
-
-                    <ol class="grid gap-4 text-sm text-zinc-400 sm:grid-cols-3">
-                        <li><span class="font-medium text-white">1.</span> Add the config to Cursor in any local project.</li>
-                        <li><span class="font-medium text-white">2.</span> Ask the agent to capture UI and create a review.</li>
-                        <li><span class="font-medium text-white">3.</span> Open the Cloud link, pin, approve or request changes.</li>
-                    </ol>
-                </div>
-            @endif
-        </div>
-    </section>
-
-    <footer class="relative z-10 border-t border-zinc-800 bg-zinc-950 px-6 py-8 text-sm text-zinc-500 sm:px-8">
-        <div class="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p>Open source · Laravel + Livewire Flux · Built for Laravel Cloud</p>
-            <a href="https://github.com/heyderekj/revisemy" class="text-zinc-400 transition hover:text-white" target="_blank" rel="noreferrer">heyderekj/revisemy</a>
-        </div>
-    </footer>
+            <footer class="mt-20 border-t border-zinc-900/8 py-8 text-sm text-zinc-400">
+                Open source · Laravel + Livewire Flux · Built for Laravel Cloud
+            </footer>
+        </main>
+    </div>
 </div>
