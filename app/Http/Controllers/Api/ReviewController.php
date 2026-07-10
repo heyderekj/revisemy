@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Review;
 use App\Services\ReviewService;
+use App\Services\SecondOpinionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -19,7 +20,7 @@ class ReviewController extends Controller
         $reviews = $workspace->reviews()
             ->latest()
             ->limit(20)
-            ->with(['screenshots.annotations'])
+            ->with(['screenshots.annotations', 'screenshots.findings'])
             ->get()
             ->map(fn (Review $review) => $review->toAgentPayload());
 
@@ -33,6 +34,7 @@ class ReviewController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'context' => ['nullable', 'string', 'max:5000'],
+            'page_url' => ['nullable', 'string', 'max:2048'],
             'images' => ['required', 'array', 'min:1', 'max:5'],
             'images.*' => ['required'],
         ]);
@@ -42,6 +44,7 @@ class ReviewController extends Controller
             $data['title'],
             $data['context'] ?? null,
             $data['images'],
+            $data['page_url'] ?? null,
         );
 
         return response()->json($review->toAgentPayload(), 201);
@@ -78,7 +81,56 @@ class ReviewController extends Controller
             throw $e;
         }
 
-        return response()->json($review->fresh(['screenshots.annotations'])?->toAgentPayload());
+        return response()->json($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload());
+    }
+
+    public function addFindings(Request $request, string $publicId, ReviewService $reviews, SecondOpinionService $opinions): JsonResponse
+    {
+        $this->throttle($request, 'add-findings', 60);
+
+        $review = $reviews->findForWorkspace($request->user()->workspace, $publicId);
+
+        if (! $review) {
+            return response()->json(['message' => 'Review not found for this try token.'], 404);
+        }
+
+        $data = $request->validate([
+            'findings' => ['required', 'array', 'min:1', 'max:20'],
+            'findings.*.body' => ['required', 'string', 'max:2000'],
+            'findings.*.severity' => ['nullable', 'string', 'in:suggestion,a11y,polish'],
+            'findings.*.screenshot_index' => ['nullable', 'integer', 'min:0', 'max:4'],
+            'findings.*.related_pin' => ['nullable', 'integer', 'min:1'],
+            'findings.*.area' => ['nullable', 'array'],
+        ]);
+
+        $opinions->addAgentFindings($review, $data['findings']);
+
+        return response()->json($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload(), 201);
+    }
+
+    public function requestSecondOpinion(Request $request, string $publicId, ReviewService $reviews, SecondOpinionService $opinions): JsonResponse
+    {
+        $this->throttle($request, 'second-opinion', 30);
+
+        $review = $reviews->findForWorkspace($request->user()->workspace, $publicId);
+
+        if (! $review) {
+            return response()->json(['message' => 'Review not found for this try token.'], 404);
+        }
+
+        $data = $request->validate([
+            'screenshot_index' => ['nullable', 'integer', 'min:0', 'max:4'],
+        ]);
+
+        $count = $opinions->requestForReview(
+            $review,
+            array_key_exists('screenshot_index', $data) ? (int) $data['screenshot_index'] : null,
+        );
+
+        return response()->json([
+            'queued' => $count,
+            'review' => $review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload(),
+        ]);
     }
 
     protected function throttle(Request $request, string $action, int $maxAttempts): void

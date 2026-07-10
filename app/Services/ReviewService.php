@@ -6,21 +6,19 @@ use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ReviewService
 {
     public function __construct(
         protected ScreenshotStorage $screenshots,
+        protected SecondOpinionService $opinions,
     ) {}
 
     /**
      * @param  list<string|UploadedFile>  $images
      */
-    public function create(Workspace $workspace, string $title, ?string $context, array $images): Review
+    public function create(Workspace $workspace, string $title, ?string $context, array $images, ?string $pageUrl = null): Review
     {
         if ($images === []) {
             throw ValidationException::withMessages([
@@ -37,13 +35,15 @@ class ReviewService
         $review = $workspace->reviews()->create([
             'title' => $title,
             'context' => $context,
+            'page_url' => $pageUrl,
         ]);
 
         foreach (array_values($images) as $index => $image) {
-            $this->screenshots->store($review, $image, $index);
+            $shot = $this->screenshots->store($review, $image, $index);
+            $this->opinions->queue($shot);
         }
 
-        return $review->fresh(['screenshots.annotations']) ?? $review;
+        return $review->fresh(['screenshots.annotations', 'screenshots.findings']) ?? $review;
     }
 
     public function addScreenshot(Review $review, string|UploadedFile $image): Screenshot
@@ -62,14 +62,17 @@ class ReviewService
 
         $sortOrder = (int) $review->screenshots()->max('sort_order') + 1;
 
-        return $this->screenshots->store($review, $image, $sortOrder);
+        $shot = $this->screenshots->store($review, $image, $sortOrder);
+        $this->opinions->queue($shot);
+
+        return $shot;
     }
 
     public function findForWorkspace(Workspace $workspace, string $publicId): ?Review
     {
         return $workspace->reviews()
             ->where('public_id', $publicId)
-            ->with(['screenshots.annotations'])
+            ->with(['screenshots.annotations', 'screenshots.findings'])
             ->first();
     }
 }

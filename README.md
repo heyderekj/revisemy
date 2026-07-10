@@ -21,12 +21,16 @@ No account required for the human reviewer — secret `/r/{token}` links.
 
 | Tool | Purpose |
 |------|---------|
-| `create_review` | title + screenshots → review URL |
-| `get_review` | status, pins, decision |
+| `create_review` | title + screenshots (+ optional `page_url`) → review URL; queues second opinion |
+| `get_review` | work packets: human pins + `second_opinion` + decision |
 | `list_reviews` | recent reviews for this try token |
 | `add_screenshot` | append a shot to an open review |
+| `add_findings` | agent subagent — push suggestion/a11y/polish into the review |
+| `request_second_opinion` | re-queue Cloud checklist (+ vision if keyed) |
 
 Screenshots accept **https URLs**, **data URLs**, or **base64**.
+
+Human pins are authoritative. Second opinion is suggestions only — see [docs/SECOND-OPINION.md](docs/SECOND-OPINION.md).
 
 ### Cursor MCP config
 
@@ -50,10 +54,12 @@ Same URL + Bearer header works for Claude connectors and other MCP hosts. See [d
 ### REST API (same auth)
 
 - `POST /api/try-token` — create a try workspace + token
-- `POST /api/reviews` — `{ "title", "context?", "images": [...] }`
+- `POST /api/reviews` — `{ "title", "context?", "page_url?", "images": [...] }`
 - `GET /api/reviews/{id}`
 - `GET /api/reviews`
 - `POST /api/reviews/{id}/screenshots` — `{ "image" }`
+- `POST /api/reviews/{id}/findings` — `{ "findings": [...] }`
+- `POST /api/reviews/{id}/second-opinion` — optional `{ "screenshot_index" }`
 
 ## Local development
 
@@ -79,6 +85,8 @@ Visit `http://127.0.0.1:8000`, get a try token, and create a review.
    - `APP_NAME=ReviseMy`
    - `FILESYSTEM_DISK` / `REVISEMY_DISK` to the Cloud object storage disk
    - `APP_URL` to your `https://….laravel.cloud` URL
+   - Queue worker enabled (`QUEUE_CONNECTION`)
+   - Optional `OPENAI_API_KEY` for vision second opinion
 5. Deploy. Run migrations from Cloud commands: `php artisan migrate --force`
 6. Reply to the contest with your `https://….laravel.cloud` homepage URL.
 
@@ -97,7 +105,7 @@ Point MCP at your own origin. Use S3-compatible storage for screenshots in produ
 ## Docs
 
 - [CONNECTORS.md](docs/CONNECTORS.md) — Cursor / Claude / ChatGPT packaging  
-- [SECOND-OPINION.md](docs/SECOND-OPINION.md) — design skills + UI element grounding research  
+- [SECOND-OPINION.md](docs/SECOND-OPINION.md) — second opinion, agent subagent findings, work packets  
 - [DEPLOY.md](docs/DEPLOY.md) — Laravel Cloud contest deploy  
 
 ## License

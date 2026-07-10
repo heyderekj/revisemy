@@ -52,8 +52,8 @@ new class extends Component
     <div class="relative z-10 mx-auto flex min-h-screen max-w-[1200px]">
         {{-- Agentation-style sidebar --}}
         <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-900/8 px-6 py-8 lg:flex">
-            <a href="/" class="inline-block">
-                <x-logo />
+            <a href="/" class="font-mark text-[2.35rem] leading-none tracking-tight text-rose-500">
+                ReviseMy
             </a>
 
             <nav class="mt-12 flex flex-1 flex-col gap-8 text-[14px]">
@@ -62,6 +62,7 @@ new class extends Component
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#top" class="transition hover:text-zinc-900">Home</a></li>
                         <li><a href="#how" class="transition hover:text-zinc-900">How you use it</a></li>
+                        <li><a href="#cloud" class="transition hover:text-zinc-900">Not just pins</a></li>
                         <li><a href="#agents" class="transition hover:text-zinc-900">How agents use it</a></li>
                     </ul>
                 </div>
@@ -105,13 +106,12 @@ new class extends Component
         <main id="top" class="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10">
             {{-- Mobile top bar --}}
             <div class="mb-8 flex items-center justify-between lg:hidden">
-                <a href="/" class="inline-block">
-                    <x-logo size="sm" />
-                </a>
+                <a href="/" class="font-mark text-3xl leading-none text-rose-500">ReviseMy</a>
                 <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
             </div>
             <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
                 <a href="#how" class="block" x-on:click="mobileNav = false">How you use it</a>
+                <a href="#cloud" class="block" x-on:click="mobileNav = false">Not just pins</a>
                 <a href="#agents" class="block" x-on:click="mobileNav = false">How agents use it</a>
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try token</a>
                 <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub</a>
@@ -134,7 +134,7 @@ new class extends Component
                 </div>
 
                 <p class="rm-fade-up-delay mt-5 max-w-xl text-[15px] leading-relaxed text-zinc-600 sm:text-base">
-                    Drop screenshots from any project. Leave pins like a markup pen. Approve or request changes — your agent reads the notes over MCP.
+                    Drop screenshots from any project. Agents can pre-load a second opinion. You pin what matters, then approve or request changes — structured work packets come back over MCP on Laravel Cloud.
                 </p>
 
                 @if ($error)
@@ -253,7 +253,7 @@ new class extends Component
                 <ol class="mt-6 max-w-2xl space-y-3 text-[15px] leading-relaxed text-zinc-600">
                     <li><span class="font-medium text-zinc-900">1.</span> Get a try token and paste the MCP config into Cursor (any project).</li>
                     <li><span class="font-medium text-zinc-900">2.</span> Ask your agent to screenshot UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code>.</li>
-                    <li><span class="font-medium text-zinc-900">3.</span> Open the <code class="font-mono text-[13px]">laravel.cloud</code> link and click to pin feedback.</li>
+                    <li><span class="font-medium text-zinc-900">3.</span> Open the <code class="font-mono text-[13px]">laravel.cloud</code> link — second opinion may already be on the shot. Pin what you care about.</li>
                     <li><span class="font-medium text-zinc-900">4.</span> Approve or request changes — the agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code>.</li>
                 </ol>
                 <p class="rm-note mt-6 inline max-w-2xl text-[15px] leading-relaxed text-zinc-700">
@@ -261,16 +261,29 @@ new class extends Component
                 </p>
             </section>
 
+            {{-- Not just pins --}}
+            <section id="cloud" class="mt-16 scroll-mt-8 sm:mt-20">
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Not just pins</h2>
+                <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                    Agentation-style markup is the start. ReviseMy is a shared critique surface on Laravel Cloud — queues, object storage, and work packets agents can actually implement.
+                </p>
+                <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
+                    <li><span class="font-medium text-zinc-800">Cloud-queued second opinion</span> — free design checklist on every shot; optional OpenAI vision when keyed</li>
+                    <li><span class="font-medium text-zinc-800">Agent as subagent</span> — <code class="font-mono text-[13px] text-rose-600">add_findings</code> drops suggestion / a11y / polish notes into the same review before you look</li>
+                    <li><span class="font-medium text-zinc-800">You stay authoritative</span> — only your pins and approve / request-changes flip the status</li>
+                </ul>
+            </section>
+
             {{-- How agents use it --}}
             <section id="agents" class="mt-16 scroll-mt-8 sm:mt-20">
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">How agents use it</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                    When the agent reads a review, it gets coordinates and intent — not “the blue button on the right.”
+                    <code class="font-mono text-[13px] text-rose-600">get_review</code> returns work packets — human intent first, second opinion as hints.
                 </p>
                 <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                    <li>Normalized pin positions on each screenshot</li>
-                    <li>Severity: <span class="font-medium text-zinc-800">must-fix</span> or <span class="font-medium text-zinc-800">nit</span></li>
-                    <li>Your exact note, plus an overall decision</li>
+                    <li>Human pins with severity <span class="font-medium text-zinc-800">must-fix</span> or <span class="font-medium text-zinc-800">nit</span> (apply these first)</li>
+                    <li><span class="font-medium text-zinc-800">second_opinion</span> findings: suggestion / a11y / polish from checklist, vision, or the agent subagent</li>
+                    <li>Optional <span class="font-medium text-zinc-800">page_url</span> for later DOM grounding</li>
                     <li>A stable review URL on Laravel Cloud</li>
                 </ul>
             </section>
@@ -344,8 +357,6 @@ new class extends Component
             rel="noreferrer"
             class="group relative block overflow-hidden rounded-2xl border border-zinc-900/10 bg-white/95 p-3 shadow-[0_20px_50px_-24px_rgba(24,24,27,0.55)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-rose-300/80"
         >
-            <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 via-rose-500 to-pink-400"></div>
-
             <div class="flex gap-3">
                 <img
                     src="{{ asset('images/taylor-otwell.png') }}"

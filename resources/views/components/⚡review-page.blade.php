@@ -2,6 +2,8 @@
 
 use App\Models\Annotation;
 use App\Models\Review;
+use App\Models\Screenshot;
+use App\Services\SecondOpinionService;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -34,7 +36,7 @@ new class extends Component
     {
         $this->review = Review::query()
             ->where('token', $this->token)
-            ->with(['screenshots.annotations'])
+            ->with(['screenshots.annotations', 'screenshots.findings'])
             ->firstOrFail();
     }
 
@@ -111,6 +113,12 @@ new class extends Component
         $this->loadReview();
     }
 
+    public function refreshSecondOpinion(SecondOpinionService $opinions): void
+    {
+        $opinions->requestForReview($this->review, $this->activeScreenshotIndex);
+        $this->loadReview();
+    }
+
     public function approve(): void
     {
         $this->decide(Review::STATUS_APPROVED);
@@ -144,23 +152,33 @@ new class extends Component
     {
         return $this->review->screenshots->values()->get($this->activeScreenshotIndex);
     }
+
+    public function getOpinionPendingProperty(): bool
+    {
+        return $this->review->screenshots->contains(
+            fn (Screenshot $shot) => $shot->second_opinion_status === Screenshot::OPINION_QUEUED
+        );
+    }
 };
 ?>
 
-<div class="min-h-screen">
+<div
+    class="min-h-screen"
+    @if ($this->opinionPending)
+        wire:poll.3s="loadReview"
+    @endif
+>
     <header class="border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
             <div class="min-w-0">
                 <div class="flex items-center gap-2 text-sm text-zinc-500">
-                    <a href="/" class="hover:opacity-90">
-                        <x-logo size="sm" class="!text-[1.35rem] !text-rose-600" />
-                    </a>
+                    <a href="/" class="font-semibold text-rose-600 hover:underline dark:text-rose-400">ReviseMy</a>
                     <span>/</span>
                     <span class="truncate">{{ $review->title }}</span>
                 </div>
                 <p class="mt-1 text-sm text-zinc-500">
                     @if ($review->effectiveStatus() === 'pending')
-                        Waiting on your eye
+                        Waiting on your eye — you own approve / request changes
                     @elseif ($review->effectiveStatus() === 'changes_requested')
                         Changes requested
                     @elseif ($review->effectiveStatus() === 'approved')
@@ -188,9 +206,16 @@ new class extends Component
                 </flux:callout>
             @endif
 
+            @if ($review->page_url)
+                <p class="text-sm text-zinc-500">
+                    Page:
+                    <a href="{{ $review->page_url }}" target="_blank" rel="noreferrer" class="text-rose-600 hover:underline">{{ $review->page_url }}</a>
+                </p>
+            @endif
+
             @if ($review->screenshots->count() > 1)
                 <div class="flex flex-wrap gap-2">
-                    @foreach ($review->screenshots as $index => $shot)
+                    @foreach ($review->screenshots as $index => $shotOption)
                         <flux:button
                             size="sm"
                             variant="{{ $activeScreenshotIndex === $index ? 'primary' : 'ghost' }}"
@@ -210,6 +235,7 @@ new class extends Component
                     class="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                     x-data="{
                         place(e) {
+                            if (e.target.closest('[data-finding], [data-pin]')) return;
                             const rect = e.currentTarget.getBoundingClientRect();
                             const x = (e.clientX - rect.left) / rect.width;
                             const y = (e.clientY - rect.top) / rect.height;
@@ -226,9 +252,30 @@ new class extends Component
                         @endif
                     />
 
+                    @foreach ($shot->findings as $findingIndex => $finding)
+                        @php($area = is_array($finding->area) ? $finding->area : null)
+                        @if ($area)
+                            <div
+                                data-finding
+                                class="pointer-events-none absolute z-[5] rounded-md border border-dashed border-sky-400/80 bg-sky-400/10"
+                                style="left: {{ $area['x'] * 100 }}%; top: {{ $area['y'] * 100 }}%; width: {{ $area['w'] * 100 }}%; height: {{ $area['h'] * 100 }}%;"
+                                title="{{ $finding->body }}"
+                            ></div>
+                            <div
+                                data-finding
+                                class="absolute z-[6] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white text-[10px] font-semibold text-sky-700 shadow-sm"
+                                style="left: {{ ($area['x'] + $area['w'] / 2) * 100 }}%; top: {{ ($area['y'] + $area['h'] / 2) * 100 }}%;"
+                                title="{{ $finding->body }}"
+                            >
+                                S{{ $findingIndex + 1 }}
+                            </div>
+                        @endif
+                    @endforeach
+
                     @foreach ($shot->annotations as $annotation)
                         <button
                             type="button"
+                            data-pin
                             class="absolute z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-semibold text-white shadow-lg ring-2 ring-white
                                 {{ $annotation->severity === 'nit' ? 'bg-amber-500' : 'bg-rose-600' }}"
                             style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
@@ -249,7 +296,9 @@ new class extends Component
                 </div>
 
                 @if ($review->isOpenForFeedback())
-                    <p class="text-sm text-zinc-500">Click the screenshot to pin feedback.</p>
+                    <p class="text-sm text-zinc-500">
+                        Solid pins are yours (authoritative). Dashed sky markers are second opinion — suggestions only.
+                    </p>
                 @endif
             @else
                 <flux:callout variant="warning">No screenshots on this review yet.</flux:callout>
@@ -292,7 +341,8 @@ new class extends Component
 
         <aside class="space-y-4">
             <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <flux:heading size="sm" class="mb-3">Pins</flux:heading>
+                <flux:heading size="sm" class="mb-3">Your pins</flux:heading>
+                <p class="mb-3 text-xs text-zinc-500">Authoritative — the agent must apply these.</p>
 
                 @php($pins = $shot?->annotations ?? collect())
 
@@ -312,6 +362,47 @@ new class extends Component
                                     @endif
                                 </div>
                                 <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{{ $pin->body }}</p>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+
+            <div class="rounded-2xl border border-sky-200/80 bg-sky-50/50 p-4 shadow-sm dark:border-sky-900 dark:bg-sky-950/30">
+                <div class="mb-3 flex items-start justify-between gap-2">
+                    <div>
+                        <flux:heading size="sm">Second opinion</flux:heading>
+                        <p class="mt-1 text-xs text-zinc-500">Suggestions — not a decision</p>
+                    </div>
+                    @if ($review->isOpenForFeedback())
+                        <flux:button size="sm" variant="ghost" wire:click="refreshSecondOpinion" wire:loading.attr="disabled">
+                            Refresh
+                        </flux:button>
+                    @endif
+                </div>
+
+                @php($findings = $shot?->findings ?? collect())
+                @php($status = $shot?->second_opinion_status ?? 'idle')
+
+                @if ($status === 'queued')
+                    <p class="text-sm text-sky-700 dark:text-sky-300">Running on Laravel Cloud…</p>
+                @elseif ($status === 'failed')
+                    <p class="text-sm text-rose-600">Second opinion failed{{ $shot?->second_opinion_error ? ': '.$shot->second_opinion_error : '.' }}</p>
+                @elseif ($findings->isEmpty())
+                    <p class="text-sm text-zinc-500">No suggestions yet. Refresh to queue a checklist pass, or wait for the agent subagent.</p>
+                @else
+                    <ul class="space-y-3">
+                        @foreach ($findings as $findingIndex => $finding)
+                            <li class="rounded-xl border border-sky-100 bg-white/80 p-3 dark:border-sky-900 dark:bg-zinc-900/60">
+                                <div class="mb-1 flex flex-wrap items-center gap-2">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-sky-500 text-[10px] font-semibold text-sky-700">S{{ $findingIndex + 1 }}</span>
+                                    <span class="text-xs uppercase tracking-wide text-zinc-500">{{ $finding->severity }}</span>
+                                    <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800 dark:bg-sky-900 dark:text-sky-200">{{ $finding->sourceLabel() }}</span>
+                                    @if ($finding->related_pin)
+                                        <span class="text-[10px] text-zinc-400">→ pin {{ $finding->related_pin }}</span>
+                                    @endif
+                                </div>
+                                <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{{ $finding->body }}</p>
                             </li>
                         @endforeach
                     </ul>

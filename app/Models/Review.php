@@ -24,6 +24,7 @@ class Review extends Model
         'token',
         'title',
         'context',
+        'page_url',
         'status',
         'decision_note',
         'decision_at',
@@ -88,16 +89,57 @@ class Review extends Model
     }
 
     /**
+     * Structured work packet for agents: human pins first, second opinion as hints.
+     *
      * @return array<string, mixed>
      */
     public function toAgentPayload(): array
     {
-        $this->loadMissing(['screenshots.annotations']);
+        $this->loadMissing(['screenshots.annotations', 'screenshots.findings']);
+
+        $screenshots = $this->screenshots->map(function (Screenshot $shot, int $index) {
+            $pins = $shot->annotations
+                ->sortBy('number')
+                ->values()
+                ->map(fn (Annotation $annotation) => [
+                    'number' => $annotation->number,
+                    'x' => (float) $annotation->x,
+                    'y' => (float) $annotation->y,
+                    'severity' => $annotation->severity,
+                    'body' => $annotation->body,
+                ])->all();
+
+            $findings = $shot->findings
+                ->values()
+                ->map(fn (Finding $finding) => $finding->toAgentArray())
+                ->all();
+
+            return [
+                'index' => $index,
+                'url' => $shot->url(),
+                'width' => $shot->width,
+                'height' => $shot->height,
+                'second_opinion_status' => $shot->second_opinion_status,
+                'pins' => $pins,
+                // Legacy key for older agents
+                'annotations' => $pins,
+                'second_opinion' => $findings,
+            ];
+        })->all();
+
+        $allFindings = collect($screenshots)->flatMap(fn (array $s) => collect($s['second_opinion'])->map(
+            fn (array $f) => $f + ['screenshot_index' => $s['index']]
+        ))->values()->all();
+
+        $allPins = collect($screenshots)->flatMap(fn (array $s) => collect($s['pins'])->map(
+            fn (array $p) => $p + ['screenshot_index' => $s['index']]
+        ))->values()->all();
 
         return [
             'id' => $this->public_id,
             'title' => $this->title,
             'context' => $this->context,
+            'page_url' => $this->page_url,
             'status' => $this->effectiveStatus(),
             'status_label' => match ($this->effectiveStatus()) {
                 self::STATUS_PENDING => 'Waiting on your eye',
@@ -110,22 +152,12 @@ class Review extends Model
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
-            'screenshots' => $this->screenshots->map(fn (Screenshot $shot, int $index) => [
-                'index' => $index,
-                'url' => $shot->url(),
-                'width' => $shot->width,
-                'height' => $shot->height,
-                'annotations' => $shot->annotations
-                    ->sortBy('number')
-                    ->values()
-                    ->map(fn (Annotation $annotation) => [
-                        'number' => $annotation->number,
-                        'x' => (float) $annotation->x,
-                        'y' => (float) $annotation->y,
-                        'severity' => $annotation->severity,
-                        'body' => $annotation->body,
-                    ])->all(),
-            ])->all(),
+            'guidance' => 'Apply human pins first (must-fix / nit). Treat second_opinion findings as hints only — never override the human decision.',
+            'work_packets' => [
+                'pins' => $allPins,
+                'second_opinion' => $allFindings,
+            ],
+            'screenshots' => $screenshots,
         ];
     }
 }

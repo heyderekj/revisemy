@@ -1,68 +1,70 @@
-# Second opinion & UI grounding (research)
+# Second opinion & work packets
 
-ReviseMy’s human pins stay authoritative. A **second opinion** is optional, labeled, and never overrides approve / request-changes. UI grounding tools help the *implementing* agent map pins to real elements.
+ReviseMy’s **human pins stay authoritative**. Second opinion is optional, labeled, and never flips approve / request-changes.
 
-## Design skills (screenshot-specific critique)
+## What ships today (v1.1)
 
-| Project | Fit for ReviseMy | Notes |
-|---------|------------------|--------|
-| [aslanmazhidov/design-review-skill](https://github.com/aslanmazhidov/design-review-skill) | Strong | Playwright screenshots → structured audit (type, contrast, rhythm, hierarchy) + concrete CSS fixes. Vision-first, not code-guessing. |
-| [educlopez/ui-craft](https://github.com/educlopez/ui-craft) | Strong | `design-reviewer` + `a11y-auditor` agents; severity-tagged findings; anti-slop / score gates. Good as an MCP-side “opinion” layer. |
-| [edrouhardmicrosoft/agent-canvas-skills](https://github.com/edrouhardmicrosoft/agent-canvas-skills) | Strong | Annotated screenshots, interactive element picker, fix task lists. Closest to pin + annotate UX. |
-| [kozz36/frontend-designer-skill](https://github.com/kozz36/frontend-designer-skill) | Medium | Tokens, CSS layers, WCAG — better for *implementation* taste than per-screenshot critique. |
-| [carmahhawwari/ui-design-brain](https://github.com/carmahhawwari/ui-design-brain) | Medium | 60+ component patterns — helps agents build correctly after pins, not critique the shot. |
-| [keg-flair/cursor-designer-agents](https://github.com/keg-flair/cursor-designer-agents) | Medium | Screenshot-oriented designer skills for Cursor. |
+On every screenshot upload, Laravel Cloud queues `GenerateSecondOpinionJob`:
 
-**Recommended combo for ReviseMy:**  
-`design-review-skill` *or* `ui-craft:design-reviewer` for the second opinion · `frontend-designer-skill` / `ui-design-brain` as implementer skills in the consumer’s repo.
+1. **Free checklist** — hierarchy, contrast, spacing, mobile/desktop heuristics from dimensions + review context keywords.
+2. **OpenAI vision upgrade** — when `OPENAI_API_KEY` is set, the same job merges vision findings (`suggestion` / `a11y` / `polish` only).
+
+Agents can also act as a **design-reviewer subagent** via `add_findings` before the human opens the link. Those land in the same review UI with an `Agent` badge.
 
 ### Non-contradiction rules
 
-1. Human pins = **intent** (`must-fix` / `nit` / decision).  
-2. Skill output = **suggestions** only (`suggestion` / `a11y` / `polish`) — never auto-flip review status.  
-3. If a skill finding overlaps a human pin, **merge under the pin** (enrich), don’t duplicate as a conflicting must-fix.  
-4. Second opinion is scoped to **this screenshot** (+ optional URL), not the whole product.
+1. Human pins = **intent** (`must-fix` / `nit` / decision).
+2. Findings = **suggestions** only (`suggestion` / `a11y` / `polish`) — never auto-flip review status.
+3. If a finding overlaps a human pin, enrich under `related_pin` — don’t invent a conflicting must-fix.
+4. Second opinion is scoped to **this screenshot** (+ optional `page_url`), not the whole product.
 
-Suggested payload shape:
+### MCP tools
+
+| Tool | Role |
+|------|------|
+| `create_review` | Screenshots + optional `page_url`; auto-queues second opinion |
+| `add_findings` | Subagent path — push critique into the open review |
+| `request_second_opinion` | Re-queue checklist (+ vision if keyed) |
+| `get_review` | Work packets: `work_packets.pins` first, then `work_packets.second_opinion` + `guidance` |
+
+### Review UI
+
+- Solid rose/amber markers = **your pins**
+- Dashed sky markers / areas = **second opinion**
+- Sidebar: **Your pins** vs **Second opinion** (Refresh re-queues the Cloud job)
+
+### Agent payload shape
 
 ```json
 {
-  "source": "second_opinion",
-  "skill": "design-review",
-  "findings": [
-    {
-      "severity": "suggestion",
-      "area": { "x": 0.62, "y": 0.72, "w": 0.2, "h": 0.08 },
-      "body": "Primary CTA contrast may fail WCAG AA on this background.",
-      "related_pin": 1
-    }
-  ]
+  "guidance": "Apply human pins first…",
+  "work_packets": {
+    "pins": [{ "number": 1, "severity": "must-fix", "body": "…", "screenshot_index": 0 }],
+    "second_opinion": [{ "source": "checklist", "severity": "a11y", "body": "…", "area": { "x": 0.1, "y": 0.2, "w": 0.3, "h": 0.1 }, "screenshot_index": 0 }]
+  }
 }
 ```
 
-## UI element grounding (stronger implementations)
+### Cloud env
 
-| Project | What it gives agents | Notes |
-|---------|----------------------|--------|
-| [microsoft/OmniParser](https://github.com/microsoft/OmniParser) | BBoxes + labels for UI regions from a **screenshot alone** | Best when you only have the image (ReviseMy’s default). Heavier (vision models). |
-| [dirkknibbe/uipe](https://github.com/dirkknibbe/uipe) | MCP **UI scene graph** (DOM + a11y + optional OmniParser) | Ideal when a live URL is available alongside the shot. |
-| [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Screenshots + accessibility tree | Lightweight grounding for local/staging URLs. |
-| [Agentation](https://www.agentation.com/) | Live DOM selectors + component path | Gold standard when the page is open in-browser; ReviseMy is screenshot-first by design. |
-| Pincushion (see [DEV writeup](https://dev.to/matttdamon/how-i-built-an-mcp-server-that-turns-visual-feedback-into-code-fixes-31nf)) | Pin as **work packet** (URL, selector, thread) | Pattern to copy: don’t hand agents a bare PNG — hand structured intent. |
+```
+QUEUE_CONNECTION=database   # or Cloud’s queue
+REVISEMY_SECOND_OPINION=true
+OPENAI_API_KEY=             # optional — upgrades checklist with vision
+REVISEMY_OPENAI_MODEL=gpt-4o-mini
+```
 
-**Recommended path for ReviseMy:**
+Enable a **queue worker** on Laravel Cloud so jobs run after upload.
 
-1. **v1 (now):** human pins with normalized `x/y` + note (already shipped).  
-2. **v1.1:** optional `second_opinion` job on upload — run a design-review skill / vision checklist → attach suggestions.  
-3. **v1.2:** if agent also sends `page_url`, call Playwright MCP / UIPE to attach `selector` / a11y role to each pin.  
-4. **v1.3:** optional OmniParser pass on the screenshot to propose element labels near each pin (“button”, “nav link”) when no DOM is available.
+## Roadmap (not blocking contest)
 
-## Product wording
+| Step | Idea |
+|------|------|
+| v1.2 | If `page_url` is set, attach selector / a11y role via Playwright MCP / UIPE |
+| v1.3 | Optional OmniParser pass for element labels when no DOM is available |
 
-- UI: **“Second opinion”** (not “AI review” as authority).  
-- Agent tool: e.g. `get_review` already returns human pins; add `second_opinion` array separately.  
-- Skill for consumers: teach “apply human pins first; treat second_opinion as hints.”
+Research references (implementer skills for consumer repos):
 
-## Weekend cut
-
-Do **not** block the Cloud contest on OmniParser or ui-craft. Document the path; ship human pins + MCP first. Second opinion can be a follow-up MCP tool: `request_second_opinion(review_id)`.
+- [design-review-skill](https://github.com/aslanmazhidov/design-review-skill)
+- [ui-craft](https://github.com/educlopez/ui-craft)
+- [OmniParser](https://github.com/microsoft/OmniParser) / [UIPE](https://github.com/dirkknibbe/uipe) / [Playwright MCP](https://github.com/microsoft/playwright-mcp)
