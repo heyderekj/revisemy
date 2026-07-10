@@ -94,6 +94,12 @@ Point MCP at your own origin. Use S3-compatible storage for screenshots in produ
 - Laravel Sanctum try tokens
 - Postgres / SQLite + object storage
 
+## Docs
+
+- [CONNECTORS.md](docs/CONNECTORS.md) — Cursor / Claude / ChatGPT packaging  
+- [SECOND-OPINION.md](docs/SECOND-OPINION.md) — design skills + UI element grounding research  
+- [DEPLOY.md](docs/DEPLOY.md) — Laravel Cloud contest deploy  
+
 ## License
 
 MIT
