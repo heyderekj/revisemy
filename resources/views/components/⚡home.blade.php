@@ -139,47 +139,93 @@ new class extends Component
                     <p class="mt-3 text-sm text-rose-600">{{ $error }}</p>
                 @endif
 
-                {{-- Product stage: browser mock + annotation popover --}}
+                {{-- Product stage: stylized Laravel Cloud dashboard under review --}}
                 <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
                     <div class="overflow-hidden rounded-xl border border-zinc-900/10 bg-white shadow-[0_18px_50px_-28px_rgba(24,24,27,0.45)]">
                         <div class="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2">
                             <span class="h-2.5 w-2.5 rounded-full bg-zinc-300"></span>
                             <span class="h-2.5 w-2.5 rounded-full bg-zinc-300"></span>
                             <span class="h-2.5 w-2.5 rounded-full bg-zinc-300"></span>
-                            <span class="ml-2 font-mono text-[11px] text-zinc-400">laravel.cloud/r/…</span>
+                            <span class="ml-2 truncate font-mono text-[11px] text-zinc-400">cloud.laravel.com · revisemy / production</span>
                         </div>
 
-                        <div class="relative min-h-[280px] bg-zinc-100 sm:min-h-[360px]">
-                            {{-- Fake reviewed UI --}}
-                            <div class="absolute inset-4 overflow-hidden rounded-lg border border-zinc-200 bg-[#fafafa] sm:inset-6">
-                                <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-                                    <span class="text-sm font-semibold text-zinc-800">Northwind</span>
-                                    <span class="text-xs text-zinc-400">Cart · 2 items</span>
-                                </div>
-                                <div class="grid gap-4 p-4 sm:grid-cols-[1.2fr_0.8fr] sm:p-5">
-                                    <div class="space-y-3">
-                                        <div class="h-24 rounded-md bg-gradient-to-br from-zinc-200 via-zinc-100 to-rose-100/70 sm:h-32"></div>
-                                        <div class="h-2.5 w-2/3 rounded bg-zinc-200"></div>
-                                        <div class="h-2.5 w-1/2 rounded bg-zinc-100"></div>
+                        <div class="relative min-h-[300px] bg-[#f8f8f9] sm:min-h-[400px]">
+                            {{-- Stylized Cloud environment canvas --}}
+                            <div class="absolute inset-3 overflow-hidden rounded-lg border border-zinc-200/80 bg-white sm:inset-5">
+                                {{-- Cloud top bar --}}
+                                <div class="flex items-center justify-between gap-3 border-b border-zinc-100 px-3 py-2.5 sm:px-4">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-[10px] text-zinc-400">Derek · revisemy · production</p>
+                                        <div class="mt-0.5 flex items-center gap-2">
+                                            <span class="flex h-5 w-5 items-center justify-center rounded bg-rose-500 text-[10px] font-bold text-white">R</span>
+                                            <span class="text-sm font-semibold text-zinc-900">revisemy · production</span>
+                                        </div>
                                     </div>
-                                    <div class="rounded-md border border-zinc-200 bg-white p-4">
-                                        <p class="text-[10px] uppercase tracking-wide text-zinc-400">Total</p>
-                                        <p class="mt-1 text-2xl font-semibold text-zinc-900">$128</p>
-                                        <button type="button" class="mt-4 w-full rounded-md bg-zinc-900 px-3 py-2.5 text-sm font-medium text-white">
-                                            Continue to payment
-                                        </button>
+                                    <div class="hidden items-center gap-1.5 sm:flex">
+                                        <span class="rounded-md border border-zinc-200 px-2 py-1 text-[10px] text-zinc-500">Cancel</span>
+                                        <span class="rounded-md bg-zinc-900 px-2.5 py-1 text-[10px] font-medium text-white">Visit</span>
+                                    </div>
+                                </div>
+
+                                {{-- Tabs --}}
+                                <div class="flex gap-4 border-b border-zinc-100 px-3 text-[11px] text-zinc-400 sm:px-4">
+                                    <span class="border-b-2 border-zinc-900 py-2 font-medium text-zinc-900">Environment</span>
+                                    <span class="py-2">Deployments</span>
+                                    <span class="hidden py-2 sm:inline">Logs</span>
+                                    <span class="hidden py-2 md:inline">Metrics</span>
+                                </div>
+
+                                <div class="grid gap-3 p-3 sm:grid-cols-[1.35fr_0.9fr] sm:gap-4 sm:p-4">
+                                    {{-- Infra map --}}
+                                    <div class="relative rounded-lg border border-dashed border-zinc-200 bg-[linear-gradient(to_right,rgb(24_24_27/0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgb(24_24_27/0.03)_1px,transparent_1px)] bg-[size:20px_20px] p-3">
+                                        <div class="grid gap-2 sm:grid-cols-3">
+                                            <div class="rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm">
+                                                <p class="text-[10px] font-medium text-zinc-500">Network</p>
+                                                <p class="mt-1 text-[11px] font-semibold text-zinc-800">Edge network</p>
+                                                <p class="mt-1 flex items-center gap-1 text-[10px] text-emerald-600"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> CDN · Active</p>
+                                            </div>
+                                            <div class="rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm">
+                                                <p class="text-[10px] font-medium text-zinc-500">US East</p>
+                                                <p class="mt-1 text-[11px] font-semibold text-zinc-800">App cluster</p>
+                                                <p class="mt-1 text-[10px] text-zinc-500">Flex 512 MiB</p>
+                                            </div>
+                                            <div class="flex items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50/80 p-2.5 text-[10px] text-zinc-400">
+                                                + Add resource
+                                            </div>
+                                        </div>
+                                        <p class="mt-2 font-mono text-[9px] text-zinc-400">revisemy-production-….laravel.cloud</p>
+                                    </div>
+
+                                    {{-- Deployments --}}
+                                    <div class="rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm">
+                                        <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-400">Latest deployments</p>
+                                        <ul class="mt-2 space-y-1.5">
+                                            <li class="flex items-start gap-2 text-[10px]">
+                                                <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"></span>
+                                                <span><span class="font-medium text-zinc-800">Deploying</span> · second opinion docs</span>
+                                            </li>
+                                            <li class="flex items-start gap-2 text-[10px]">
+                                                <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"></span>
+                                                <span><span class="font-medium text-zinc-800">Deployed</span> · Taylor mention</span>
+                                            </li>
+                                            <li class="flex items-start gap-2 text-[10px]">
+                                                <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"></span>
+                                                <span><span class="font-medium text-zinc-800">Deployed</span> · pink markup pen</span>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- Pins --}}
-                            <div class="rm-pin-pop absolute left-[68%] top-[68%] z-20 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white ring-[3px] ring-white" style="transform: translate(-50%, -50%)">1</div>
-                            <div class="rm-pin-pop-2 absolute left-[30%] top-[36%] z-10 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white ring-[3px] ring-white" style="transform: translate(-50%, -50%)">2</div>
+                            {{-- Pins on Cloud UI --}}
+                            <div class="rm-pin-pop absolute left-[22%] top-[48%] z-20 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white ring-[3px] ring-white" style="transform: translate(-50%, -50%)">1</div>
+                            <div class="rm-pin-pop-2 absolute left-[72%] top-[42%] z-10 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white ring-[3px] ring-white" style="transform: translate(-50%, -50%)">2</div>
+                            <div class="rm-pin-pop-3 absolute left-[48%] top-[28%] z-10 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white ring-[3px] ring-white" style="transform: translate(-50%, -50%)">3</div>
 
-                            {{-- Annotation popover (Agentation-style) --}}
-                            <div class="absolute bottom-[18%] left-[42%] z-30 w-[min(100%,240px)] -translate-x-1/2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-xl sm:left-[58%] sm:bottom-[22%]">
-                                <p class="font-mono text-[10px] text-zinc-400">button.checkout-cta</p>
-                                <p class="mt-2 text-[13px] leading-snug text-zinc-100">CTA feels light — bump weight or contrast.</p>
+                            {{-- Annotation popover --}}
+                            <div class="absolute bottom-[14%] left-1/2 z-30 w-[min(100%-1.5rem,260px)] -translate-x-1/2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-xl sm:left-[70%] sm:bottom-[20%] sm:translate-x-0">
+                                <p class="font-mono text-[10px] text-zinc-400">card.app-cluster</p>
+                                <p class="mt-2 text-[13px] leading-snug text-zinc-100">Cluster label hierarchy feels soft — bump weight so “App cluster” reads first.</p>
                                 <div class="mt-3 flex items-center justify-end gap-3">
                                     <span class="text-xs text-zinc-500">Cancel</span>
                                     <span class="rounded bg-rose-500 px-2.5 py-1 text-xs font-medium text-white">Add</span>
@@ -193,6 +239,9 @@ new class extends Component
                             </div>
                         </div>
                     </div>
+                    <p class="mt-3 text-center text-[12px] text-zinc-400">
+                        Stylized Laravel Cloud environment — the kind of UI your agent ships, then asks you to revise.
+                    </p>
                 </div>
             </section>
 
