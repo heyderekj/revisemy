@@ -59,121 +59,112 @@ new class extends Component
         </nav>
     </header>
 
-    {{-- Hero: one composition — brand, line, CTA, product stage --}}
-    <section class="relative z-10 mx-auto max-w-6xl px-6 pb-16 pt-8 sm:px-8 sm:pb-24 sm:pt-12">
-        <div class="rm-fade-up max-w-3xl">
-            <p class="font-display text-[clamp(3.25rem,9vw,6.5rem)] leading-[0.92] tracking-tight text-zinc-900">
-                ReviseMy
-            </p>
-            <p class="rm-fade-up-delay mt-5 max-w-xl text-lg leading-relaxed text-zinc-600 sm:text-xl">
-                Pin feedback for your agent — screenshots in, structured notes out over MCP.
-            </p>
-            <div class="rm-fade-up-delay-2 mt-8 flex flex-wrap items-center gap-4">
-                @if (! $token)
-                    <flux:button variant="primary" wire:click="getTryToken" class="!h-11 !bg-teal-800 !px-5 hover:!bg-teal-700">
-                        Get a try token
-                    </flux:button>
-                    <span class="text-sm text-zinc-500">Any project · no account · Laravel Cloud</span>
-                @else
-                    <a href="#setup" class="inline-flex h-11 items-center rounded-lg bg-teal-800 px-5 text-sm font-medium text-white transition hover:bg-teal-700">
-                        Jump to your config
-                    </a>
+    {{-- Hero: one composition — brand, line, CTA, product stage in first viewport --}}
+    <section class="relative z-10 mx-auto flex min-h-[calc(100svh-4.5rem)] max-w-6xl flex-col px-6 pb-10 pt-4 sm:px-8 sm:pb-14 sm:pt-6">
+        <div class="rm-fade-up grid items-end gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-10">
+            <div class="max-w-xl pb-1">
+                <p class="font-display text-[clamp(2.75rem,7vw,4.75rem)] leading-[0.92] tracking-tight text-zinc-900">
+                    ReviseMy
+                </p>
+                <p class="rm-fade-up-delay mt-4 max-w-md text-base leading-relaxed text-zinc-600 sm:text-lg">
+                    Pin feedback for your agent — screenshots in, structured notes out over MCP.
+                </p>
+                <div class="rm-fade-up-delay-2 mt-6 flex flex-wrap items-center gap-3">
+                    @if (! $token)
+                        <flux:button variant="primary" wire:click="getTryToken" class="!h-11 !bg-teal-800 !px-5 hover:!bg-teal-700">
+                            Get a try token
+                        </flux:button>
+                        <span class="text-sm text-zinc-500">Any project · no account</span>
+                    @else
+                        <a href="#setup" class="inline-flex h-11 items-center rounded-lg bg-teal-800 px-5 text-sm font-medium text-white transition hover:bg-teal-700">
+                            Jump to your config
+                        </a>
+                    @endif
+                </div>
+                @if ($error)
+                    <p class="mt-4 text-sm text-rose-700">{{ $error }}</p>
                 @endif
             </div>
-            @if ($error)
-                <p class="mt-4 text-sm text-rose-700">{{ $error }}</p>
-            @endif
-        </div>
 
-        {{-- Dominant product stage (Agentation-style: show the tool) --}}
-        <div class="rm-fade-up-delay-2 relative mt-14 sm:mt-16">
-            <div class="pointer-events-none absolute -inset-x-8 -top-10 bottom-10 bg-[radial-gradient(ellipse_at_center,_rgb(15_118_110_/_0.12),_transparent_65%)] rm-stage-shine"></div>
+            {{-- Dominant product stage sits beside brand on desktop --}}
+            <div class="rm-fade-up-delay-2 relative min-w-0 lg:row-span-1">
+                <div class="pointer-events-none absolute -inset-6 bg-[radial-gradient(ellipse_at_center,_rgb(15_118_110_/_0.16),_transparent_70%)] rm-stage-shine"></div>
 
-            <div class="relative overflow-hidden rounded-2xl border border-zinc-900/10 bg-zinc-900 shadow-[0_40px_80px_-40px_rgba(24,24,27,0.55)]">
-                {{-- Review chrome --}}
-                <div class="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 sm:px-5">
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 text-xs text-zinc-400">
-                            <span class="font-medium text-teal-400">ReviseMy</span>
-                            <span>/</span>
-                            <span class="truncate text-zinc-300">Checkout redesign</span>
+                <div class="relative overflow-hidden rounded-2xl border border-zinc-900/10 bg-zinc-900 shadow-[0_40px_80px_-40px_rgba(24,24,27,0.55)]">
+                    <div class="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2.5 sm:px-4">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 text-[11px] text-zinc-400">
+                                <span class="font-medium text-teal-400">ReviseMy</span>
+                                <span>/</span>
+                                <span class="truncate text-zinc-300">Checkout redesign</span>
+                            </div>
+                            <p class="mt-0.5 text-[11px] text-zinc-500">Waiting on your eye</p>
                         </div>
-                        <p class="mt-0.5 text-xs text-zinc-500">Waiting on your eye</p>
+                        <div class="hidden items-center gap-1.5 sm:flex">
+                            <span class="rounded-md px-2.5 py-1 text-[11px] text-zinc-300 ring-1 ring-white/10">Request changes</span>
+                            <span class="rounded-md bg-teal-700 px-2.5 py-1 text-[11px] font-medium text-white">Approve</span>
+                        </div>
                     </div>
-                    <div class="hidden items-center gap-2 sm:flex">
-                        <span class="rounded-md px-3 py-1.5 text-xs text-zinc-300 ring-1 ring-white/10">Request changes</span>
-                        <span class="rounded-md bg-teal-700 px-3 py-1.5 text-xs font-medium text-white">Looks good — approve</span>
-                    </div>
-                </div>
 
-                <div class="grid lg:grid-cols-[1fr_280px]">
-                    {{-- Mock screenshot canvas --}}
-                    <div class="relative min-h-[320px] bg-[#1c1917] sm:min-h-[420px]">
-                        <div class="absolute inset-4 overflow-hidden rounded-xl bg-[#fafaf9] sm:inset-6">
-                            {{-- Fake product UI being reviewed --}}
-                            <div class="flex h-full flex-col">
-                                <div class="flex items-center justify-between border-b border-zinc-200 px-5 py-3">
-                                    <span class="text-sm font-semibold text-zinc-800">Northwind</span>
-                                    <span class="text-xs text-zinc-400">Cart · 2 items</span>
-                                </div>
-                                <div class="grid flex-1 gap-4 p-5 sm:grid-cols-[1.2fr_0.8fr]">
-                                    <div class="space-y-3">
-                                        <div class="h-28 rounded-lg bg-gradient-to-br from-zinc-200 via-stone-100 to-teal-100/80 sm:h-36"></div>
-                                        <div class="h-3 w-2/3 rounded bg-zinc-200"></div>
-                                        <div class="h-3 w-1/2 rounded bg-zinc-100"></div>
+                    <div class="grid sm:grid-cols-[1fr_200px]">
+                        <div class="relative h-[240px] bg-[#1c1917] sm:h-[300px] lg:h-[340px]">
+                            <div class="absolute inset-3 overflow-hidden rounded-xl bg-[#fafaf9] sm:inset-4">
+                                <div class="flex h-full flex-col">
+                                    <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-2.5">
+                                        <span class="text-sm font-semibold text-zinc-800">Northwind</span>
+                                        <span class="text-[11px] text-zinc-400">Cart · 2 items</span>
                                     </div>
-                                    <div class="flex flex-col justify-between rounded-lg border border-zinc-200 bg-white p-4">
-                                        <div>
-                                            <p class="text-xs uppercase tracking-wide text-zinc-400">Total</p>
-                                            <p class="mt-1 text-2xl font-semibold text-zinc-900">$128</p>
+                                    <div class="grid flex-1 gap-3 p-4 sm:grid-cols-[1.15fr_0.85fr]">
+                                        <div class="space-y-2.5">
+                                            <div class="h-20 rounded-lg bg-gradient-to-br from-zinc-200 via-stone-100 to-teal-100/80 sm:h-28"></div>
+                                            <div class="h-2.5 w-2/3 rounded bg-zinc-200"></div>
+                                            <div class="h-2.5 w-1/2 rounded bg-zinc-100"></div>
                                         </div>
-                                        <button type="button" class="mt-4 rounded-lg bg-zinc-900 px-3 py-2.5 text-sm font-medium text-white">
-                                            Continue to payment
-                                        </button>
+                                        <div class="flex flex-col justify-between rounded-lg border border-zinc-200 bg-white p-3">
+                                            <div>
+                                                <p class="text-[10px] uppercase tracking-wide text-zinc-400">Total</p>
+                                                <p class="mt-0.5 text-xl font-semibold text-zinc-900">$128</p>
+                                            </div>
+                                            <button type="button" class="mt-3 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-medium text-white">
+                                                Continue to payment
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {{-- Pins --}}
-                            <div class="rm-pin-pop absolute left-[62%] top-[72%] z-10 flex h-7 w-7 items-center justify-center rounded-full bg-teal-700 text-xs font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)" title="CTA feels light">
-                                1
-                            </div>
-                            <div class="rm-pin-pop-2 absolute left-[28%] top-[38%] z-10 flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-xs font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)" title="Image ratio feels tall">
-                                2
-                            </div>
-                            <div class="rm-pin-pop-3 absolute left-[18%] top-[18%] z-10 flex h-7 w-7 items-center justify-center rounded-full bg-teal-700 text-xs font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)" title="Nav weight">
-                                3
+                                <div class="rm-pin-pop absolute left-[62%] top-[72%] z-10 flex h-6 w-6 items-center justify-center rounded-full bg-teal-700 text-[10px] font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)">1</div>
+                                <div class="rm-pin-pop-2 absolute left-[28%] top-[38%] z-10 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-[10px] font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)">2</div>
+                                <div class="rm-pin-pop-3 absolute left-[18%] top-[18%] z-10 flex h-6 w-6 items-center justify-center rounded-full bg-teal-700 text-[10px] font-semibold text-white ring-2 ring-white" style="transform: translate(-50%, -50%)">3</div>
                             </div>
                         </div>
-                    </div>
 
-                    {{-- Pins sidebar --}}
-                    <aside class="border-t border-white/10 bg-zinc-950/80 p-4 lg:border-l lg:border-t-0">
-                        <p class="text-xs font-medium uppercase tracking-wider text-zinc-500">Pins</p>
-                        <ul class="mt-4 space-y-3">
-                            <li class="rounded-lg border border-white/10 bg-white/5 p-3">
-                                <div class="mb-1.5 flex items-center gap-2">
-                                    <span class="flex h-5 w-5 items-center justify-center rounded-full bg-teal-700 text-[10px] font-semibold text-white">1</span>
-                                    <span class="text-[10px] uppercase tracking-wide text-zinc-500">Must fix</span>
-                                </div>
-                                <p class="text-sm leading-snug text-zinc-300">CTA feels light — bump weight or contrast.</p>
-                            </li>
-                            <li class="rounded-lg border border-white/10 bg-white/5 p-3">
-                                <div class="mb-1.5 flex items-center gap-2">
-                                    <span class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-semibold text-white">2</span>
-                                    <span class="text-[10px] uppercase tracking-wide text-zinc-500">Nit</span>
-                                </div>
-                                <p class="text-sm leading-snug text-zinc-300">Hero image ratio feels tall on mobile.</p>
-                            </li>
-                            <li class="rounded-lg border border-white/10 bg-white/5 p-3">
-                                <div class="mb-1.5 flex items-center gap-2">
-                                    <span class="flex h-5 w-5 items-center justify-center rounded-full bg-teal-700 text-[10px] font-semibold text-white">3</span>
-                                    <span class="text-[10px] uppercase tracking-wide text-zinc-500">Must fix</span>
-                                </div>
-                                <p class="text-sm leading-snug text-zinc-300">Wordmark competes with the page title.</p>
-                            </li>
-                        </ul>
-                    </aside>
+                        <aside class="hidden border-l border-white/10 bg-zinc-950/80 p-3 sm:block">
+                            <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Pins</p>
+                            <ul class="mt-3 space-y-2">
+                                <li class="rounded-lg border border-white/10 bg-white/5 p-2.5">
+                                    <div class="mb-1 flex items-center gap-1.5">
+                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-teal-700 text-[9px] font-semibold text-white">1</span>
+                                        <span class="text-[9px] uppercase tracking-wide text-zinc-500">Must fix</span>
+                                    </div>
+                                    <p class="text-[11px] leading-snug text-zinc-300">CTA feels light — bump weight.</p>
+                                </li>
+                                <li class="rounded-lg border border-white/10 bg-white/5 p-2.5">
+                                    <div class="mb-1 flex items-center gap-1.5">
+                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-semibold text-white">2</span>
+                                        <span class="text-[9px] uppercase tracking-wide text-zinc-500">Nit</span>
+                                    </div>
+                                    <p class="text-[11px] leading-snug text-zinc-300">Image ratio feels tall.</p>
+                                </li>
+                                <li class="rounded-lg border border-white/10 bg-white/5 p-2.5">
+                                    <div class="mb-1 flex items-center gap-1.5">
+                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-teal-700 text-[9px] font-semibold text-white">3</span>
+                                        <span class="text-[9px] uppercase tracking-wide text-zinc-500">Must fix</span>
+                                    </div>
+                                    <p class="text-[11px] leading-snug text-zinc-300">Wordmark competes with title.</p>
+                                </li>
+                            </ul>
+                        </aside>
+                    </div>
                 </div>
             </div>
         </div>

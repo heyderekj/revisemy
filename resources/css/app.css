@@ -15,8 +15,8 @@
     --color-accent-content: #0f766e;
     --color-accent-foreground: #ffffff;
     --color-ink: #18181b;
-    --color-paper: #f7f5f1;
-    --color-mist: #e8e4dc;
+    --color-paper: #f4f4f5;
+    --color-mist: #e4e4e7;
 }
 
 @layer base {
@@ -40,9 +40,9 @@
 
     .rm-wash {
         background:
-            radial-gradient(ellipse 90% 60% at 10% -10%, rgb(15 118 110 / 0.18), transparent 55%),
-            radial-gradient(ellipse 70% 50% at 100% 10%, rgb(180 83 9 / 0.08), transparent 50%),
-            linear-gradient(180deg, #f7f5f1 0%, #efebe3 48%, #f7f5f1 100%);
+            radial-gradient(ellipse 90% 60% at 8% -10%, rgb(15 118 110 / 0.16), transparent 55%),
+            radial-gradient(ellipse 60% 45% at 100% 0%, rgb(24 24 27 / 0.05), transparent 50%),
+            linear-gradient(180deg, #fafafa 0%, #f4f4f5 45%, #fafafa 100%);
     }
 
     .rm-fade-up {
