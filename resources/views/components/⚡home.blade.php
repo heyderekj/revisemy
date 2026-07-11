@@ -138,7 +138,7 @@ new class extends Component
                 </div>
 
                 <p class="rm-fade-up-delay mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                    Drop screenshots from any project — product UI, websites, presentations, print, and more. Agents can pre-load a second opinion.<br class="hidden sm:block">
+                    Drop screenshots from any project — interfaces, websites, presentations, print, and more. Agents can pre-load a second opinion.<br class="hidden sm:block">
                     You mark what matters, then approve or request changes — structured work packets come back over MCP on
                     <a
                         href="https://laravel.com/cloud"
@@ -169,12 +169,16 @@ new class extends Component
                         x-data="{
                             step: 0,
                             scenario: 'product',
+                            order: ['product', 'websites', 'presentations', 'print'],
+                            stepMs: 2800,
+                            cycleKey: 0,
+                            paused: false,
                             reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
                             timer: null,
                             resumeTimer: null,
                             scenarios: {
                                 product: {
-                                    title: 'revisemy · product UI checkup',
+                                    title: 'revisemy · interfaces checkup',
                                     capture: 'Opening a design checkup on the production environment…',
                                     hintBody: 'Traffic series rely on rose vs sky alone — label each line directly for faster scanning.',
                                     hintMeta: 'finding: a11y · hint',
@@ -193,19 +197,19 @@ new class extends Component
                                 },
                                 websites: {
                                     title: 'revisemy · website checkup',
-                                    capture: 'Opening a design checkup on the launch page…',
-                                    hintBody: 'Supporting copy is too light on the warm wash — increase contrast before shipping.',
+                                    capture: 'Opening a design checkup on the Atlas marketing site…',
+                                    hintBody: 'Hero subcopy is too light over the photo — darken it before shipping.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: 'Keep “feedback loop” together — the current wrap weakens the promise.',
+                                    markBody: 'Keep “worth keeping” together — the break softens the promise.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: 'Primary and secondary actions have equal weight — make one path obvious.',
+                                    mark2Body: 'Primary and secondary CTAs share the same weight — make Explore lead.',
                                     mark2Meta: 'hierarchy · M2',
                                     markTarget: 'hero.headline',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Rebalance the headline so “feedback loop” lands on one line.',
+                                    markNote: 'Rebalance the headline so “worth keeping” lands on one line.',
                                     mark2Target: 'hero.actions',
                                     mark2Severity: 'hierarchy',
-                                    mark2Note: 'Reduce the secondary action to a text link so “Start a review” leads.',
+                                    mark2Note: 'Demote “Watch film” to a text link so Explore is the clear path.',
                                     packets: 'Changes requested — fix the headline wrap and CTA hierarchy; retain the contrast hint.',
                                     packetChip: 'work packets →'
                                 },
@@ -247,23 +251,39 @@ new class extends Component
                                 }
                             },
                             get s() { return this.scenarios[this.scenario]; },
+                            get progressPct() { return ((this.step + 1) / 5) * 100; },
                             start() {
                                 this.stop();
+                                this.paused = false;
                                 if (this.reduced) { this.step = 4; return; }
-                                this.timer = setInterval(() => { this.step = (this.step + 1) % 5; }, 2800);
+                                this.timer = setInterval(() => {
+                                    if (this.step >= 4) {
+                                        this.advanceScenario();
+                                        this.step = 0;
+                                    } else {
+                                        this.step += 1;
+                                    }
+                                }, this.stepMs);
                             },
                             stop() {
                                 if (this.timer) { clearInterval(this.timer); this.timer = null; }
                                 if (this.resumeTimer) { clearTimeout(this.resumeTimer); this.resumeTimer = null; }
                             },
+                            advanceScenario() {
+                                const i = this.order.indexOf(this.scenario);
+                                this.scenario = this.order[(i + 1) % this.order.length];
+                                this.cycleKey += 1;
+                            },
                             setScenario(id) {
                                 this.scenario = id;
                                 this.step = this.reduced ? 4 : 0;
+                                this.cycleKey += 1;
                                 this.start();
                             },
                             goToStep(i) {
                                 this.step = i;
                                 this.stop();
+                                this.paused = true;
                                 if (this.reduced) return;
                                 this.resumeTimer = setTimeout(() => this.start(), 6000);
                             }
@@ -279,18 +299,31 @@ new class extends Component
                             </div>
                             <div class="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-white p-0.5">
                                 <template x-for="tab in [
-                                    { id: 'product', label: 'Product UI' },
+                                    { id: 'product', label: 'Interfaces' },
                                     { id: 'websites', label: 'Websites' },
                                     { id: 'presentations', label: 'Presentations' },
                                     { id: 'print', label: 'Print' }
                                 ]" :key="tab.id">
                                     <button
                                         type="button"
-                                        class="rounded-md px-2.5 py-1 text-[11px] font-medium transition"
+                                        class="relative overflow-hidden rounded-md px-2.5 py-1.5 text-[11px] font-medium transition"
                                         :class="scenario === tab.id ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'"
                                         x-on:click="setScenario(tab.id)"
-                                        x-text="tab.label"
-                                    ></button>
+                                    >
+                                        <span x-text="tab.label"></span>
+                                        <template x-for="k in (scenario === tab.id && !reduced ? [cycleKey] : [])" :key="tab.id + '-' + k">
+                                            <span class="pointer-events-none absolute inset-x-1.5 bottom-0.5 h-[3px] overflow-hidden rounded-full bg-white/20">
+                                                <span
+                                                    class="block h-full rounded-full bg-rose-300"
+                                                    x-init="$el.style.width = '0%'; requestAnimationFrame(() => { $el.style.width = progressPct + '%' })"
+                                                    :style="{
+                                                        width: progressPct + '%',
+                                                        transition: paused ? 'none' : ('width ' + stepMs + 'ms linear')
+                                                    }"
+                                                ></span>
+                                            </span>
+                                        </template>
+                                    </button>
                                 </template>
                             </div>
                         </div>
@@ -483,31 +516,36 @@ new class extends Component
                                 </div>
 
                                 {{-- WEBSITES mock --}}
-                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-200/80 bg-[#fffaf7] sm:inset-3" x-show="scenario === 'websites'" x-cloak>
-                                    <div class="absolute inset-x-0 top-0 h-[58%] bg-[radial-gradient(circle_at_82%_20%,rgb(251_113_133/0.18),transparent_36%),radial-gradient(circle_at_18%_8%,rgb(125_211_252/0.16),transparent_32%)]"></div>
+                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-200/80 bg-zinc-950 sm:inset-3" x-show="scenario === 'websites'" x-cloak>
+                                    {{-- Photographic hero plane --}}
+                                    <div class="absolute inset-0 bg-[linear-gradient(115deg,rgb(9_9_11/0.72)_0%,rgb(9_9_11/0.28)_48%,rgb(9_9_11/0.55)_100%),radial-gradient(ellipse_at_70%_40%,rgb(56_189_248/0.35),transparent_42%),radial-gradient(ellipse_at_30%_80%,rgb(16_185_129/0.28),transparent_38%),linear-gradient(160deg,#0c4a6e_0%,#134e4a_42%,#1c1917_100%)]"></div>
+                                    <div class="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(to_top,rgb(9_9_11/0.85),transparent)]"></div>
+                                    {{-- Soft horizon / ridge silhouette --}}
+                                    <svg class="pointer-events-none absolute inset-x-0 bottom-8 h-16 w-full text-zinc-950/40 sm:bottom-10 sm:h-20" viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden="true">
+                                        <path fill="currentColor" d="M0 80V48c28-10 46-28 78-28s42 18 72 14 48-22 86-18 54 24 84 22 48-16 80-10v52H0Z"/>
+                                    </svg>
+
                                     <div class="relative flex h-full flex-col">
-                                        <nav class="flex items-center justify-between border-b border-zinc-900/5 px-4 py-2 sm:px-5">
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="h-3.5 w-3.5 rounded-[4px] bg-rose-500"></span>
-                                                <span class="text-[10px] font-semibold tracking-tight text-zinc-900">Relay</span>
+                                        <nav class="flex items-center justify-between px-3.5 py-2.5 sm:px-5">
+                                            <div class="flex items-center gap-2">
+                                                <span class="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[7px] font-semibold text-white">A</span>
+                                                <span class="font-display text-[12px] font-medium tracking-tight text-white">Atlas</span>
                                             </div>
-                                            <div class="flex items-center gap-3 text-[8px] text-zinc-500">
-                                                <span class="hidden sm:inline">Product</span>
-                                                <span class="hidden sm:inline">Customers</span>
-                                                <span>Sign in</span>
+                                            <div class="flex items-center gap-3 text-[8px] text-white/65">
+                                                <span class="hidden sm:inline">Routes</span>
+                                                <span class="hidden sm:inline">Guides</span>
+                                                <span class="hidden sm:inline">Journal</span>
+                                                <span class="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-white backdrop-blur-sm">Sign in</span>
                                             </div>
                                         </nav>
 
-                                        <div class="grid min-h-0 flex-1 grid-cols-[1.08fr_0.92fr] items-center gap-3 px-4 py-3 sm:gap-5 sm:px-6">
-                                            <div class="min-w-0">
-                                                <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-white/80 px-2 py-0.5 text-[8px] font-medium text-rose-700 shadow-sm">
-                                                    <span class="h-1 w-1 rounded-full bg-rose-500"></span>
-                                                    Built for product teams
-                                                </span>
-                                                <div class="relative mt-2 max-w-[15rem]">
-                                                    <h3 class="text-[clamp(1.05rem,2.5vw,1.55rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-950">
-                                                        Close the<br>
-                                                        feedback <span class="text-rose-500">loop.</span>
+                                        <div class="grid min-h-0 flex-1 grid-cols-[1.15fr_0.85fr] items-end gap-3 px-3.5 pb-3 pt-1 sm:gap-4 sm:px-5 sm:pb-4">
+                                            <div class="min-w-0 pb-1">
+                                                <p class="text-[7px] font-medium uppercase tracking-[0.16em] text-emerald-300/90">Summer routes · 2026</p>
+                                                <div class="relative mt-1.5 max-w-[14.5rem]">
+                                                    <h3 class="font-display text-[clamp(1.15rem,2.6vw,1.65rem)] font-medium leading-[1.05] tracking-[-0.02em] text-white">
+                                                        Places worth<br>
+                                                        keeping.
                                                     </h3>
                                                     <div
                                                         class="pointer-events-none absolute -inset-1 z-[8] rounded-md border-2 border-rose-500 bg-rose-500/10"
@@ -518,8 +556,8 @@ new class extends Component
                                                         <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-white">M1</span>
                                                     </div>
                                                 </div>
-                                                <div class="relative mt-2 max-w-[15rem]">
-                                                    <p class="text-[9px] leading-relaxed text-zinc-400">Turn marked screenshots into structured tasks your agent can actually implement.</p>
+                                                <div class="relative mt-2 max-w-[13.5rem]">
+                                                    <p class="text-[9px] leading-relaxed text-white/35">Quiet coastlines, alpine passes, and the maps that help you find them again.</p>
                                                     <div
                                                         class="pointer-events-none absolute -inset-1 rounded-md border-2 border-dashed border-sky-400 bg-sky-400/10"
                                                         x-show="step >= 1"
@@ -533,8 +571,8 @@ new class extends Component
                                                     >S1</div>
                                                 </div>
                                                 <div class="relative mt-3 inline-flex items-center gap-2">
-                                                    <span class="rounded-md bg-zinc-900 px-2.5 py-1.5 text-[9px] font-medium text-white shadow-sm">Start a review</span>
-                                                    <span class="rounded-md border border-zinc-300 bg-white/70 px-2.5 py-1.5 text-[9px] font-medium text-zinc-700">Watch demo</span>
+                                                    <span class="rounded-md bg-white px-2.5 py-1.5 text-[9px] font-semibold text-zinc-900 shadow-sm">Explore routes</span>
+                                                    <span class="rounded-md border border-white/40 bg-white/15 px-2.5 py-1.5 text-[9px] font-semibold text-white backdrop-blur-sm">Watch film</span>
                                                     <div
                                                         class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                         x-show="step >= 2"
@@ -546,32 +584,38 @@ new class extends Component
                                                 </div>
                                             </div>
 
-                                            <div class="relative min-h-[8rem] rounded-xl border border-white/80 bg-white/75 p-2.5 shadow-[0_12px_28px_-16px_rgb(24_24_27/0.45)] backdrop-blur">
-                                                <div class="flex items-center justify-between">
-                                                    <div>
-                                                        <p class="text-[7px] uppercase tracking-wide text-zinc-400">Review activity</p>
-                                                        <p class="mt-0.5 text-[10px] font-semibold text-zinc-800">Homepage polish</p>
+                                            <div class="relative mb-0.5 hidden min-w-0 sm:block">
+                                                <div class="overflow-hidden rounded-lg border border-white/15 bg-white/10 shadow-[0_16px_32px_-18px_rgb(0_0_0/0.7)] backdrop-blur-md">
+                                                    <div class="relative h-16 bg-[linear-gradient(145deg,#0369a1_0%,#0f766e_55%,#44403c_100%)]">
+                                                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgb(255_255_255/0.18),transparent_45%)]"></div>
+                                                        <span class="absolute left-2 top-2 rounded bg-black/35 px-1.5 py-0.5 text-[6px] font-medium uppercase tracking-wide text-white/90">Featured</span>
                                                     </div>
-                                                    <span class="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[7px] font-medium text-emerald-700">Live</span>
-                                                </div>
-                                                <div class="mt-2 rounded-lg bg-zinc-50 p-2">
-                                                    <div class="h-1.5 w-[72%] rounded-full bg-zinc-200"></div>
-                                                    <div class="mt-1.5 h-1.5 w-[52%] rounded-full bg-zinc-100"></div>
-                                                    <div class="mt-3 grid grid-cols-3 gap-1">
-                                                        <div class="h-7 rounded bg-rose-100"></div>
-                                                        <div class="h-7 rounded bg-sky-100"></div>
-                                                        <div class="h-7 rounded bg-zinc-200"></div>
+                                                    <div class="space-y-1.5 p-2">
+                                                        <div class="flex items-start justify-between gap-2">
+                                                            <div>
+                                                                <p class="text-[9px] font-semibold text-white">Big Sur overlook</p>
+                                                                <p class="text-[7px] text-white/50">California · 3-day route</p>
+                                                            </div>
+                                                            <span class="text-[8px] font-medium text-emerald-300">4.9</span>
+                                                        </div>
+                                                        <div class="flex items-center gap-1">
+                                                            <span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[6px] text-white/70">Coast</span>
+                                                            <span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[6px] text-white/70">Camping</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div class="absolute -bottom-2 -left-2 rounded-lg border border-rose-200 bg-white px-2 py-1.5 shadow-lg">
-                                                    <p class="text-[7px] font-semibold text-rose-600">M1 · must-fix</p>
-                                                    <p class="mt-0.5 text-[7px] text-zinc-500">Keep the promise together.</p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div class="flex items-center justify-center gap-4 border-t border-zinc-900/5 bg-white/60 px-4 py-1.5 text-[7px] font-medium uppercase tracking-[0.12em] text-zinc-400">
-                                            <span>Arc</span><span>Northstar</span><span>Plain</span><span>Frame</span>
+                                        <div class="flex items-center gap-3 border-t border-white/10 bg-black/25 px-3.5 py-1.5 backdrop-blur-sm sm:px-5">
+                                            <span class="text-[6px] font-medium uppercase tracking-[0.14em] text-white/40">Editors’ picks</span>
+                                            <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-[7px] text-white/55">
+                                                <span class="truncate">Amalfi dawn</span>
+                                                <span class="h-0.5 w-0.5 shrink-0 rounded-full bg-white/30"></span>
+                                                <span class="truncate">Patagonia traverse</span>
+                                                <span class="h-0.5 w-0.5 shrink-0 rounded-full bg-white/30"></span>
+                                                <span class="hidden truncate sm:inline">Kyoto alleys</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
