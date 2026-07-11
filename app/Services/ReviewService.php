@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
+use App\Services\Capture\PageCaptureService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
 
@@ -13,10 +14,69 @@ class ReviewService
     public function __construct(
         protected ScreenshotStorage $screenshots,
         protected SecondOpinionService $opinions,
+        protected PageCaptureService $capture,
+        protected DocumentIngestionService $documents,
     ) {}
 
     /**
-     * @param  list<string|UploadedFile>  $images
+     * Create a review from a validated request payload, resolving whichever
+     * source was provided: uploaded images, a server-side page capture
+     * (capture_url + page_url), a PDF (presentation), or raw HTML (email).
+     * Exactly one source is required; type is inferred from the source when
+     * not explicit.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function createFromRequest(Workspace $workspace, array $data): Review
+    {
+        $images = $data['images'] ?? [];
+        $sources = array_filter([
+            'images' => $images !== [] && $images !== null,
+            'capture_url' => (bool) ($data['capture_url'] ?? false),
+            'pdf' => isset($data['pdf']) && $data['pdf'] !== '',
+            'html' => isset($data['html']) && $data['html'] !== '',
+        ]);
+
+        if (count($sources) !== 1) {
+            throw ValidationException::withMessages([
+                'images' => 'Provide exactly one source: images, capture_url (with page_url), pdf, or html.',
+            ]);
+        }
+
+        $type = $data['type'] ?? null;
+
+        if (isset($sources['capture_url'])) {
+            $pageUrl = trim((string) ($data['page_url'] ?? ''));
+
+            if ($pageUrl === '' || ! filter_var($pageUrl, FILTER_VALIDATE_URL)) {
+                throw ValidationException::withMessages([
+                    'page_url' => 'capture_url needs a valid page_url to render.',
+                ]);
+            }
+
+            $images = $this->capture->captureUrl($pageUrl);
+            $type ??= Review::TYPE_WEBSITE;
+        } elseif (isset($sources['pdf'])) {
+            $images = $this->documents->pdfToImages((string) $data['pdf']);
+            $type ??= Review::TYPE_PRESENTATION;
+        } elseif (isset($sources['html'])) {
+            $images = $this->capture->captureHtml((string) $data['html']);
+            $type ??= Review::TYPE_EMAIL;
+        }
+
+        return $this->create(
+            $workspace,
+            $data['title'],
+            $data['context'] ?? null,
+            $images,
+            $data['page_url'] ?? null,
+            $data['parent_id'] ?? null,
+            $type,
+        );
+    }
+
+    /**
+     * @param  list<string|UploadedFile|array{binary: string, meta: array<string, mixed>|null}>  $images
      */
     public function create(
         Workspace $workspace,
@@ -25,7 +85,14 @@ class ReviewService
         array $images,
         ?string $pageUrl = null,
         ?string $parentPublicId = null,
+        ?string $type = null,
     ): Review {
+        if ($type !== null && ! in_array($type, Review::types(), true)) {
+            throw ValidationException::withMessages([
+                'type' => 'Type must be one of: '.implode(', ', Review::types()).'.',
+            ]);
+        }
+
         if ($images === []) {
             throw ValidationException::withMessages([
                 'images' => 'Add at least one screenshot so there is something to look at.',
@@ -53,18 +120,22 @@ class ReviewService
             $pass = ((int) $parent->pass) + 1;
             $context ??= $parent->context;
             $pageUrl ??= $parent->page_url;
+            $type ??= $parent->type;
         }
 
         $review = $workspace->reviews()->create([
             'parent_id' => $parent?->id,
             'title' => $title,
             'context' => $context,
+            'type' => $type ?? Review::TYPE_UI,
             'page_url' => $pageUrl,
             'pass' => $pass,
         ]);
 
         foreach (array_values($images) as $index => $image) {
-            $shot = $this->screenshots->store($review, $image, $index);
+            $shot = is_array($image)
+                ? $this->screenshots->storeRaw($review, $image['binary'], $index, $image['meta'] ?? null)
+                : $this->screenshots->store($review, $image, $index);
             $this->opinions->queue($shot);
         }
 

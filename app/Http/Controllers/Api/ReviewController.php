@@ -35,20 +35,17 @@ class ReviewController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'context' => ['nullable', 'string', 'max:5000'],
+            'type' => ['nullable', 'string', 'in:ui,website,presentation,email'],
             'page_url' => ['nullable', 'string', 'max:2048'],
             'parent_id' => ['nullable', 'string'],
-            'images' => ['required', 'array', 'min:1', 'max:5'],
+            'images' => ['nullable', 'array', 'min:1', 'max:5'],
             'images.*' => ['required'],
+            'capture_url' => ['nullable', 'boolean'],
+            'pdf' => ['nullable', 'string'],
+            'html' => ['nullable', 'string', 'max:500000'],
         ]);
 
-        $review = $reviews->create(
-            $request->user()->workspace,
-            $data['title'],
-            $data['context'] ?? null,
-            $data['images'],
-            $data['page_url'] ?? null,
-            $data['parent_id'] ?? null,
-        );
+        $review = $reviews->createFromRequest($request->user()->workspace, $data);
 
         return response()->json($review->toAgentPayload(), 201);
     }
@@ -134,6 +131,7 @@ class ReviewController extends Controller
             'marks.*.id' => ['required', 'integer'],
             'marks.*.status' => ['nullable', 'string', 'in:in_progress,resolved'],
             'marks.*.note' => ['nullable', 'string', 'max:2000'],
+            'marks.*.after_image' => ['nullable', 'string'],
         ]);
 
         $updated = $lifecycle->applyAgentUpdates($workspace, $data['marks']);

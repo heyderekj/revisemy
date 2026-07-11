@@ -10,7 +10,10 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 
 - **Marks, not pins** — product UI speaks in marks (rose rectangles + M1/M2 badges). Human marks are authoritative; API keys stay `pins` for compatibility.
 - **Rectangle-first review** — drag to outline a region or click for a point note; zoom with +/− and pan with Space+drag (or middle mouse).
-- **Second opinion (hints only)** — Cloud-queued design checklist on every screenshot; optional OpenAI vision when keyed. Sky S-markers never override your marks.
+- **Second opinion (hints only)** — Cloud-queued, type-aware design checklist on every screenshot; optional Claude (Anthropic) or OpenAI-compatible vision when keyed (or pointed at local Ollama). Sky S-markers never override your marks.
+- **Review types** — `ui`, `website`, `presentation`, or `email`: each gets its own checklist and vision lens (emails get CTA/dark-mode/client checks, decks get slide-density checks, sites get above-the-fold/responsive checks).
+- **Before/after evidence** — agents can attach an `after_image` when resolving a mark; the review page and board show a before/after crop next to the resolution note.
+- **Server-side capture (optional)** — `create_review` can render `page_url` (mobile + desktop), a PDF deck (one shot per page), or raw email HTML — no agent screenshots needed.
 - **Agent subagent path** — `add_findings` drops suggestion / a11y / polish notes into the same review before you look.
 - **Work packets + `next_action`** — agents know whether to wait, apply marks, open the next pass, or stop.
 - **Multi-pass checkups** — `create_review` with `parent_id` for pass 2+ after you request changes.
@@ -32,7 +35,7 @@ No account required for the human reviewer.
 
 | Tool | Purpose |
 |------|---------|
-| `create_review` | title + screenshots (+ optional `page_url`, `parent_id` for next pass) → review URL; queues second opinion |
+| `create_review` | title + one source — `images`, `capture_url` (renders `page_url`), `pdf`, or `html` — (+ optional `type`, `page_url`, `parent_id`) → review URL; queues second opinion |
 | `get_review` | work packets + `next_action` (`wait_for_human` / `apply_pins_then_next_pass` / `done`) |
 | `list_reviews` | recent reviews for this try token |
 | `add_screenshot` | append a shot to an open review |
@@ -67,7 +70,7 @@ The homepage also copies configs for Claude Code and ChatGPT. Same URL + Bearer 
 ### REST API (same auth)
 
 - `POST /api/try-token` — create a try workspace + token
-- `POST /api/reviews` — `{ "title", "context?", "page_url?", "parent_id?", "images": [...] }`
+- `POST /api/reviews` — `{ "title", "context?", "type?", "page_url?", "parent_id?", "images"|"capture_url"|"pdf"|"html" }`
 - `GET /api/reviews/{id}`
 - `GET /api/reviews`
 - `POST /api/reviews/{id}/screenshots` — `{ "image" }`
@@ -99,13 +102,18 @@ Visit `http://127.0.0.1:8000`, get a try token, and create a review.
    - `FILESYSTEM_DISK` / `REVISEMY_DISK` to the Cloud object storage disk
    - `APP_URL` to your `https://….laravel.cloud` URL
    - Queue worker enabled (`QUEUE_CONNECTION`)
-   - Optional `OPENAI_API_KEY` for vision second opinion
+   - Optional `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) for the vision second opinion — `REVISEMY_VISION_PROVIDER=auto` prefers Claude when both are set
+   - Optional free local vision: run Ollama, set `REVISEMY_VISION_PROVIDER=openai`, `REVISEMY_OPENAI_BASE_URL=http://localhost:11434/v1`, and `REVISEMY_OPENAI_MODEL=llama3.2-vision` (blank key is fine). Local/OSS models give helpful hints, not Claude/GPT-4o quality.
+   - Optional `REVISEMY_CAPTURE_DRIVER=hosted` + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for server-side URL/email/PDF capture — Cloud containers have no Chrome, so use the hosted driver there
+   - Optional Reverb (`BROADCAST_CONNECTION=reverb` + `REVERB_*`/`VITE_REVERB_*`) for live updates — without it the UI polls
 5. Deploy. Run migrations from Cloud commands: `php artisan migrate --force`
 6. Reply to the contest with your `https://….laravel.cloud` homepage URL.
 
 ## Self-host
 
 Point MCP at your own origin. Use S3-compatible storage for screenshots in production. Rate limits and 7-day review expiry are built in.
+
+For free pixel vision without a cloud API key, point `REVISEMY_OPENAI_BASE_URL` at Ollama (or another OpenAI-compatible `/v1` host) as in `.env.example`.
 
 ## Stack
 

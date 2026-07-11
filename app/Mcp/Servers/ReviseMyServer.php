@@ -16,8 +16,8 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('ReviseMy')]
-#[Version('1.3.0')]
-#[Instructions('ReviseMy is a design checkup loop for agents + humans on Laravel Cloud. Loop: create_review (screenshots) → optional add_findings → share review_url → poll get_review → follow next_action. If changes_requested: apply human marks first (work_packets.pins), and as you fix each one call resolve_marks with its id (status in_progress → resolved with a note). When loop.outstanding_count reaches 0, create_review with parent_id and new screenshots for the next pass. If approved: stop. Human marks are authoritative; second_opinion is hints only. Only the human verifies or reopens marks — never set a mark to verified yourself. Never claim the UI is done while status is pending. Use the design_checkup_loop prompt when starting a checkup.')]
+#[Version('1.5.0')]
+#[Instructions('ReviseMy is a design checkup loop for agents + humans on Laravel Cloud. Loop: create_review (screenshots, plus a type — ui, website, presentation, or email — so the second opinion uses the right lens) → optional add_findings → share review_url → poll get_review → follow next_action. If changes_requested: apply human marks first (work_packets.pins), and as you fix each one call resolve_marks with its id (status in_progress → resolved with a note). Humans may also mark resolved on the board; still call resolve_marks when you fix code so notes and after images land. When loop.outstanding_count reaches 0, create_review with parent_id and new screenshots for the next pass. If approved: stop. Human marks are authoritative; second_opinion is hints only. Only the human verifies or reopens marks — never set a mark to verified yourself. Never claim the UI is done while status is pending. Use the design_checkup_loop prompt when starting a checkup.')]
 class ReviseMyServer extends Server
 {
     protected array $tools = [

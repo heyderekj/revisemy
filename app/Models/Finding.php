@@ -11,6 +11,8 @@ class Finding extends Model
 
     public const SOURCE_OPENAI = 'openai';
 
+    public const SOURCE_ANTHROPIC = 'anthropic';
+
     public const SOURCE_AGENT = 'agent';
 
     public const SOURCE_GUEST = 'guest';
@@ -70,6 +72,7 @@ class Finding extends Model
         return match ($this->source) {
             self::SOURCE_AGENT => 'Agent',
             self::SOURCE_OPENAI => 'Vision',
+            self::SOURCE_ANTHROPIC => 'Vision',
             self::SOURCE_GUEST => $this->author ?: 'Guest',
             default => 'Checklist',
         };

@@ -12,11 +12,40 @@ use Illuminate\Validation\ValidationException;
 
 class ScreenshotStorage
 {
-    public function store(Review $review, string|UploadedFile $image, int $sortOrder = 0): Screenshot
+    public function store(Review $review, string|UploadedFile $image, int $sortOrder = 0, string $kind = Screenshot::KIND_SOURCE): Screenshot
+    {
+        $binary = $this->resolveBinary($image);
+
+        return $this->persist($review, $binary, $this->guessExtension($binary, $image), $sortOrder, $kind);
+    }
+
+    /**
+     * Store server-originated image bytes (captures, rendered PDF pages).
+     * Unlike user uploads these are never rejected for size — anything over
+     * the 8MB cap is downscaled/re-encoded instead.
+     *
+     * @param  array<string, mixed>|null  $meta
+     */
+    public function storeRaw(Review $review, string $binary, int $sortOrder = 0, ?array $meta = null): Screenshot
+    {
+        $binary = $this->normalizeSize($binary);
+
+        $extension = match (@getimagesizefromstring($binary)['mime'] ?? null) {
+            'image/jpeg' => 'jpg',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+            default => 'png',
+        };
+
+        return $this->persist($review, $binary, $extension, $sortOrder, Screenshot::KIND_SOURCE, $meta);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $meta
+     */
+    protected function persist(Review $review, string $binary, string $extension, int $sortOrder, string $kind, ?array $meta = null): Screenshot
     {
         $disk = (string) config('filesystems.revisemy_disk', config('filesystems.default', 'public'));
-        $binary = $this->resolveBinary($image);
-        $extension = $this->guessExtension($binary, $image);
         $path = 'reviews/'.$review->public_id.'/'.Str::ulid().'.'.$extension;
 
         Storage::disk($disk)->put($path, $binary);
@@ -29,7 +58,52 @@ class ScreenshotStorage
             'width' => $width,
             'height' => $height,
             'sort_order' => $sortOrder,
+            'kind' => $kind,
+            'meta' => $meta,
         ]);
+    }
+
+    /**
+     * GD downscale for oversized server-side captures: shrink until the
+     * encoded image fits the 8MB cap, falling back to JPEG re-encoding.
+     */
+    protected function normalizeSize(string $binary): string
+    {
+        $cap = 8 * 1024 * 1024;
+
+        if (strlen($binary) <= $cap) {
+            return $binary;
+        }
+
+        $image = @imagecreatefromstring($binary);
+
+        if ($image === false) {
+            throw ValidationException::withMessages([
+                'capture' => 'The captured image was too large and could not be re-encoded.',
+            ]);
+        }
+
+        $scale = 1.0;
+
+        do {
+            $scaled = $scale < 1.0
+                ? imagescale($image, (int) (imagesx($image) * $scale))
+                : $image;
+
+            ob_start();
+            imagejpeg($scaled, null, 85);
+            $binary = (string) ob_get_clean();
+
+            if ($scaled !== $image) {
+                imagedestroy($scaled);
+            }
+
+            $scale *= 0.7;
+        } while (strlen($binary) > $cap && $scale > 0.1);
+
+        imagedestroy($image);
+
+        return $binary;
     }
 
     protected function resolveBinary(string|UploadedFile $image): string

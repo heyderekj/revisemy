@@ -229,4 +229,51 @@ class MarkLifecycleTest extends TestCase
             ->assertSee('Previous pass marks')
             ->assertSee('Done.');
     }
+
+    public function test_owner_can_resolve_from_open_or_in_progress(): void
+    {
+        [, $review] = $this->setUpReview();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $open = $shot->annotations()->create(['x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Open', 'number' => 1]);
+        $inProgress = $shot->annotations()->create(['x' => 0.4, 'y' => 0.4, 'severity' => 'must-fix', 'body' => 'Working', 'number' => 2, 'status' => Annotation::STATUS_IN_PROGRESS]);
+
+        $lifecycle = app(\App\Services\MarkLifecycleService::class);
+
+        $this->assertTrue($lifecycle->resolveByOwner($open));
+        $this->assertSame(Annotation::STATUS_RESOLVED, $open->fresh()->status);
+
+        $this->assertTrue($lifecycle->resolveByOwner($inProgress));
+        $this->assertSame(Annotation::STATUS_RESOLVED, $inProgress->fresh()->status);
+    }
+
+    public function test_owner_resolve_is_noop_from_verified(): void
+    {
+        [, $review] = $this->setUpReview();
+        $mark = $review->screenshots()->firstOrFail()->annotations()->create([
+            'x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Done', 'number' => 1, 'status' => Annotation::STATUS_VERIFIED,
+        ]);
+
+        $lifecycle = app(\App\Services\MarkLifecycleService::class);
+
+        $this->assertFalse($lifecycle->resolveByOwner($mark));
+        $this->assertSame(Annotation::STATUS_VERIFIED, $mark->fresh()->status);
+    }
+
+    public function test_owner_resolve_drops_outstanding_count(): void
+    {
+        [, $review] = $this->setUpReview();
+        $mark = $review->screenshots()->firstOrFail()->annotations()->create([
+            'x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Fix', 'number' => 1,
+        ]);
+
+        $this->assertSame(1, $review->fresh()->toAgentPayload()['loop']['outstanding_count']);
+
+        Livewire::test('review-board', ['token' => $review->token])
+            ->call('moveMark', $mark->id, Annotation::STATUS_RESOLVED)
+            ->assertOk();
+
+        $this->assertSame(0, $review->fresh()->toAgentPayload()['loop']['outstanding_count']);
+        $this->assertSame('open_next_pass', $review->fresh()->toAgentPayload()['next_action']['action']);
+    }
 }

@@ -8,8 +8,8 @@ ReviseMy’s **human marks stay authoritative**. Second opinion is optional, lab
 
 On every screenshot upload, Laravel Cloud queues `GenerateSecondOpinionJob`:
 
-1. **Free checklist** — hierarchy, contrast, spacing, mobile/desktop heuristics, plus Emil Kowalski taste checks (press feedback, soft depth vs hard borders; motion hints when context mentions modals/drawers/toasts).
-2. **OpenAI vision upgrade** — when `OPENAI_API_KEY` is set, the same job merges vision findings (`suggestion` / `a11y` / `polish` only), guided by the same taste lens.
+1. **Free checklist** — tuned to the review `type`: `ui` gets hierarchy/contrast/spacing plus Emil Kowalski taste checks; `website` gets above-the-fold/nav/responsive checks; `presentation` gets slide-density/consistency checks; `email` gets CTA/dark-mode/images-off/client-rendering checks. Checklist findings are text-only (no `area`) — they never point at pixels they haven't seen.
+2. **Vision upgrade** — when `ANTHROPIC_API_KEY` (Claude, preferred), `OPENAI_API_KEY`, or a custom `REVISEMY_OPENAI_BASE_URL` (Ollama / Groq / OpenRouter / LM Studio) is set, the same job merges vision findings (`suggestion` / `a11y` / `polish` only), guided by a type-specific lens. Force a provider with `REVISEMY_VISION_PROVIDER=anthropic|openai` (default `auto`). Only vision findings carry an `area`.
 
 Agents can also act as a **design-reviewer subagent** via `add_findings` before the human opens the link. Those land in the same review UI with an `Agent` badge.
 
@@ -67,9 +67,21 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 ```
 QUEUE_CONNECTION=database   # or Cloud’s queue
 REVISEMY_SECOND_OPINION=true
-OPENAI_API_KEY=             # optional — upgrades checklist with vision
+REVISEMY_VISION_PROVIDER=auto   # anthropic | openai | auto (prefer Claude when keyed)
+ANTHROPIC_API_KEY=              # optional — Claude vision second opinion
+REVISEMY_ANTHROPIC_MODEL=claude-opus-4-8
+OPENAI_API_KEY=                 # optional — OpenAI vision second opinion
 REVISEMY_OPENAI_MODEL=gpt-4o-mini
+
+# Free local / OpenAI-compatible vision (optional). Blank key is OK for Ollama.
+# REVISEMY_VISION_PROVIDER=openai
+# REVISEMY_OPENAI_BASE_URL=http://localhost:11434/v1
+# REVISEMY_OPENAI_MODEL=llama3.2-vision
+# OPENAI_API_KEY=
+# Groq / OpenRouter / LM Studio: set REVISEMY_OPENAI_BASE_URL + their API key.
 ```
+
+Local/OSS vision (e.g. Llama 3.2 Vision via Ollama) is a solid free upgrade over checklist-only, but weaker than Claude/GPT-4o at fine critique and clean JSON — severity caps, area normalize, and dedupe still apply so output degrades gracefully.
 
 Enable a **queue worker** on Laravel Cloud so jobs run after upload.
 

@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -15,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('resolve_marks')]
-#[Description('Report progress on human marks while fixing them: set each mark to in_progress or resolved (with a short note on what you changed). Verifying stays the human\'s job — never claim a mark is done for them.')]
+#[Description('Report progress on human marks while fixing them: set each mark to in_progress or resolved (with a short note on what you changed). When resolving, optionally attach after_image — a screenshot of the fixed area — so the human sees a before/after. Verifying stays the human\'s job — never claim a mark is done for them.')]
 class ResolveMarksTool extends Tool
 {
     use ResolvesWorkspace;
@@ -39,6 +40,7 @@ class ResolveMarksTool extends Tool
             'marks.*.id' => 'required|integer',
             'marks.*.status' => 'nullable|string|in:in_progress,resolved',
             'marks.*.note' => 'nullable|string|max:2000',
+            'marks.*.after_image' => 'nullable|string',
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['id']);
@@ -51,7 +53,11 @@ class ResolveMarksTool extends Tool
             return Response::error('You can only resolve marks after the human requests changes. Current status: '.$review->effectiveStatus().'.');
         }
 
-        $updated = $this->lifecycle->applyAgentUpdates($workspace, $data['marks']);
+        try {
+            $updated = $this->lifecycle->applyAgentUpdates($workspace, $data['marks']);
+        } catch (ValidationException $e) {
+            return Response::error(collect($e->errors())->flatten()->first() ?? 'Could not apply those mark updates.');
+        }
 
         if ($updated->isEmpty()) {
             return Response::error('None of those mark ids belong to a review on this try token. Check work_packets.pins[].id.');
@@ -81,7 +87,7 @@ class ResolveMarksTool extends Tool
                 ->items($schema->object())
                 ->min(1)
                 ->max(50)
-                ->description('List of {id, status?, note?}. id is the mark id from work_packets.pins[].id. status is "in_progress" or "resolved" (default resolved). note describes what you changed.')
+                ->description('List of {id, status?, note?, after_image?}. id is the mark id from work_packets.pins[].id. status is "in_progress" or "resolved" (default resolved). note describes what you changed. after_image is an optional screenshot of the fixed area (https URL, data URL, or base64) shown to the human as a before/after.')
                 ->required(),
         ];
     }

@@ -17,6 +17,10 @@ class Screenshot extends Model
 
     public const OPINION_FAILED = 'failed';
 
+    public const KIND_SOURCE = 'source';
+
+    public const KIND_AFTER = 'after';
+
     protected $fillable = [
         'review_id',
         'path',
@@ -24,9 +28,18 @@ class Screenshot extends Model
         'width',
         'height',
         'sort_order',
+        'kind',
+        'meta',
         'second_opinion_status',
         'second_opinion_error',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'meta' => 'array',
+        ];
+    }
 
     public function review(): BelongsTo
     {

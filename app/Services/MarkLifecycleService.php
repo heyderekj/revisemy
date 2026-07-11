@@ -5,23 +5,26 @@ namespace App\Services;
 use App\Events\MarkUpdated;
 use App\Models\Annotation;
 use App\Models\Review;
+use App\Models\Screenshot;
 use App\Models\Workspace;
 use Illuminate\Support\Collection;
 
 /**
  * Single source of truth for mark (annotation) status transitions.
  *
- * The one rule that matters: agents may only move a mark to in_progress or
- * resolved. Verifying and reopening stay human-only, so human marks remain
+ * Agents may only move a mark to in_progress or resolved. Humans verify,
+ * reopen, and may override-resolve on the board. Human marks stay
  * authoritative even as the agent reports progress.
  */
 class MarkLifecycleService
 {
+    public function __construct(protected ScreenshotStorage $screenshots) {}
+
     /**
-     * Apply a batch of agent updates. Each entry is {id, status?, note?}.
+     * Apply a batch of agent updates. Each entry is {id, status?, note?, after_image?}.
      * Marks are scoped to the workspace, so the agent can only touch its own.
      *
-     * @param  array<int, array{id: int|string, status?: string, note?: ?string}>  $marks
+     * @param  array<int, array{id: int|string, status?: string, note?: ?string, after_image?: ?string}>  $marks
      * @return Collection<int, Annotation> the annotations that were updated
      */
     public function applyAgentUpdates(Workspace $workspace, array $marks): Collection
@@ -45,11 +48,36 @@ class MarkLifecycleService
                 continue;
             }
 
+            if (! empty($mark['after_image']) && is_string($mark['after_image'])) {
+                $this->storeAfterImage($annotation, $mark['after_image']);
+            }
+
             $this->transition($annotation, $status, $mark['note'] ?? null);
             $updated->push($annotation);
         }
 
         return $updated;
+    }
+
+    /**
+     * Attach an "after" screenshot showing the fixed area. Stored directly —
+     * bypassing ReviewService::addScreenshot() on purpose: that path rejects
+     * closed reviews, but after-evidence arrives exactly while the review sits
+     * in changes_requested. After shots are excluded from Review::screenshots(),
+     * so they never count against the 5-shot cap or get a second opinion.
+     */
+    protected function storeAfterImage(Annotation $annotation, string $image): void
+    {
+        $annotation->loadMissing('screenshot.review');
+
+        $shot = $this->screenshots->store(
+            $annotation->screenshot->review,
+            $image,
+            sortOrder: 0,
+            kind: Screenshot::KIND_AFTER,
+        );
+
+        $annotation->update(['after_screenshot_id' => $shot->id]);
     }
 
     /**
@@ -76,6 +104,20 @@ class MarkLifecycleService
         }
 
         $this->transition($annotation, Annotation::STATUS_OPEN);
+
+        return true;
+    }
+
+    /**
+     * Human marks a fix resolved on the board without waiting on the agent.
+     */
+    public function resolveByOwner(Annotation $annotation, ?string $note = null): bool
+    {
+        if (! in_array($annotation->status, [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS], true)) {
+            return false;
+        }
+
+        $this->transition($annotation, Annotation::STATUS_RESOLVED, $note);
 
         return true;
     }
