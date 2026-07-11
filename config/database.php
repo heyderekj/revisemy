@@ -96,7 +96,25 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslmode' => env('DB_SSLMODE', str_contains((string) env('DB_URL'), 'neon.tech') ? 'require' : 'prefer'),
+        ],
+
+        // Neon / serverless Postgres: migrations need the direct (non-pooled) endpoint.
+        // Set DB_MIGRATE_URL in Laravel Cloud to the host without "-pooler" and
+        // append ?sslmode=require. Runtime can keep using pooled DB_URL if desired.
+        'pgsql_migrate' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_MIGRATE_URL', env('DB_URL')),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'require'),
         ],
 
         'sqlsrv' => [
@@ -130,6 +148,7 @@ return [
     'migrations' => [
         'table' => 'migrations',
         'update_date_on_publish' => true,
+        'connection' => env('DB_MIGRATE_URL') ? 'pgsql_migrate' : null,
     ],
 
     /*

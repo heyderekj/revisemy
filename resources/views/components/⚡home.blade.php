@@ -100,8 +100,8 @@ new class extends Component
     <div class="relative z-10 mx-auto flex min-h-screen max-w-[1200px]">
         {{-- Agentation-style sidebar --}}
         <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-900/8 px-6 py-8 lg:flex">
-            <a href="/" class="font-mark text-[2.35rem] leading-none tracking-tight text-rose-500">
-                ReviseMy
+            <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                <x-revisemy-logo class="!h-auto !w-[150px]" />
             </a>
 
             <nav class="mt-12 flex flex-1 flex-col gap-8 text-[14px]">
@@ -151,7 +151,9 @@ new class extends Component
         <main id="top" class="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10">
             {{-- Mobile top bar --}}
             <div class="mb-8 flex items-center justify-between lg:hidden">
-                <a href="/" class="font-mark text-3xl leading-none text-rose-500">ReviseMy</a>
+                <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                    <x-revisemy-logo class="!h-auto !w-[150px]" />
+                </a>
                 <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
             </div>
             <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
@@ -181,7 +183,7 @@ new class extends Component
                 </div>
 
                 <p class="rm-fade-up-delay mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                    Review interfaces, websites, presentations, and email templates with your agent. Mark what matters, approve or request changes, and send clear next steps back over MCP using
+                    Human-in-the-loop design review for agents. Capture UI, websites, decks, or email from a screenshot, URL, PDF, or HTML; mark what matters; track fixes on the board; and send clear next steps back over MCP on
                     <a
                         href="https://laravel.com/cloud"
                         target="_blank"
@@ -935,22 +937,22 @@ new class extends Component
             <section id="how" class="mt-20 scroll-mt-8 sm:mt-24">
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">One feedback loop for anything visual</h2>
                 <ol class="mt-6 max-w-2xl space-y-3 text-[15px] leading-relaxed text-zinc-600">
-                    <li><span class="font-medium text-zinc-900">1.</span> Ask your agent to open a review for anything you can screenshot.</li>
-                    <li><span class="font-medium text-zinc-900">2.</span> It can add a second opinion before you look: useful hints, never decisions.</li>
-                    <li><span class="font-medium text-zinc-900">3.</span> Open the review link, mark what matters, then approve or request changes.</li>
-                    <li><span class="font-medium text-zinc-900">4.</span> Your feedback returns to the agent as clear, structured next steps.</li>
-                    <li><span class="font-medium text-zinc-900">5.</span> Repeat until it feels right. You stay in charge every pass.</li>
+                    <li><span class="font-medium text-zinc-900">1.</span> Ask your agent to open a review — from screenshots, or by capturing a page URL, PDF deck, or email HTML.</li>
+                    <li><span class="font-medium text-zinc-900">2.</span> An optional second opinion can land first: useful hints, never decisions.</li>
+                    <li><span class="font-medium text-zinc-900">3.</span> Open the review link, mark regions, comment, and share a guest link when you want another set of eyes.</li>
+                    <li><span class="font-medium text-zinc-900">4.</span> Track marks on the board (open → resolved → verified). Agents can attach before/after evidence when they fix something.</li>
+                    <li><span class="font-medium text-zinc-900">5.</span> Approve or request changes. Structured next steps return over MCP — repeat until it feels right.</li>
                 </ol>
                 <p class="rm-note mt-6 inline max-w-2xl text-[15px] leading-relaxed text-zinc-700">
-                    <span class="font-medium">Try saying:</span> “Run a design checkup” or “address my feedback.” ReviseMy handles the MCP handoff inside the agent workflow you already use.
+                    <span class="font-medium">Try saying:</span> “Run a design checkup,” “review this URL,” or “address my feedback.” ReviseMy handles the MCP handoff inside the agent workflow you already use.
                 </p>
             </section>
 
             {{-- Feature grid --}}
             <section id="cloud" class="mt-16 scroll-mt-8 sm:mt-20">
-                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">More than screenshot markup</h2>
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for the full checkup loop</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                    Marks are the simple part you see. Behind them, ReviseMy keeps the screenshot, context, decisions, and next steps together so feedback does not get lost between you and your agent.
+                    Marks are what you see. Behind them, ReviseMy keeps captures, review type, guest feedback, and lifecycle together so nothing gets lost between passes.
                 </p>
 
                 <div class="mt-8 grid gap-x-8 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
@@ -958,45 +960,42 @@ new class extends Component
                         <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
                             <flux:icon.photo variant="micro" class="size-[18px]" />
                         </div>
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Anything you can screenshot</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Review interfaces, websites, presentations, email templates, and whatever you make next.</p>
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">UI, websites, decks, and email</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Each review type gets its own checklist and vision lens tuned for sites, decks, or email.</p>
+                    </article>
+
+                    <article>
+                        <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
+                            <flux:icon.computer-desktop variant="micro" class="size-[18px]" />
+                        </div>
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Capture without screenshots</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Agents can send a page URL (mobile + desktop), a PDF deck, or raw email HTML — ReviseMy renders the shots for you.</p>
                     </article>
 
                     <article>
                         <x-mark-type-icon type="m" />
                         <h3 class="mt-3 text-sm font-semibold text-zinc-900">Precise marks and priorities</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Point or outline the exact area, then explain whether it is a must-fix, tweak, question, or keep.</p>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Point or outline the exact area, set must-fix / tweak / question / keep, and keep a threaded comment thread on each mark.</p>
                     </article>
 
                     <article>
                         <x-mark-type-icon type="s" />
-                        <div class="mt-3 flex flex-wrap items-center gap-2">
-                            <h3 class="text-sm font-semibold text-zinc-900">Second opinion</h3>
-                            <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-500">Optional</span>
-                        </div>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Let an agent surface accessibility, hierarchy, and polish hints before you begin your review.</p>
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Cloud-queued design hints before you look — with optional Claude, OpenAI, or local Ollama vision.</p>
                     </article>
 
                     <article>
                         <x-mark-type-icon type="g" />
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Shareable guest feedback</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Send a private review link so clients or teammates can suggest changes without any accounts.</p>
-                    </article>
-
-                    <article>
-                        <div class="flex size-9 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-rose-100">
-                            <flux:icon.check variant="micro" class="size-[18px]" />
-                        </div>
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">You make the final call</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Accept or dismiss suggestions, then approve the work or request changes when you are ready.</p>
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Shareable guest links</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Share a private link so clients or teammates can suggest changes — no accounts. Your marks stay authoritative.</p>
                     </article>
 
                     <article>
                         <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
-                            <flux:icon.arrow-uturn-left variant="micro" class="size-[18px]" />
+                            <flux:icon.check variant="micro" class="size-[18px]" />
                         </div>
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Agent-ready follow-through</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Structured work packets return through MCP, keeping each change and follow-up connected.</p>
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Track every mark to done</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">A board moves marks from open to resolved to verified, so you always know what is left.</p>
                     </article>
                 </div>
             </section>
@@ -1005,12 +1004,14 @@ new class extends Component
             <section id="agents" class="mt-16 scroll-mt-8 sm:mt-20">
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">The technical handoff</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                    When you finish a review, <code class="font-mono text-[13px] text-rose-600">get_review</code> gives your agent structured work packets and one clear <code class="font-mono text-[13px]">next_action</code>: wait, make changes, open another pass, or stop.
+                    <code class="font-mono text-[13px] text-rose-600">create_review</code> accepts images, a capture URL, PDF, or HTML. When you finish,
+                    <code class="font-mono text-[13px] text-rose-600">get_review</code> returns work packets and one clear <code class="font-mono text-[13px]">next_action</code>: wait, apply marks, open another pass, or stop.
                 </p>
                 <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
                     <li>Marks include intent and priority: <span class="font-medium text-zinc-800">must-fix</span>, tweak, nit, question, or keep</li>
-                    <li><code class="font-mono text-[13px]">second_opinion</code> findings stay suggestions unless you accept them</li>
-                    <li>Requesting changes creates a linked follow-up with <code class="font-mono text-[13px] text-rose-600">create_review</code> and <code class="font-mono text-[13px]">parent_id</code></li>
+                    <li><code class="font-mono text-[13px]">second_opinion</code> and guest findings stay suggestions until you accept them</li>
+                    <li><code class="font-mono text-[13px] text-rose-600">resolve_marks</code> can close marks with notes and optional before/after evidence</li>
+                    <li>Requesting changes links a follow-up pass via <code class="font-mono text-[13px] text-rose-600">create_review</code> + <code class="font-mono text-[13px]">parent_id</code></li>
                     <li>The MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code> can guide the full cycle</li>
                 </ul>
             </section>

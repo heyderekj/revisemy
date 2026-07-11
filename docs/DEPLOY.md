@@ -11,7 +11,13 @@ Repo: https://github.com/heyderekj/revisemy
 4. Environment variables:
    - `APP_NAME=ReviseMy`
    - `APP_URL=https://YOUR-APP.laravel.cloud` (set after first deploy if needed)
-   - `DB_CONNECTION=pgsql` (or let Cloud inject `DATABASE_URL` from the attached Postgres resource)
+   - `DB_CONNECTION=pgsql`
+   - **Neon Postgres (Laravel Cloud):** migrations must use the **direct** endpoint, not the pooler.
+     - In Neon → Connection details, copy the **non-pooled** URL (host is `ep-…c-….neon.tech` **without** `-pooler`).
+     - Append `?sslmode=require` if it is not already in the URL.
+     - Set **`DB_MIGRATE_URL`** to that direct URL (recommended), or set **`DB_URL`** to the direct URL if you only use one connection.
+     - Optional: keep **`DB_URL`** on the **pooled** endpoint (`…-pooler…`) for runtime traffic and set **`DB_MIGRATE_URL`** to the direct URL for deploy migrations.
+     - Set **`DB_SSLMODE=require`** when not using `?sslmode=require` in the URL.
    - `CACHE_STORE` / `SESSION_DRIVER` → `database` or Cloud Redis (not file/sqlite-backed paths)
    - `REVISEMY_DISK` / `FILESYSTEM_DISK` → Cloud object storage disk name
    - `QUEUE_CONNECTION` → Cloud queue (or `database` with a worker)
