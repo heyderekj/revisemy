@@ -10,7 +10,20 @@
     <link href="https://fonts.bunny.net/css?family=caveat:500,600,700|instrument-sans:400,500,600,700|newsreader:400,500,600" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @fluxAppearance
+    <style>
+        :root {
+            color-scheme: light;
+        }
+    </style>
+    <script>
+        window.Flux = {
+            applyAppearance () {
+                document.documentElement.classList.remove('dark')
+                window.localStorage.setItem('flux.appearance', 'light')
+            }
+        }
+        window.Flux.applyAppearance()
+    </script>
 </head>
 <body class="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] antialiased">
     {{ $slot }}

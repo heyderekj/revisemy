@@ -34,7 +34,7 @@ class TryTokenController extends Controller
             'claude_code_command' => $result['claude_code_command'],
             'chatgpt_hint' => $result['chatgpt_hint'],
             'next_steps' => [
-                'Pick your client on the homepage (Cursor, Claude, VS Code, or ChatGPT) and paste the matching config.',
+                'Pick your client on the homepage (ChatGPT, Claude, or Cursor) and paste the matching config.',
                 'Ask your agent to screenshot UI work and call create_review.',
                 'Open the laravel.cloud review link, mark feedback, then approve or request changes.',
             ],

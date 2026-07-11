@@ -14,14 +14,14 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 - **Agent subagent path** — `add_findings` drops suggestion / a11y / polish notes into the same review before you look.
 - **Work packets + `next_action`** — agents know whether to wait, apply marks, open the next pass, or stop.
 - **Multi-pass checkups** — `create_review` with `parent_id` for pass 2+ after you request changes.
-- **Try token, no account** — one-click token on the homepage; paste MCP config for Cursor, Claude Code, VS Code, or ChatGPT.
+- **Try token, no account** — one-click token on the homepage; paste MCP config for ChatGPT, Claude, or Cursor.
 - **Secret review links** — humans open `/r/{token}` without signing up.
 
 ## Try it on any project (~2 minutes)
 
 1. Open the hosted app (your `*.laravel.cloud` URL after deploy).
 2. Click **Get a try token**.
-3. Copy the MCP config for your client (Cursor, Claude, VS Code, or ChatGPT).
+3. Copy the MCP config for your client (ChatGPT, Claude, or Cursor).
 4. Ask your agent to screenshot UI work and call `create_review`.
 5. Open the review link, mark feedback, approve or request changes.
 6. Ask the agent to call `get_review` and follow `next_action`.
@@ -62,7 +62,7 @@ After you get a try token from the homepage:
 }
 ```
 
-The homepage also copies configs for Claude Code, VS Code (`servers` key), and ChatGPT. Same URL + Bearer header works for any MCP host — see [docs/CONNECTORS.md](docs/CONNECTORS.md).
+The homepage also copies configs for Claude Code and ChatGPT. Same URL + Bearer header works for any MCP host — see [docs/CONNECTORS.md](docs/CONNECTORS.md).
 
 ### REST API (same auth)
 
@@ -117,7 +117,7 @@ Point MCP at your own origin. Use S3-compatible storage for screenshots in produ
 
 ## Docs
 
-- [CONNECTORS.md](docs/CONNECTORS.md) — Cursor / Claude / VS Code / ChatGPT packaging  
+- [CONNECTORS.md](docs/CONNECTORS.md) — ChatGPT / Claude / Cursor packaging  
 - [SECOND-OPINION.md](docs/SECOND-OPINION.md) — second opinion, agent subagent findings, work packets  
 - [DEPLOY.md](docs/DEPLOY.md) — Laravel Cloud contest deploy  
 

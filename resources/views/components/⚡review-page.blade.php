@@ -332,12 +332,12 @@ new class extends Component
         wire:poll.3s="loadReview"
     @endif
 >
-    <header class="shrink-0 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
+    <header class="shrink-0 border-b border-zinc-200 bg-white/90 backdrop-blur">
         <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
             <div class="min-w-0">
                 <div class="flex min-w-0 items-center gap-2 text-sm text-zinc-500">
                     <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                        <span class="font-mark text-[1.35rem] leading-none tracking-tight text-rose-500 dark:text-rose-400">ReviseMy</span>
+                        <span class="font-mark text-[1.35rem] leading-none tracking-tight text-rose-500">ReviseMy</span>
                     </a>
                     <span class="shrink-0">/</span>
                     <span class="truncate">{{ $review->title }}</span>
@@ -359,7 +359,7 @@ new class extends Component
 
             @if ($mode === 'guest')
                 <div class="flex shrink-0 items-center">
-                    <span class="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800 sm:px-3 sm:text-xs dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                    <span class="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800 sm:px-3 sm:text-xs">
                         <span class="sm:hidden">Guest mode</span>
                         <span class="hidden sm:inline">Guest — your marks are suggestions until accepted</span>
                     </span>
@@ -385,7 +385,7 @@ new class extends Component
     </header>
 
     <div
-        class="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-4 overflow-y-auto px-4 pt-4 sm:gap-5 sm:px-6 sm:pt-5 xl:grid-cols-[minmax(0,1fr)_20rem] xl:grid-rows-[auto_1fr] xl:gap-x-6 xl:gap-y-4 xl:overflow-hidden xl:pt-6"
+        class="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-4 overflow-y-auto px-4 pt-4 sm:gap-5 sm:px-6 sm:pt-5 xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-x-6 xl:overflow-hidden xl:pt-6"
         x-data
         x-init="
             if (! Alpine.store('rmFocus')) {
@@ -393,11 +393,11 @@ new class extends Component
             }
         "
     >
-        <section class="min-w-0 space-y-3 sm:space-y-4 xl:col-start-1 xl:row-start-1 xl:min-h-0 xl:overflow-y-auto">
+        <section class="min-w-0 space-y-3 sm:space-y-4 xl:min-h-0 xl:overflow-y-auto">
             @if ($review->context)
                 <div class="grid gap-1.5 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
                     <flux:heading size="sm" class="sm:pt-0.5">What to look at</flux:heading>
-                    <p class="text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base dark:text-zinc-400">
+                    <p class="text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base">
                         {{ $review->context }}
                     </p>
                 </div>
@@ -424,7 +424,7 @@ new class extends Component
             @if ($shot)
                 <div
                     wire:key="shot-viewer-{{ $activeScreenshotIndex }}"
-                    class="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                    class="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm"
                     x-data="{
                         zoom: 1,
                         zoomMin: 1,
@@ -594,24 +594,24 @@ new class extends Component
                     x-on:keydown.window="onKeyDown($event)"
                     x-on:keyup.window="onKeyUp($event)"
                 >
-                    <div data-zoom-controls class="absolute left-2 top-2 z-30 flex items-center gap-0.5 rounded-lg border border-zinc-200/80 bg-white/95 p-0.5 shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+                    <div data-zoom-controls class="absolute left-2 top-2 z-30 flex items-center gap-0.5 rounded-lg border border-zinc-200/80 bg-white/95 p-0.5 shadow-sm backdrop-blur">
                         <button
                             type="button"
-                            class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
                             x-on:click="zoomOut()"
                             x-bind:disabled="zoom <= zoomMin"
                             aria-label="Zoom out"
                         >−</button>
                         <button
                             type="button"
-                            class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-[10px] text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                            class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-[10px] text-zinc-500 transition hover:bg-zinc-100"
                             x-on:click="resetZoom()"
                             x-text="Math.round(zoom * 100) + '%'"
                             aria-label="Reset zoom"
                         ></button>
                         <button
                             type="button"
-                            class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
                             x-on:click="zoomIn()"
                             x-bind:disabled="zoom >= zoomMax"
                             aria-label="Zoom in"
@@ -808,7 +808,7 @@ new class extends Component
             @endif
 
             @if ($pendingX !== null)
-                <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
                     <flux:heading size="sm" class="mb-3">
                         @if ($pendingW !== null && $pendingH !== null && $pendingW >= 0.01 && $pendingH >= 0.01)
                             {{ $mode === 'guest' ? 'Suggest a change on this region' : 'Leave a note on this region' }}
@@ -830,7 +830,7 @@ new class extends Component
                         <flux:textarea wire:model="draftBody" rows="3" placeholder="Be specific — what feels off, and what would be better?" />
                         <div class="flex flex-wrap gap-2">
                             @foreach (\App\Models\Annotation::severityLabels() as $value => $label)
-                                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-sm has-[:checked]:border-zinc-400 has-[:checked]:bg-white has-[:checked]:shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50">
+                                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-sm has-[:checked]:border-zinc-400 has-[:checked]:bg-white has-[:checked]:shadow-sm">
                                     <input type="radio" wire:model="draftSeverity" value="{{ $value }}" class="{{ \App\Models\Annotation::accentClass($value) }}">
                                     {{ $label }}
                                 </label>
@@ -849,9 +849,9 @@ new class extends Component
             @endif
         </section>
 
-        <aside class="flex min-w-0 flex-col border-t border-zinc-200 pt-4 dark:border-zinc-800 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:min-h-0 xl:border-t-0 xl:overflow-y-auto xl:pt-0">
+        <aside class="flex min-w-0 flex-col border-t border-zinc-200 pt-4 xl:min-h-0 xl:border-t-0 xl:overflow-y-auto xl:pt-0">
             <div class="space-y-4 pb-4 xl:pb-6">
-            <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
                 <flux:heading size="sm" class="mb-3">{{ $mode === 'owner' ? 'My marks' : 'Owner marks' }}</flux:heading>
 
                 @php($pins = $shot?->annotations ?? collect())
@@ -863,7 +863,7 @@ new class extends Component
                 @else
                     <ul class="space-y-3">
                         @foreach ($pins as $pin)
-                            <li class="rounded-xl border border-zinc-100 p-3 dark:border-zinc-800">
+                            <li class="rounded-xl border border-zinc-100 p-3">
                                 <div class="mb-1 flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2">
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
@@ -873,14 +873,14 @@ new class extends Component
                                         <button type="button" class="text-xs text-zinc-400 hover:text-rose-600" wire:click="deletePin({{ $pin->id }})">Remove</button>
                                     @endif
                                 </div>
-                                <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{{ $pin->body }}</p>
+                                <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
                             </li>
                         @endforeach
                     </ul>
                 @endif
             </div>
 
-            <div class="rounded-2xl border border-sky-200/80 bg-sky-50/50 p-3 shadow-sm sm:p-4 dark:border-sky-900 dark:bg-sky-950/30">
+            <div class="rounded-2xl border border-sky-200/80 bg-sky-50/50 p-3 shadow-sm sm:p-4">
                 <div class="mb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                         <flux:heading size="sm">Second opinion</flux:heading>
@@ -893,7 +893,7 @@ new class extends Component
                             icon="arrow-path"
                             wire:click="refreshSecondOpinion"
                             wire:loading.attr="disabled"
-                            class="shrink-0 [&_[data-flux-loading-indicator]]:rounded-md [&_[data-flux-loading-indicator]]:bg-sky-100/95 dark:[&_[data-flux-loading-indicator]]:bg-sky-950/90"
+                            class="shrink-0 [&_[data-flux-loading-indicator]]:rounded-md [&_[data-flux-loading-indicator]]:bg-sky-100/95"
                         >
                             Refresh
                         </flux:button>
@@ -904,7 +904,7 @@ new class extends Component
                 @php($status = $shot?->second_opinion_status ?? 'idle')
 
                 @if ($status === 'queued')
-                    <p class="text-sm text-sky-700 dark:text-sky-300">Running on Laravel Cloud…</p>
+                    <p class="text-sm text-sky-700">Running on Laravel Cloud…</p>
                 @elseif ($status === 'failed')
                     <p class="text-sm text-rose-600">Second opinion failed{{ $shot?->second_opinion_error ? ': '.$shot->second_opinion_error : '.' }}</p>
                 @elseif ($findings->isEmpty())
@@ -921,18 +921,18 @@ new class extends Component
                     <ul class="space-y-3">
                         @foreach ($findings as $findingIndex => $finding)
                             <li
-                                class="cursor-pointer rounded-xl border bg-white/80 p-3 transition dark:bg-zinc-900/60"
+                                class="cursor-pointer rounded-xl border bg-white/80 p-3 transition"
                                 x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                 x-on:click="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                 x-bind:class="$store.rmFocus?.finding === {{ $finding->id }}
-                                    ? 'border-sky-400 ring-2 ring-sky-300/60 dark:border-sky-500'
-                                    : 'border-sky-100 dark:border-sky-900'"
+                                    ? 'border-sky-400 ring-2 ring-sky-300/60'
+                                    : 'border-sky-100'"
                             >
                                 <div class="mb-1 flex items-start gap-2">
                                     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-sky-500 text-[10px] font-semibold text-sky-700">S{{ $findingIndex + 1 }}</span>
                                         <span class="text-xs uppercase tracking-wide text-zinc-500">{{ $finding->severity }}</span>
-                                        <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800 dark:bg-sky-900 dark:text-sky-200">{{ $finding->sourceLabel() }}</span>
+                                        <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">{{ $finding->sourceLabel() }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
                                         <div class="flex shrink-0 items-center gap-1" x-on:click.stop>
@@ -950,21 +950,21 @@ new class extends Component
                                                 wire:click="dismissFinding({{ $finding->id }})"
                                                 title="Dismiss"
                                                 aria-label="Dismiss"
-                                                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                                                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-700"
                                             >
                                                 <flux:icon.x-mark variant="micro" class="size-3.5" />
                                             </button>
                                         </div>
                                     @endif
                                 </div>
-                                <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{{ $finding->body }}</p>
+                                <p class="text-sm leading-relaxed text-zinc-700">{{ $finding->body }}</p>
                             </li>
                         @endforeach
                     </ul>
                 @endif
             </div>
 
-            <div class="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3 shadow-sm sm:p-4 dark:border-amber-900 dark:bg-amber-950/30">
+            <div class="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3 shadow-sm sm:p-4">
                 <div class="mb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                         <flux:heading size="sm">Guest feedback</flux:heading>
@@ -995,18 +995,18 @@ new class extends Component
                     <ul class="space-y-3">
                         @foreach ($guestSuggestions as $guestIndex => $finding)
                             <li
-                                class="cursor-pointer rounded-xl border bg-white/80 p-3 transition dark:bg-zinc-900/60"
+                                class="cursor-pointer rounded-xl border bg-white/80 p-3 transition"
                                 x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                 x-on:click="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                 x-bind:class="$store.rmFocus?.finding === {{ $finding->id }}
-                                    ? 'border-amber-400 ring-2 ring-amber-300/60 dark:border-amber-500'
-                                    : 'border-amber-100 dark:border-amber-900'"
+                                    ? 'border-amber-400 ring-2 ring-amber-300/60'
+                                    : 'border-amber-100'"
                             >
                                 <div class="mb-1 flex items-start gap-2">
                                     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-amber-500 text-[10px] font-semibold text-amber-700">G{{ $guestIndex + 1 }}</span>
                                         <span class="text-xs uppercase tracking-wide text-zinc-500">{{ \App\Models\Annotation::severityLabels()[$finding->severity] ?? $finding->severity }}</span>
-                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200">{{ $finding->sourceLabel() }}</span>
+                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">{{ $finding->sourceLabel() }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
                                         <div class="flex shrink-0 items-center gap-1" x-on:click.stop>
@@ -1024,47 +1024,47 @@ new class extends Component
                                                 wire:click="dismissFinding({{ $finding->id }})"
                                                 title="Dismiss"
                                                 aria-label="Dismiss"
-                                                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                                                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-700"
                                             >
                                                 <flux:icon.x-mark variant="micro" class="size-3.5" />
                                             </button>
                                         </div>
                                     @endif
                                 </div>
-                                <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{{ $finding->body }}</p>
+                                <p class="text-sm leading-relaxed text-zinc-700">{{ $finding->body }}</p>
                             </li>
                         @endforeach
                     </ul>
                 @endif
             </div>
             </div>
+
+            @if ($this->showDecisionNote() || $this->showDecisionCallout() || $this->showStatusCallout())
+                <div class="mt-auto space-y-3 border-t border-zinc-200 pt-4 pb-4 xl:pb-6">
+                    @if ($this->showDecisionNote())
+                        <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
+                            <flux:heading size="sm" class="mb-3">Overall note (optional)</flux:heading>
+                            <flux:textarea wire:model="decisionNote" rows="2" placeholder="Anything else before you approve or request changes?" />
+                        </div>
+                    @elseif ($this->showDecisionCallout())
+                        <flux:callout>
+                            <strong class="font-medium">Note to the agent:</strong> {{ $review->decision_note }}
+                        </flux:callout>
+                    @endif
+
+                    @if ($review->effectiveStatus() === 'changes_requested')
+                        <flux:callout>
+                            <strong class="font-medium">What’s next:</strong>
+                            The agent should apply your marks, then open a new checkup pass with fresh screenshots (linked to this review). You’ll get another link to approve.
+                        </flux:callout>
+                    @elseif ($review->effectiveStatus() === 'approved')
+                        <flux:callout>
+                            <strong class="font-medium">Loop complete for this pass.</strong>
+                            Ask the agent for another checkup anytime if the UI changes again.
+                        </flux:callout>
+                    @endif
+                </div>
+            @endif
         </aside>
-
-        @if ($this->showDecisionNote() || $this->showDecisionCallout() || $this->showStatusCallout())
-            <div class="min-w-0 space-y-3 border-t border-zinc-200 pt-4 pb-6 dark:border-zinc-800 xl:col-start-1 xl:row-start-2 xl:border-t-0 xl:pt-0">
-                @if ($this->showDecisionNote())
-                    <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                        <flux:heading size="sm" class="mb-3">Overall note (optional)</flux:heading>
-                        <flux:textarea wire:model="decisionNote" rows="2" placeholder="Anything else before you approve or request changes?" />
-                    </div>
-                @elseif ($this->showDecisionCallout())
-                    <flux:callout>
-                        <strong class="font-medium">Note to the agent:</strong> {{ $review->decision_note }}
-                    </flux:callout>
-                @endif
-
-                @if ($review->effectiveStatus() === 'changes_requested')
-                    <flux:callout>
-                        <strong class="font-medium">What’s next:</strong>
-                        The agent should apply your marks, then open a new checkup pass with fresh screenshots (linked to this review). You’ll get another link to approve.
-                    </flux:callout>
-                @elseif ($review->effectiveStatus() === 'approved')
-                    <flux:callout>
-                        <strong class="font-medium">Loop complete for this pass.</strong>
-                        Ask the agent for another checkup anytime if the UI changes again.
-                    </flux:callout>
-                @endif
-            </div>
-        @endif
     </div>
 </div>
