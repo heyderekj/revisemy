@@ -29,12 +29,13 @@ You are running a ReviseMy design checkup loop for: {$focus}
 5. **Wait** — Poll `get_review` with the review id. While `status` is `pending`, do not claim the UI is done.
 6. **Act on the work packet** — When status changes:
    - `approved` → stop. Follow `next_action`. Celebrate briefly; do not keep editing unless asked.
-   - `changes_requested` → apply **human marks first** (`work_packets.pins`): must-fix → wording/spacing/size/color/alignment → nit. Honor `keep` (do not change). Resolve `question` with the human before inventing a fix. Treat `second_opinion` as hints only. Then ship fixes and call `create_review` again with `parent_id` set to this review’s id for pass 2+ (new screenshots of the fixed UI).
+   - `changes_requested` → apply **human marks first** (`work_packets.pins`): must-fix → nit. Honor `keep` (do not change). Resolve `question` with the human before inventing a fix. Treat `second_opinion` as hints only. As you work each mark, call `resolve_marks` with its `id` — `status` `in_progress` while editing, `resolved` (with a short `note` on what you changed) once fixed. Never set `verified`; only the human verifies. When `loop.outstanding_count` reaches 0, ship the pass: `create_review` again with `parent_id` set to this review’s id (new screenshots of the fixed UI, plus a fresh `context` for what to look at on that pass).
 7. **Repeat** until `approved` (or the human stops the loop).
 
 ## Rules
 
 - Human marks = intent. Second opinion = hints. (API still uses the key `pins` for marks.)
+- Report progress with `resolve_marks` (`in_progress` → `resolved`). Only the human verifies or reopens a mark — never mark one `verified` yourself.
 - Never invent approval. Never flip status yourself.
 - Prefer one clear review URL per pass; link passes with `parent_id`.
 - Teammates can suggest via `guest_share_url`, but their suggestions only reach you after the owner accepts them (they arrive as pins). If `loop.guest_suggestion_count` > 0, teammate feedback is still waiting on owner triage. `work_packets.second_opinion_resolved` shows which earlier hints were accepted or dismissed.

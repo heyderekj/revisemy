@@ -683,15 +683,15 @@ new class extends Component
     </header>
 
     <div
-        class="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-4 overflow-y-auto px-4 pt-4 sm:gap-5 sm:px-6 sm:pt-5 xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-x-6 xl:overflow-hidden xl:pt-6"
+        class="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 pt-4 sm:px-6 sm:pt-5 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-x-6 xl:overflow-hidden xl:pt-6"
         x-data
         x-init="
             if (! Alpine.store('rmFocus')) {
-                Alpine.store('rmFocus', { finding: null });
+                Alpine.store('rmFocus', { finding: null, mark: null });
             }
         "
     >
-        <section class="min-w-0 space-y-3 sm:space-y-4 xl:min-h-0 xl:overflow-y-auto">
+        <section class="min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto sm:space-y-4 xl:max-h-none xl:min-h-0 xl:overflow-y-auto">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
                 <div class="grid gap-1.5 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
                     <flux:heading size="sm" class="sm:pt-0.5">What to look at</flux:heading>
@@ -774,7 +774,7 @@ new class extends Component
                             size="sm"
                             variant="{{ $activeScreenshotIndex === $index ? 'primary' : 'ghost' }}"
                             wire:click="selectScreenshot({{ $index }})"
-                            x-on:click="$store.rmFocus && ($store.rmFocus.finding = null)"
+                            x-on:click="$store.rmFocus && ($store.rmFocus.finding = null, $store.rmFocus.mark = null)"
                             class="{{ $activeScreenshotIndex === $index ? '!border-zinc-800 !bg-zinc-800 !text-white hover:!bg-zinc-700' : '' }}"
                         >
                             Shot {{ $index + 1 }}
@@ -1081,8 +1081,14 @@ new class extends Component
                                         class="absolute z-[8] {{ $markState }}"
                                         style="left: {{ $region['x'] * 100 }}%; top: {{ $region['y'] * 100 }}%; width: {{ $region['w'] * 100 }}%; height: {{ $region['h'] * 100 }}%;"
                                     >
-                                        <div class="pointer-events-none absolute inset-0 rounded-md border-2 border-rose-500/80 bg-rose-500/10"></div>
-                                        <div class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white shadow-sm ring-2 ring-white {{ $annotation->markerClass() }}">
+                                        <div
+                                            class="pointer-events-none absolute inset-0 rounded-md border-2 border-rose-500/80 bg-rose-500/10 transition"
+                                            x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'ring-2 ring-rose-400 ring-offset-1' : ''"
+                                        ></div>
+                                        <div
+                                            class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white shadow-sm ring-2 ring-white transition {{ $annotation->markerClass() }}"
+                                            x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110' : ''"
+                                        >
                                             M{{ $annotation->number }}
                                         </div>
                                     </div>
@@ -1090,9 +1096,10 @@ new class extends Component
                                     <button
                                         type="button"
                                         data-pin
-                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow-lg ring-2 ring-white {{ $annotation->markerClass() }} {{ $markState }}"
+                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
                                         style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
                                         title="{{ $annotation->body }}"
+                                        x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110 ring-4 ring-rose-300' : ''"
                                     >
                                         M{{ $annotation->number }}
                                     </button>
@@ -1165,6 +1172,76 @@ new class extends Component
                 <flux:callout variant="warning">No screenshots on this review yet.</flux:callout>
             @endif
         </section>
+
+        @php($stripMarks = $shot?->annotations ?? collect())
+        @php($stripSecondOpinion = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
+        @php($stripGuest = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && $f->isGuest())->values())
+
+        @if ($shot && ($stripMarks->isNotEmpty() || $stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
+            <div class="shrink-0 overflow-x-auto overscroll-x-contain border-y border-zinc-200 bg-white/95 px-3 py-2 [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
+                <div class="flex w-max items-center gap-1.5">
+                    @foreach ($stripMarks as $pin)
+                        <button
+                            type="button"
+                            class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white shadow-sm ring-2 ring-white transition {{ $pin->markerClass() }}"
+                            x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'scale-110 ring-rose-300' : ''"
+                            x-on:click="
+                                $store.rmFocus.mark = $store.rmFocus.mark === {{ $pin->id }} ? null : {{ $pin->id }};
+                                $store.rmFocus.finding = null;
+                                document.getElementById('fb-mark-{{ $pin->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            "
+                            aria-label="Jump to mark M{{ $pin->number }}"
+                        >
+                            M{{ $pin->number }}
+                        </button>
+                    @endforeach
+
+                    @if ($stripMarks->isNotEmpty() && ($stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
+                        <span class="h-4 w-px shrink-0 bg-zinc-200" aria-hidden="true"></span>
+                    @endif
+
+                    @foreach ($stripSecondOpinion as $index => $finding)
+                        <button
+                            type="button"
+                            class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-1.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
+                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
+                            x-on:click="
+                                $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
+                                $store.rmFocus.mark = null;
+                                @if ($secondOpinionTab !== 'all' && $secondOpinionTab !== $finding->severity)
+                                    $wire.setSecondOpinionTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+                                @else
+                                    document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                @endif
+                            "
+                            aria-label="Jump to second opinion S{{ $index + 1 }}"
+                        >
+                            S{{ $index + 1 }}
+                        </button>
+                    @endforeach
+
+                    @if ($stripSecondOpinion->isNotEmpty() && $stripGuest->isNotEmpty())
+                        <span class="h-4 w-px shrink-0 bg-zinc-200" aria-hidden="true"></span>
+                    @endif
+
+                    @foreach ($stripGuest as $index => $finding)
+                        <button
+                            type="button"
+                            class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-amber-500 bg-white px-1.5 text-[10px] font-semibold text-amber-700 shadow-sm transition"
+                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
+                            x-on:click="
+                                $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
+                                $store.rmFocus.mark = null;
+                                document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            "
+                            aria-label="Jump to guest suggestion G{{ $index + 1 }}"
+                        >
+                            G{{ $index + 1 }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         @if ($pendingX !== null)
             <div
@@ -1280,7 +1357,7 @@ new class extends Component
             </div>
         @endif
 
-        <aside class="flex min-w-0 flex-col border-t border-zinc-200 pt-4 xl:min-h-0 xl:border-t-0 xl:overflow-y-auto xl:pt-0">
+        <aside class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t border-zinc-200 pt-4 xl:min-h-0 xl:border-t-0 xl:overflow-y-auto xl:pt-0">
             <div class="space-y-4 pb-4 xl:pb-6">
             <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
                 <flux:heading size="sm" class="mb-3">{{ $mode === 'owner' ? 'My marks' : 'Owner marks' }}</flux:heading>
@@ -1294,7 +1371,11 @@ new class extends Component
                 @else
                     <ul class="space-y-3">
                         @foreach ($pins as $pin)
-                            <li class="rounded-xl border border-zinc-100 p-3">
+                            <li
+                                id="fb-mark-{{ $pin->id }}"
+                                class="rounded-xl border border-zinc-100 p-3 transition"
+                                x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'border-rose-300 ring-2 ring-rose-200/70' : ''"
+                            >
                                 <div class="mb-1 flex items-center justify-between gap-2">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
@@ -1451,6 +1532,7 @@ new class extends Component
                         <ul class="space-y-3">
                             @foreach ($visibleFindings as $finding)
                                 <li
+                                    id="fb-finding-{{ $finding->id }}"
                                     class="cursor-pointer rounded-xl border bg-white/80 p-3 transition"
                                     x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                     x-on:click="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
@@ -1513,6 +1595,7 @@ new class extends Component
                     <ul class="space-y-3">
                         @foreach ($guestSuggestions as $guestIndex => $finding)
                             <li
+                                id="fb-finding-{{ $finding->id }}"
                                 class="cursor-pointer rounded-xl border bg-white/80 p-3 transition"
                                 x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                 x-on:click="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"

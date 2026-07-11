@@ -140,12 +140,20 @@ class Review extends Model
                 'action' => 'wait_for_human',
                 'summary' => 'Share review_url with the human. Poll get_review until they approve or request changes. Do not claim the UI is done.',
             ],
-            self::STATUS_CHANGES_REQUESTED => [
-                'action' => 'apply_pins_then_next_pass',
-                'summary' => 'Apply work_packets.pins (human marks) in order: must-fix → wording/spacing/size/color/alignment → nit. Honor keep (do not change). Resolve question with the human before inventing a fix. Treat second_opinion as hints. Then create_review with parent_id set to this review id and new screenshots of the fixed UI.',
-                'create_next_pass' => true,
-                'parent_id' => $this->public_id,
-            ],
+            self::STATUS_CHANGES_REQUESTED => $this->outstandingMarkCount() > 0
+                ? [
+                    'action' => 'apply_pins_then_next_pass',
+                    'summary' => 'Apply work_packets.pins (human marks) in order: must-fix → nit. Honor keep (do not change). Resolve question with the human before inventing a fix. As you work each mark, call resolve_marks with its id — status "in_progress" while editing, "resolved" (with a short note) once fixed. Never set "verified"; that is the human\'s call. Treat second_opinion as hints. Once every mark is resolved, create_review with parent_id set to this review id, new screenshots of the fixed UI, and a fresh context for what to look at on this next pass.',
+                    'create_next_pass' => true,
+                    'parent_id' => $this->public_id,
+                    'outstanding_marks' => $this->outstandingMarkCount(),
+                ]
+                : [
+                    'action' => 'open_next_pass',
+                    'summary' => 'Every mark is resolved. Open the next pass now: create_review with parent_id set to this review id and fresh screenshots of the fixed UI so the human can verify.',
+                    'create_next_pass' => true,
+                    'parent_id' => $this->public_id,
+                ],
             self::STATUS_APPROVED => [
                 'action' => 'done',
                 'summary' => 'Human approved this pass. Stop editing unless they ask for another checkup.',
@@ -168,20 +176,14 @@ class Review extends Model
      */
     public function toAgentPayload(): array
     {
-        $this->loadMissing(['screenshots.annotations', 'screenshots.findings', 'parent']);
+        $this->loadMissing(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations']);
 
         $screenshots = $this->screenshots->map(function (Screenshot $shot, int $index) {
             $pins = $shot->annotations
                 ->sortBy('number')
                 ->values()
-                ->map(fn (Annotation $annotation) => [
-                    'number' => $annotation->number,
-                    'x' => (float) $annotation->x,
-                    'y' => (float) $annotation->y,
-                    'area' => $annotation->region(),
-                    'severity' => $annotation->severity,
-                    'body' => $annotation->body,
-                ])->all();
+                ->map(fn (Annotation $annotation) => $this->markToArray($annotation))
+                ->all();
 
             $findings = $shot->findings
                 ->filter(fn (Finding $finding) => $finding->isOpen() && ! $finding->isGuest())
@@ -228,11 +230,18 @@ class Review extends Model
             fn (array $p) => $p + ['screenshot_index' => $s['index']]
         ))->values()->all();
 
-        $mustFix = collect($allPins)->where('severity', Annotation::SEVERITY_MUST_FIX)->values()->all();
-        $nits = collect($allPins)->where('severity', Annotation::SEVERITY_NIT)->values()->all();
-        $questions = collect($allPins)->where('severity', Annotation::SEVERITY_QUESTION)->values()->all();
+        // The agent should only re-work marks it has not resolved yet. Keeps stay
+        // fully listed (they are "leave this alone" reminders, not tasks).
+        $outstanding = collect($allPins)->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS]);
+
+        $mustFix = $outstanding->where('severity', Annotation::SEVERITY_MUST_FIX)->values()->all();
+        $nits = $outstanding->where('severity', Annotation::SEVERITY_NIT)->values()->all();
+        $questions = $outstanding->where('severity', Annotation::SEVERITY_QUESTION)->values()->all();
+        $tweaks = $outstanding->whereIn('severity', Annotation::tweakSeverities())->values()->all();
         $keeps = collect($allPins)->where('severity', Annotation::SEVERITY_KEEP)->values()->all();
-        $tweaks = collect($allPins)->whereIn('severity', Annotation::tweakSeverities())->values()->all();
+
+        $awaitingVerification = collect($allPins)->where('status', Annotation::STATUS_RESOLVED)->values()->all();
+        $verifiedCount = collect($allPins)->where('status', Annotation::STATUS_VERIFIED)->count();
 
         return [
             'id' => $this->public_id,
@@ -250,11 +259,12 @@ class Review extends Model
                 default => $this->status,
             },
             'review_url' => $this->reviewUrl(),
+            'board_url' => $this->boardUrl(),
             'guest_share_url' => $this->shareUrl(),
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
-            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then tweaks (wording/spacing/size/color/alignment), then nit. Honor keep (leave alone). Ask before inventing answers to question marks. Treat second_opinion as hints only.',
+            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). Ask before inventing answers to question marks. Treat second_opinion as hints only.',
             'next_action' => $this->nextAction(),
             'loop' => [
                 'pass' => $this->pass,
@@ -268,6 +278,9 @@ class Review extends Model
                 'second_opinion_accepted_count' => collect($allResolved)->where('status', Finding::STATUS_ACCEPTED)->count(),
                 'second_opinion_dismissed_count' => collect($allResolved)->where('status', Finding::STATUS_DISMISSED)->count(),
                 'guest_suggestion_count' => $guestSuggestionCount,
+                'outstanding_count' => $outstanding->count(),
+                'resolved_count' => count($awaitingVerification),
+                'verified_count' => $verifiedCount,
             ],
             'work_packets' => [
                 'pins' => $allPins,
@@ -276,10 +289,78 @@ class Review extends Model
                 'questions' => $questions,
                 'keeps' => $keeps,
                 'tweaks' => $tweaks,
+                'awaiting_verification' => $awaitingVerification,
                 'second_opinion' => $allFindings,
                 'second_opinion_resolved' => $allResolved,
             ],
+            'previous_pass' => $this->previousPassPayload(),
             'screenshots' => $screenshots,
         ];
+    }
+
+    /**
+     * Serialize one mark (human annotation) for the agent work packet.
+     *
+     * @return array<string, mixed>
+     */
+    protected function markToArray(Annotation $annotation): array
+    {
+        return [
+            'id' => $annotation->id,
+            'number' => $annotation->number,
+            'x' => (float) $annotation->x,
+            'y' => (float) $annotation->y,
+            'area' => $annotation->region(),
+            'severity' => $annotation->severity,
+            'body' => $annotation->body,
+            'status' => $annotation->status,
+            'resolution_note' => $annotation->resolution_note,
+        ];
+    }
+
+    /**
+     * Marks carried over from the parent pass, so the agent can see what the
+     * human has since verified or reopened after the last round of fixes.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function previousPassPayload(): ?array
+    {
+        $parent = $this->parent;
+
+        if (! $parent) {
+            return null;
+        }
+
+        $marks = $parent->screenshots
+            ->flatMap(fn (Screenshot $shot) => $shot->annotations)
+            ->sortBy('number')
+            ->values()
+            ->map(fn (Annotation $annotation) => $this->markToArray($annotation));
+
+        return [
+            'id' => $parent->public_id,
+            'pass' => $parent->pass,
+            'review_url' => $parent->reviewUrl(),
+            'marks' => $marks->all(),
+            'outstanding_count' => $marks->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS])->count(),
+            'resolved_count' => $marks->where('status', Annotation::STATUS_RESOLVED)->count(),
+            'verified_count' => $marks->where('status', Annotation::STATUS_VERIFIED)->count(),
+        ];
+    }
+
+    public function boardUrl(): string
+    {
+        return url('/r/'.$this->token.'/board');
+    }
+
+    /**
+     * Marks still needing agent work (open or in progress), across all passes' screenshots.
+     */
+    public function outstandingMarkCount(): int
+    {
+        return $this->annotations()
+            ->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS])
+            ->count();
     }
 }

@@ -15,15 +15,28 @@ class Annotation extends Model
 
     public const SEVERITY_KEEP = 'keep';
 
+    /** @deprecated Kept for legacy marks; not offered in the composer. */
     public const SEVERITY_WORDING = 'wording';
 
+    /** @deprecated Kept for legacy marks; not offered in the composer. */
     public const SEVERITY_SPACING = 'spacing';
 
+    /** @deprecated Kept for legacy marks; not offered in the composer. */
     public const SEVERITY_SIZE = 'size';
 
+    /** @deprecated Kept for legacy marks; not offered in the composer. */
     public const SEVERITY_COLOR = 'color';
 
+    /** @deprecated Kept for legacy marks; not offered in the composer. */
     public const SEVERITY_ALIGNMENT = 'alignment';
+
+    public const STATUS_OPEN = 'open';
+
+    public const STATUS_IN_PROGRESS = 'in_progress';
+
+    public const STATUS_RESOLVED = 'resolved';
+
+    public const STATUS_VERIFIED = 'verified';
 
     /**
      * @return list<string>
@@ -31,6 +44,41 @@ class Annotation extends Model
     public static function severities(): array
     {
         return array_keys(self::severityLabels());
+    }
+
+    /**
+     * Lifecycle statuses in board / progression order.
+     *
+     * @return list<string>
+     */
+    public static function statuses(): array
+    {
+        return array_keys(self::statusLabels());
+    }
+
+    /**
+     * Human-facing labels for the lifecycle status.
+     *
+     * @return array<string, string>
+     */
+    public static function statusLabels(): array
+    {
+        return [
+            self::STATUS_OPEN => 'Open',
+            self::STATUS_IN_PROGRESS => 'In progress',
+            self::STATUS_RESOLVED => 'Resolved',
+            self::STATUS_VERIFIED => 'Verified',
+        ];
+    }
+
+    /**
+     * Statuses an agent may set via resolve_marks. Verify and reopen stay human-only.
+     *
+     * @return list<string>
+     */
+    public static function agentStatuses(): array
+    {
+        return [self::STATUS_IN_PROGRESS, self::STATUS_RESOLVED];
     }
 
     /**
@@ -45,6 +93,17 @@ class Annotation extends Model
             self::SEVERITY_NIT => 'Nice to have',
             self::SEVERITY_QUESTION => 'Question',
             self::SEVERITY_KEEP => 'Keep this',
+        ];
+    }
+
+    /**
+     * Labels for display, including legacy tweak categories.
+     *
+     * @return array<string, string>
+     */
+    public static function allSeverityLabels(): array
+    {
+        return self::severityLabels() + [
             self::SEVERITY_WORDING => 'Wording',
             self::SEVERITY_SPACING => 'Spacing',
             self::SEVERITY_SIZE => 'Size',
@@ -54,7 +113,7 @@ class Annotation extends Model
     }
 
     /**
-     * Tweak-type marks (scoped visual/copy changes).
+     * Legacy tweak-type marks (scoped visual/copy changes).
      *
      * @return list<string>
      */
@@ -71,7 +130,41 @@ class Annotation extends Model
 
     public function label(): string
     {
-        return self::severityLabels()[$this->severity] ?? (string) $this->severity;
+        return self::allSeverityLabels()[$this->severity] ?? (string) $this->severity;
+    }
+
+    public function statusLabel(): string
+    {
+        return self::statusLabels()[$this->status] ?? (string) $this->status;
+    }
+
+    /**
+     * Still needs the agent's attention (not yet resolved or verified).
+     */
+    public function isOutstanding(): bool
+    {
+        return in_array($this->status, [self::STATUS_OPEN, self::STATUS_IN_PROGRESS], true);
+    }
+
+    /**
+     * Agent says done; waiting on the human to verify or reopen.
+     */
+    public function awaitsVerification(): bool
+    {
+        return $this->status === self::STATUS_RESOLVED;
+    }
+
+    /**
+     * Tailwind classes for the small status badge in the sidebar and board.
+     */
+    public function statusBadgeClass(): string
+    {
+        return match ($this->status) {
+            self::STATUS_IN_PROGRESS => 'bg-sky-100 text-sky-800',
+            self::STATUS_RESOLVED => 'bg-amber-100 text-amber-800',
+            self::STATUS_VERIFIED => 'bg-emerald-100 text-emerald-800',
+            default => 'bg-zinc-100 text-zinc-600',
+        };
     }
 
     /**
@@ -118,6 +211,11 @@ class Annotation extends Model
         'severity',
         'body',
         'number',
+        'status',
+        'resolution_note',
+        'after_screenshot_id',
+        'resolved_at',
+        'verified_at',
     ];
 
     protected function casts(): array
@@ -126,7 +224,21 @@ class Annotation extends Model
             'x' => 'float',
             'y' => 'float',
             'area' => 'array',
+            'resolved_at' => 'datetime',
+            'verified_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Annotation $annotation): void {
+            if ($annotation->status === null || $annotation->status === '') {
+                // Nothing for the agent to do on a "keep" — it lands verified.
+                $annotation->status = $annotation->severity === self::SEVERITY_KEEP
+                    ? self::STATUS_VERIFIED
+                    : self::STATUS_OPEN;
+            }
+        });
     }
 
     /**
@@ -160,5 +272,13 @@ class Annotation extends Model
     public function screenshot(): BelongsTo
     {
         return $this->belongsTo(Screenshot::class);
+    }
+
+    /**
+     * Optional "after" screenshot an agent referenced when resolving this mark.
+     */
+    public function afterScreenshot(): BelongsTo
+    {
+        return $this->belongsTo(Screenshot::class, 'after_screenshot_id');
     }
 }

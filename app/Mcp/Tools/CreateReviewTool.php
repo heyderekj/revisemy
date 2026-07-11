@@ -73,7 +73,7 @@ class CreateReviewTool extends Tool
     {
         return [
             'title' => $schema->string()->description('Short title for this checkup pass')->required(),
-            'context' => $schema->string()->description('What should they look at? Optional notes for the human.'),
+            'context' => $schema->string()->description('What should the human look at on this pass? Set a new focus for each pass — do not reuse the previous pass’s notes blindly.'),
             'page_url' => $schema->string()->description('Optional live page URL for future DOM grounding'),
             'parent_id' => $schema->string()->description('Previous review id when opening the next pass after changes_requested'),
             'images' => $schema->array()

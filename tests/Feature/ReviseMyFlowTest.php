@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class ReviseMyFlowTest extends TestCase
@@ -174,7 +175,7 @@ class ReviseMyFlowTest extends TestCase
         $finding = $review->screenshots()->firstOrFail()->findings()->where('severity', 'a11y')->firstOrFail();
         $dismiss = $review->screenshots()->firstOrFail()->findings()->where('severity', 'polish')->firstOrFail();
 
-        $component = \Livewire\Livewire::test('review-page', ['token' => $review->token])
+        $component = Livewire::test('review-page', ['token' => $review->token])
             ->call('acceptFinding', $finding->id)
             ->call('dismissFinding', $dismiss->id);
 
@@ -255,12 +256,16 @@ class ReviseMyFlowTest extends TestCase
         $this->assertSame(1, $first['pass']);
 
         $review = Review::query()->where('public_id', $first['id'])->firstOrFail();
+        $review->screenshots()->firstOrFail()->annotations()->create([
+            'x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Fix the CTA', 'number' => 1,
+        ]);
         $review->update([
             'status' => Review::STATUS_CHANGES_REQUESTED,
             'decision_at' => now(),
             'decision_note' => 'Fix the CTA',
         ]);
 
+        // An outstanding mark keeps the agent on the apply-then-next-pass step.
         $payload = $review->fresh()->toAgentPayload();
         $this->assertSame('apply_pins_then_next_pass', $payload['next_action']['action']);
         $this->assertTrue($payload['next_action']['create_next_pass']);
@@ -326,7 +331,7 @@ class ReviseMyFlowTest extends TestCase
 
         $review = Review::query()->where('public_id', $id)->firstOrFail();
 
-        \Livewire\Livewire::test('review-page', ['token' => $review->share_token])
+        Livewire::test('review-page', ['token' => $review->share_token])
             ->call('startPin', 0.3, 0.4)
             ->set('guestName', 'Sam')
             ->set('draftBody', 'The heading feels cramped.')
@@ -371,7 +376,7 @@ class ReviseMyFlowTest extends TestCase
             'source' => Finding::SOURCE_AGENT, 'severity' => 'polish', 'body' => 'Agent hint',
         ]);
 
-        \Livewire\Livewire::test('review-page', ['token' => $review->share_token])
+        Livewire::test('review-page', ['token' => $review->share_token])
             ->call('approve')
             ->call('requestChanges')
             ->call('deletePin', $pin->id)
@@ -414,7 +419,7 @@ class ReviseMyFlowTest extends TestCase
             'status' => Finding::STATUS_OPEN,
         ]);
 
-        \Livewire\Livewire::test('review-page', ['token' => $review->token])
+        Livewire::test('review-page', ['token' => $review->token])
             ->call('acceptFinding', $suggestion->id)
             ->assertOk();
 
@@ -460,7 +465,7 @@ class ReviseMyFlowTest extends TestCase
             'y' => 0.5,
         ]);
 
-        \Livewire\Livewire::test('review-page', ['token' => $review->token])
+        Livewire::test('review-page', ['token' => $review->token])
             ->call('acceptFinding', $accepted->id)
             ->call('dismissFinding', $dismissed->id)
             ->assertOk();

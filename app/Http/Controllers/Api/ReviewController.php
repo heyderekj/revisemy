@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Review;
+use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use App\Services\SecondOpinionService;
 use Illuminate\Http\JsonResponse;
@@ -108,6 +109,45 @@ class ReviewController extends Controller
         $opinions->addAgentFindings($review, $data['findings']);
 
         return response()->json($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload(), 201);
+    }
+
+    public function resolveMarks(Request $request, string $publicId, ReviewService $reviews, MarkLifecycleService $lifecycle): JsonResponse
+    {
+        $this->throttle($request, 'resolve-marks', 120);
+
+        $workspace = $request->user()->workspace;
+        $review = $reviews->findForWorkspace($workspace, $publicId);
+
+        if (! $review) {
+            return response()->json(['message' => 'Review not found for this try token.'], 404);
+        }
+
+        if ($review->effectiveStatus() !== Review::STATUS_CHANGES_REQUESTED) {
+            return response()->json([
+                'message' => 'You can only resolve marks after the human requests changes.',
+                'status' => $review->effectiveStatus(),
+            ], 422);
+        }
+
+        $data = $request->validate([
+            'marks' => ['required', 'array', 'min:1', 'max:50'],
+            'marks.*.id' => ['required', 'integer'],
+            'marks.*.status' => ['nullable', 'string', 'in:in_progress,resolved'],
+            'marks.*.note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $updated = $lifecycle->applyAgentUpdates($workspace, $data['marks']);
+
+        if ($updated->isEmpty()) {
+            return response()->json([
+                'message' => 'None of those mark ids belong to a review on this try token. Check work_packets.pins[].id.',
+            ], 422);
+        }
+
+        return response()->json([
+            'updated' => $updated->count(),
+            'review' => $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations'])?->toAgentPayload(),
+        ]);
     }
 
     public function requestSecondOpinion(Request $request, string $publicId, ReviewService $reviews, SecondOpinionService $opinions): JsonResponse
