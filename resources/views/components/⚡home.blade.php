@@ -248,7 +248,9 @@ new class extends Component
                                 this.stop();
                                 this.paused = false;
                                 if (this.reduced) { this.step = 4; return; }
-                                this.timer = setInterval(() => {
+                                // Livewire's Alpine build has no $cleanup — keep one global timer so remounts cannot stack intervals.
+                                if (window.__rmStageTimer) { clearInterval(window.__rmStageTimer); }
+                                this.timer = window.__rmStageTimer = setInterval(() => {
                                     if (this.step >= 4) {
                                         this.advanceScenario();
                                         this.step = 0;
@@ -259,6 +261,7 @@ new class extends Component
                             },
                             stop() {
                                 if (this.timer) { clearInterval(this.timer); this.timer = null; }
+                                if (window.__rmStageTimer) { clearInterval(window.__rmStageTimer); window.__rmStageTimer = null; }
                                 if (this.resumeTimer) { clearTimeout(this.resumeTimer); this.resumeTimer = null; }
                             },
                             advanceScenario() {
@@ -280,7 +283,7 @@ new class extends Component
                                 this.resumeTimer = setTimeout(() => this.start(), 6000);
                             }
                         }"
-                        x-init="start(); $cleanup(() => stop())"
+                        x-init="start(); window.addEventListener('pagehide', () => stop(), { once: true })"
                     >
                         <div class="flex flex-col gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                             <div class="flex min-w-0 items-center gap-2">
