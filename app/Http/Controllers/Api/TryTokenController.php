@@ -12,17 +12,27 @@ class TryTokenController extends Controller
 {
     public function store(Request $request, TryTokenService $tryTokens): JsonResponse
     {
-        $key = 'try-token:'.$request->ip();
+        try {
+            $key = 'try-token:'.$request->ip();
 
-        if (RateLimiter::tooManyAttempts($key, 10)) {
+            if (RateLimiter::tooManyAttempts($key, 10)) {
+                return response()->json([
+                    'message' => 'Slow down — try again in a minute.',
+                ], 429);
+            }
+
+            RateLimiter::hit($key, 60);
+
+            $result = $tryTokens->create();
+        } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
-                'message' => 'Slow down — try again in a minute.',
-            ], 429);
+                'message' => 'Could not create try token.',
+                'error' => $e->getMessage(),
+                'type' => $e::class,
+            ], 500);
         }
-
-        RateLimiter::hit($key, 60);
-
-        $result = $tryTokens->create();
 
         return response()->json([
             'token' => $result['token'],
