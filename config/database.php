@@ -16,40 +16,17 @@ $dbSslMode = env('DB_SSLMODE', PostgresHost::defaultSslMode($dbHost, $dbUrl));
 $dbConnectTimeout = (int) env('DB_CONNECT_TIMEOUT', 60);
 $isServerless = PostgresHost::isServerlessHost($dbHost) || PostgresHost::isServerlessHost($dbUrl);
 $neonEndpointId = $isServerless ? PostgresHost::endpointId($dbHost) : null;
-$dbPasswordForServerless = PostgresHost::passwordForServerless($dbPassword, $neonEndpointId);
 $useMigrateConnection = PostgresHost::shouldUseMigrateConnection($dbConnection, $dbHost, $dbUrl, $dbMigrateUrl);
 
 $migrateUrl = $dbMigrateUrl;
 
-if ($migrateUrl === null || $migrateUrl === '') {
-    if ($useMigrateConnection && $dbConnection === 'pgsql') {
-        $migrateUrl = PostgresHost::buildUrl(
-            $dbHost,
-            $dbPort,
-            $dbDatabase,
-            $dbUsername,
-            $dbPassword,
-            is_string($dbSslMode) ? $dbSslMode : 'require',
-            $dbConnectTimeout,
-        );
-    }
-} elseif ($isServerless) {
+if ($migrateUrl !== null && $migrateUrl !== '' && $isServerless) {
     $migrateUrl = PostgresHost::ensureUrlParams($migrateUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
 }
 
 $runtimePgsqlUrl = $dbUrl;
 
-if ($runtimePgsqlUrl === '' && $isServerless && $dbConnection === 'pgsql') {
-    $runtimePgsqlUrl = PostgresHost::buildUrl(
-        $dbHost,
-        $dbPort,
-        $dbDatabase,
-        $dbUsername,
-        $dbPassword,
-        is_string($dbSslMode) ? $dbSslMode : 'require',
-        $dbConnectTimeout,
-    );
-} elseif ($runtimePgsqlUrl !== '' && $isServerless) {
+if ($runtimePgsqlUrl !== '' && $isServerless) {
     $runtimePgsqlUrl = PostgresHost::ensureUrlParams($runtimePgsqlUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
 }
 
@@ -141,7 +118,7 @@ return [
             'port' => $dbPort,
             'database' => $dbDatabase,
             'username' => $dbUsername,
-            'password' => $dbPasswordForServerless,
+            'password' => $dbPassword,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
@@ -160,7 +137,7 @@ return [
             'port' => $dbPort,
             'database' => $dbDatabase,
             'username' => $dbUsername,
-            'password' => $dbPasswordForServerless,
+            'password' => $dbPassword,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,

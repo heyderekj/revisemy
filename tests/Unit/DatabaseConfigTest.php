@@ -55,16 +55,15 @@ class DatabaseConfigTest extends TestCase
         $this->assertSame('require', $config['connections']['pgsql_migrate']['sslmode']);
         $this->assertSame(60, $config['connections']['pgsql_migrate']['connect_timeout']);
         $this->assertSame('ep-x', $config['connections']['pgsql_migrate']['neon_endpoint']);
-        $this->assertStringNotContainsString('options=endpoint', (string) $config['connections']['pgsql_migrate']['url']);
-        $this->assertStringContainsString('ep-x.us-east-2.pg.laravel.cloud', (string) $config['connections']['pgsql_migrate']['url']);
-        $this->assertStringContainsString('sslmode=require', (string) $config['connections']['pgsql_migrate']['url']);
-        $this->assertStringContainsString('connect_timeout=60', (string) $config['connections']['pgsql_migrate']['url']);
+        $this->assertSame('', (string) $config['connections']['pgsql_migrate']['url']);
+        $this->assertStringContainsString('ep-x.us-east-2.pg.laravel.cloud', $config['connections']['pgsql_migrate']['host']);
         $this->assertSame(
             'ep-x-pooler.us-east-2.pg.laravel.cloud',
             $config['connections']['pgsql']['host'],
         );
         $this->assertSame(60, $config['connections']['pgsql']['connect_timeout']);
-        $this->assertStringContainsString('endpoint=ep-x$', (string) $config['connections']['pgsql']['password']);
+        $this->assertSame('secret', $config['connections']['pgsql']['password']);
+        $this->assertSame('', (string) $config['connections']['pgsql']['url']);
     }
 
     public function test_laravel_cloud_host_auto_adds_neon_endpoint_routing(): void
@@ -84,8 +83,8 @@ class DatabaseConfigTest extends TestCase
 
         $this->assertSame('pgsql_migrate', $config['migrations']['connection']);
         $this->assertSame('ep-misty-smoke-aiihk586', $config['connections']['pgsql']['neon_endpoint']);
-        $this->assertStringContainsString('endpoint=ep-misty-smoke-aiihk586$', (string) $config['connections']['pgsql']['password']);
-        $this->assertStringNotContainsString('options=endpoint', (string) $config['connections']['pgsql']['url']);
+        $this->assertSame('secret', $config['connections']['pgsql']['password']);
+        $this->assertSame('', (string) $config['connections']['pgsql']['url']);
     }
 
     public function test_local_pgsql_config_is_unchanged(): void

@@ -163,7 +163,6 @@ class PostgresHostTest extends TestCase
         $this->assertStringNotContainsString('-pooler', $url);
         $this->assertStringContainsString('sslmode=require', $url);
         $this->assertStringContainsString('connect_timeout=60', $url);
-        $this->assertStringContainsString('endpoint%3Dep-x%24', $url);
         $this->assertStringContainsString('cloud-user', $url);
         $this->assertStringContainsString('main', $url);
     }

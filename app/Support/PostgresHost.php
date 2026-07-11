@@ -128,8 +128,7 @@ class PostgresHost
         int $connectTimeout = 60,
     ): string {
         $user = rawurlencode($username);
-        $endpointId = self::endpointId($host);
-        $pass = rawurlencode(self::passwordForServerless($password, $endpointId));
+        $pass = rawurlencode($password);
         $host = self::directHost($host);
         $path = '/'.ltrim($database, '/');
         $query = [
