@@ -270,52 +270,52 @@ new class extends Component
                                     packets: 'Changes requested — add environment context and deploy metadata; retain the chart-label hint.',
                                 },
                                 websites: {
-                                    capture: 'Opening a design checkup on the Atlas marketing site…',
-                                    hintBody: 'Hero subcopy is too light over the photo — darken it before shipping.',
+                                    capture: 'Opening a design checkup on the Field Notes route page…',
+                                    hintBody: 'The route description is too faint against the paper tone — increase its contrast before shipping.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: 'Keep “worth keeping” together — the break softens the promise.',
+                                    markBody: 'Keep “through the coast” together — the line break interrupts the thought.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: 'Primary and secondary CTAs share the same weight — make Explore lead.',
+                                    mark2Body: 'The route link and field guide compete — make the guide the unmistakable next step.',
                                     mark2Meta: 'hierarchy · M2',
                                     markTarget: 'hero.headline',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Rebalance the headline so “worth keeping” lands on one line.',
+                                    markNote: 'Rebalance the headline so “through the coast” reads as one phrase.',
                                     mark2Target: 'hero.actions',
                                     mark2Severity: 'hierarchy',
-                                    mark2Note: 'Demote “Watch film” to a text link so Explore is the clear path.',
-                                    packets: 'Changes requested — fix the headline wrap and CTA hierarchy; retain the contrast hint.',
+                                    mark2Note: 'Keep “View route” as a quiet text link so the field guide remains primary.',
+                                    packets: 'Changes requested — fix the headline wrap and action hierarchy; retain the contrast hint.',
                                 },
                                 presentations: {
-                                    capture: 'Opening a design checkup on the quarterly deck…',
-                                    hintBody: 'The chart depends on rose vs sky alone — add direct labels so the series survive projection.',
+                                    capture: 'Opening a design checkup on the growth review deck…',
+                                    hintBody: 'The comparison bars still depend on color — label control and guided setup directly on the chart.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: 'Turn “Launch impact” into the takeaway: activation rose 28% after onboarding.',
+                                    markBody: 'Name the comparison window in the title so the 28% lift is not read as permanent.',
                                     markMeta: 'must-fix · M1',
                                     mark2Body: 'The methodology note is presentation detail — move it to speaker notes.',
                                     mark2Meta: 'polish · M2',
                                     markTarget: 'slide.title',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Use the slide title to state the conclusion, not the topic.',
+                                    markNote: 'Add “in the first 30 days” to make the result precise at a glance.',
                                     mark2Target: 'slide.source-note',
                                     mark2Severity: 'polish',
                                     mark2Note: 'Move sample-size and date detail into speaker notes; keep a short source.',
-                                    packets: 'Changes requested — rewrite the takeaway title, simplify the source, then label the chart.',
+                                    packets: 'Changes requested — qualify the takeaway, simplify the source, then label the comparison.',
                                 },
                                 email: {
-                                    capture: 'Opening a design checkup on the launch email…',
-                                    hintBody: 'Footer links are too low-contrast for inbox viewing — darken them before sending.',
+                                    capture: 'Opening a design checkup on the Friday Brief email…',
+                                    hintBody: 'The legal and preference links are too faint for inbox viewing — darken them before sending.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: 'The hero promise is generic — lead with the specific benefit readers will get.',
+                                    markBody: 'Put the five-minute promise in the headline; it is the strongest reason to open the brief.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: '“Learn more” hides the destination — make the primary action explicit.',
+                                    mark2Body: 'Make the action personal and specific: “Open my Friday brief.”',
                                     mark2Meta: 'wording · M2',
                                     markTarget: 'email.hero',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Replace “A better way to work” with the concrete value of the new workspace.',
+                                    markNote: 'Lead with “Your five-minute Friday brief” so the value is immediate.',
                                     mark2Target: 'email.primary-cta',
                                     mark2Severity: 'wording',
-                                    mark2Note: 'Change the CTA to “Explore the new workspace” so readers know what opens.',
-                                    packets: 'Changes requested — sharpen the hero promise and CTA; retain the footer contrast hint.',
+                                    mark2Note: 'Change the CTA to “Open my Friday brief” so readers know exactly what opens.',
+                                    packets: 'Changes requested — sharpen the time-saving promise and CTA; retain the footer contrast hint.',
                                 }
                             },
                             get s() { return this.scenarios[this.scenario]; },
@@ -568,173 +568,168 @@ new class extends Component
                                 </div>
 
                                 {{-- WEBSITES mock --}}
-                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-200/80 bg-zinc-950 sm:inset-3" x-show="scenario === 'websites'" x-cloak>
-                                    {{-- Photographic hero plane --}}
-                                    <div class="absolute inset-0 bg-[linear-gradient(115deg,rgb(9_9_11/0.72)_0%,rgb(9_9_11/0.28)_48%,rgb(9_9_11/0.55)_100%),radial-gradient(ellipse_at_70%_40%,rgb(56_189_248/0.35),transparent_42%),radial-gradient(ellipse_at_30%_80%,rgb(16_185_129/0.28),transparent_38%),linear-gradient(160deg,#0c4a6e_0%,#134e4a_42%,#1c1917_100%)]"></div>
-                                    <div class="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(to_top,rgb(9_9_11/0.85),transparent)]"></div>
-                                    {{-- Soft horizon / ridge silhouette --}}
-                                    <svg class="pointer-events-none absolute inset-x-0 bottom-8 h-16 w-full text-zinc-950/40 sm:bottom-10 sm:h-20" viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden="true">
-                                        <path fill="currentColor" d="M0 80V48c28-10 46-28 78-28s42 18 72 14 48-22 86-18 54 24 84 22 48-16 80-10v52H0Z"/>
-                                    </svg>
-
-                                    <div class="relative flex h-full flex-col">
-                                        <nav class="flex items-center justify-between px-3.5 py-2.5 sm:px-5">
+                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-[#d8d0c3] bg-[#f3eee5] sm:inset-3" x-show="scenario === 'websites'" x-cloak>
+                                    <div class="flex h-full flex-col text-[#1f2926]">
+                                        <nav class="flex h-9 shrink-0 items-center justify-between border-b border-[#d8d0c3] px-3.5 sm:px-5">
                                             <div class="flex items-center gap-2">
-                                                <span class="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[7px] font-semibold text-white">A</span>
-                                                <span class="font-display text-[12px] font-medium tracking-tight text-white">Atlas</span>
+                                                <span class="h-2.5 w-2.5 rounded-full bg-[#c84b3f]"></span>
+                                                <span class="text-[8px] font-semibold uppercase tracking-[0.2em]">Field / Notes</span>
                                             </div>
-                                            <div class="flex items-center gap-3 text-[8px] text-white/65">
+                                            <div class="flex items-center gap-3 text-[7px] font-medium text-[#5d6661]">
                                                 <span class="hidden sm:inline">Routes</span>
-                                                <span class="hidden sm:inline">Guides</span>
                                                 <span class="hidden sm:inline">Journal</span>
-                                                <span class="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-white backdrop-blur-sm">Sign in</span>
+                                                <span class="border-b border-[#1f2926] pb-0.5 text-[#1f2926]">Field guides</span>
                                             </div>
                                         </nav>
 
-                                        <div class="grid min-h-0 flex-1 grid-cols-[1.15fr_0.85fr] items-end gap-3 px-3.5 pb-3 pt-1 sm:gap-4 sm:px-5 sm:pb-4">
-                                            <div class="min-w-0 pb-1">
-                                                <p class="text-[7px] font-medium uppercase tracking-[0.16em] text-emerald-300/90">Summer routes · 2026</p>
-                                                <div class="relative mt-1.5 max-w-[14.5rem]">
-                                                    <h3 class="font-display text-[clamp(1.15rem,2.6vw,1.65rem)] font-medium leading-[1.05] tracking-[-0.02em] text-white">
-                                                        Places worth<br>
-                                                        keeping.
-                                                    </h3>
-                                                    <div
-                                                        class="pointer-events-none absolute -inset-1 z-[8] rounded-md border-2 border-rose-500 bg-rose-500/10"
-                                                        x-show="step === 2"
-                                                        x-transition
-                                                        :class="step === 2 ? 'rm-pin-pop' : ''"
-                                                    >
-                                                        <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-white">M1</span>
-                                                    </div>
+                                        <div class="grid min-h-0 flex-1 grid-cols-[1.08fr_0.92fr]">
+                                            <div class="flex min-w-0 flex-col justify-between px-3.5 py-3 sm:px-5 sm:py-4">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <p class="text-[6px] font-semibold uppercase tracking-[0.2em] text-[#c84b3f]">Route 024 / Pacific edge</p>
+                                                    <span class="text-[6px] text-[#7c827e]">36° 16′ N</span>
                                                 </div>
-                                                <div class="relative mt-2 max-w-[13.5rem]">
-                                                    <p class="text-[9px] leading-relaxed text-white/35">Quiet coastlines, alpine passes, and the maps that help you find them again.</p>
-                                                    <div
-                                                        class="pointer-events-none absolute -inset-1 rounded-md border-2 border-dashed border-sky-400 bg-sky-400/10"
-                                                        x-show="step === 1"
-                                                        x-transition.opacity
-                                                        :class="step === 1 ? 'rm-pulse-soft' : ''"
-                                                    ></div>
-                                                    <div
-                                                        class="absolute -left-2 -top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white text-[8px] font-bold text-sky-700 shadow-sm"
-                                                        x-show="step === 1"
-                                                        x-transition
-                                                    >S1</div>
-                                                </div>
-                                                <div class="relative mt-3 inline-flex items-center gap-2">
-                                                    <span class="rounded-md bg-white px-2.5 py-1.5 text-[9px] font-semibold text-zinc-900 shadow-sm">Explore routes</span>
-                                                    <span class="rounded-md border border-white/40 bg-white/15 px-2.5 py-1.5 text-[9px] font-semibold text-white backdrop-blur-sm">Watch film</span>
-                                                    <div
-                                                        class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
-                                                        x-show="step === 2"
-                                                        x-transition
-                                                        :class="step === 2 ? 'rm-pin-pop-2' : ''"
-                                                    >
-                                                        <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-white">M2</span>
-                                                    </div>
-                                                </div>
-                                            </div>
 
-                                            <div class="relative mb-0.5 hidden min-w-0 sm:block">
-                                                <div class="overflow-hidden rounded-lg border border-white/15 bg-white/10 shadow-[0_16px_32px_-18px_rgb(0_0_0/0.7)] backdrop-blur-md">
-                                                    <div class="relative h-16 bg-[linear-gradient(145deg,#0369a1_0%,#0f766e_55%,#44403c_100%)]">
-                                                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgb(255_255_255/0.18),transparent_45%)]"></div>
-                                                        <span class="absolute left-2 top-2 rounded bg-black/35 px-1.5 py-0.5 text-[6px] font-medium uppercase tracking-wide text-white/90">Featured</span>
-                                                    </div>
-                                                    <div class="space-y-1.5 p-2">
-                                                        <div class="flex items-start justify-between gap-2">
-                                                            <div>
-                                                                <p class="text-[9px] font-semibold text-white">Big Sur overlook</p>
-                                                                <p class="text-[7px] text-white/50">California · 3-day route</p>
-                                                            </div>
-                                                            <span class="text-[8px] font-medium text-emerald-300">4.9</span>
+                                                <div class="min-w-0">
+                                                    <div class="relative max-w-[15rem]">
+                                                        <h3 class="font-display text-[clamp(1.2rem,2.8vw,1.8rem)] font-medium leading-[0.98] tracking-[-0.025em] text-[#173f3b]">
+                                                            A quieter way<br>
+                                                            through the coast.
+                                                        </h3>
+                                                        <div
+                                                            class="pointer-events-none absolute -inset-1 z-[8] rounded-md border-2 border-rose-500 bg-rose-500/10"
+                                                            x-show="step === 2"
+                                                            x-transition
+                                                            :class="step === 2 ? 'rm-pin-pop' : ''"
+                                                        >
+                                                            <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f3eee5]">M1</span>
                                                         </div>
-                                                        <div class="flex items-center gap-1">
-                                                            <span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[6px] text-white/70">Coast</span>
-                                                            <span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[6px] text-white/70">Camping</span>
+                                                    </div>
+                                                    <div class="relative mt-2 max-w-[13.5rem]">
+                                                        <p class="text-[8px] leading-relaxed text-[#8b8d87]">Three unhurried days between redwood shade and the last light at Point Reyes.</p>
+                                                        <div
+                                                            class="pointer-events-none absolute -inset-1 rounded-md border-2 border-dashed border-sky-400 bg-sky-400/10"
+                                                            x-show="step === 1"
+                                                            x-transition.opacity
+                                                            :class="step === 1 ? 'rm-pulse-soft' : ''"
+                                                        ></div>
+                                                        <div
+                                                            class="absolute -left-2 -top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-[#f3eee5] text-[8px] font-bold text-sky-700 shadow-sm"
+                                                            x-show="step === 1"
+                                                            x-transition
+                                                        >S1</div>
+                                                    </div>
+                                                    <div class="relative mt-3 inline-flex items-center gap-2.5">
+                                                        <span class="rounded-full bg-[#c84b3f] px-3 py-1.5 text-[8px] font-semibold text-white shadow-sm">Get the field guide</span>
+                                                        <span class="border-b border-[#70817a] pb-0.5 text-[8px] font-medium text-[#315c56]">View route ↗</span>
+                                                        <div
+                                                            class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
+                                                            x-show="step === 2"
+                                                            x-transition
+                                                            :class="step === 2 ? 'rm-pin-pop-2' : ''"
+                                                        >
+                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f3eee5]">M2</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
 
-                                        <div class="flex items-center gap-3 border-t border-white/10 bg-black/25 px-3.5 py-1.5 backdrop-blur-sm sm:px-5">
-                                            <span class="text-[6px] font-medium uppercase tracking-[0.14em] text-white/40">Editors’ picks</span>
-                                            <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-[7px] text-white/55">
-                                                <span class="truncate">Amalfi dawn</span>
-                                                <span class="h-0.5 w-0.5 shrink-0 rounded-full bg-white/30"></span>
-                                                <span class="truncate">Patagonia traverse</span>
-                                                <span class="h-0.5 w-0.5 shrink-0 rounded-full bg-white/30"></span>
-                                                <span class="hidden truncate sm:inline">Kyoto alleys</span>
+                                                <div class="flex items-center gap-2 text-[6px] text-[#777e79]">
+                                                    <span class="font-semibold text-[#173f3b]">03 days</span>
+                                                    <span class="h-px w-4 bg-[#b6b2aa]"></span>
+                                                    <span>42 miles · moderate</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="relative min-w-0 overflow-hidden rounded-tl-[2.25rem] bg-[#164e4a]">
+                                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_72%_24%,rgb(229_196_140/0.24),transparent_24%),linear-gradient(160deg,transparent_35%,rgb(8_47_43/0.8)_100%)]"></div>
+                                                <svg class="absolute inset-0 h-full w-full text-[#8eb7a7]/35" viewBox="0 0 220 230" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                                                    <path d="M-20 35C34 3 70 80 126 46s77-9 119 19M-24 63c54-33 98 49 154 13s77-10 112 13M-18 94c52-29 96 40 150 9s76-8 108 15M-16 126c50-22 93 33 145 7s74-6 108 19M-12 160c46-18 88 24 138 5s72-3 106 22M-5 192c45-13 85 17 133 3s69 1 101 25" stroke="currentColor" stroke-width="1"/>
+                                                </svg>
+                                                <div class="absolute left-3 top-3 rounded-full border border-white/30 bg-[#103f3b]/70 px-2 py-1 text-[6px] font-semibold uppercase tracking-[0.14em] text-[#f2dfba] backdrop-blur-sm">Point Reyes</div>
+                                                <div class="absolute bottom-3 left-3 right-3 border-t border-white/25 pt-2 text-white">
+                                                    <p class="font-display text-[13px] leading-none">Sea, fog, redwood.</p>
+                                                    <div class="mt-1.5 flex items-center justify-between text-[6px] text-white/60">
+                                                        <span>Stop 02 / Limantour</span>
+                                                        <span>08:14 PM</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {{-- PRESENTATIONS mock --}}
-                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-700 bg-[#202124] sm:inset-3" x-show="scenario === 'presentations'" x-cloak>
+                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-700 bg-[#242522] sm:inset-3" x-show="scenario === 'presentations'" x-cloak>
                                     <div class="flex h-full">
-                                        <aside class="hidden w-[3.25rem] shrink-0 flex-col gap-2 border-r border-white/10 bg-[#17181a] p-1.5 sm:flex">
-                                            <div class="relative aspect-video rounded border border-rose-400 bg-white p-1 shadow-sm">
-                                                <div class="h-1 w-3 rounded-full bg-zinc-300"></div>
-                                                <div class="mt-1 h-2.5 rounded-sm bg-gradient-to-r from-rose-200 to-sky-100"></div>
-                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">3</span>
+                                        <aside class="hidden w-[3.25rem] shrink-0 flex-col gap-2 border-r border-white/10 bg-[#191a18] p-1.5 sm:flex">
+                                            <div class="relative aspect-video rounded border border-[#d75b4e] bg-[#f4efe6] p-1 shadow-sm">
+                                                <div class="h-1 w-3 rounded-full bg-[#d75b4e]"></div>
+                                                <div class="mt-1 flex h-2.5 items-end gap-0.5">
+                                                    <span class="h-1.5 flex-1 bg-[#1e5a54]"></span><span class="h-2.5 flex-1 bg-[#d75b4e]"></span>
+                                                </div>
+                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">7</span>
                                             </div>
                                             <div class="relative aspect-video rounded border border-white/10 bg-zinc-800 p-1">
                                                 <div class="h-1 w-4 rounded-full bg-zinc-600"></div>
-                                                <div class="mt-1 grid grid-cols-3 gap-px">
-                                                    <span class="h-2 rounded-sm bg-zinc-700"></span>
-                                                    <span class="h-2 rounded-sm bg-zinc-700"></span>
-                                                    <span class="h-2 rounded-sm bg-zinc-700"></span>
-                                                </div>
-                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">4</span>
+                                                <div class="mt-1 h-2.5 rounded-sm bg-[#325f59]"></div>
+                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">8</span>
                                             </div>
                                             <div class="relative aspect-video rounded border border-white/10 bg-zinc-800 p-1">
                                                 <div class="h-1 w-3 rounded-full bg-zinc-600"></div>
                                                 <div class="mt-1 h-2.5 rounded-sm bg-zinc-700"></div>
-                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">5</span>
+                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">9</span>
                                             </div>
                                         </aside>
 
                                         <div class="flex min-w-0 flex-1 flex-col">
                                             <div class="flex h-6 items-center justify-between border-b border-white/10 px-2 text-[7px] text-zinc-400">
-                                                <span>Q3 product review</span>
-                                                <span class="rounded bg-white/5 px-1.5 py-0.5">Present</span>
+                                                <span>Growth review / June 2026</span>
+                                                <span class="rounded-full border border-white/10 px-1.5 py-0.5 text-zinc-300">Present ↗</span>
                                             </div>
                                             <div class="flex flex-1 items-center justify-center p-2">
-                                                <div class="relative aspect-video w-full max-w-[25rem] overflow-hidden rounded-sm bg-[#f8f7f4] px-4 py-3 shadow-[0_10px_30px_rgb(0_0_0/0.38)] sm:px-5">
-                                                    <div class="flex items-start justify-between gap-2">
-                                                        <div class="relative">
-                                                            <p class="text-[7px] font-medium uppercase tracking-[0.16em] text-rose-500">Onboarding</p>
-                                                            <h3 class="mt-0.5 text-[13px] font-semibold tracking-tight text-zinc-900 sm:text-[15px]">Launch impact</h3>
+                                                <div class="relative aspect-video w-full max-w-[25rem] overflow-hidden rounded-sm bg-[#f4efe6] px-4 py-3 text-[#183b37] shadow-[0_10px_30px_rgb(0_0_0/0.4)] sm:px-5">
+                                                    <div class="flex items-center justify-between text-[6px] font-semibold uppercase tracking-[0.16em]">
+                                                        <span class="text-[#c84b3f]">Northstar / Growth</span>
+                                                        <span class="text-[#7d817b]">07</span>
+                                                    </div>
+
+                                                    <div class="mt-3 grid grid-cols-[1.05fr_0.95fr] gap-4">
+                                                        <div class="min-w-0">
+                                                            <div class="relative">
+                                                                <h3 class="font-display text-[15px] font-medium leading-[1.02] tracking-[-0.025em] text-[#183b37] sm:text-[18px]">
+                                                                    Guided setup drove<br>a 28% activation lift.
+                                                                </h3>
                                                             <div
                                                                 class="pointer-events-none absolute -inset-1 z-[8] rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                                 x-show="step === 2"
                                                                 x-transition
                                                                 :class="step === 2 ? 'rm-pin-pop' : ''"
                                                             >
-                                                                <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f8f7f4]">M1</span>
+                                                                    <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f4efe6]">M1</span>
+                                                                </div>
+                                                            </div>
+                                                            <p class="mt-2 max-w-[11rem] text-[7px] leading-relaxed text-[#69736e]">
+                                                                More people reached their first shared project when setup ended with one concrete action.
+                                                            </p>
+                                                            <div class="mt-3 flex gap-3">
+                                                                <div>
+                                                                    <p class="text-[11px] font-semibold leading-none text-[#183b37]">61%</p>
+                                                                    <p class="mt-0.5 text-[5.5px] uppercase tracking-wide text-[#7d817b]">Guided</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p class="text-[11px] font-semibold leading-none text-[#69736e]">47%</p>
+                                                                    <p class="mt-0.5 text-[5.5px] uppercase tracking-wide text-[#7d817b]">Control</p>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div class="text-right">
-                                                            <p class="text-[16px] font-semibold leading-none text-zinc-900 sm:text-[20px]">+28%</p>
-                                                            <p class="mt-0.5 text-[7px] text-zinc-400">activation</p>
-                                                        </div>
-                                                    </div>
 
-                                                    <div class="mt-2 grid grid-cols-[1fr_4.5rem] gap-3">
-                                                        <div class="relative">
-                                                            <div class="flex h-[4.5rem] items-end gap-1.5 border-b border-l border-zinc-200 px-1 pb-0.5">
-                                                                <span class="h-[28%] flex-1 rounded-t-sm bg-sky-300"></span>
-                                                                <span class="h-[38%] flex-1 rounded-t-sm bg-rose-300"></span>
-                                                                <span class="h-[43%] flex-1 rounded-t-sm bg-sky-300"></span>
-                                                                <span class="h-[58%] flex-1 rounded-t-sm bg-rose-300"></span>
-                                                                <span class="h-[54%] flex-1 rounded-t-sm bg-sky-300"></span>
-                                                                <span class="h-[82%] flex-1 rounded-t-sm bg-rose-300"></span>
+                                                        <div class="relative flex items-end gap-2 border-b border-[#c9c4ba] px-2 pb-0.5">
+                                                            <div class="flex flex-1 flex-col items-center gap-1">
+                                                                <span class="text-[6px] font-semibold text-[#69736e]">47%</span>
+                                                                <span class="h-[3.1rem] w-full bg-[#7fa49b]"></span>
                                                             </div>
-                                                            <div class="mt-1 flex justify-between text-[6px] text-zinc-400">
-                                                                <span>Apr</span><span>May</span><span>Jun</span>
+                                                            <div class="flex flex-1 flex-col items-center gap-1">
+                                                                <span class="text-[6px] font-semibold text-[#c84b3f]">61%</span>
+                                                                <span class="h-[4.25rem] w-full bg-[#c84b3f]"></span>
                                                             </div>
                                                             <div
                                                                 class="pointer-events-none absolute -inset-1 rounded-md border-2 border-dashed border-sky-400 bg-sky-400/10"
@@ -743,35 +738,24 @@ new class extends Component
                                                                 :class="step === 1 ? 'rm-pulse-soft' : ''"
                                                             ></div>
                                                             <div
-                                                                class="absolute -left-2 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-[#f8f7f4] text-[8px] font-bold text-sky-700 shadow-sm"
+                                                                class="absolute -left-2 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-[#f4efe6] text-[8px] font-bold text-sky-700 shadow-sm"
                                                                 x-show="step === 1"
                                                                 x-transition
                                                             >S1</div>
                                                         </div>
-                                                        <div class="space-y-1.5">
-                                                            <div class="rounded border border-zinc-200 bg-white p-1.5">
-                                                                <p class="text-[6px] uppercase text-zinc-400">Completed</p>
-                                                                <p class="mt-0.5 text-[10px] font-semibold text-zinc-800">4,821</p>
-                                                            </div>
-                                                            <div class="rounded border border-zinc-200 bg-white p-1.5">
-                                                                <p class="text-[6px] uppercase text-zinc-400">Time saved</p>
-                                                                <p class="mt-0.5 text-[10px] font-semibold text-zinc-800">12 min</p>
-                                                            </div>
-                                                        </div>
                                                     </div>
 
-                                                    <div class="relative mt-1.5">
-                                                        <p class="text-[6px] leading-tight text-zinc-400">Source: onboarding cohort, n=1,842 · Apr–Jun 2026 · excludes invited teammates and test workspaces</p>
+                                                    <div class="relative mt-2 border-t border-[#d8d2c8] pt-1.5">
+                                                        <p class="text-[5.5px] leading-tight text-[#8b8c86]">Source: new-workspace cohort, n=1,842 · 30-day window · Apr–Jun 2026 · invited teammates excluded</p>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                             x-show="step === 2"
                                                             x-transition
                                                             :class="step === 2 ? 'rm-pin-pop-2' : ''"
                                                         >
-                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f8f7f4]">M2</span>
+                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f4efe6]">M2</span>
                                                         </div>
                                                     </div>
-                                                    <span class="absolute bottom-2 right-2 text-[6px] text-zinc-400">03</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -779,35 +763,35 @@ new class extends Component
                                 </div>
 
                                 {{-- EMAIL mock --}}
-                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-300/80 bg-[#e9eaed] sm:inset-3" x-show="scenario === 'email'" x-cloak>
+                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-[#d4d0c8] bg-[#e8e5df] sm:inset-3" x-show="scenario === 'email'" x-cloak>
                                     <div class="flex h-full flex-col">
-                                        <div class="flex h-7 shrink-0 items-center justify-between border-b border-zinc-300 bg-[#f7f7f8] px-3 text-[7px] text-zinc-500">
+                                        <div class="flex h-7 shrink-0 items-center justify-between border-b border-[#d4d0c8] bg-[#f6f4ef] px-3 text-[7px] text-[#6c6d68]">
                                             <div class="flex items-center gap-2">
-                                                <span class="font-medium text-zinc-700">Campaign preview</span>
-                                                <span class="text-zinc-300">/</span>
-                                                <span>Workspace launch</span>
+                                                <span class="font-medium text-[#303633]">Campaign preview</span>
+                                                <span class="text-[#b1afa9]">/</span>
+                                                <span>The Friday Brief · 07</span>
                                             </div>
-                                            <div class="flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-0.5">
-                                                <span class="rounded bg-zinc-900 px-1.5 py-0.5 text-white">Desktop</span>
+                                            <div class="flex items-center gap-1 rounded-md border border-[#d8d4cc] bg-white p-0.5">
+                                                <span class="rounded bg-[#224e48] px-1.5 py-0.5 text-white">Desktop</span>
                                                 <span class="px-1.5 py-0.5">Mobile</span>
                                             </div>
                                         </div>
 
                                         <div class="min-h-0 flex-1 overflow-hidden p-2 sm:p-2.5">
-                                            <div class="relative mx-auto flex h-full max-w-[20rem] flex-col overflow-hidden rounded-sm bg-white shadow-[0_8px_24px_rgb(39_39_42/0.16)]">
-                                                <div class="flex shrink-0 items-center justify-between border-b border-zinc-100 px-3 py-2">
+                                            <div class="relative mx-auto flex h-full max-w-[19rem] flex-col overflow-hidden rounded-sm bg-[#fbfaf7] shadow-[0_8px_24px_rgb(55_54_49/0.16)]">
+                                                <div class="flex shrink-0 items-center justify-between border-b border-[#ebe7df] px-3 py-2">
                                                     <div class="flex items-center gap-1.5">
-                                                        <span class="flex h-4 w-4 items-center justify-center rounded bg-indigo-600 text-[7px] font-semibold text-white">N</span>
-                                                        <span class="text-[9px] font-semibold text-zinc-800">Northstar</span>
+                                                        <span class="h-2.5 w-2.5 rounded-full bg-[#c84b3f]"></span>
+                                                        <span class="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#243d39]">Northstar</span>
                                                     </div>
-                                                    <span class="text-[6px] text-zinc-400">View in browser</span>
+                                                    <span class="text-[6px] text-[#8d8d87]">Friday, June 19</span>
                                                 </div>
 
-                                                <div class="bg-[radial-gradient(circle_at_88%_12%,rgb(196_181_253/0.65),transparent_34%),linear-gradient(135deg,#eef2ff_0%,#f5f3ff_55%,#ecfeff_100%)] px-4 py-3">
-                                                    <span class="rounded-full border border-indigo-200 bg-white/70 px-1.5 py-0.5 text-[6px] font-medium uppercase tracking-[0.12em] text-indigo-600">New this week</span>
+                                                <div class="border-b border-[#e4ded4] bg-[#f1eadd] px-4 py-3">
+                                                    <p class="text-[6px] font-semibold uppercase tracking-[0.18em] text-[#c84b3f]">The Friday Brief / Issue 07</p>
                                                     <div class="relative mt-2">
-                                                        <h3 class="max-w-[13rem] text-[16px] font-semibold leading-[1.05] tracking-[-0.03em] text-zinc-900 sm:text-[18px]">
-                                                            A better way<br>to work.
+                                                        <h3 class="max-w-[14rem] font-display text-[16px] font-medium leading-[1.02] tracking-[-0.025em] text-[#183b37] sm:text-[18px]">
+                                                            Start Monday with<br>fewer loose ends.
                                                         </h3>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
@@ -815,38 +799,42 @@ new class extends Component
                                                             x-transition
                                                             :class="step === 2 ? 'rm-pin-pop' : ''"
                                                         >
-                                                            <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-white">M1</span>
+                                                            <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f1eadd]">M1</span>
                                                         </div>
                                                     </div>
-                                                    <p class="mt-1.5 max-w-[14rem] text-[7px] leading-relaxed text-zinc-500">Bring projects, notes, and decisions into one calm workspace built for focus.</p>
+                                                    <p class="mt-1.5 max-w-[14rem] text-[7px] leading-relaxed text-[#67716d]">Five minutes to close open decisions, reset priorities, and hand next week a cleaner start.</p>
                                                     <div class="relative mt-2 inline-flex">
-                                                        <span class="rounded-md bg-indigo-600 px-2.5 py-1 text-[7px] font-semibold text-white shadow-sm">Learn more</span>
+                                                        <span class="rounded-full bg-[#c84b3f] px-2.5 py-1.5 text-[7px] font-semibold text-white shadow-sm">Open this week’s brief →</span>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                             x-show="step === 2"
                                                             x-transition
                                                             :class="step === 2 ? 'rm-pin-pop-2' : ''"
                                                         >
-                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-white">M2</span>
+                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f1eadd]">M2</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                                                    <div class="rounded-md border border-zinc-100 bg-zinc-50 p-2">
-                                                        <span class="flex h-4 w-4 items-center justify-center rounded bg-rose-100 text-[7px] text-rose-600">✓</span>
-                                                        <p class="mt-1 text-[7px] font-semibold text-zinc-700">Clear priorities</p>
-                                                        <p class="mt-0.5 text-[6px] leading-snug text-zinc-400">See what needs attention next.</p>
+                                                <div class="px-4 py-2.5">
+                                                    <div class="flex items-start gap-2 border-b border-[#ece8e0] pb-2">
+                                                        <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#dce8e3] text-[6px] font-semibold text-[#225c54]">03</span>
+                                                        <div class="min-w-0">
+                                                            <p class="text-[7px] font-semibold text-[#303d39]">Decisions waiting on you</p>
+                                                            <p class="mt-0.5 truncate text-[6px] text-[#878983]">Pricing page · Q3 narrative · Research plan</p>
+                                                        </div>
                                                     </div>
-                                                    <div class="rounded-md border border-zinc-100 bg-zinc-50 p-2">
-                                                        <span class="flex h-4 w-4 items-center justify-center rounded bg-sky-100 text-[7px] text-sky-600">↗</span>
-                                                        <p class="mt-1 text-[7px] font-semibold text-zinc-700">Fewer handoffs</p>
-                                                        <p class="mt-0.5 text-[6px] leading-snug text-zinc-400">Keep every decision in context.</p>
+                                                    <div class="flex items-start gap-2 pt-2">
+                                                        <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#f2ddd8] text-[6px] font-semibold text-[#a84439]">05</span>
+                                                        <div class="min-w-0">
+                                                            <p class="text-[7px] font-semibold text-[#303d39]">Priorities for next week</p>
+                                                            <p class="mt-0.5 truncate text-[6px] text-[#878983]">Launch QA · Customer calls · Team retro</p>
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <div class="relative mt-auto border-t border-zinc-100 px-4 py-2 text-center">
-                                                    <p class="text-[5.5px] leading-relaxed text-zinc-300">Northstar, 123 Market Street · Unsubscribe · Email preferences</p>
+                                                <div class="relative mt-auto border-t border-[#ece8e0] px-4 py-2 text-center">
+                                                    <p class="text-[5.5px] leading-relaxed text-[#c5c3bd]">Northstar, 123 Market Street · Unsubscribe · Email preferences</p>
                                                     <div
                                                         class="pointer-events-none absolute inset-x-3 inset-y-1 rounded border-2 border-dashed border-sky-400 bg-sky-400/10"
                                                         x-show="step === 1"

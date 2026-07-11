@@ -6,6 +6,9 @@ use Illuminate\Database\Connectors\PostgresConnector;
 
 /**
  * Adds connect_timeout to the PDO DSN so Neon cold starts can outlive short defaults.
+ *
+ * Neon endpoint routing uses the password-field workaround (see PostgresHost), not a DSN
+ * options key — Laravel reserves config "options" for PDO attributes.
  */
 class ReviseMyPostgresConnector extends PostgresConnector
 {
@@ -18,10 +21,6 @@ class ReviseMyPostgresConnector extends PostgresConnector
 
         if (isset($config['connect_timeout'])) {
             $dsn .= ';connect_timeout='.(int) $config['connect_timeout'];
-        }
-
-        if (! empty($config['neon_endpoint']) && is_string($config['neon_endpoint'])) {
-            $dsn .= ';options=endpoint='.$config['neon_endpoint'];
         }
 
         return $dsn;

@@ -16,6 +16,9 @@ $dbSslMode = env('DB_SSLMODE', PostgresHost::defaultSslMode($dbHost, $dbUrl));
 $dbConnectTimeout = (int) env('DB_CONNECT_TIMEOUT', 60);
 $isServerless = PostgresHost::isServerlessHost($dbHost) || PostgresHost::isServerlessHost($dbUrl);
 $neonEndpointId = $isServerless ? PostgresHost::endpointId($dbHost) : null;
+// Neon recommends embedding the endpoint id in the password for Laravel/PDO clients
+// without SNI: https://neon.tech/docs/connect/connection-errors#d-specify-the-endpoint-id-in-the-password-field
+$dbPasswordForServerless = PostgresHost::passwordForServerless($dbPassword, $neonEndpointId);
 $useMigrateConnection = PostgresHost::shouldUseMigrateConnection($dbConnection, $dbHost, $dbUrl, $dbMigrateUrl);
 
 $migrateUrl = $dbMigrateUrl;
@@ -129,14 +132,13 @@ return [
             'port' => $dbPort,
             'database' => $dbDatabase,
             'username' => $dbUsername,
-            'password' => $dbPassword,
+            'password' => $dbPasswordForServerless,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => $dbSslMode,
             'connect_timeout' => $isServerless ? $dbConnectTimeout : null,
-            'neon_endpoint' => $neonEndpointId,
         ],
 
         // Neon / Laravel Cloud Serverless Postgres: migrations use the direct host
@@ -148,14 +150,13 @@ return [
             'port' => $dbPort,
             'database' => $dbDatabase,
             'username' => $dbUsername,
-            'password' => $dbPassword,
+            'password' => $dbPasswordForServerless,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => is_string($dbSslMode) ? $dbSslMode : 'require',
             'connect_timeout' => $dbConnectTimeout,
-            'neon_endpoint' => $neonEndpointId,
         ],
 
         'sqlsrv' => [
