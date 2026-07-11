@@ -1,7 +1,6 @@
 <?php
 
 use App\Support\PostgresHost;
-use App\Support\ServerlessPostgresConfigurator;
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
@@ -12,7 +11,7 @@ $dbMigrateUrl = env('DB_MIGRATE_URL');
 $dbPort = (string) env('DB_PORT', '5432');
 $dbDatabase = (string) env('DB_DATABASE', 'laravel');
 $dbUsername = (string) env('DB_USERNAME', 'root');
-$dbPassword = ServerlessPostgresConfigurator::passwordFromEnv();
+$dbPassword = (string) env('DB_PASSWORD', '');
 $dbSslMode = env('DB_SSLMODE', PostgresHost::defaultSslMode($dbHost, $dbUrl));
 $dbConnectTimeout = (int) env('DB_CONNECT_TIMEOUT', 60);
 $isServerless = PostgresHost::isServerlessHost($dbHost) || PostgresHost::isServerlessHost($dbUrl);

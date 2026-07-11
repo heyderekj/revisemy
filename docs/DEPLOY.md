@@ -24,7 +24,7 @@ Repo: https://github.com/heyderekj/revisemy
    - `QUEUE_CONNECTION` → Cloud queue (or `database` with a worker)
    - `REVISEMY_SECOND_OPINION=true` (default)
    - Optional: `OPENAI_API_KEY` — upgrades second opinion with vision
-5. Build commands should include `npm ci && npm run build` (Cloud default for Node apps) and `composer install`. Cloud may run `php artisan optimize` / `config:cache` during the build image step — ReviseMy re-reads injected `DB_*` credentials at runtime, so migrate still sees the live password.
+5. Build commands should include `npm ci && npm run build` (Cloud default for Node apps) and `composer install`. Cloud injects database credentials while building Laravel's cached configuration; raw `DB_*` variables may not be available later in the Commands shell.
 6. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
 7. Visit the `*.laravel.cloud` homepage → **Get a try token** → paste MCP config into any project.
 8. Contest reply: post that `https://….laravel.cloud` URL.
