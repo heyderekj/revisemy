@@ -24,15 +24,23 @@ new class extends Component
 
         $key = 'try-token-web:'.request()->ip();
 
-        if (RateLimiter::tooManyAttempts($key, 10)) {
-            $this->error = 'Slow down — try again in a minute.';
+        try {
+            if (RateLimiter::tooManyAttempts($key, 10)) {
+                $this->error = 'Slow down — try again in a minute.';
+
+                return;
+            }
+
+            RateLimiter::hit($key, 60);
+
+            $result = $tryTokens->create();
+        } catch (\Throwable $e) {
+            report($e);
+
+            $this->error = 'Could not start a free try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.';
 
             return;
         }
-
-        RateLimiter::hit($key, 60);
-
-        $result = $tryTokens->create();
 
         $this->token = $result['token'];
         $this->mcpUrl = $result['mcp_url'];
@@ -40,7 +48,42 @@ new class extends Component
         $this->claudeDesktopConfigJson = json_encode($result['claude_desktop_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $this->claudeCodeCommand = $result['claude_code_command'];
 
+        $this->dispatch('revisemy-try-setup-saved', payload: [
+            'token' => $this->token,
+            'mcpUrl' => $this->mcpUrl,
+            'cursorConfigJson' => $this->cursorConfigJson,
+            'claudeDesktopConfigJson' => $this->claudeDesktopConfigJson,
+            'claudeCodeCommand' => $this->claudeCodeCommand,
+        ]);
+
         $this->dispatch('scroll-to-setup');
+    }
+
+    public function restoreTryTokenSetup(
+        string $token,
+        string $mcpUrl,
+        string $cursorConfigJson,
+        string $claudeDesktopConfigJson,
+        string $claudeCodeCommand,
+    ): void {
+        $this->token = $token;
+        $this->mcpUrl = $mcpUrl;
+        $this->cursorConfigJson = $cursorConfigJson;
+        $this->claudeDesktopConfigJson = $claudeDesktopConfigJson;
+        $this->claudeCodeCommand = $claudeCodeCommand;
+        $this->error = null;
+    }
+
+    public function clearTryTokenSetup(): void
+    {
+        $this->token = null;
+        $this->mcpUrl = null;
+        $this->cursorConfigJson = null;
+        $this->claudeDesktopConfigJson = null;
+        $this->claudeCodeCommand = null;
+        $this->error = null;
+
+        $this->dispatch('revisemy-try-setup-cleared');
     }
 };
 ?>
@@ -74,7 +117,7 @@ new class extends Component
                 <div>
                     <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Tools</p>
                     <ul class="space-y-2.5 text-zinc-600">
-                        <li><a href="#setup" class="transition hover:text-zinc-900">Try token</a></li>
+                        <li><a href="#setup" class="transition hover:text-zinc-900">Try with your agent</a></li>
                     </ul>
                 </div>
                 <div>
@@ -115,7 +158,7 @@ new class extends Component
                 <a href="#how" class="block" x-on:click="mobileNav = false">How it works</a>
                 <a href="#cloud" class="block" x-on:click="mobileNav = false">Features</a>
                 <a href="#agents" class="block" x-on:click="mobileNav = false">For agents</a>
-                <a href="#setup" class="block" x-on:click="mobileNav = false">Try token</a>
+                <a href="#setup" class="block" x-on:click="mobileNav = false">Try with your agent</a>
                 <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub ↗</a>
             </div>
 
@@ -973,19 +1016,53 @@ new class extends Component
             </section>
 
             {{-- Setup --}}
-            <section id="setup" class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16">
+            <section
+                id="setup"
+                class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16"
+                x-data
+                x-on:revisemy-try-setup-saved.window="sessionStorage.setItem('revisemy_try_setup', JSON.stringify($event.detail.payload))"
+                x-on:revisemy-try-setup-cleared.window="sessionStorage.removeItem('revisemy_try_setup')"
+                x-init="
+                    const raw = sessionStorage.getItem('revisemy_try_setup');
+                    if (raw && ! @js((bool) $token)) {
+                        try {
+                            const d = JSON.parse(raw);
+                            if (d.token) {
+                                $wire.restoreTryTokenSetup(
+                                    d.token,
+                                    d.mcpUrl ?? '',
+                                    d.cursorConfigJson ?? '',
+                                    d.claudeDesktopConfigJson ?? '',
+                                    d.claudeCodeCommand ?? '',
+                                );
+                            }
+                        } catch (e) {}
+                    }
+                "
+            >
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Try it with your agent</h2>
                 <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
-                    Choose the app you already use. A free try token connects ReviseMy with no account required, so you can start reviewing from ChatGPT, Claude, or Cursor.
+                    Choose the app you already use. Try free — no account required — and start reviewing from ChatGPT, Claude, or Cursor.
                 </p>
+
+                @if ($error)
+                    <p class="mt-4 text-sm text-rose-600">{{ $error }}</p>
+                @endif
 
                 @if (! $token)
                     <div class="mt-8">
                         <x-try-token-button />
                     </div>
                 @else
+                    <div class="mt-4 flex justify-end">
+                        <button
+                            type="button"
+                            class="text-sm text-zinc-500 transition hover:text-zinc-800"
+                            wire:click="clearTryTokenSetup"
+                        >Start over</button>
+                    </div>
                     <div
-                        class="mt-8 space-y-5"
+                        class="mt-4 space-y-5"
                         x-data="{ client: 'chatgpt' }"
                     >
                         <div class="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">

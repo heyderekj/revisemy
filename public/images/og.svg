@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="600" y1="0" x2="600" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FAFAFA"/>
+      <stop offset="1" stop-color="#F4F4F5"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1020 40) rotate(90) scale(420 520)">
+      <stop stop-color="#FB7185" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FB7185" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#18181B" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="highlight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.08" stop-color="#FECDD3" stop-opacity="0"/>
+      <stop offset="0.08" stop-color="#FECDD3"/>
+      <stop offset="0.88" stop-color="#FECDD3"/>
+      <stop offset="0.88" stop-color="#FECDD3" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.85"/>
+
+  <text x="96" y="118" fill="#F43F5E" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-style="italic" font-weight="600">ReviseMy</text>
+
+  <rect x="96" y="198" width="430" height="72" fill="url(#highlight)" rx="4"/>
+  <text x="96" y="252" fill="#18181B" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="64" font-weight="600" letter-spacing="-0.03em">Visual feedback.</text>
+
+  <text x="96" y="332" fill="#18181B" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="64" font-weight="600" letter-spacing="-0.03em">With your agent.</text>
+
+  <text x="96" y="410" fill="#71717A" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="24" font-weight="400">Mark what matters. Approve or request changes over MCP.</text>
+
+  <rect x="96" y="468" width="188" height="44" rx="22" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <circle cx="124" cy="490" r="10" fill="#F53003" fill-opacity="0.14" stroke="#F53003" stroke-width="1.5"/>
+  <text x="144" y="496" fill="#27272A" font-family="system-ui, sans-serif" font-size="16" font-weight="500">Laravel Cloud</text>
+
+  <rect x="96" y="548" width="200" height="36" rx="18" fill="#E11D48"/>
+  <text x="196" y="571" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="15" font-weight="600" text-anchor="middle">Try with your agent</text>
+</svg>

@@ -7,6 +7,7 @@ use App\Models\Finding;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\SecondOpinionService;
+use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -350,6 +351,31 @@ class ReviseMyFlowTest extends TestCase
         $this->assertEqualsWithDelta(0.3, $finding->x, 0.0001);
         $this->assertEqualsWithDelta(0.4, $finding->y, 0.0001);
         $this->assertSame(Finding::STATUS_OPEN, $finding->status);
+    }
+
+    public function test_home_try_token_setup_can_be_restored_and_cleared(): void
+    {
+        Livewire::test('home')
+            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', 'claude mcp add')
+            ->assertSet('token', 'tok_abc')
+            ->assertSet('mcpUrl', 'https://example.test/mcp')
+            ->call('clearTryTokenSetup')
+            ->assertSet('token', null)
+            ->assertSet('mcpUrl', null);
+    }
+
+    public function test_home_try_token_failure_sets_error_instead_of_throwing(): void
+    {
+        $this->mock(TryTokenService::class, function ($mock) {
+            $mock->shouldReceive('create')
+                ->once()
+                ->andThrow(new \RuntimeException('database missing'));
+        });
+
+        Livewire::test('home')
+            ->call('getTryToken')
+            ->assertSet('token', null)
+            ->assertSet('error', 'Could not start a free try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.');
     }
 
     public function test_guest_cannot_perform_owner_actions(): void
