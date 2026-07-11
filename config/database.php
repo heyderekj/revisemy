@@ -1,7 +1,45 @@
 <?php
 
+use App\Support\PostgresHost;
 use Illuminate\Support\Str;
 use Pdo\Mysql;
+
+$dbConnection = (string) env('DB_CONNECTION', 'sqlite');
+$dbHost = (string) env('DB_HOST', '127.0.0.1');
+$dbUrl = (string) env('DB_URL', '');
+$dbMigrateUrl = env('DB_MIGRATE_URL');
+$dbPort = (string) env('DB_PORT', '5432');
+$dbDatabase = (string) env('DB_DATABASE', 'laravel');
+$dbUsername = (string) env('DB_USERNAME', 'root');
+$dbPassword = (string) env('DB_PASSWORD', '');
+$dbSslMode = env('DB_SSLMODE', PostgresHost::defaultSslMode($dbHost, $dbUrl));
+$dbConnectTimeout = (int) env('DB_CONNECT_TIMEOUT', 60);
+$isServerless = PostgresHost::isServerlessHost($dbHost) || PostgresHost::isServerlessHost($dbUrl);
+$useMigrateConnection = PostgresHost::shouldUseMigrateConnection($dbConnection, $dbHost, $dbUrl, $dbMigrateUrl);
+
+$migrateUrl = $dbMigrateUrl;
+
+if ($migrateUrl === null || $migrateUrl === '') {
+    if ($useMigrateConnection && $dbConnection === 'pgsql') {
+        $migrateUrl = PostgresHost::buildUrl(
+            $dbHost,
+            $dbPort,
+            $dbDatabase,
+            $dbUsername,
+            $dbPassword,
+            is_string($dbSslMode) ? $dbSslMode : 'require',
+            $dbConnectTimeout,
+        );
+    }
+} elseif ($isServerless) {
+    $migrateUrl = PostgresHost::ensureUrlParams($migrateUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
+}
+
+$runtimePgsqlUrl = $dbUrl;
+
+if ($runtimePgsqlUrl !== '' && $isServerless) {
+    $runtimePgsqlUrl = PostgresHost::ensureUrlParams($runtimePgsqlUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
+}
 
 return [
 
@@ -17,7 +55,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => $dbConnection,
 
     /*
     |--------------------------------------------------------------------------
@@ -86,35 +124,36 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
+            'url' => $runtimePgsqlUrl !== '' ? $runtimePgsqlUrl : env('DB_URL'),
+            'host' => $dbHost,
+            'port' => $dbPort,
+            'database' => $dbDatabase,
+            'username' => $dbUsername,
+            'password' => $dbPassword,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', str_contains((string) env('DB_URL'), 'neon.tech') ? 'require' : 'prefer'),
+            'sslmode' => $dbSslMode,
+            'connect_timeout' => $isServerless ? $dbConnectTimeout : null,
         ],
 
-        // Neon / serverless Postgres: migrations need the direct (non-pooled) endpoint.
-        // Set DB_MIGRATE_URL in Laravel Cloud to the host without "-pooler" and
-        // append ?sslmode=require. Runtime can keep using pooled DB_URL if desired.
+        // Neon / Laravel Cloud Serverless Postgres: migrations use the direct host
+        // (no -pooler) with a longer connect_timeout for cold-start wake-ups.
         'pgsql_migrate' => [
             'driver' => 'pgsql',
-            'url' => env('DB_MIGRATE_URL', env('DB_URL')),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
+            'url' => $migrateUrl,
+            'host' => PostgresHost::directHost($dbHost),
+            'port' => $dbPort,
+            'database' => $dbDatabase,
+            'username' => $dbUsername,
+            'password' => $dbPassword,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'require'),
+            'sslmode' => is_string($dbSslMode) ? $dbSslMode : 'require',
+            'connect_timeout' => $dbConnectTimeout,
         ],
 
         'sqlsrv' => [
@@ -148,7 +187,7 @@ return [
     'migrations' => [
         'table' => 'migrations',
         'update_date_on_publish' => true,
-        'connection' => env('DB_MIGRATE_URL') ? 'pgsql_migrate' : null,
+        'connection' => $useMigrateConnection ? 'pgsql_migrate' : null,
     ],
 
     /*

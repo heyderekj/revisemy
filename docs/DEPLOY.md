@@ -13,11 +13,10 @@ Repo: https://github.com/heyderekj/revisemy
    - `APP_URL=https://YOUR-APP.laravel.cloud` (set after first deploy if needed)
    - `DB_CONNECTION=pgsql`
    - **Neon Postgres (Laravel Cloud):** Cloud injects `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_DATABASE` — there is usually **no `DB_URL`** to edit.
-     - Add **`DB_SSLMODE=require`** (this is how you enable SSL when not using a connection URL).
-     - Migrations must use the **direct** endpoint, not the pooler. If `DB_HOST` contains **`-pooler`**, either:
-       - **Simple:** edit `DB_HOST` to the direct host (remove `-pooler` from the hostname), keep `DB_SSLMODE=require`, redeploy; or
-       - **Split:** add **`DB_MIGRATE_URL`** as a full direct URL, e.g. `postgresql://USER:PASSWORD@ep-xxxxx.c-xxxxx.neon.tech/DATABASE?sslmode=require` (copy user/password/database from the injected vars).
-     - Optional advanced: set **`DB_URL`** yourself only if you prefer a single connection string over the split Cloud vars.
+     - Add **`DB_SSLMODE=require`** (belt-and-suspenders; the app also defaults SSL for Cloud/Neon hosts).
+     - **You do not need to edit `DB_HOST` or set `DB_MIGRATE_URL` for pooler hosts.** When `DB_HOST` contains `-pooler`, migrations automatically use the direct host with `sslmode=require` and a longer `connect_timeout`.
+     - Optional: set **`DB_MIGRATE_URL`** only if you want an explicit direct URL override.
+     - Optional: **`DB_CONNECT_TIMEOUT=60`** (default for serverless hosts) if you need a longer wake window.
    - `CACHE_STORE` / `SESSION_DRIVER` → `database` or Cloud Redis (not file/sqlite-backed paths)
    - `REVISEMY_DISK` / `FILESYSTEM_DISK` → Cloud object storage disk name
    - `QUEUE_CONNECTION` → Cloud queue (or `database` with a worker)
@@ -27,6 +26,23 @@ Repo: https://github.com/heyderekj/revisemy
 6. After deploy, run: `php artisan migrate --force` and `php artisan storage:link` (if using local public disk; object storage usually needs no link).
 7. Visit the `*.laravel.cloud` homepage → **Get a try token** → paste MCP config into any project.
 8. Contest reply: post that `https://….laravel.cloud` URL.
+
+## “Still waking up” / 30s deploy timeout
+
+Laravel Cloud Serverless Postgres is Neon under the hood. When the database is idle it scales to zero; the next deploy opens a connection that **wakes** the compute. Cloud’s default health/migrate wait is about **30 seconds**. If Neon is still starting, deploy fails with **“still waking up”**.
+
+Cloud’s UI advice maps to two different knobs:
+
+1. **Increase the connection / wake wait** on the Postgres resource (try **60–90s**). That gives deploy/migrate more time for Neon to become ready.
+2. **Decrease how often the DB sleeps** by raising the idle/suspend window, or **disable hibernation / scale-to-zero** on the database while you are iterating on deploys (or for contest weekend traffic).
+
+**In Laravel Cloud UI (Serverless Postgres resource):**
+
+- If deploy fails with “still waking up”, bump the **wake / connection wait** above 30s first.
+- If every deploy cold-starts the DB, raise the **idle/suspend window** or disable hibernation temporarily.
+- Keep the app and database in the **same region**.
+
+After the code-side fixes, runtime stays on the pooled `-pooler` host (good for concurrency) while migrations use the direct host automatically — so you should not need manual `DB_HOST` surgery for pooler vs direct.
 
 ## Why the queue worker matters
 
