@@ -52,7 +52,6 @@ new class extends Component
     class="rm-wash relative min-h-screen"
     x-data="{
         mobileNav: false,
-        showMention: localStorage.getItem('rm-taylor-mention') !== '0',
         mentionTab: 'challenge'
     }"
     x-on:scroll-to-setup.window="$nextTick(() => document.getElementById('setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
@@ -72,8 +71,8 @@ new class extends Component
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#top" class="transition hover:text-zinc-900">Home</a></li>
                         <li><a href="#how" class="transition hover:text-zinc-900">The loop</a></li>
-                        <li><a href="#cloud" class="transition hover:text-zinc-900">Not just marks</a></li>
-                        <li><a href="#agents" class="transition hover:text-zinc-900">How agents use it</a></li>
+                        <li><a href="#cloud" class="transition hover:text-zinc-900">Beyond marks</a></li>
+                        <li><a href="#agents" class="transition hover:text-zinc-900">Technical handoff</a></li>
                     </ul>
                 </div>
                 <div>
@@ -98,11 +97,9 @@ new class extends Component
                         </li>
                         <li>
                             <a
-                                href="https://x.com/taylorotwell/status/2075667366646858222"
+                                href="#challenge"
                                 class="transition hover:text-zinc-900"
-                                target="_blank"
-                                rel="noreferrer"
-                            >Taylor’s challenge ↗</a>
+                            >Taylor’s challenge</a>
                         </li>
                     </ul>
                 </div>
@@ -120,8 +117,8 @@ new class extends Component
             </div>
             <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
                 <a href="#how" class="block" x-on:click="mobileNav = false">The loop</a>
-                <a href="#cloud" class="block" x-on:click="mobileNav = false">Not just marks</a>
-                <a href="#agents" class="block" x-on:click="mobileNav = false">How agents use it</a>
+                <a href="#cloud" class="block" x-on:click="mobileNav = false">Beyond marks</a>
+                <a href="#agents" class="block" x-on:click="mobileNav = false">Technical handoff</a>
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try token</a>
                 <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub ↗</a>
             </div>
@@ -130,7 +127,7 @@ new class extends Component
             <section class="rm-fade-up">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <h1 class="max-w-xl text-[clamp(2.4rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900">
-                        <span class="rm-highlight">Mark feedback.</span>
+                        <span class="rm-highlight">Visual feedback.</span>
                         <br>
                         <span class="rm-underline-mark">For agents.</span>
                     </h1>
@@ -138,8 +135,7 @@ new class extends Component
                 </div>
 
                 <p class="rm-fade-up-delay mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                    Drop screenshots from any project — interfaces, websites, presentations, print, and more. Agents can pre-load a second opinion.<br class="hidden sm:block">
-                    You mark what matters, then approve or request changes — structured work packets come back over MCP on
+                    Review interfaces, websites, presentations, and email templates with your agent. Mark what matters, approve or request changes, and send clear next steps back over MCP on
                     <a
                         href="https://laravel.com/cloud"
                         target="_blank"
@@ -169,7 +165,7 @@ new class extends Component
                         x-data="{
                             step: 0,
                             scenario: 'product',
-                            order: ['product', 'websites', 'presentations', 'print'],
+                            order: ['product', 'websites', 'presentations', 'email'],
                             stepMs: 2800,
                             cycleKey: 0,
                             paused: false,
@@ -193,7 +189,6 @@ new class extends Component
                                     mark2Severity: 'content',
                                     mark2Note: 'Include commit SHA and author so each deploy can be traced without opening it.',
                                     packets: 'Changes requested — add environment context and deploy metadata; retain the chart-label hint.',
-                                    packetChip: 'work packets →'
                                 },
                                 websites: {
                                     title: 'revisemy · website checkup',
@@ -211,7 +206,6 @@ new class extends Component
                                     mark2Severity: 'hierarchy',
                                     mark2Note: 'Demote “Watch film” to a text link so Explore is the clear path.',
                                     packets: 'Changes requested — fix the headline wrap and CTA hierarchy; retain the contrast hint.',
-                                    packetChip: 'work packets →'
                                 },
                                 presentations: {
                                     title: 'revisemy · presentation checkup',
@@ -229,25 +223,23 @@ new class extends Component
                                     mark2Severity: 'polish',
                                     mark2Note: 'Move sample-size and date detail into speaker notes; keep a short source.',
                                     packets: 'Changes requested — rewrite the takeaway title, simplify the source, then label the chart.',
-                                    packetChip: 'work packets →'
                                 },
-                                print: {
-                                    title: 'revisemy · print checkup',
-                                    capture: 'Opening a design checkup on the editorial spread…',
-                                    hintBody: 'The image caption is too light at print size — use a darker ink value for legibility.',
-                                    hintMeta: 'finding: legibility · hint',
-                                    markBody: 'Masthead sits inside the trim-risk zone — move it inward before export.',
+                                email: {
+                                    title: 'revisemy · email template checkup',
+                                    capture: 'Opening a design checkup on the launch email…',
+                                    hintBody: 'Footer links are too low-contrast for inbox viewing — darken them before sending.',
+                                    hintMeta: 'finding: a11y · hint',
+                                    markBody: 'The hero promise is generic — lead with the specific benefit readers will get.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: 'The center gutter is too tight — open the columns for a bound spread.',
-                                    mark2Meta: 'spacing · M2',
-                                    markTarget: 'print.masthead',
+                                    mark2Body: '“Learn more” hides the destination — make the primary action explicit.',
+                                    mark2Meta: 'wording · M2',
+                                    markTarget: 'email.hero',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Move the masthead at least 6 mm inside the safe area.',
-                                    mark2Target: 'print.gutter',
-                                    mark2Severity: 'spacing',
-                                    mark2Note: 'Increase the inside margin so body copy does not disappear into the binding.',
-                                    packets: 'Changes requested — correct safe area and gutter; retain the caption legibility hint.',
-                                    packetChip: 'work packets →'
+                                    markNote: 'Replace “A better way to work” with the concrete value of the new workspace.',
+                                    mark2Target: 'email.primary-cta',
+                                    mark2Severity: 'wording',
+                                    mark2Note: 'Change the CTA to “Explore the new workspace” so readers know what opens.',
+                                    packets: 'Changes requested — sharpen the hero promise and CTA; retain the footer contrast hint.',
                                 }
                             },
                             get s() { return this.scenarios[this.scenario]; },
@@ -302,7 +294,7 @@ new class extends Component
                                     { id: 'product', label: 'Interfaces' },
                                     { id: 'websites', label: 'Websites' },
                                     { id: 'presentations', label: 'Presentations' },
-                                    { id: 'print', label: 'Print' }
+                                    { id: 'email', label: 'Email' }
                                 ]" :key="tab.id">
                                     <button
                                         type="button"
@@ -367,12 +359,6 @@ new class extends Component
                             {{-- Left: scenario mock under review --}}
                             <div
                                 class="rm-stage-ui relative min-h-[280px] border-b border-zinc-200 bg-[#f8f8f9] transition duration-500 md:min-h-0 md:border-b-0 md:border-r"
-                                :class="{
-                                    'ring-2 ring-inset ring-sky-300/60': step === 1,
-                                    'ring-2 ring-inset ring-rose-300/70': step === 2,
-                                    'ring-2 ring-inset ring-amber-300/60': step === 3,
-                                    'ring-2 ring-inset ring-emerald-300/70': step === 4
-                                }"
                             >
                                 <div
                                     class="absolute left-3 top-10 z-40 max-w-[70%] rounded-md px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-wide shadow-sm sm:left-4 sm:top-11"
@@ -726,83 +712,89 @@ new class extends Component
                                     </div>
                                 </div>
 
-                                {{-- PRINT mock --}}
-                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-300/80 bg-[#d9d4cb] p-2 sm:inset-3 sm:p-3" x-show="scenario === 'print'" x-cloak>
-                                    <div class="relative mx-auto grid h-full max-w-[28rem] grid-cols-2 overflow-hidden bg-[#f6f0e5] shadow-[0_10px_24px_rgb(63_53_42/0.25)]">
-                                        <div class="relative flex min-w-0 flex-col border-r border-[#d9d0c0] px-3 py-3 sm:px-4">
-                                            <span class="absolute inset-y-0 right-0 w-2 bg-gradient-to-l from-black/5 to-transparent"></span>
-                                            <div class="flex items-center justify-between text-[6px] uppercase tracking-[0.14em] text-[#8b8174]">
-                                                <span>Field notes</span>
-                                                <span>Issue 02</span>
+                                {{-- EMAIL mock --}}
+                                <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-300/80 bg-[#e9eaed] sm:inset-3" x-show="scenario === 'email'" x-cloak>
+                                    <div class="flex h-full flex-col">
+                                        <div class="flex h-7 shrink-0 items-center justify-between border-b border-zinc-300 bg-[#f7f7f8] px-3 text-[7px] text-zinc-500">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-medium text-zinc-700">Campaign preview</span>
+                                                <span class="text-zinc-300">/</span>
+                                                <span>Workspace launch</span>
                                             </div>
-                                            <div class="relative mt-2">
-                                                <p class="font-display text-[17px] font-medium leading-[0.92] tracking-[-0.04em] text-[#312d28] sm:text-[21px]">
-                                                    The craft of<br>clear feedback
-                                                </p>
-                                                <div
-                                                    class="pointer-events-none absolute -inset-1 rounded-sm border-2 border-rose-500 bg-rose-500/10"
-                                                    x-show="step >= 2"
-                                                    x-transition
-                                                    :class="step === 2 ? 'rm-pin-pop' : ''"
-                                                >
-                                                    <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f6f0e5]">M1</span>
-                                                </div>
+                                            <div class="flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-0.5">
+                                                <span class="rounded bg-zinc-900 px-1.5 py-0.5 text-white">Desktop</span>
+                                                <span class="px-1.5 py-0.5">Mobile</span>
                                             </div>
-                                            <p class="mt-2 max-w-[10rem] font-display text-[8px] italic leading-snug text-[#8b8174]">Why specific marks move creative work forward.</p>
-                                            <div class="mt-3 min-h-0 flex-1 overflow-hidden rounded-sm bg-[linear-gradient(145deg,#efb4ad_0%,#d86e72_42%,#9b3c52_100%)] p-2">
-                                                <div class="grid h-full grid-cols-3 gap-1 opacity-80">
-                                                    <span class="rounded-sm border border-white/25 bg-white/10"></span>
-                                                    <span class="rounded-sm border border-white/25 bg-white/5"></span>
-                                                    <span class="rounded-sm border border-white/25 bg-white/15"></span>
-                                                </div>
-                                            </div>
-                                            <div class="relative mt-1.5">
-                                                <p class="text-[6px] leading-tight text-[#aaa093]">Photograph: studio review wall, Brooklyn, June 2026</p>
-                                                <div
-                                                    class="pointer-events-none absolute -inset-1 rounded-sm border-2 border-dashed border-sky-400 bg-sky-400/10"
-                                                    x-show="step >= 1"
-                                                    x-transition.opacity
-                                                    :class="step === 1 ? 'rm-pulse-soft' : ''"
-                                                ></div>
-                                                <div
-                                                    class="absolute -left-2 -top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-[#f6f0e5] text-[8px] font-bold text-sky-700 shadow-sm"
-                                                    x-show="step >= 1 && step < 4"
-                                                    x-transition
-                                                >S1</div>
-                                            </div>
-                                            <span class="mt-2 text-[6px] text-[#8b8174]">04</span>
                                         </div>
 
-                                        <div class="relative flex min-w-0 flex-col px-3 py-3 sm:px-4">
-                                            <span class="absolute inset-y-0 left-0 w-2 bg-gradient-to-r from-black/5 to-transparent"></span>
-                                            <div class="flex items-center justify-between border-b border-[#cfc4b3] pb-1.5 text-[6px] uppercase tracking-[0.14em] text-[#8b8174]">
-                                                <span>Essay</span>
-                                                <span>ReviseMy Quarterly</span>
-                                            </div>
-                                            <p class="mt-2 font-display text-[11px] font-medium leading-tight text-[#3f3932]">Make the note actionable, not merely accurate.</p>
-                                            <div class="relative mt-2 grid flex-1 grid-cols-2 gap-1.5 overflow-hidden text-[6.5px] leading-[1.45] text-[#665e54] sm:gap-2 sm:text-[7px]">
-                                                <p>Good feedback identifies the exact surface, explains what is not working, and preserves the intent behind the design. A mark gives the conversation a shared coordinate.</p>
-                                                <p>Agents can then translate that intent into a work packet: the change, its priority, and the reason it matters. The human still decides when the work is complete.</p>
-                                                <div
-                                                    class="pointer-events-none absolute -inset-1 rounded-sm border-2 border-rose-500 bg-rose-500/10"
-                                                    x-show="step >= 2"
-                                                    x-transition
-                                                    :class="step === 2 ? 'rm-pin-pop-2' : ''"
-                                                >
-                                                    <span class="absolute -right-2 top-1/3 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f6f0e5]">M2</span>
+                                        <div class="min-h-0 flex-1 overflow-hidden p-2 sm:p-2.5">
+                                            <div class="relative mx-auto flex h-full max-w-[20rem] flex-col overflow-hidden rounded-sm bg-white shadow-[0_8px_24px_rgb(39_39_42/0.16)]">
+                                                <div class="flex shrink-0 items-center justify-between border-b border-zinc-100 px-3 py-2">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <span class="flex h-4 w-4 items-center justify-center rounded bg-indigo-600 text-[7px] font-semibold text-white">N</span>
+                                                        <span class="text-[9px] font-semibold text-zinc-800">Northstar</span>
+                                                    </div>
+                                                    <span class="text-[6px] text-zinc-400">View in browser</span>
+                                                </div>
+
+                                                <div class="bg-[radial-gradient(circle_at_88%_12%,rgb(196_181_253/0.65),transparent_34%),linear-gradient(135deg,#eef2ff_0%,#f5f3ff_55%,#ecfeff_100%)] px-4 py-3">
+                                                    <span class="rounded-full border border-indigo-200 bg-white/70 px-1.5 py-0.5 text-[6px] font-medium uppercase tracking-[0.12em] text-indigo-600">New this week</span>
+                                                    <div class="relative mt-2">
+                                                        <h3 class="max-w-[13rem] text-[16px] font-semibold leading-[1.05] tracking-[-0.03em] text-zinc-900 sm:text-[18px]">
+                                                            A better way<br>to work.
+                                                        </h3>
+                                                        <div
+                                                            class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
+                                                            x-show="step >= 2"
+                                                            x-transition
+                                                            :class="step === 2 ? 'rm-pin-pop' : ''"
+                                                        >
+                                                            <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-white">M1</span>
+                                                        </div>
+                                                    </div>
+                                                    <p class="mt-1.5 max-w-[14rem] text-[7px] leading-relaxed text-zinc-500">Bring projects, notes, and decisions into one calm workspace built for focus.</p>
+                                                    <div class="relative mt-2 inline-flex">
+                                                        <span class="rounded-md bg-indigo-600 px-2.5 py-1 text-[7px] font-semibold text-white shadow-sm">Learn more</span>
+                                                        <div
+                                                            class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
+                                                            x-show="step >= 2"
+                                                            x-transition
+                                                            :class="step === 2 ? 'rm-pin-pop-2' : ''"
+                                                        >
+                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-white">M2</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
+                                                    <div class="rounded-md border border-zinc-100 bg-zinc-50 p-2">
+                                                        <span class="flex h-4 w-4 items-center justify-center rounded bg-rose-100 text-[7px] text-rose-600">✓</span>
+                                                        <p class="mt-1 text-[7px] font-semibold text-zinc-700">Clear priorities</p>
+                                                        <p class="mt-0.5 text-[6px] leading-snug text-zinc-400">See what needs attention next.</p>
+                                                    </div>
+                                                    <div class="rounded-md border border-zinc-100 bg-zinc-50 p-2">
+                                                        <span class="flex h-4 w-4 items-center justify-center rounded bg-sky-100 text-[7px] text-sky-600">↗</span>
+                                                        <p class="mt-1 text-[7px] font-semibold text-zinc-700">Fewer handoffs</p>
+                                                        <p class="mt-0.5 text-[6px] leading-snug text-zinc-400">Keep every decision in context.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="relative mt-auto border-t border-zinc-100 px-4 py-2 text-center">
+                                                    <p class="text-[5.5px] leading-relaxed text-zinc-300">Northstar, 123 Market Street · Unsubscribe · Email preferences</p>
+                                                    <div
+                                                        class="pointer-events-none absolute inset-x-3 inset-y-1 rounded border-2 border-dashed border-sky-400 bg-sky-400/10"
+                                                        x-show="step >= 1"
+                                                        x-transition.opacity
+                                                        :class="step === 1 ? 'rm-pulse-soft' : ''"
+                                                    ></div>
+                                                    <div
+                                                        class="absolute -left-1 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white text-[8px] font-bold text-sky-700 shadow-sm"
+                                                        x-show="step >= 1 && step < 4"
+                                                        x-transition
+                                                    >S1</div>
                                                 </div>
                                             </div>
-                                            <blockquote class="my-2 border-y border-[#cfc4b3] py-2 font-display text-[9px] italic leading-snug text-[#8d3b4f]">
-                                                “Specificity turns taste into direction.”
-                                            </blockquote>
-                                            <div class="grid grid-cols-2 gap-2 text-[6.5px] leading-[1.45] text-[#665e54]">
-                                                <p>Second opinions can reveal contrast, hierarchy, and polish issues before review.</p>
-                                                <p>But only your marks carry authority into the next pass.</p>
-                                            </div>
-                                            <span class="mt-2 self-end text-[6px] text-[#8b8174]">05</span>
                                         </div>
-
-                                        <div class="pointer-events-none absolute inset-[4px] border border-dashed border-rose-300/45"></div>
                                     </div>
                                 </div>
 
@@ -840,25 +832,6 @@ new class extends Component
                                     </p>
                                 </div>
 
-                                {{-- Decision toolbar --}}
-                                <div
-                                    class="absolute bottom-2 right-2 z-20 flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-1.5 py-1 text-zinc-700 shadow-lg ring-2 ring-amber-300/60 sm:bottom-3 sm:right-3"
-                                    x-show="step >= 3"
-                                    x-transition
-                                    :class="step === 3 ? 'rm-pulse-amber' : ''"
-                                >
-                                    <x-logo-mark size="md" />
-                                    <template x-if="step < 4">
-                                        <span class="flex gap-1 pr-1">
-                                            <span class="rounded px-1.5 py-0.5 text-[9px] text-zinc-400">Changes</span>
-                                            <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-medium text-white">Approve</span>
-                                        </span>
-                                    </template>
-                                    <template x-if="step >= 4">
-                                        <span class="pr-1.5 font-mono text-[9px] text-emerald-600">approved</span>
-                                    </template>
-                                </div>
-
                                 <div
                                     class="pointer-events-none absolute inset-0 z-10 rounded-lg bg-emerald-400/15"
                                     x-show="step >= 4"
@@ -880,12 +853,6 @@ new class extends Component
                             {{-- Right: Agent chat --}}
                             <div
                                 class="rm-stage-chat relative flex min-h-[240px] flex-col bg-zinc-50 transition duration-500 md:min-h-0"
-                                :class="{
-                                    'ring-2 ring-inset ring-sky-300/50': step === 1,
-                                    'ring-2 ring-inset ring-rose-300/60': step === 2,
-                                    'ring-2 ring-inset ring-amber-300/50': step === 3,
-                                    'ring-2 ring-inset ring-emerald-300/60': step === 4
-                                }"
                             >
                                 <div class="flex items-center justify-between border-b border-zinc-200 bg-white px-3 py-2">
                                     <div>
@@ -964,13 +931,6 @@ new class extends Component
                                     </div>
                                 </div>
 
-                                <div
-                                    class="rm-packet-return absolute left-3 top-12 z-20 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 font-mono text-[8px] font-semibold text-emerald-700 shadow-md"
-                                    x-show="step === 4"
-                                    x-transition
-                                    x-text="s.packetChip"
-                                ></div>
-
                                 <div class="border-t border-zinc-200 bg-white px-3 py-2">
                                     <div class="flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5">
                                         <span class="truncate font-mono text-[9px] text-zinc-400">Ask ReviseMy to run another pass…</span>
@@ -985,52 +945,51 @@ new class extends Component
 
             {{-- How you use it --}}
             <section id="how" class="mt-20 scroll-mt-8 sm:mt-24">
-                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">The design checkup loop</h2>
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">One feedback loop for anything visual</h2>
                 <ol class="mt-6 max-w-2xl space-y-3 text-[15px] leading-relaxed text-zinc-600">
-                    <li><span class="font-medium text-zinc-900">1.</span> Agent screenshots any project UI and opens a review (<code class="font-mono text-[13px] text-rose-600">create_review</code>).</li>
-                    <li><span class="font-medium text-zinc-900">2.</span> Optional: agent drops a second opinion / subagent notes into the same review.</li>
-                    <li><span class="font-medium text-zinc-900">3.</span> You open the <code class="font-mono text-[13px]">laravel.cloud</code> link, mark what matters, approve or request changes.</li>
-                    <li><span class="font-medium text-zinc-900">4.</span> Agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code>, follows <code class="font-mono text-[13px]">next_action</code> — apply marks, then a new pass if needed.</li>
-                    <li><span class="font-medium text-zinc-900">5.</span> Repeat until you approve. You stay in charge every pass.</li>
+                    <li><span class="font-medium text-zinc-900">1.</span> Ask your agent to open a review for anything you can screenshot.</li>
+                    <li><span class="font-medium text-zinc-900">2.</span> It can add a second opinion before you look: useful hints, never decisions.</li>
+                    <li><span class="font-medium text-zinc-900">3.</span> Open the review link, mark what matters, then approve or request changes.</li>
+                    <li><span class="font-medium text-zinc-900">4.</span> Your feedback returns to the agent as clear, structured next steps.</li>
+                    <li><span class="font-medium text-zinc-900">5.</span> Repeat until it feels right. You stay in charge every pass.</li>
                 </ol>
                 <p class="rm-note mt-6 inline max-w-2xl text-[15px] leading-relaxed text-zinc-700">
-                    <span class="font-medium">Note:</span> Say “run a design checkup” or “address my feedback” — MCP carries the work packets; you don’t paste screenshots around.
+                    <span class="font-medium">Try saying:</span> “Run a design checkup” or “address my feedback.” ReviseMy handles the MCP handoff inside the agent workflow you already use.
                 </p>
             </section>
 
             {{-- Not just marks --}}
             <section id="cloud" class="mt-16 scroll-mt-8 sm:mt-20">
-                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Not just marks</h2>
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">More than screenshot markup</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                    Agentation-style markup is the start. ReviseMy is a shared critique surface on Laravel Cloud — queues, object storage, and work packets agents can actually implement.
+                    Marks are the simple part you see. Behind them, ReviseMy keeps the screenshot, context, decisions, and next steps together so feedback does not get lost between you and your agent.
                 </p>
                 <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                    <li><span class="font-medium text-zinc-800">Cloud-queued second opinion</span> — free design checklist on every shot; optional OpenAI vision when keyed</li>
-                    <li><span class="font-medium text-zinc-800">Agent as subagent</span> — <code class="font-mono text-[13px] text-rose-600">add_findings</code> drops suggestion / a11y / polish notes into the same review before you look</li>
-                    <li><span class="font-medium text-zinc-800">You stay authoritative</span> — only your marks and approve / request-changes flip the status</li>
+                    <li><span class="font-medium text-zinc-800">Optional second opinion</span> catches accessibility, hierarchy, and polish issues before you review</li>
+                    <li><span class="font-medium text-zinc-800">Agent-ready feedback</span> carries each mark, its priority, and the reason it matters</li>
+                    <li><span class="font-medium text-zinc-800">Your decision stays final</span> because suggestions remain hints until you accept them</li>
                 </ul>
             </section>
 
             {{-- How agents use it --}}
             <section id="agents" class="mt-16 scroll-mt-8 sm:mt-20">
-                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">How agents use it</h2>
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">The technical handoff</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                    <code class="font-mono text-[13px] text-rose-600">get_review</code> returns work packets plus a clear <code class="font-mono text-[13px]">next_action</code> so the agent knows whether to wait, fix, open the next pass, or stop.
+                    When you finish a review, <code class="font-mono text-[13px] text-rose-600">get_review</code> gives your agent structured work packets and one clear <code class="font-mono text-[13px]">next_action</code>: wait, make changes, open another pass, or stop.
                 </p>
                 <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                    <li>Human marks: <span class="font-medium text-zinc-800">must-fix</span>, tweaks (<span class="font-medium text-zinc-800">wording</span> / <span class="font-medium text-zinc-800">spacing</span> / <span class="font-medium text-zinc-800">size</span> / <span class="font-medium text-zinc-800">color</span> / <span class="font-medium text-zinc-800">alignment</span>), <span class="font-medium text-zinc-800">nit</span>, <span class="font-medium text-zinc-800">question</span>, or <span class="font-medium text-zinc-800">keep</span></li>
-                    <li><span class="font-medium text-zinc-800">second_opinion</span> findings: suggestion / a11y / polish — hints only</li>
-                    <li>After changes requested: <code class="font-mono text-[13px] text-rose-600">create_review</code> with <code class="font-mono text-[13px]">parent_id</code> for pass 2+</li>
-                    <li>MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code> encodes the full cycle</li>
+                    <li>Marks include intent and priority: <span class="font-medium text-zinc-800">must-fix</span>, tweak, nit, question, or keep</li>
+                    <li><code class="font-mono text-[13px]">second_opinion</code> findings stay suggestions unless you accept them</li>
+                    <li>Requesting changes creates a linked follow-up with <code class="font-mono text-[13px] text-rose-600">create_review</code> and <code class="font-mono text-[13px]">parent_id</code></li>
+                    <li>The MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code> can guide the full cycle</li>
                 </ul>
             </section>
 
             {{-- Setup --}}
             <section id="setup" class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16">
-                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Try it on any project</h2>
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Try it with your agent</h2>
                 <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
-                    One click, no account.<br class="hidden sm:block">
-                    Paste into Cursor, Claude, VS Code, or ChatGPT, then start reviewing.
+                    Choose the app you already use. A free try token connects ReviseMy with no account required, so you can start reviewing from ChatGPT, Claude, Cursor, or VS Code.
                 </p>
 
                 @if (! $token)
@@ -1040,14 +999,14 @@ new class extends Component
                 @else
                     <div
                         class="mt-8 space-y-5"
-                        x-data="{ client: 'cursor' }"
+                        x-data="{ client: 'chatgpt' }"
                     >
                         <div class="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
                             @foreach ([
-                                'cursor' => 'Cursor',
-                                'claude' => 'Claude',
-                                'vscode' => 'VS Code',
                                 'chatgpt' => 'ChatGPT',
+                                'claude' => 'Claude',
+                                'cursor' => 'Cursor',
+                                'vscode' => 'VS Code',
                             ] as $id => $label)
                                 <button
                                     type="button"
@@ -1189,138 +1148,132 @@ new class extends Component
                 @endif
             </section>
 
-            <footer class="mt-20 border-t border-zinc-900/8 py-8 text-sm text-zinc-400">
-                Open source · Laravel + Livewire Flux · Built for Laravel Cloud
-            </footer>
-        </main>
-    </div>
-
-    {{-- Floating mention: challenge + about Derek (manila folder tabs) --}}
-    <div
-        x-show="showMention"
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0 translate-y-3"
-        x-transition:enter-end="opacity-100 translate-y-0"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 translate-y-2"
-        class="fixed bottom-4 right-4 z-40 w-[min(100%-2rem,22rem)] sm:bottom-6 sm:right-6"
-        style="display: none;"
-    >
-        <div class="relative">
-            <div class="relative z-10 flex items-end gap-1 px-3">
-                <button
-                    type="button"
-                    class="rounded-t-lg border px-3 py-1.5 text-[11px] font-medium transition"
-                    :class="mentionTab === 'challenge'
-                        ? 'relative z-[2] -mb-px border-zinc-900/10 border-b-white bg-white/95 text-zinc-900'
-                        : 'border-transparent bg-zinc-100/90 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'"
-                    x-on:click="mentionTab = 'challenge'"
-                >
-                    The Challenge
-                </button>
-                <button
-                    type="button"
-                    class="rounded-t-lg border px-3 py-1.5 text-[11px] font-medium transition"
-                    :class="mentionTab === 'derek'
-                        ? 'relative z-[2] -mb-px border-zinc-900/10 border-b-white bg-white/95 text-zinc-900'
-                        : 'border-transparent bg-zinc-100/90 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'"
-                    x-on:click="mentionTab = 'derek'"
-                >
-                    The Challenger
-                </button>
-            </div>
-
-            <div class="relative rounded-2xl rounded-tl-md border border-zinc-900/10 bg-white/95 shadow-[0_20px_50px_-24px_rgba(24,24,27,0.55)] backdrop-blur-md">
-                <button
-                    type="button"
-                    class="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-                    aria-label="Dismiss"
-                    x-on:click.stop="showMention = false; localStorage.setItem('rm-taylor-mention', '0')"
-                >
-                    <span class="text-lg leading-none">&times;</span>
-                </button>
-
-                <div class="grid [&>*]:col-start-1 [&>*]:row-start-1">
-                    <div
-                        class="p-3 pr-10"
-                        :class="mentionTab === 'challenge' ? 'relative z-[1] visible' : 'invisible pointer-events-none'"
-                        :aria-hidden="mentionTab !== 'challenge'"
-                    >
-                        <div class="flex gap-3">
-                            <img
-                                src="{{ asset('images/taylor-otwell-pink.png') }}"
-                                alt="Taylor Otwell"
-                                class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-rose-200"
-                                width="56"
-                                height="56"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-[11px] font-medium uppercase tracking-[0.12em] text-rose-500">The challenge</p>
-                                <p class="mt-1 text-[13px] font-semibold leading-snug text-zinc-900">
-                                    Taylor Otwell’s Laravel Cloud weekend challenge
-                                </p>
-                                <p class="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
-                                    “Best side project shipped on Laravel Cloud this weekend… reply with a laravel.cloud URL.”
-                                </p>
-                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px]">
-                                    <a
-                                        href="https://x.com/taylorotwell/status/2075667366646858222"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        class="text-zinc-400 transition hover:text-rose-500"
-                                    >@taylorotwell ↗</a>
-                                    <a
-                                        href="https://x.com/heyderekj/status/2075675582973501792"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        class="font-semibold text-rose-500 transition hover:text-rose-600"
-                                    >GAME ON. ↗</a>
-                                </div>
-                            </div>
+            {{-- Challenge --}}
+            <section id="challenge" class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16">
+                <div class="max-w-2xl">
+                    <div class="relative">
+                        <div class="relative z-10 flex items-end gap-1">
+                            <button
+                                type="button"
+                                class="rounded-t-lg border px-3 py-1.5 text-[11px] font-medium transition"
+                                :class="mentionTab === 'challenge'
+                                    ? 'relative z-[2] -mb-px rounded-bl-none border-zinc-900/10 border-b-white bg-white text-zinc-900'
+                                    : 'border-transparent bg-zinc-100 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'"
+                                x-on:click="mentionTab = 'challenge'"
+                            >
+                                The challenge
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-t-lg border px-3 py-1.5 text-[11px] font-medium transition"
+                                :class="mentionTab === 'derek'
+                                    ? 'relative z-[2] -mb-px rounded-bl-none border-zinc-900/10 border-b-white bg-white text-zinc-900'
+                                    : 'border-transparent bg-zinc-100 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'"
+                                x-on:click="mentionTab = 'derek'"
+                            >
+                                The challenger
+                            </button>
                         </div>
-                    </div>
 
-                    <div
-                        class="p-3 pr-10"
-                        :class="mentionTab === 'derek' ? 'relative z-[1] visible' : 'invisible pointer-events-none'"
-                        :aria-hidden="mentionTab !== 'derek'"
-                    >
-                        <div class="flex gap-3">
-                            <img
-                                src="{{ asset('images/derek-castelli.png') }}"
-                                alt="Derek Castelli"
-                                class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-rose-200 bg-[#ffe8f1]"
-                                width="56"
-                                height="56"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-[11px] font-medium uppercase tracking-[0.12em] text-rose-500">Made by</p>
-                                <p class="mt-1 text-[13px] font-semibold leading-snug text-zinc-900">
-                                    Derek Castelli
-                                </p>
-                                <p class="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
-                                    Agentic design engineer — still making websites full-time. Writing on faith and technology.
-                                </p>
-                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px]">
-                                    <a
-                                        href="https://heyderekj.com"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        class="text-zinc-400 transition hover:text-rose-500"
-                                    >heyderekj.com ↗</a>
-                                    <a
-                                        href="https://x.com/heyderekj/status/2075675582973501792"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        class="font-semibold text-rose-500 transition hover:text-rose-600"
-                                    >GAME ON. ↗</a>
+                        <div
+                            class="relative rounded-2xl rounded-tr-2xl rounded-b-2xl border border-zinc-900/10 bg-white shadow-sm"
+                            :class="mentionTab === 'challenge' ? 'rounded-tl-none' : 'rounded-tl-md'"
+                        >
+                            <div class="grid [&>*]:col-start-1 [&>*]:row-start-1">
+                                <div
+                                    class="p-4 sm:p-5"
+                                    :class="mentionTab === 'challenge' ? 'relative z-[1] visible' : 'invisible pointer-events-none'"
+                                    :aria-hidden="mentionTab !== 'challenge'"
+                                >
+                                    <div class="flex gap-4">
+                                        <img
+                                            src="{{ asset('images/taylor-otwell-pink.png') }}"
+                                            alt="Taylor Otwell"
+                                            class="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-rose-200 sm:h-[4.5rem] sm:w-[4.5rem]"
+                                            width="72"
+                                            height="72"
+                                        />
+                                        <div class="min-w-0">
+                                            <p class="text-[11px] font-medium uppercase tracking-[0.12em] text-rose-500">The challenge</p>
+                                            <p class="mt-1 text-base font-semibold leading-snug text-zinc-900">
+                                                Taylor Otwell’s Laravel Cloud weekend challenge
+                                            </p>
+                                            <p class="mt-2 text-[15px] leading-relaxed text-zinc-600">
+                                                “Best side project shipped on Laravel Cloud this weekend… reply with a laravel.cloud URL.”
+                                            </p>
+                                            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px]">
+                                                <a
+                                                    href="https://x.com/taylorotwell/status/2075667366646858222"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    class="text-zinc-400 transition hover:text-rose-500"
+                                                >@taylorotwell ↗</a>
+                                                <a
+                                                    href="https://x.com/heyderekj/status/2075675582973501792"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    class="font-semibold text-rose-500 transition hover:text-rose-600"
+                                                >GAME ON. ↗</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="p-4 sm:p-5"
+                                    :class="mentionTab === 'derek' ? 'relative z-[1] visible' : 'invisible pointer-events-none'"
+                                    :aria-hidden="mentionTab !== 'derek'"
+                                >
+                                    <div class="flex gap-4">
+                                        <img
+                                            src="{{ asset('images/derek-castelli.png') }}"
+                                            alt="Derek Castelli"
+                                            class="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-rose-200 bg-[#ffe8f1] sm:h-[4.5rem] sm:w-[4.5rem]"
+                                            width="72"
+                                            height="72"
+                                        />
+                                        <div class="min-w-0">
+                                            <p class="text-[11px] font-medium uppercase tracking-[0.12em] text-rose-500">Made by</p>
+                                            <p class="mt-1 text-base font-semibold leading-snug text-zinc-900">
+                                                Derek Castelli
+                                            </p>
+                                            <p class="mt-2 text-[15px] leading-relaxed text-zinc-600">
+                                                ReviseMy was actually a
+                                                <a
+                                                    href="https://heyderekj.com/projects/revisemy/"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
+                                                >side project on the back burner</a>
+                                                and I thought this was a good time to explore it on Laravel Cloud.
+                                                As a full-time freelance web designer building apps on the side, I made it to pull design feedback into my agent workflow.
+                                            </p>
+                                            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px]">
+                                                <a
+                                                    href="https://heyderekj.com"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    class="text-zinc-400 transition hover:text-rose-500"
+                                                >heyderekj.com ↗</a>
+                                                <a
+                                                    href="https://x.com/heyderekj/status/2075675582973501792"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    class="font-semibold text-rose-500 transition hover:text-rose-600"
+                                                >GAME ON. ↗</a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <footer class="mt-20 border-t border-zinc-900/8 py-8 text-sm text-zinc-400">
+                Open source · Laravel + Livewire Flux · Built for Laravel Cloud
+            </footer>
+        </main>
     </div>
 </div>
