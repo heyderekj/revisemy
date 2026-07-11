@@ -16,7 +16,7 @@ class ReviseMyPostgresConnectorTest extends TestCase
         $dsn = $method->invoke($connector, 'pgsql:host=ep-x.neon.tech;dbname=main', [
             'sslmode' => 'require',
             'connect_timeout' => 60,
-            'options' => 'endpoint=ep-x',
+            'neon_endpoint' => 'ep-x',
         ]);
 
         $this->assertStringContainsString('sslmode=require', $dsn);

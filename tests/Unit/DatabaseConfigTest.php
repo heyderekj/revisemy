@@ -54,8 +54,8 @@ class DatabaseConfigTest extends TestCase
         $this->assertSame('ep-x.us-east-2.pg.laravel.cloud', $config['connections']['pgsql_migrate']['host']);
         $this->assertSame('require', $config['connections']['pgsql_migrate']['sslmode']);
         $this->assertSame(60, $config['connections']['pgsql_migrate']['connect_timeout']);
-        $this->assertSame('endpoint=ep-x', $config['connections']['pgsql_migrate']['options']);
-        $this->assertStringContainsString('options=endpoint%3Dep-x', (string) $config['connections']['pgsql_migrate']['url']);
+        $this->assertSame('ep-x', $config['connections']['pgsql_migrate']['neon_endpoint']);
+        $this->assertStringNotContainsString('options=endpoint', (string) $config['connections']['pgsql_migrate']['url']);
         $this->assertStringContainsString('ep-x.us-east-2.pg.laravel.cloud', (string) $config['connections']['pgsql_migrate']['url']);
         $this->assertStringContainsString('sslmode=require', (string) $config['connections']['pgsql_migrate']['url']);
         $this->assertStringContainsString('connect_timeout=60', (string) $config['connections']['pgsql_migrate']['url']);
@@ -83,9 +83,9 @@ class DatabaseConfigTest extends TestCase
         ]);
 
         $this->assertSame('pgsql_migrate', $config['migrations']['connection']);
-        $this->assertSame('endpoint=ep-misty-smoke-aiihk586', $config['connections']['pgsql']['options']);
+        $this->assertSame('ep-misty-smoke-aiihk586', $config['connections']['pgsql']['neon_endpoint']);
         $this->assertStringContainsString('endpoint=ep-misty-smoke-aiihk586$', (string) $config['connections']['pgsql']['password']);
-        $this->assertStringContainsString('options=endpoint%3Dep-misty-smoke-aiihk586', (string) $config['connections']['pgsql']['url']);
+        $this->assertStringNotContainsString('options=endpoint', (string) $config['connections']['pgsql']['url']);
     }
 
     public function test_local_pgsql_config_is_unchanged(): void

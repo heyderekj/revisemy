@@ -17,7 +17,6 @@ $dbConnectTimeout = (int) env('DB_CONNECT_TIMEOUT', 60);
 $isServerless = PostgresHost::isServerlessHost($dbHost) || PostgresHost::isServerlessHost($dbUrl);
 $neonEndpointId = $isServerless ? PostgresHost::endpointId($dbHost) : null;
 $dbPasswordForServerless = PostgresHost::passwordForServerless($dbPassword, $neonEndpointId);
-$neonOptions = PostgresHost::endpointOptions($neonEndpointId);
 $useMigrateConnection = PostgresHost::shouldUseMigrateConnection($dbConnection, $dbHost, $dbUrl, $dbMigrateUrl);
 
 $migrateUrl = $dbMigrateUrl;
@@ -149,7 +148,7 @@ return [
             'search_path' => 'public',
             'sslmode' => $dbSslMode,
             'connect_timeout' => $isServerless ? $dbConnectTimeout : null,
-            'options' => $neonOptions,
+            'neon_endpoint' => $neonEndpointId,
         ],
 
         // Neon / Laravel Cloud Serverless Postgres: migrations use the direct host
@@ -168,7 +167,7 @@ return [
             'search_path' => 'public',
             'sslmode' => is_string($dbSslMode) ? $dbSslMode : 'require',
             'connect_timeout' => $dbConnectTimeout,
-            'options' => $neonOptions,
+            'neon_endpoint' => $neonEndpointId,
         ],
 
         'sqlsrv' => [

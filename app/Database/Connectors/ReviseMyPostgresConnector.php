@@ -20,8 +20,8 @@ class ReviseMyPostgresConnector extends PostgresConnector
             $dsn .= ';connect_timeout='.(int) $config['connect_timeout'];
         }
 
-        if (isset($config['options']) && is_string($config['options']) && $config['options'] !== '') {
-            $dsn .= ';options='.$config['options'];
+        if (! empty($config['neon_endpoint']) && is_string($config['neon_endpoint'])) {
+            $dsn .= ';options=endpoint='.$config['neon_endpoint'];
         }
 
         return $dsn;

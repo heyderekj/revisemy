@@ -128,17 +128,14 @@ class PostgresHost
         int $connectTimeout = 60,
     ): string {
         $user = rawurlencode($username);
-        $pass = rawurlencode($password);
+        $endpointId = self::endpointId($host);
+        $pass = rawurlencode(self::passwordForServerless($password, $endpointId));
         $host = self::directHost($host);
         $path = '/'.ltrim($database, '/');
         $query = [
             'sslmode' => $sslmode,
             'connect_timeout' => $connectTimeout,
         ];
-
-        if (($endpointId = self::endpointId($host)) !== null) {
-            $query['options'] = self::endpointOptions($endpointId);
-        }
 
         $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
 
@@ -162,10 +159,7 @@ class PostgresHost
         parse_str($parts['query'] ?? '', $query);
         $query['sslmode'] ??= $sslmode;
         $query['connect_timeout'] ??= (string) $connectTimeout;
-
-        if (! isset($query['options']) && ($endpointId = self::endpointId($parts['host'] ?? '')) !== null) {
-            $query['options'] = self::endpointOptions($endpointId);
-        }
+        unset($query['options']);
 
         $parts['query'] = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
 
