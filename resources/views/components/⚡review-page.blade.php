@@ -58,6 +58,21 @@ new class extends Component
         return $this->mode === 'owner';
     }
 
+    public function showDecisionNote(): bool
+    {
+        return $this->review->isOpenForFeedback() && $this->isOwner();
+    }
+
+    public function showDecisionCallout(): bool
+    {
+        return (bool) $this->review->decision_note && ! $this->showDecisionNote();
+    }
+
+    public function showStatusCallout(): bool
+    {
+        return in_array($this->review->effectiveStatus(), ['changes_requested', 'approved'], true);
+    }
+
     public function selectScreenshot(int $index): void
     {
         $this->activeScreenshotIndex = $index;
@@ -1025,17 +1040,14 @@ new class extends Component
             </div>
         </aside>
 
-        @php($showDecisionNote = $review->isOpenForFeedback() && $mode === 'owner')
-        @php($showDecisionCallout = (bool) $review->decision_note && ! $showDecisionNote)
-        @php($showStatusCallout = in_array($review->effectiveStatus(), ['changes_requested', 'approved'], true))
-        @if ($showDecisionNote || $showDecisionCallout || $showStatusCallout)
+        @if ($this->showDecisionNote() || $this->showDecisionCallout() || $this->showStatusCallout())
             <div class="min-w-0 space-y-3 border-t border-zinc-200 pt-4 pb-6 dark:border-zinc-800 xl:col-start-1 xl:row-start-2 xl:border-t-0 xl:pt-0">
-                @if ($showDecisionNote)
+                @if ($this->showDecisionNote())
                     <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 dark:border-zinc-800 dark:bg-zinc-900">
                         <flux:heading size="sm" class="mb-3">Overall note (optional)</flux:heading>
                         <flux:textarea wire:model="decisionNote" rows="2" placeholder="Anything else before you approve or request changes?" />
                     </div>
-                @elseif ($showDecisionCallout)
+                @elseif ($this->showDecisionCallout())
                     <flux:callout>
                         <strong class="font-medium">Note to the agent:</strong> {{ $review->decision_note }}
                     </flux:callout>
