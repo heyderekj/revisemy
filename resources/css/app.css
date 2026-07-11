@@ -135,6 +135,16 @@
     .rm-step-pop {
         animation: rm-step-pop 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
+
+    .rm-note-composer {
+        animation: rm-note-sheet 280ms cubic-bezier(0.32, 0.72, 0, 1) both;
+    }
+
+    @media (min-width: 768px) {
+        .rm-note-composer {
+            animation: rm-note-popover 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+    }
 }
 
 @keyframes rm-fade-up {
@@ -183,6 +193,28 @@
     }
 }
 
+@keyframes rm-note-popover {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes rm-note-sheet {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes rm-agent-cycle {
     0% {
         opacity: 0;
@@ -212,6 +244,7 @@
     .rm-pin-pop-2,
     .rm-pulse-soft,
     .rm-step-pop,
+    .rm-note-composer,
     .rm-agent-cycle-item {
         animation: none !important;
     }
