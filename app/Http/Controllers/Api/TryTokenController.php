@@ -28,9 +28,7 @@ class TryTokenController extends Controller
             report($e);
 
             return response()->json([
-                'message' => 'Could not create try token.',
-                'error' => $e->getMessage(),
-                'type' => $e::class,
+                'message' => 'Could not create try token. Check that the app database is attached and migrated.',
             ], 500);
         }
 

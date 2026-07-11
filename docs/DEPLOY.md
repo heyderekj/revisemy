@@ -7,9 +7,12 @@ Repo: https://github.com/heyderekj/revisemy
 1. Open https://cloud.laravel.com and sign in.
 2. **New application** → import `heyderekj/revisemy`.
 3. Attach **Postgres**, **object storage**, and a **queue worker**.
+   - Do **not** use SQLite on Cloud. The app filesystem is ephemeral, so `database/database.sqlite` disappears on every deploy and try-token / reviews will 500.
 4. Environment variables:
    - `APP_NAME=ReviseMy`
    - `APP_URL=https://YOUR-APP.laravel.cloud` (set after first deploy if needed)
+   - `DB_CONNECTION=pgsql` (or let Cloud inject `DATABASE_URL` from the attached Postgres resource)
+   - `CACHE_STORE` / `SESSION_DRIVER` → `database` or Cloud Redis (not file/sqlite-backed paths)
    - `REVISEMY_DISK` / `FILESYSTEM_DISK` → Cloud object storage disk name
    - `QUEUE_CONNECTION` → Cloud queue (or `database` with a worker)
    - `REVISEMY_SECOND_OPINION=true` (default)
