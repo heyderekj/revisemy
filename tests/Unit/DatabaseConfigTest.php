@@ -55,7 +55,7 @@ class DatabaseConfigTest extends TestCase
         $this->assertSame('require', $config['connections']['pgsql_migrate']['sslmode']);
         $this->assertSame(60, $config['connections']['pgsql_migrate']['connect_timeout']);
         $this->assertSame('ep-x', $config['connections']['pgsql_migrate']['neon_endpoint']);
-        $this->assertSame('', (string) $config['connections']['pgsql_migrate']['url']);
+        $this->assertNull($config['connections']['pgsql_migrate']['url']);
         $this->assertStringContainsString('ep-x.us-east-2.pg.laravel.cloud', $config['connections']['pgsql_migrate']['host']);
         $this->assertSame(
             'ep-x-pooler.us-east-2.pg.laravel.cloud',
@@ -63,7 +63,7 @@ class DatabaseConfigTest extends TestCase
         );
         $this->assertSame(60, $config['connections']['pgsql']['connect_timeout']);
         $this->assertSame('secret', $config['connections']['pgsql']['password']);
-        $this->assertSame('', (string) $config['connections']['pgsql']['url']);
+        $this->assertNull($config['connections']['pgsql']['url']);
     }
 
     public function test_laravel_cloud_host_auto_adds_neon_endpoint_routing(): void
@@ -84,7 +84,27 @@ class DatabaseConfigTest extends TestCase
         $this->assertSame('pgsql_migrate', $config['migrations']['connection']);
         $this->assertSame('ep-misty-smoke-aiihk586', $config['connections']['pgsql']['neon_endpoint']);
         $this->assertSame('secret', $config['connections']['pgsql']['password']);
-        $this->assertSame('', (string) $config['connections']['pgsql']['url']);
+        $this->assertNull($config['connections']['pgsql']['url']);
+    }
+
+    public function test_serverless_host_ignores_stale_db_url_credentials(): void
+    {
+        $config = $this->loadDatabaseConfig([
+            'DB_CONNECTION' => 'pgsql',
+            'DB_HOST' => 'ep-misty-smoke-aiihk586.c-4.aws-us-east-1.pg.laravel.cloud',
+            'DB_URL' => 'postgresql://laravel:wrong@ep-misty-smoke-aiihk586.c-4.aws-us-east-1.pg.laravel.cloud/main',
+            'DB_MIGRATE_URL' => null,
+            'DB_PORT' => '5432',
+            'DB_DATABASE' => 'main',
+            'DB_USERNAME' => 'neondb_owner',
+            'DB_PASSWORD' => 'cloud-secret',
+            'DB_SSLMODE' => 'require',
+            'DB_CONNECT_TIMEOUT' => '60',
+        ]);
+
+        $this->assertNull($config['connections']['pgsql']['url']);
+        $this->assertSame('neondb_owner', $config['connections']['pgsql']['username']);
+        $this->assertSame('cloud-secret', $config['connections']['pgsql']['password']);
     }
 
     public function test_local_pgsql_config_is_unchanged(): void

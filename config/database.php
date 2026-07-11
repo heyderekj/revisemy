@@ -30,6 +30,18 @@ if ($runtimePgsqlUrl !== '' && $isServerless) {
     $runtimePgsqlUrl = PostgresHost::ensureUrlParams($runtimePgsqlUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
 }
 
+// Cloud injects discrete DB_* vars. A leftover DB_URL overrides username/password at connect time.
+$pgsqlConnectionUrl = null;
+if ($isServerless && PostgresHost::isServerlessHost($dbHost)) {
+    $pgsqlConnectionUrl = null;
+} elseif ($runtimePgsqlUrl !== '') {
+    $pgsqlConnectionUrl = $runtimePgsqlUrl;
+} else {
+    $pgsqlConnectionUrl = env('DB_URL') ?: null;
+}
+
+$pgsqlMigrateConnectionUrl = ($dbMigrateUrl !== null && $dbMigrateUrl !== '') ? $migrateUrl : null;
+
 return [
 
     /*
@@ -113,7 +125,7 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => $runtimePgsqlUrl !== '' ? $runtimePgsqlUrl : env('DB_URL'),
+            'url' => $pgsqlConnectionUrl,
             'host' => $dbHost,
             'port' => $dbPort,
             'database' => $dbDatabase,
@@ -132,7 +144,7 @@ return [
         // (no -pooler) with a longer connect_timeout for cold-start wake-ups.
         'pgsql_migrate' => [
             'driver' => 'pgsql',
-            'url' => $migrateUrl,
+            'url' => $pgsqlMigrateConnectionUrl,
             'host' => PostgresHost::directHost($dbHost),
             'port' => $dbPort,
             'database' => $dbDatabase,
