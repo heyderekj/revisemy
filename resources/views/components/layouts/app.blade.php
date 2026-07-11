@@ -1,30 +1,28 @@
+@props([
+    'title' => null,
+    'description' => null,
+    'ogImage' => null,
+    'ogUrl' => null,
+    'canonical' => null,
+    'robots' => 'index, follow',
+    'schema' => 'page',
+])
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    @php
-        $pageTitle = $title ?? 'ReviseMy';
-        $pageDescription = $description ?? 'Visual feedback. With your agent.';
-        $ogImage = $ogImage ?? url('/images/og.png');
-        $ogUrl = $ogUrl ?? url()->current();
-    @endphp
-    <title>{{ $pageTitle }}</title>
-    <meta name="description" content="{{ $pageDescription }}">
 
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="ReviseMy">
-    <meta property="og:title" content="{{ $pageTitle }}">
-    <meta property="og:description" content="{{ $pageDescription }}">
-    <meta property="og:url" content="{{ $ogUrl }}">
-    <meta property="og:image" content="{{ $ogImage }}">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ $pageTitle }}">
-    <meta name="twitter:description" content="{{ $pageDescription }}">
-    <meta name="twitter:image" content="{{ $ogImage }}">
+    <x-seo-head
+        :title="$title"
+        :description="$description"
+        :og-image="$ogImage"
+        :og-url="$ogUrl"
+        :canonical="$canonical"
+        :robots="$robots"
+        :schema="$schema"
+    />
 
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">

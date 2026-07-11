@@ -130,7 +130,7 @@ new class extends Component
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#top" class="transition hover:text-zinc-900">Home</a></li>
                         <li><a href="#how" class="transition hover:text-zinc-900">How it works</a></li>
-                        <li><a href="#cloud" class="transition hover:text-zinc-900">Features</a></li>
+                        <li><a href="#features" class="transition hover:text-zinc-900">Features</a></li>
                         <li><a href="#agents" class="transition hover:text-zinc-900">For agents</a></li>
                     </ul>
                 </div>
@@ -177,7 +177,7 @@ new class extends Component
             </div>
             <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
                 <a href="#how" class="block" x-on:click="mobileNav = false">How it works</a>
-                <a href="#cloud" class="block" x-on:click="mobileNav = false">Features</a>
+                <a href="#features" class="block" x-on:click="mobileNav = false">Features</a>
                 <a href="#agents" class="block" x-on:click="mobileNav = false">For agents</a>
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try with your agent</a>
                 <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub ↗</a>
@@ -254,68 +254,68 @@ new class extends Component
                             resumeTimer: null,
                             scenarios: {
                                 product: {
-                                    capture: 'Opening a design checkup on the production environment…',
-                                    hintBody: 'Traffic series rely on rose vs sky alone — label each line directly for faster scanning.',
+                                    capture: 'Opening a design checkup on the West 04 pollination run…',
+                                    hintBody: 'The blossom-rate chart has no target line, so operators cannot tell whether either Pip is on pace.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: '“Production” needs context — surface region and service count in the page header.',
+                                    markBody: 'Add the 05:51 sunrise cutoff to the run header so the remaining window is visible.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: 'Recent deploys are missing commit context — show SHA and author beside status.',
+                                    mark2Body: 'Pip 12 is “mapping,” but the row it is preparing is not named.',
                                     mark2Meta: 'content · M2',
-                                    markTarget: 'environment.header',
+                                    markTarget: 'run.header',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Add “US East · 3 services” under Production so the environment is identifiable.',
-                                    mark2Target: 'deploy.row',
+                                    markNote: 'Surface “sunrise cutoff 05:51” beside the shift start time.',
+                                    mark2Target: 'robot.row',
                                     mark2Severity: 'content',
-                                    mark2Note: 'Include commit SHA and author so each deploy can be traced without opening it.',
-                                    packets: 'Changes requested — add environment context and deploy metadata; retain the chart-label hint.',
+                                    mark2Note: 'Change the state to “mapping Row 17” so the next move is traceable.',
+                                    packets: 'Changes requested — add the run cutoff and mapping destination; retain the target-line hint.',
                                 },
                                 websites: {
-                                    capture: 'Opening a design checkup on the Field Notes route page…',
-                                    hintBody: 'The route description is too faint against the paper tone — increase its contrast before shipping.',
+                                    capture: 'Opening a design checkup on the Thrum Robotics product page…',
+                                    hintBody: 'The supporting copy explains the motion but buries the labor outcome growers care about.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: 'Keep “through the coast” together — the line break interrupts the thought.',
+                                    markBody: 'Keep “before sunrise” together — the line break weakens the overnight promise.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: 'The route link and field guide compete — make the guide the unmistakable next step.',
+                                    mark2Body: 'The run report and field demo compete — make booking the live demo the unmistakable next step.',
                                     mark2Meta: 'hierarchy · M2',
                                     markTarget: 'hero.headline',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Rebalance the headline so “through the coast” reads as one phrase.',
+                                    markNote: 'Rebalance the headline so “before sunrise” reads as one phrase.',
                                     mark2Target: 'hero.actions',
                                     mark2Severity: 'hierarchy',
-                                    mark2Note: 'Keep “View route” as a quiet text link so the field guide remains primary.',
-                                    packets: 'Changes requested — fix the headline wrap and action hierarchy; retain the contrast hint.',
+                                    mark2Note: 'Keep “Read run 118” as a quiet text link so the field demo remains primary.',
+                                    packets: 'Changes requested — fix the promise wrap and action hierarchy; sharpen the labor outcome.',
                                 },
                                 presentations: {
-                                    capture: 'Opening a design checkup on the growth review deck…',
-                                    hintBody: 'The comparison bars still depend on color — label control and guided setup directly on the chart.',
+                                    capture: 'Opening a design checkup on the harvest review deck…',
+                                    hintBody: 'The comparison has no visible baseline, making the 13-point difference look larger than it is.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: 'Name the comparison window in the title so the 28% lift is not read as permanent.',
+                                    markBody: 'Name the harvest window in the title so the 18% yield lift is not read as a permanent baseline.',
                                     markMeta: 'must-fix · M1',
                                     mark2Body: 'The methodology note is presentation detail — move it to speaker notes.',
                                     mark2Meta: 'polish · M2',
                                     markTarget: 'slide.title',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Add “in the first 30 days” to make the result precise at a glance.',
+                                    markNote: 'Add “across the June harvest” to make the result precise at a glance.',
                                     mark2Target: 'slide.source-note',
                                     mark2Severity: 'polish',
                                     mark2Note: 'Move sample-size and date detail into speaker notes; keep a short source.',
-                                    packets: 'Changes requested — qualify the takeaway, simplify the source, then label the comparison.',
+                                    packets: 'Changes requested — qualify the harvest takeaway, simplify the source, then clarify the chart baseline.',
                                 },
                                 email: {
-                                    capture: 'Opening a design checkup on the Friday Brief email…',
-                                    hintBody: 'The legal and preference links are too faint for inbox viewing — darken them before sending.',
+                                    capture: 'Opening a design checkup on the West 04 dawn report…',
+                                    hintBody: 'The footer actions are packed too tightly for a mobile inbox — add clearer separation.',
                                     hintMeta: 'finding: a11y · hint',
-                                    markBody: 'Put the five-minute promise in the headline; it is the strongest reason to open the brief.',
+                                    markBody: 'Put the 94.2% contact rate in the headline; blossom visits alone do not show pollination quality.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: 'Make the action personal and specific: “Open my Friday brief.”',
+                                    mark2Body: 'Name the destination and greenhouse: “Open the West 04 run.”',
                                     mark2Meta: 'wording · M2',
                                     markTarget: 'email.hero',
                                     markSeverity: 'must-fix',
-                                    markNote: 'Lead with “Your five-minute Friday brief” so the value is immediate.',
+                                    markNote: 'Pair the visit count with contact rate so the result is meaningful.',
                                     mark2Target: 'email.primary-cta',
                                     mark2Severity: 'wording',
-                                    mark2Note: 'Change the CTA to “Open my Friday brief” so readers know exactly what opens.',
-                                    packets: 'Changes requested — sharpen the time-saving promise and CTA; retain the footer contrast hint.',
+                                    mark2Note: 'Change the CTA to “Open the West 04 run” so operators know exactly what opens.',
+                                    packets: 'Changes requested — add the quality signal and clarify the CTA; give footer actions more space.',
                                 }
                             },
                             get s() { return this.scenarios[this.scenario]; },
@@ -443,20 +443,20 @@ new class extends Component
                                     <div class="flex h-full flex-col bg-zinc-50/70">
                                         <div class="flex h-8 shrink-0 items-center justify-between border-b border-zinc-200 bg-white px-3">
                                             <div class="flex items-center gap-2">
-                                                <span class="flex h-4 w-4 items-center justify-center rounded bg-zinc-900 text-[7px] font-semibold text-white">N</span>
-                                                <span class="text-[9px] font-semibold text-zinc-800">Northstar</span>
+                                                <span class="flex h-4 w-4 items-center justify-center rounded-full bg-thrum-pollen text-[7px] font-bold text-thrum-ink">T</span>
+                                                <span class="text-[9px] font-semibold text-zinc-800">Thrum Robotics</span>
                                                 <span class="text-[8px] text-zinc-300">/</span>
-                                                <span class="text-[8px] text-zinc-500">Environments</span>
+                                                <span class="text-[8px] text-zinc-500">Glasshouse fleet</span>
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                <span class="hidden items-center gap-1 text-[7px] text-emerald-600 sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>All systems operational</span>
-                                                <span class="rounded-md bg-zinc-900 px-2 py-1 text-[8px] font-medium text-white">Deploy</span>
+                                                <span class="hidden items-center gap-1 text-[7px] text-thrum-teal sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-thrum-teal"></span>Night shift active</span>
+                                                <span class="rounded-md bg-thrum-ink px-2 py-1 text-[8px] font-medium text-white">Dispatch</span>
                                             </div>
                                         </div>
 
                                         <div class="flex min-h-0 flex-1">
                                             <aside class="hidden w-9 shrink-0 flex-col items-center gap-2.5 border-r border-zinc-200 bg-white py-3 sm:flex">
-                                                <span class="h-4 w-4 rounded bg-rose-100 ring-1 ring-rose-200"></span>
+                                                <span class="h-4 w-4 rounded-md bg-thrum-teal-soft ring-1 ring-thrum-teal/30"></span>
                                                 <span class="h-4 w-4 rounded bg-zinc-100"></span>
                                                 <span class="h-4 w-4 rounded bg-zinc-100"></span>
                                                 <span class="h-4 w-4 rounded bg-zinc-100"></span>
@@ -465,12 +465,12 @@ new class extends Component
                                             <div class="min-w-0 flex-1 p-2.5 sm:p-3">
                                                 <div class="flex items-start justify-between gap-2">
                                                     <div class="relative">
-                                                        <p class="text-[7px] font-medium uppercase tracking-[0.12em] text-zinc-400">Environment</p>
+                                                        <p class="text-[7px] font-semibold uppercase tracking-[0.12em] text-thrum-pollen-dark">Pollination run</p>
                                                         <div class="mt-0.5 flex items-center gap-1.5">
-                                                            <h3 class="text-[13px] font-semibold tracking-tight text-zinc-900">Production</h3>
-                                                            <span class="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[6px] font-medium text-emerald-700">Healthy</span>
+                                                            <h3 class="text-[13px] font-semibold tracking-tight text-zinc-900">West 04</h3>
+                                                            <span class="rounded-full bg-thrum-teal-soft px-1.5 py-0.5 text-[7px] font-medium text-thrum-ink">Pollinating</span>
                                                         </div>
-                                                        <p class="mt-0.5 text-[7px] text-zinc-400">Environment overview</p>
+                                                        <p class="mt-0.5 text-[7px] text-zinc-500">Almería · Roma · 18 rows</p>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 z-[8] rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                             x-show="step === 2"
@@ -481,42 +481,42 @@ new class extends Component
                                                         </div>
                                                     </div>
                                                     <div class="flex items-center gap-2 text-[7px] text-zinc-400">
-                                                        <span>Last 24 hours</span>
+                                                        <span>Started 21:00</span>
                                                         <span class="rounded border border-zinc-200 bg-white px-1.5 py-0.5">•••</span>
                                                     </div>
                                                 </div>
 
                                                 <div class="mt-2 grid grid-cols-3 gap-1.5">
                                                     <div class="rounded-md border border-zinc-200 bg-white p-1.5 shadow-sm">
-                                                        <p class="text-[6px] uppercase tracking-wide text-zinc-400">Requests</p>
-                                                        <p class="mt-0.5 text-[11px] font-semibold text-zinc-800">1.84M</p>
-                                                        <p class="text-[6px] text-emerald-600">↑ 12.4%</p>
+                                                        <p class="text-[7px] uppercase tracking-wide text-zinc-500">Blossoms visited</p>
+                                                        <p class="mt-0.5 text-[11px] font-semibold text-zinc-800">12,480</p>
+                                                        <p class="text-[7px] text-thrum-teal">↑ 8.1% vs plan</p>
                                                     </div>
                                                     <div class="rounded-md border border-zinc-200 bg-white p-1.5 shadow-sm">
-                                                        <p class="text-[6px] uppercase tracking-wide text-zinc-400">Error rate</p>
-                                                        <p class="mt-0.5 text-[11px] font-semibold text-zinc-800">0.06%</p>
-                                                        <p class="text-[6px] text-zinc-400">Within target</p>
+                                                        <p class="text-[7px] uppercase tracking-wide text-zinc-500">Contact rate</p>
+                                                        <p class="mt-0.5 text-[11px] font-semibold text-zinc-800">94.2%</p>
+                                                        <p class="text-[7px] text-zinc-500">Target 92%</p>
                                                     </div>
                                                     <div class="rounded-md border border-zinc-200 bg-white p-1.5 shadow-sm">
-                                                        <p class="text-[6px] uppercase tracking-wide text-zinc-400">P95 latency</p>
-                                                        <p class="mt-0.5 text-[11px] font-semibold text-zinc-800">182ms</p>
-                                                        <p class="text-[6px] text-emerald-600">↓ 8ms</p>
+                                                        <p class="text-[7px] uppercase tracking-wide text-zinc-500">Rows complete</p>
+                                                        <p class="mt-0.5 text-[11px] font-semibold text-zinc-800">16 / 18</p>
+                                                        <p class="text-[7px] text-thrum-teal">42 min ahead</p>
                                                     </div>
                                                 </div>
 
                                                 <div class="mt-2 grid grid-cols-[1.25fr_0.9fr] gap-1.5">
                                                     <div class="relative rounded-md border border-zinc-200 bg-white p-2 shadow-sm">
                                                         <div class="flex items-center justify-between">
-                                                            <p class="text-[7px] font-medium text-zinc-700">Traffic</p>
-                                                            <div class="flex gap-1.5 text-[6px] text-zinc-400">
-                                                                <span class="flex items-center gap-0.5"><span class="h-1 w-1 rounded-full bg-rose-400"></span>API</span>
-                                                                <span class="flex items-center gap-0.5"><span class="h-1 w-1 rounded-full bg-sky-400"></span>Web</span>
+                                                            <p class="text-[7px] font-medium text-zinc-700">Blossoms / hour</p>
+                                                            <div class="flex gap-1.5 text-[7px] text-zinc-500">
+                                                                <span class="flex items-center gap-0.5"><span class="h-1 w-1 rounded-full bg-thrum-pollen"></span>Pip 07</span>
+                                                                <span class="flex items-center gap-0.5"><span class="h-1 w-1 rounded-full bg-[#6a9d92]"></span>Pip 12</span>
                                                             </div>
                                                         </div>
                                                         <svg class="mt-1 h-10 w-full overflow-visible" viewBox="0 0 180 48" fill="none" aria-hidden="true">
                                                             <path d="M0 38H180M0 24H180M0 10H180" stroke="#f4f4f5" stroke-width="1"/>
-                                                            <path d="M0 34C18 31 20 22 39 25C59 28 67 11 88 17C105 22 115 8 133 12C151 16 161 6 180 8" stroke="#fb7185" stroke-width="2" stroke-linecap="round"/>
-                                                            <path d="M0 40C17 38 26 31 43 34C62 37 70 24 91 29C110 33 120 20 140 23C155 25 167 17 180 19" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/>
+                                                            <path d="M0 34C18 31 20 22 39 25C59 28 67 11 88 17C105 22 115 8 133 12C151 16 161 6 180 8" stroke="#d8a62f" stroke-width="2" stroke-linecap="round"/>
+                                                            <path d="M0 40C17 38 26 31 43 34C62 37 70 24 91 29C110 33 120 20 140 23C155 25 167 17 180 19" stroke="#6a9d92" stroke-width="2" stroke-linecap="round"/>
                                                         </svg>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-dashed border-sky-400 bg-sky-400/10"
@@ -533,23 +533,25 @@ new class extends Component
 
                                                     <div class="relative rounded-md border border-zinc-200 bg-white p-2 shadow-sm">
                                                         <div class="flex items-center justify-between">
-                                                            <p class="text-[7px] font-medium text-zinc-700">Recent deploys</p>
-                                                            <span class="text-[6px] text-zinc-400">View all</span>
+                                                            <p class="text-[7px] font-medium text-zinc-700">Robots on row</p>
+                                                            <span class="text-[7px] text-zinc-500">4 active</span>
                                                         </div>
                                                         <ul class="mt-1.5 space-y-1.5">
-                                                            <li class="flex items-center gap-1">
-                                                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                                                <div class="min-w-0">
-                                                                    <p class="truncate text-[7px] text-zinc-700">Checkout polish</p>
-                                                                    <p class="text-[6px] text-zinc-400">2m ago</p>
+                                                            <li class="flex items-center gap-1.5">
+                                                                <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-thrum-teal"></span>
+                                                                <div class="min-w-0 flex-1">
+                                                                    <p class="truncate text-[7px] text-zinc-700">Pip 07 · Row 12</p>
+                                                                    <p class="text-[7px] text-zinc-500">pollinating</p>
                                                                 </div>
+                                                                <span class="text-right text-[6.5px] leading-tight text-zinc-500">82% batt.<br>64% brush</span>
                                                             </li>
-                                                            <li class="flex items-center gap-1">
-                                                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                                                <div class="min-w-0">
-                                                                    <p class="truncate text-[7px] text-zinc-700">Token onboarding</p>
-                                                                    <p class="text-[6px] text-zinc-400">34m ago</p>
+                                                            <li class="flex items-center gap-1.5">
+                                                                <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-thrum-teal"></span>
+                                                                <div class="min-w-0 flex-1">
+                                                                    <p class="truncate text-[7px] text-zinc-700">Pip 12 · Row 16</p>
+                                                                    <p class="text-[7px] text-zinc-500">mapping</p>
                                                                 </div>
+                                                                <span class="text-right text-[6.5px] leading-tight text-zinc-500">76% batt.<br>91% brush</span>
                                                             </li>
                                                         </ul>
                                                         <div
@@ -562,6 +564,22 @@ new class extends Component
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                <div class="mt-2 overflow-hidden rounded-md border border-zinc-200 bg-[#f4f7f5] shadow-sm">
+                                                    <div class="flex items-center justify-between border-b border-zinc-200/80 px-2 py-1.5">
+                                                        <p class="text-[7px] font-medium text-zinc-700">Glasshouse map</p>
+                                                        <p class="text-[7px] text-zinc-500">Next dispatch · 21:15</p>
+                                                    </div>
+                                                    <svg class="h-12 w-full" viewBox="0 0 360 48" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                                                        <path d="M20 8H340M20 16H340M20 24H340M20 32H340M20 40H340" stroke="#cbd5d1" stroke-width="2" stroke-linecap="round"/>
+                                                        <path d="M20 8H310M20 16H286M20 24H330M20 32H268M20 40H318" stroke="#78a99e" stroke-width="2" stroke-linecap="round"/>
+                                                        <circle cx="310" cy="8" r="4" fill="#d8a62f" stroke="white" stroke-width="2"/>
+                                                        <circle cx="286" cy="16" r="4" fill="#d8a62f" stroke="white" stroke-width="2"/>
+                                                        <circle cx="330" cy="24" r="4" fill="#d8a62f" stroke="white" stroke-width="2"/>
+                                                        <circle cx="268" cy="32" r="4" fill="#d8a62f" stroke="white" stroke-width="2"/>
+                                                        <path d="M20 40H318" stroke="#78a99e" stroke-width="2" stroke-dasharray="4 3"/>
+                                                    </svg>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -572,28 +590,28 @@ new class extends Component
                                     <div class="flex h-full flex-col text-[#1f2926]">
                                         <nav class="flex h-9 shrink-0 items-center justify-between border-b border-[#d8d0c3] px-3.5 sm:px-5">
                                             <div class="flex items-center gap-2">
-                                                <span class="h-2.5 w-2.5 rounded-full bg-[#c84b3f]"></span>
-                                                <span class="text-[8px] font-semibold uppercase tracking-[0.2em]">Field / Notes</span>
+                                                <span class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-thrum-pollen text-[6px] font-bold text-thrum-ink">T</span>
+                                                <span class="text-[8px] font-semibold uppercase tracking-[0.2em]">Thrum / Robotics</span>
                                             </div>
-                                            <div class="flex items-center gap-3 text-[7px] font-medium text-[#5d6661]">
-                                                <span class="hidden sm:inline">Routes</span>
-                                                <span class="hidden sm:inline">Journal</span>
-                                                <span class="border-b border-[#1f2926] pb-0.5 text-[#1f2926]">Field guides</span>
+                                            <div class="flex items-center gap-3 text-[8px] font-medium text-[#5d6661]">
+                                                <span class="hidden sm:inline">Fleet</span>
+                                                <span class="hidden sm:inline">Method</span>
+                                                <span class="border-b border-[#1f2926] pb-0.5 text-[#1f2926]">Meet Pip</span>
                                             </div>
                                         </nav>
 
                                         <div class="grid min-h-0 flex-1 grid-cols-[1.08fr_0.92fr]">
                                             <div class="flex min-w-0 flex-col justify-between px-3.5 py-3 sm:px-5 sm:py-4">
                                                 <div class="flex items-center justify-between gap-2">
-                                                    <p class="text-[6px] font-semibold uppercase tracking-[0.2em] text-[#c84b3f]">Route 024 / Pacific edge</p>
-                                                    <span class="text-[6px] text-[#7c827e]">36° 16′ N</span>
+                                                    <p class="text-[7px] font-semibold uppercase tracking-[0.18em] text-thrum-pollen-dark">Autonomous pollination / Pip 04</p>
+                                                    <span class="text-[7px] text-[#6d7671]">04:42 AM</span>
                                                 </div>
 
                                                 <div class="min-w-0">
                                                     <div class="relative max-w-[15rem]">
                                                         <h3 class="font-display text-[clamp(1.2rem,2.8vw,1.8rem)] font-medium leading-[0.98] tracking-[-0.025em] text-[#173f3b]">
-                                                            A quieter way<br>
-                                                            through the coast.
+                                                            Every open blossom,<br>
+                                                            before sunrise.
                                                         </h3>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 z-[8] rounded-md border-2 border-rose-500 bg-rose-500/10"
@@ -605,7 +623,7 @@ new class extends Component
                                                         </div>
                                                     </div>
                                                     <div class="relative mt-2 max-w-[13.5rem]">
-                                                        <p class="text-[8px] leading-relaxed text-[#8b8d87]">Three unhurried days between redwood shade and the last light at Point Reyes.</p>
+                                                        <p class="text-[9px] leading-relaxed text-[#596661]">Pip rolls the rows at night, finds flowers ready for pollen, and gives each one a careful buzz.</p>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-dashed border-sky-400 bg-sky-400/10"
                                                             x-show="step === 1"
@@ -619,8 +637,8 @@ new class extends Component
                                                         >S1</div>
                                                     </div>
                                                     <div class="relative mt-3 inline-flex items-center gap-2.5">
-                                                        <span class="rounded-full bg-[#c84b3f] px-3 py-1.5 text-[8px] font-semibold text-white shadow-sm">Get the field guide</span>
-                                                        <span class="border-b border-[#70817a] pb-0.5 text-[8px] font-medium text-[#315c56]">View route ↗</span>
+                                                        <span class="rounded-full bg-thrum-pollen px-3 py-1.5 text-[8px] font-semibold text-thrum-ink shadow-sm">Book a field demo</span>
+                                                        <span class="border-b border-[#70817a] pb-0.5 text-[8px] font-medium text-[#315c56]">Read run 118 ↗</span>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                             x-show="step === 2"
@@ -632,24 +650,38 @@ new class extends Component
                                                     </div>
                                                 </div>
 
-                                                <div class="flex items-center gap-2 text-[6px] text-[#777e79]">
-                                                    <span class="font-semibold text-[#173f3b]">03 days</span>
+                                                <div class="flex items-center gap-2 text-[7px] text-[#69736e]">
+                                                    <span class="font-semibold text-[#173f3b]">18 rows</span>
                                                     <span class="h-px w-4 bg-[#b6b2aa]"></span>
-                                                    <span>42 miles · moderate</span>
+                                                    <span>12,480 blossoms · one night</span>
                                                 </div>
                                             </div>
 
-                                            <div class="relative min-w-0 overflow-hidden rounded-tl-[2.25rem] bg-[#164e4a]">
-                                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_72%_24%,rgb(229_196_140/0.24),transparent_24%),linear-gradient(160deg,transparent_35%,rgb(8_47_43/0.8)_100%)]"></div>
-                                                <svg class="absolute inset-0 h-full w-full text-[#8eb7a7]/35" viewBox="0 0 220 230" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                                                    <path d="M-20 35C34 3 70 80 126 46s77-9 119 19M-24 63c54-33 98 49 154 13s77-10 112 13M-18 94c52-29 96 40 150 9s76-8 108 15M-16 126c50-22 93 33 145 7s74-6 108 19M-12 160c46-18 88 24 138 5s72-3 106 22M-5 192c45-13 85 17 133 3s69 1 101 25" stroke="currentColor" stroke-width="1"/>
+                                            <div class="relative min-w-0 overflow-hidden rounded-tl-[2rem] bg-thrum-ink">
+                                                <svg class="absolute inset-0 h-full w-full" viewBox="0 0 180 260" preserveAspectRatio="xMidYMid meet" fill="none" aria-hidden="true">
+                                                    <path d="M8 230V82C8 44 30 24 53 24s45 20 45 58v148M82 230V82c0-38 22-58 45-58s45 20 45 58v148M0 76h180M0 132h180M0 188h180" stroke="#8eb7a7" stroke-opacity=".24"/>
+                                                    <path d="M14 220h152M14 205h152M14 190h152M14 175h152M14 160h152" stroke="#d5e4dc" stroke-opacity=".13"/>
+                                                    <g transform="translate(76 126)">
+                                                        <rect x="-23" y="-15" width="46" height="31" rx="9" fill="#f4efe6"/>
+                                                        <rect x="-14" y="-29" width="27" height="14" rx="5" fill="#d8a62f"/>
+                                                        <circle cx="6" cy="-22" r="2.5" fill="#163f3a"/>
+                                                        <path d="M-12 0h24M0-10v20" stroke="#d5cec1" stroke-width="1"/>
+                                                        <circle cx="-15" cy="20" r="7" fill="#0d3531" stroke="#f4efe6" stroke-width="2.5"/>
+                                                        <circle cx="15" cy="20" r="7" fill="#0d3531" stroke="#f4efe6" stroke-width="2.5"/>
+                                                        <path d="M23-4 36-10 43-24" stroke="#f4efe6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        <path d="m42-24 6 3m-6-3 2-6" stroke="#d8a62f" stroke-width="3" stroke-linecap="round"/>
+                                                        <g transform="translate(52 -34)" fill="#f4efe6">
+                                                            <circle cx="0" cy="-5" r="4"/><circle cx="5" cy="0" r="4"/><circle cx="0" cy="5" r="4"/><circle cx="-5" cy="0" r="4"/>
+                                                            <circle r="3" fill="#d8a62f"/>
+                                                        </g>
+                                                    </g>
                                                 </svg>
-                                                <div class="absolute left-3 top-3 rounded-full border border-white/30 bg-[#103f3b]/70 px-2 py-1 text-[6px] font-semibold uppercase tracking-[0.14em] text-[#f2dfba] backdrop-blur-sm">Point Reyes</div>
+                                                <div class="absolute left-3 top-3 rounded-full border border-white/25 bg-[#103f3b]/80 px-2 py-1 text-[7px] font-semibold uppercase tracking-[0.14em] text-[#f2dfba] backdrop-blur-sm">Pip 04 · West 04</div>
                                                 <div class="absolute bottom-3 left-3 right-3 border-t border-white/25 pt-2 text-white">
-                                                    <p class="font-display text-[13px] leading-none">Sea, fog, redwood.</p>
-                                                    <div class="mt-1.5 flex items-center justify-between text-[6px] text-white/60">
-                                                        <span>Stop 02 / Limantour</span>
-                                                        <span>08:14 PM</span>
+                                                    <p class="font-display text-[13px] leading-none">Brush, map, repeat.</p>
+                                                    <div class="mt-1.5 flex items-center justify-between text-[7px] text-white/65">
+                                                        <span>Row 12 / Truss 08</span>
+                                                        <span>94.2% contact</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -660,35 +692,32 @@ new class extends Component
                                 {{-- PRESENTATIONS mock --}}
                                 <div class="absolute inset-2 overflow-hidden rounded-lg border border-zinc-700 bg-[#242522] sm:inset-3" x-show="scenario === 'presentations'" x-cloak>
                                     <div class="flex h-full">
-                                        <aside class="hidden w-[3.25rem] shrink-0 flex-col gap-2 border-r border-white/10 bg-[#191a18] p-1.5 sm:flex">
-                                            <div class="relative aspect-video rounded border border-[#d75b4e] bg-[#f4efe6] p-1 shadow-sm">
-                                                <div class="h-1 w-3 rounded-full bg-[#d75b4e]"></div>
+                                        <aside class="hidden w-[2.75rem] shrink-0 flex-col gap-1.5 border-r border-white/10 bg-[#191a18] p-1 sm:flex">
+                                            <div class="relative aspect-video rounded-md border border-thrum-pollen bg-thrum-paper p-1">
+                                                <div class="h-1 w-3 rounded-full bg-thrum-pollen"></div>
                                                 <div class="mt-1 flex h-2.5 items-end gap-0.5">
-                                                    <span class="h-1.5 flex-1 bg-[#1e5a54]"></span><span class="h-2.5 flex-1 bg-[#d75b4e]"></span>
+                                                    <span class="h-1.5 flex-1 bg-thrum-teal"></span><span class="h-2.5 flex-1 bg-thrum-pollen"></span>
                                                 </div>
-                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">7</span>
                                             </div>
-                                            <div class="relative aspect-video rounded border border-white/10 bg-zinc-800 p-1">
+                                            <div class="relative aspect-video rounded-md border border-white/10 bg-zinc-800 p-1">
                                                 <div class="h-1 w-4 rounded-full bg-zinc-600"></div>
                                                 <div class="mt-1 h-2.5 rounded-sm bg-[#325f59]"></div>
-                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">8</span>
                                             </div>
-                                            <div class="relative aspect-video rounded border border-white/10 bg-zinc-800 p-1">
+                                            <div class="relative aspect-video rounded-md border border-white/10 bg-zinc-800 p-1">
                                                 <div class="h-1 w-3 rounded-full bg-zinc-600"></div>
                                                 <div class="mt-1 h-2.5 rounded-sm bg-zinc-700"></div>
-                                                <span class="absolute -left-1 top-1 text-[6px] text-zinc-500">9</span>
                                             </div>
                                         </aside>
 
                                         <div class="flex min-w-0 flex-1 flex-col">
-                                            <div class="flex h-6 items-center justify-between border-b border-white/10 px-2 text-[7px] text-zinc-400">
-                                                <span>Growth review / June 2026</span>
+                                            <div class="flex h-5 items-center justify-between border-b border-white/10 px-2 text-[7px] text-zinc-400">
+                                                <span>Harvest review / June 2026</span>
                                                 <span class="rounded-full border border-white/10 px-1.5 py-0.5 text-zinc-300">Present ↗</span>
                                             </div>
-                                            <div class="flex flex-1 items-center justify-center p-2">
-                                                <div class="relative aspect-video w-full max-w-[25rem] overflow-hidden rounded-sm bg-[#f4efe6] px-4 py-3 text-[#183b37] shadow-[0_10px_30px_rgb(0_0_0/0.4)] sm:px-5">
-                                                    <div class="flex items-center justify-between text-[6px] font-semibold uppercase tracking-[0.16em]">
-                                                        <span class="text-[#c84b3f]">Northstar / Growth</span>
+                                            <div class="flex flex-1 items-center justify-center p-1.5">
+                                                <div class="relative aspect-video w-full max-w-[27rem] overflow-hidden rounded-md bg-thrum-paper px-4 py-3 text-thrum-ink shadow-[0_10px_30px_rgb(0_0_0/0.4)] sm:px-5">
+                                                    <div class="flex items-center justify-between text-[7px] font-semibold uppercase tracking-[0.16em]">
+                                                        <span class="text-thrum-pollen-dark">Thrum / Harvest</span>
                                                         <span class="text-[#7d817b]">07</span>
                                                     </div>
 
@@ -696,7 +725,7 @@ new class extends Component
                                                         <div class="min-w-0">
                                                             <div class="relative">
                                                                 <h3 class="font-display text-[15px] font-medium leading-[1.02] tracking-[-0.025em] text-[#183b37] sm:text-[18px]">
-                                                                    Guided setup drove<br>a 28% activation lift.
+                                                                    Night pollination lifted<br>Grade A yield 18%.
                                                                 </h3>
                                                             <div
                                                                 class="pointer-events-none absolute -inset-1 z-[8] rounded-md border-2 border-rose-500 bg-rose-500/10"
@@ -707,29 +736,26 @@ new class extends Component
                                                                     <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f4efe6]">M1</span>
                                                                 </div>
                                                             </div>
-                                                            <p class="mt-2 max-w-[11rem] text-[7px] leading-relaxed text-[#69736e]">
-                                                                More people reached their first shared project when setup ended with one concrete action.
+                                                            <p class="mt-2 max-w-[11rem] text-[8px] leading-relaxed text-[#5f6d67]">
+                                                                Pip covered open blossoms at peak receptivity while greenhouse crews were off shift.
                                                             </p>
-                                                            <div class="mt-3 flex gap-3">
-                                                                <div>
-                                                                    <p class="text-[11px] font-semibold leading-none text-[#183b37]">61%</p>
-                                                                    <p class="mt-0.5 text-[5.5px] uppercase tracking-wide text-[#7d817b]">Guided</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p class="text-[11px] font-semibold leading-none text-[#69736e]">47%</p>
-                                                                    <p class="mt-0.5 text-[5.5px] uppercase tracking-wide text-[#7d817b]">Control</p>
-                                                                </div>
-                                                            </div>
+                                                            <p class="mt-3 inline-flex rounded-full bg-thrum-teal-soft px-2 py-1 text-[7px] font-semibold text-thrum-ink">+13 pts vs hand pollination</p>
                                                         </div>
 
-                                                        <div class="relative flex items-end gap-2 border-b border-[#c9c4ba] px-2 pb-0.5">
-                                                            <div class="flex flex-1 flex-col items-center gap-1">
-                                                                <span class="text-[6px] font-semibold text-[#69736e]">47%</span>
-                                                                <span class="h-[3.1rem] w-full bg-[#7fa49b]"></span>
+                                                        <div class="relative">
+                                                            <div class="flex h-[4.6rem] items-end gap-2 border-b border-[#a9aaa4] px-2 pb-0.5">
+                                                                <div class="flex flex-1 flex-col items-center gap-1">
+                                                                    <span class="text-[7px] font-semibold text-[#69736e]">72%</span>
+                                                                    <span class="h-[3.1rem] w-full bg-[#7fa49b]"></span>
+                                                                </div>
+                                                                <div class="flex flex-1 flex-col items-center gap-1">
+                                                                    <span class="text-[7px] font-semibold text-thrum-pollen-dark">85%</span>
+                                                                    <span class="h-[4.25rem] w-full bg-thrum-pollen"></span>
+                                                                </div>
                                                             </div>
-                                                            <div class="flex flex-1 flex-col items-center gap-1">
-                                                                <span class="text-[6px] font-semibold text-[#c84b3f]">61%</span>
-                                                                <span class="h-[4.25rem] w-full bg-[#c84b3f]"></span>
+                                                            <div class="mt-1 grid grid-cols-2 gap-2 text-center text-[6px] font-semibold uppercase tracking-wide text-[#69736e]">
+                                                                <span>Hand</span>
+                                                                <span>Pip</span>
                                                             </div>
                                                             <div
                                                                 class="pointer-events-none absolute -inset-1 rounded-md border-2 border-dashed border-sky-400 bg-sky-400/10"
@@ -738,7 +764,7 @@ new class extends Component
                                                                 :class="step === 1 ? 'rm-pulse-soft' : ''"
                                                             ></div>
                                                             <div
-                                                                class="absolute -left-2 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-[#f4efe6] text-[8px] font-bold text-sky-700 shadow-sm"
+                                                                class="absolute -left-2 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-thrum-paper text-[8px] font-bold text-sky-700 shadow-sm"
                                                                 x-show="step === 1"
                                                                 x-transition
                                                             >S1</div>
@@ -746,7 +772,7 @@ new class extends Component
                                                     </div>
 
                                                     <div class="relative mt-2 border-t border-[#d8d2c8] pt-1.5">
-                                                        <p class="text-[5.5px] leading-tight text-[#8b8c86]">Source: new-workspace cohort, n=1,842 · 30-day window · Apr–Jun 2026 · invited teammates excluded</p>
+                                                        <p class="text-[6.5px] leading-tight text-[#777c76]">Source: 14 Roma rows · 8,420 trusses · June 2026 harvest · edge rows and replants excluded</p>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                             x-show="step === 2"
@@ -769,7 +795,7 @@ new class extends Component
                                             <div class="flex items-center gap-2">
                                                 <span class="font-medium text-[#303633]">Campaign preview</span>
                                                 <span class="text-[#b1afa9]">/</span>
-                                                <span>The Friday Brief · 07</span>
+                                                <span>Dawn report · Run 118</span>
                                             </div>
                                             <div class="flex items-center gap-1 rounded-md border border-[#d8d4cc] bg-white p-0.5">
                                                 <span class="rounded bg-[#224e48] px-1.5 py-0.5 text-white">Desktop</span>
@@ -778,20 +804,20 @@ new class extends Component
                                         </div>
 
                                         <div class="min-h-0 flex-1 overflow-hidden p-2 sm:p-2.5">
-                                            <div class="relative mx-auto flex h-full max-w-[19rem] flex-col overflow-hidden rounded-sm bg-[#fbfaf7] shadow-[0_8px_24px_rgb(55_54_49/0.16)]">
+                                            <div class="relative mx-auto flex h-full max-w-[19rem] flex-col overflow-hidden rounded-md bg-[#fbfaf7] shadow-[0_8px_24px_rgb(55_54_49/0.16)]">
                                                 <div class="flex shrink-0 items-center justify-between border-b border-[#ebe7df] px-3 py-2">
                                                     <div class="flex items-center gap-1.5">
-                                                        <span class="h-2.5 w-2.5 rounded-full bg-[#c84b3f]"></span>
-                                                        <span class="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#243d39]">Northstar</span>
+                                                        <span class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-thrum-pollen text-[6px] font-bold text-thrum-ink">T</span>
+                                                        <span class="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#243d39]">Thrum Robotics</span>
                                                     </div>
-                                                    <span class="text-[6px] text-[#8d8d87]">Friday, June 19</span>
+                                                    <span class="text-[7px] text-[#777d77]">Delivered at sunrise · 05:48</span>
                                                 </div>
 
-                                                <div class="border-b border-[#e4ded4] bg-[#f1eadd] px-4 py-3">
-                                                    <p class="text-[6px] font-semibold uppercase tracking-[0.18em] text-[#c84b3f]">The Friday Brief / Issue 07</p>
+                                                <div class="border-b border-[#e4ded4] bg-thrum-paper px-4 py-3">
+                                                    <p class="text-[7px] font-semibold uppercase tracking-[0.18em] text-thrum-pollen-dark">West 04 / Dawn report 118</p>
                                                     <div class="relative mt-2">
-                                                        <h3 class="max-w-[14rem] font-display text-[16px] font-medium leading-[1.02] tracking-[-0.025em] text-[#183b37] sm:text-[18px]">
-                                                            Start Monday with<br>fewer loose ends.
+                                                        <h3 class="max-w-[14rem] font-display text-[16px] font-medium leading-[1.02] tracking-[-0.025em] text-thrum-ink sm:text-[18px]">
+                                                            12,480 blossoms<br>visited before dawn.
                                                         </h3>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
@@ -799,42 +825,55 @@ new class extends Component
                                                             x-transition
                                                             :class="step === 2 ? 'rm-pin-pop' : ''"
                                                         >
-                                                            <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f1eadd]">M1</span>
+                                                            <span class="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-thrum-paper">M1</span>
                                                         </div>
                                                     </div>
-                                                    <p class="mt-1.5 max-w-[14rem] text-[7px] leading-relaxed text-[#67716d]">Five minutes to close open decisions, reset priorities, and hand next week a cleaner start.</p>
+                                                    <p class="mt-1.5 max-w-[14rem] text-[8px] leading-relaxed text-[#5f6d67]">Four Pips covered 16 Roma rows overnight. Two rows remain queued for the morning pass.</p>
                                                     <div class="relative mt-2 inline-flex">
-                                                        <span class="rounded-full bg-[#c84b3f] px-2.5 py-1.5 text-[7px] font-semibold text-white shadow-sm">Open this week’s brief →</span>
+                                                        <span class="rounded-full bg-thrum-pollen px-2.5 py-1.5 text-[8px] font-semibold text-thrum-ink shadow-sm">Review this run →</span>
                                                         <div
                                                             class="pointer-events-none absolute -inset-1 rounded-md border-2 border-rose-500 bg-rose-500/10"
                                                             x-show="step === 2"
                                                             x-transition
                                                             :class="step === 2 ? 'rm-pin-pop-2' : ''"
                                                         >
-                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-[#f1eadd]">M2</span>
+                                                            <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-semibold text-white shadow ring-2 ring-thrum-paper">M2</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <div class="px-4 py-2.5">
                                                     <div class="flex items-start gap-2 border-b border-[#ece8e0] pb-2">
-                                                        <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#dce8e3] text-[6px] font-semibold text-[#225c54]">03</span>
+                                                        <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#dce8e3] text-[6px] font-semibold text-[#225c54]">94</span>
                                                         <div class="min-w-0">
-                                                            <p class="text-[7px] font-semibold text-[#303d39]">Decisions waiting on you</p>
-                                                            <p class="mt-0.5 truncate text-[6px] text-[#878983]">Pricing page · Q3 narrative · Research plan</p>
+                                                            <p class="text-[8px] font-semibold text-[#303d39]">Pollination contact</p>
+                                                            <p class="mt-0.5 truncate text-[7px] text-[#747b75]">94.2% · 2.2 points above target</p>
                                                         </div>
                                                     </div>
                                                     <div class="flex items-start gap-2 pt-2">
-                                                        <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#f2ddd8] text-[6px] font-semibold text-[#a84439]">05</span>
+                                                        <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#f4e8c9] text-[6px] font-semibold text-thrum-pollen-dark">P7</span>
                                                         <div class="min-w-0">
-                                                            <p class="text-[7px] font-semibold text-[#303d39]">Priorities for next week</p>
-                                                            <p class="mt-0.5 truncate text-[6px] text-[#878983]">Launch QA · Customer calls · Team retro</p>
+                                                            <p class="text-[8px] font-semibold text-[#303d39]">One robot needs a brush</p>
+                                                            <p class="mt-0.5 truncate text-[7px] text-[#747b75]">Pip 07 · replace before tonight’s dispatch</p>
                                                         </div>
+                                                    </div>
+
+                                                    <div class="mt-2 rounded-md bg-thrum-ink p-2 text-white">
+                                                        <div class="flex items-center justify-between">
+                                                            <p class="text-[7px] font-semibold">Rows complete</p>
+                                                            <p class="text-[7px] text-white/65">16 / 18</p>
+                                                        </div>
+                                                        <div class="mt-1.5 grid grid-cols-9 gap-0.5">
+                                                            @for ($row = 1; $row <= 18; $row++)
+                                                                <span class="h-1 rounded-full {{ $row <= 16 ? 'bg-thrum-pollen' : 'bg-white/20' }}"></span>
+                                                            @endfor
+                                                        </div>
+                                                        <p class="mt-1.5 text-[6.5px] text-white/65">Morning pass begins 07:10 · Rows 17–18</p>
                                                     </div>
                                                 </div>
 
                                                 <div class="relative mt-auto border-t border-[#ece8e0] px-4 py-2 text-center">
-                                                    <p class="text-[5.5px] leading-relaxed text-[#c5c3bd]">Northstar, 123 Market Street · Unsubscribe · Email preferences</p>
+                                                    <p class="text-[6.5px] leading-relaxed text-[#858a84]">Thrum Robotics · Almería field office&nbsp;&nbsp;|&nbsp;&nbsp;Unsubscribe&nbsp;&nbsp;|&nbsp;&nbsp;Report preferences</p>
                                                     <div
                                                         class="pointer-events-none absolute inset-x-3 inset-y-1 rounded border-2 border-dashed border-sky-400 bg-sky-400/10"
                                                         x-show="step === 1"
@@ -972,7 +1011,7 @@ new class extends Component
             </section>
 
             {{-- Feature grid --}}
-            <section id="cloud" class="mt-16 scroll-mt-8 sm:mt-20">
+            <section id="features" class="mt-16 scroll-mt-8 sm:mt-20">
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for the full checkup loop</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                     Marks are what you see. Behind them, ReviseMy keeps captures, review type, guest feedback, and lifecycle together so nothing gets lost between passes.
@@ -1227,7 +1266,7 @@ new class extends Component
                             rel="noreferrer"
                             class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
                         >side project on the back burner</a>
-                        since September 2024, when it was just an idea and a Figma file. Originally I imagined it as my version of a productized design feedback service — inspired by Roasti, now defunct. I love giving feedback. Not to be a dick, but to be a Derek.
+                        since September 2024, when it was just an idea and a Figma file. Originally I imagined it as my version of a productized design feedback service — inspired by Roasti, now defunct. Also, as a designer I love giving feedback. Not to be a dick, but to be a Derek.
                     </p>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
                         Then

@@ -21,6 +21,12 @@
     --color-mark: #fb7185;
     --color-highlight: #fecdd3;
     --color-selection: rgb(254 240 138 / 0.55);
+    --color-thrum-ink: #163f3a;
+    --color-thrum-teal: #34786e;
+    --color-thrum-teal-soft: #dce9e5;
+    --color-thrum-pollen: #d8a62f;
+    --color-thrum-pollen-dark: #8a6212;
+    --color-thrum-paper: #f4efe6;
 }
 
 @layer base {
@@ -74,8 +80,8 @@
         background-image: linear-gradient(
             180deg,
             transparent 8%,
-            color-mix(in oklab, var(--color-highlight) 85%, white) 8%,
-            color-mix(in oklab, var(--color-highlight) 85%, white) 88%,
+            var(--color-selection) 8%,
+            var(--color-selection) 88%,
             transparent 88%
         );
         box-decoration-break: clone;
