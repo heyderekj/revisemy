@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Database\Connectors\ReviseMyPostgresConnector;
+use App\Support\ServerlessPostgresConfigurator;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +24,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        ServerlessPostgresConfigurator::apply();
     }
 }
