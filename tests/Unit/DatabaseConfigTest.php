@@ -54,6 +54,8 @@ class DatabaseConfigTest extends TestCase
         $this->assertSame('ep-x.us-east-2.pg.laravel.cloud', $config['connections']['pgsql_migrate']['host']);
         $this->assertSame('require', $config['connections']['pgsql_migrate']['sslmode']);
         $this->assertSame(60, $config['connections']['pgsql_migrate']['connect_timeout']);
+        $this->assertSame('endpoint=ep-x', $config['connections']['pgsql_migrate']['options']);
+        $this->assertStringContainsString('options=endpoint%3Dep-x', (string) $config['connections']['pgsql_migrate']['url']);
         $this->assertStringContainsString('ep-x.us-east-2.pg.laravel.cloud', (string) $config['connections']['pgsql_migrate']['url']);
         $this->assertStringContainsString('sslmode=require', (string) $config['connections']['pgsql_migrate']['url']);
         $this->assertStringContainsString('connect_timeout=60', (string) $config['connections']['pgsql_migrate']['url']);
@@ -62,6 +64,28 @@ class DatabaseConfigTest extends TestCase
             $config['connections']['pgsql']['host'],
         );
         $this->assertSame(60, $config['connections']['pgsql']['connect_timeout']);
+        $this->assertStringContainsString('endpoint=ep-x$', (string) $config['connections']['pgsql']['password']);
+    }
+
+    public function test_laravel_cloud_host_auto_adds_neon_endpoint_routing(): void
+    {
+        $config = $this->loadDatabaseConfig([
+            'DB_CONNECTION' => 'pgsql',
+            'DB_HOST' => 'ep-misty-smoke-aiihk586.c-4.aws-us-east-1.pg.laravel.cloud',
+            'DB_URL' => '',
+            'DB_MIGRATE_URL' => null,
+            'DB_PORT' => '5432',
+            'DB_DATABASE' => 'main',
+            'DB_USERNAME' => 'cloud-user',
+            'DB_PASSWORD' => 'secret',
+            'DB_SSLMODE' => 'require',
+            'DB_CONNECT_TIMEOUT' => '60',
+        ]);
+
+        $this->assertSame('pgsql_migrate', $config['migrations']['connection']);
+        $this->assertSame('endpoint=ep-misty-smoke-aiihk586', $config['connections']['pgsql']['options']);
+        $this->assertStringContainsString('endpoint=ep-misty-smoke-aiihk586$', (string) $config['connections']['pgsql']['password']);
+        $this->assertStringContainsString('options=endpoint%3Dep-misty-smoke-aiihk586', (string) $config['connections']['pgsql']['url']);
     }
 
     public function test_local_pgsql_config_is_unchanged(): void

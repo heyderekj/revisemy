@@ -5,7 +5,7 @@ use Illuminate\Support\Str;
 use Pdo\Mysql;
 
 $dbConnection = (string) env('DB_CONNECTION', 'sqlite');
-$dbHost = (string) env('DB_HOST', '127.0.0.1');
+$dbHost = PostgresHost::sanitizeHost((string) env('DB_HOST', '127.0.0.1'));
 $dbUrl = (string) env('DB_URL', '');
 $dbMigrateUrl = env('DB_MIGRATE_URL');
 $dbPort = (string) env('DB_PORT', '5432');
@@ -15,6 +15,9 @@ $dbPassword = (string) env('DB_PASSWORD', '');
 $dbSslMode = env('DB_SSLMODE', PostgresHost::defaultSslMode($dbHost, $dbUrl));
 $dbConnectTimeout = (int) env('DB_CONNECT_TIMEOUT', 60);
 $isServerless = PostgresHost::isServerlessHost($dbHost) || PostgresHost::isServerlessHost($dbUrl);
+$neonEndpointId = $isServerless ? PostgresHost::endpointId($dbHost) : null;
+$dbPasswordForServerless = PostgresHost::passwordForServerless($dbPassword, $neonEndpointId);
+$neonOptions = PostgresHost::endpointOptions($neonEndpointId);
 $useMigrateConnection = PostgresHost::shouldUseMigrateConnection($dbConnection, $dbHost, $dbUrl, $dbMigrateUrl);
 
 $migrateUrl = $dbMigrateUrl;
@@ -37,7 +40,17 @@ if ($migrateUrl === null || $migrateUrl === '') {
 
 $runtimePgsqlUrl = $dbUrl;
 
-if ($runtimePgsqlUrl !== '' && $isServerless) {
+if ($runtimePgsqlUrl === '' && $isServerless && $dbConnection === 'pgsql') {
+    $runtimePgsqlUrl = PostgresHost::buildUrl(
+        $dbHost,
+        $dbPort,
+        $dbDatabase,
+        $dbUsername,
+        $dbPassword,
+        is_string($dbSslMode) ? $dbSslMode : 'require',
+        $dbConnectTimeout,
+    );
+} elseif ($runtimePgsqlUrl !== '' && $isServerless) {
     $runtimePgsqlUrl = PostgresHost::ensureUrlParams($runtimePgsqlUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
 }
 
@@ -129,13 +142,14 @@ return [
             'port' => $dbPort,
             'database' => $dbDatabase,
             'username' => $dbUsername,
-            'password' => $dbPassword,
+            'password' => $dbPasswordForServerless,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => $dbSslMode,
             'connect_timeout' => $isServerless ? $dbConnectTimeout : null,
+            'options' => $neonOptions,
         ],
 
         // Neon / Laravel Cloud Serverless Postgres: migrations use the direct host
@@ -147,13 +161,14 @@ return [
             'port' => $dbPort,
             'database' => $dbDatabase,
             'username' => $dbUsername,
-            'password' => $dbPassword,
+            'password' => $dbPasswordForServerless,
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => is_string($dbSslMode) ? $dbSslMode : 'require',
             'connect_timeout' => $dbConnectTimeout,
+            'options' => $neonOptions,
         ],
 
         'sqlsrv' => [

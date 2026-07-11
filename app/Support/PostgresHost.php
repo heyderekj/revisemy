@@ -15,19 +15,66 @@ class PostgresHost
             return false;
         }
 
+        $hostOrUrl = self::sanitizeHost($hostOrUrl);
+
         return str_contains($hostOrUrl, 'neon.tech')
             || str_contains($hostOrUrl, 'pg.laravel.cloud')
-            || str_contains($hostOrUrl, '-pooler');
+            || str_contains($hostOrUrl, '-pooler')
+            || str_contains($hostOrUrl, '-direct');
     }
 
     public static function isPooledHost(?string $hostOrUrl): bool
     {
-        return $hostOrUrl !== null && $hostOrUrl !== '' && str_contains($hostOrUrl, '-pooler');
+        return $hostOrUrl !== null && $hostOrUrl !== '' && str_contains(self::sanitizeHost($hostOrUrl), '-pooler');
+    }
+
+    /**
+     * Strip accidental URL query strings from DB_HOST and Neon role suffixes.
+     */
+    public static function sanitizeHost(string $host): string
+    {
+        $host = trim($host);
+
+        if (($queryPosition = strpos($host, '?')) !== false) {
+            $host = substr($host, 0, $queryPosition);
+        }
+
+        return $host;
     }
 
     public static function directHost(string $host): string
     {
-        return str_replace('-pooler', '', $host);
+        return str_replace(['-pooler', '-direct'], '', self::sanitizeHost($host));
+    }
+
+    /**
+     * Neon / Laravel Cloud endpoint id (e.g. ep-misty-smoke-aiihk586).
+     */
+    public static function endpointId(string $host): ?string
+    {
+        $host = self::sanitizeHost($host);
+
+        if (! preg_match('/^(ep-[^.]+)/', $host, $matches)) {
+            return null;
+        }
+
+        $endpointId = self::directHost($matches[1]);
+
+        return str_starts_with($endpointId, 'ep-') ? $endpointId : null;
+    }
+
+    /**
+     * Neon SNI workaround for libpq without endpoint-aware SNI (Laravel Cloud containers).
+     *
+     * @see https://neon.tech/docs/connect/connection-errors#the-endpoint-id-is-not-specified
+     */
+    public static function passwordForServerless(string $password, ?string $endpointId): string
+    {
+        if ($endpointId === null || $endpointId === '' || str_contains($password, 'endpoint=')) {
+            return $password;
+        }
+
+        return "endpoint={$endpointId}\${$password}";
     }
 
     public static function defaultSslMode(?string $host, ?string $url): string
@@ -53,11 +100,23 @@ class PostgresHost
             return true;
         }
 
-        return self::isPooledHost($host) || self::isPooledHost($url);
+        return self::isPooledHost($host) || self::isPooledHost($url) || self::isServerlessHost($host);
     }
 
     /**
-     * Build a libpq URL with SSL and a patient connect timeout for cold starts.
+     * libpq "options" DSN value for Neon endpoint routing.
+     */
+    public static function endpointOptions(?string $endpointId): ?string
+    {
+        if ($endpointId === null || $endpointId === '') {
+            return null;
+        }
+
+        return 'endpoint='.$endpointId;
+    }
+
+    /**
+     * Build a libpq URL with SSL, connect timeout, and Neon endpoint routing.
      */
     public static function buildUrl(
         string $host,
@@ -72,12 +131,18 @@ class PostgresHost
         $pass = rawurlencode($password);
         $host = self::directHost($host);
         $path = '/'.ltrim($database, '/');
-        $query = http_build_query([
+        $query = [
             'sslmode' => $sslmode,
             'connect_timeout' => $connectTimeout,
-        ]);
+        ];
 
-        return "postgresql://{$user}:{$pass}@{$host}:{$port}{$path}?{$query}";
+        if (($endpointId = self::endpointId($host)) !== null) {
+            $query['options'] = self::endpointOptions($endpointId);
+        }
+
+        $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+
+        return "postgresql://{$user}:{$pass}@{$host}:{$port}{$path}?{$queryString}";
     }
 
     /**
@@ -98,7 +163,11 @@ class PostgresHost
         $query['sslmode'] ??= $sslmode;
         $query['connect_timeout'] ??= (string) $connectTimeout;
 
-        $parts['query'] = http_build_query($query);
+        if (! isset($query['options']) && ($endpointId = self::endpointId($parts['host'] ?? '')) !== null) {
+            $query['options'] = self::endpointOptions($endpointId);
+        }
+
+        $parts['query'] = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
 
         return self::unparseUrl($parts);
     }

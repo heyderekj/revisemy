@@ -30,13 +30,55 @@ class PostgresHostTest extends TestCase
         $this->assertFalse(PostgresHost::isServerlessHost(''));
     }
 
-    public function test_direct_host_strips_pooler_suffix(): void
+    public function test_direct_host_strips_pooler_and_direct_suffixes(): void
     {
-        $pooled = 'ep-abc-pooler.us-east-2.pg.laravel.cloud';
-
         $this->assertSame(
             'ep-abc.us-east-2.pg.laravel.cloud',
-            PostgresHost::directHost($pooled),
+            PostgresHost::directHost('ep-abc-pooler.us-east-2.pg.laravel.cloud'),
+        );
+        $this->assertSame(
+            'ep-abc.us-east-2.pg.laravel.cloud',
+            PostgresHost::directHost('ep-abc-direct.us-east-2.pg.laravel.cloud'),
+        );
+    }
+
+    public function test_sanitize_host_strips_query_string(): void
+    {
+        $this->assertSame(
+            'ep-abc-direct.us-east-2.pg.laravel.cloud',
+            PostgresHost::sanitizeHost('ep-abc-direct.us-east-2.pg.laravel.cloud?options=endpoint%3Dep-abc'),
+        );
+    }
+
+    public function test_endpoint_id_from_laravel_cloud_host(): void
+    {
+        $this->assertSame(
+            'ep-misty-smoke-aiihk586',
+            PostgresHost::endpointId('ep-misty-smoke-aiihk586.c-4.aws-us-east-1.pg.laravel.cloud'),
+        );
+    }
+
+    public function test_password_for_serverless_prefixes_neon_endpoint(): void
+    {
+        $this->assertSame(
+            'endpoint=ep-abc$secret',
+            PostgresHost::passwordForServerless('secret', 'ep-abc'),
+        );
+        $this->assertSame(
+            'endpoint=ep-abc$secret',
+            PostgresHost::passwordForServerless('endpoint=ep-abc$secret', 'ep-abc'),
+        );
+    }
+
+    public function test_should_use_migrate_connection_for_any_serverless_host(): void
+    {
+        $this->assertTrue(
+            PostgresHost::shouldUseMigrateConnection(
+                'pgsql',
+                'ep-misty-smoke-aiihk586.c-4.aws-us-east-1.pg.laravel.cloud',
+                '',
+                null,
+            ),
         );
     }
 
@@ -121,6 +163,7 @@ class PostgresHostTest extends TestCase
         $this->assertStringNotContainsString('-pooler', $url);
         $this->assertStringContainsString('sslmode=require', $url);
         $this->assertStringContainsString('connect_timeout=60', $url);
+        $this->assertStringContainsString('options=endpoint%3Dep-x', $url);
         $this->assertStringContainsString('cloud-user', $url);
         $this->assertStringContainsString('main', $url);
     }
