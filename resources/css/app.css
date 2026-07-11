@@ -145,6 +145,10 @@
         animation: rm-packet-slide 1.8s ease-in-out both;
     }
 
+    .rm-packet-return {
+        animation: rm-packet-return 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
     .rm-msg {
         animation: rm-msg-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
@@ -223,6 +227,20 @@
     }
 }
 
+@keyframes rm-packet-return {
+    0% {
+        opacity: 0;
+        transform: translate(-16px, 0);
+    }
+    30% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.95;
+        transform: translate(0, 0);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .rm-fade-up,
     .rm-fade-up-delay,
@@ -233,6 +251,7 @@
     .rm-pulse-soft,
     .rm-pulse-amber,
     .rm-packet-chip,
+    .rm-packet-return,
     .rm-msg {
         animation: none !important;
     }

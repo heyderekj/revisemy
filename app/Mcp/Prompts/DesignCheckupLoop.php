@@ -37,6 +37,7 @@ You are running a ReviseMy design checkup loop for: {$focus}
 - Human marks = intent. Second opinion = hints. (API still uses the key `pins` for marks.)
 - Never invent approval. Never flip status yourself.
 - Prefer one clear review URL per pass; link passes with `parent_id`.
+- Teammates can suggest via `guest_share_url`, but their suggestions only reach you after the owner accepts them (they arrive as pins). If `loop.guest_suggestion_count` > 0, teammate feedback is still waiting on owner triage. `work_packets.second_opinion_resolved` shows which earlier hints were accepted or dismissed.
 PROMPT);
     }
 

@@ -278,6 +278,210 @@ class ReviseMyFlowTest extends TestCase
         $this->assertSame('pending', $second['status']);
     }
 
+    public function test_guest_share_link_opens_in_guest_mode(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $payload = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Share me',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->assertCreated()->json();
+
+        $review = Review::query()->where('public_id', $payload['id'])->firstOrFail();
+
+        $this->assertNotNull($review->share_token);
+        $this->assertNotSame($review->token, $review->share_token);
+        $this->assertStringContainsString($review->share_token, $payload['guest_share_url']);
+
+        $guestPage = $this->get('/r/'.$review->share_token)->assertOk();
+        $guestPage->assertSee('Share me');
+        $guestPage->assertSee('your marks are suggestions until accepted');
+        $guestPage->assertDontSee('wire:click="approve"', false);
+        $guestPage->assertDontSee($review->token);
+
+        $ownerPage = $this->get('/r/'.$review->token)->assertOk();
+        $ownerPage->assertSee('wire:click="approve"', false);
+        // Owner header embeds the guest link for the copy-to-share control.
+        $ownerPage->assertSee($review->share_token, false);
+    }
+
+    public function test_guest_pin_becomes_a_suggestion_not_a_mark(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Guest suggests',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+
+        \Livewire\Livewire::test('review-page', ['token' => $review->share_token])
+            ->call('startPin', 0.3, 0.4)
+            ->set('guestName', 'Sam')
+            ->set('draftBody', 'The heading feels cramped.')
+            ->set('draftSeverity', 'nit')
+            ->call('savePin')
+            ->assertOk();
+
+        $shot = $review->screenshots()->firstOrFail();
+        $this->assertSame(0, $shot->annotations()->count());
+
+        $finding = $shot->findings()->firstOrFail();
+        $this->assertSame(Finding::SOURCE_GUEST, $finding->source);
+        $this->assertSame('Sam', $finding->author);
+        $this->assertSame('nit', $finding->severity);
+        $this->assertSame('The heading feels cramped.', $finding->body);
+        $this->assertEqualsWithDelta(0.3, $finding->x, 0.0001);
+        $this->assertEqualsWithDelta(0.4, $finding->y, 0.0001);
+        $this->assertSame(Finding::STATUS_OPEN, $finding->status);
+    }
+
+    public function test_guest_cannot_perform_owner_actions(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Locked down',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $pin = $shot->annotations()->create([
+            'x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Owner mark', 'number' => 1,
+        ]);
+        $finding = $shot->findings()->create([
+            'source' => Finding::SOURCE_AGENT, 'severity' => 'polish', 'body' => 'Agent hint',
+        ]);
+
+        \Livewire\Livewire::test('review-page', ['token' => $review->share_token])
+            ->call('approve')
+            ->call('requestChanges')
+            ->call('deletePin', $pin->id)
+            ->call('acceptFinding', $finding->id)
+            ->call('dismissFinding', $finding->id)
+            ->call('regenerateShareToken')
+            ->assertOk();
+
+        $this->assertSame('pending', $review->fresh()->status);
+        $this->assertSame($review->share_token, $review->fresh()->share_token);
+        $this->assertNotNull($pin->fresh());
+        $this->assertSame(Finding::STATUS_OPEN, $finding->fresh()->status ?? Finding::STATUS_OPEN);
+        $this->assertSame(1, $shot->annotations()->count());
+    }
+
+    public function test_owner_accepts_guest_suggestion_as_pin(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Accept guest',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $suggestion = $shot->findings()->create([
+            'source' => Finding::SOURCE_GUEST,
+            'author' => 'Sam',
+            'severity' => 'nit',
+            'body' => 'Nudge the logo left.',
+            'x' => 0.25,
+            'y' => 0.75,
+            'status' => Finding::STATUS_OPEN,
+        ]);
+
+        \Livewire\Livewire::test('review-page', ['token' => $review->token])
+            ->call('acceptFinding', $suggestion->id)
+            ->assertOk();
+
+        $pin = $shot->annotations()->firstOrFail();
+        $this->assertSame('nit', $pin->severity);
+        $this->assertSame('Nudge the logo left.', $pin->body);
+        $this->assertEqualsWithDelta(0.25, $pin->x, 0.0001);
+        $this->assertEqualsWithDelta(0.75, $pin->y, 0.0001);
+
+        $this->assertSame(Finding::STATUS_ACCEPTED, $suggestion->fresh()->status);
+        $this->assertSame($pin->number, $suggestion->fresh()->related_pin);
+    }
+
+    public function test_payload_surfaces_dispositions_and_guest_counts(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Dispositions',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $accepted = $shot->findings()->create([
+            'source' => Finding::SOURCE_AGENT, 'severity' => 'a11y', 'body' => 'Label the icon button.',
+        ]);
+        $dismissed = $shot->findings()->create([
+            'source' => Finding::SOURCE_AGENT, 'severity' => 'polish', 'body' => 'Rounder corners maybe.',
+        ]);
+        $shot->findings()->create([
+            'source' => Finding::SOURCE_GUEST,
+            'author' => 'Sam',
+            'severity' => 'question',
+            'body' => 'Secret guest note before triage.',
+            'x' => 0.5,
+            'y' => 0.5,
+        ]);
+
+        \Livewire\Livewire::test('review-page', ['token' => $review->token])
+            ->call('acceptFinding', $accepted->id)
+            ->call('dismissFinding', $dismissed->id)
+            ->assertOk();
+
+        $payload = $review->fresh(['screenshots.annotations', 'screenshots.findings'])->toAgentPayload();
+
+        $this->assertEmpty($payload['work_packets']['second_opinion']);
+        $this->assertCount(2, $payload['work_packets']['second_opinion_resolved']);
+
+        $statuses = collect($payload['work_packets']['second_opinion_resolved'])->pluck('status', 'body');
+        $this->assertSame(Finding::STATUS_ACCEPTED, $statuses['Label the icon button.']);
+        $this->assertSame(Finding::STATUS_DISMISSED, $statuses['Rounder corners maybe.']);
+
+        $this->assertSame(1, $payload['loop']['second_opinion_accepted_count']);
+        $this->assertSame(1, $payload['loop']['second_opinion_dismissed_count']);
+        $this->assertSame(1, $payload['loop']['guest_suggestion_count']);
+
+        $this->assertStringContainsString($review->share_token, $payload['guest_share_url']);
+        $this->assertStringNotContainsString('Secret guest note before triage.', json_encode($payload));
+    }
+
     public function test_reviews_are_scoped_to_try_token(): void
     {
         Storage::fake('public');

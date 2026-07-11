@@ -23,6 +23,7 @@ class Review extends Model
         'parent_id',
         'public_id',
         'token',
+        'share_token',
         'title',
         'context',
         'page_url',
@@ -31,6 +32,14 @@ class Review extends Model
         'decision_note',
         'decision_at',
         'expires_at',
+    ];
+
+    /**
+     * Never let the secret capability tokens leak through serialization.
+     */
+    protected $hidden = [
+        'token',
+        'share_token',
     ];
 
     protected function casts(): array
@@ -47,6 +56,7 @@ class Review extends Model
         static::creating(function (Review $review): void {
             $review->public_id ??= (string) Str::ulid();
             $review->token ??= Str::random(40);
+            $review->share_token ??= Str::random(40);
             $review->expires_at ??= now()->addDays(7);
             $review->status ??= self::STATUS_PENDING;
             $review->pass ??= 1;
@@ -81,6 +91,19 @@ class Review extends Model
     public function reviewUrl(): string
     {
         return url('/r/'.$this->token);
+    }
+
+    /**
+     * Guest link: suggest-only access for teammates. Never grants owner controls.
+     */
+    public function shareUrl(): string
+    {
+        return url('/r/'.$this->share_token);
+    }
+
+    public function regenerateShareToken(): void
+    {
+        $this->update(['share_token' => Str::random(40)]);
     }
 
     public function isExpired(): bool
@@ -161,10 +184,21 @@ class Review extends Model
                 ])->all();
 
             $findings = $shot->findings
-                ->filter(fn (Finding $finding) => $finding->isOpen())
+                ->filter(fn (Finding $finding) => $finding->isOpen() && ! $finding->isGuest())
                 ->values()
                 ->map(fn (Finding $finding) => $finding->toAgentArray())
                 ->all();
+
+            $resolved = $shot->findings
+                ->filter(fn (Finding $finding) => ! $finding->isOpen() && ! $finding->isGuest())
+                ->values()
+                ->map(fn (Finding $finding) => $finding->toAgentArray())
+                ->all();
+
+            // Guest suggestions stay owner-only until accepted (then they arrive as pins).
+            $guestOpenCount = $shot->findings
+                ->filter(fn (Finding $finding) => $finding->isOpen() && $finding->isGuest())
+                ->count();
 
             return [
                 'index' => $index,
@@ -175,12 +209,20 @@ class Review extends Model
                 'pins' => $pins,
                 'annotations' => $pins,
                 'second_opinion' => $findings,
+                'second_opinion_resolved' => $resolved,
+                'guest_suggestion_count' => $guestOpenCount,
             ];
         })->all();
 
         $allFindings = collect($screenshots)->flatMap(fn (array $s) => collect($s['second_opinion'])->map(
             fn (array $f) => $f + ['screenshot_index' => $s['index']]
         ))->values()->all();
+
+        $allResolved = collect($screenshots)->flatMap(fn (array $s) => collect($s['second_opinion_resolved'])->map(
+            fn (array $f) => $f + ['screenshot_index' => $s['index']]
+        ))->values()->all();
+
+        $guestSuggestionCount = collect($screenshots)->sum('guest_suggestion_count');
 
         $allPins = collect($screenshots)->flatMap(fn (array $s) => collect($s['pins'])->map(
             fn (array $p) => $p + ['screenshot_index' => $s['index']]
@@ -208,6 +250,7 @@ class Review extends Model
                 default => $this->status,
             },
             'review_url' => $this->reviewUrl(),
+            'guest_share_url' => $this->shareUrl(),
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
@@ -222,6 +265,9 @@ class Review extends Model
                 'keep_count' => count($keeps),
                 'tweak_count' => count($tweaks),
                 'second_opinion_count' => count($allFindings),
+                'second_opinion_accepted_count' => collect($allResolved)->where('status', Finding::STATUS_ACCEPTED)->count(),
+                'second_opinion_dismissed_count' => collect($allResolved)->where('status', Finding::STATUS_DISMISSED)->count(),
+                'guest_suggestion_count' => $guestSuggestionCount,
             ],
             'work_packets' => [
                 'pins' => $allPins,
@@ -231,6 +277,7 @@ class Review extends Model
                 'keeps' => $keeps,
                 'tweaks' => $tweaks,
                 'second_opinion' => $allFindings,
+                'second_opinion_resolved' => $allResolved,
             ],
             'screenshots' => $screenshots,
         ];

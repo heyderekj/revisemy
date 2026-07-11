@@ -13,6 +13,8 @@ class Finding extends Model
 
     public const SOURCE_AGENT = 'agent';
 
+    public const SOURCE_GUEST = 'guest';
+
     public const SEVERITY_SUGGESTION = 'suggestion';
 
     public const SEVERITY_A11Y = 'a11y';
@@ -28,8 +30,11 @@ class Finding extends Model
     protected $fillable = [
         'screenshot_id',
         'source',
+        'author',
         'severity',
         'body',
+        'x',
+        'y',
         'area',
         'related_pin',
         'status',
@@ -38,6 +43,8 @@ class Finding extends Model
     protected function casts(): array
     {
         return [
+            'x' => 'float',
+            'y' => 'float',
             'area' => 'array',
             'related_pin' => 'integer',
         ];
@@ -53,20 +60,31 @@ class Finding extends Model
         return ($this->status ?? self::STATUS_OPEN) === self::STATUS_OPEN;
     }
 
+    public function isGuest(): bool
+    {
+        return $this->source === self::SOURCE_GUEST;
+    }
+
     public function sourceLabel(): string
     {
         return match ($this->source) {
             self::SOURCE_AGENT => 'Agent',
             self::SOURCE_OPENAI => 'Vision',
+            self::SOURCE_GUEST => $this->author ?: 'Guest',
             default => 'Checklist',
         };
     }
 
     /**
-     * Map a second-opinion severity into a human mark severity when accepting.
+     * Map a suggestion severity into a human mark severity when accepting.
+     * Guest suggestions already use mark severities, so those pass through.
      */
     public function pinSeverity(): string
     {
+        if (in_array($this->severity, Annotation::severities(), true)) {
+            return $this->severity;
+        }
+
         return match ($this->severity) {
             self::SEVERITY_POLISH => Annotation::SEVERITY_NIT,
             self::SEVERITY_A11Y => Annotation::SEVERITY_MUST_FIX,
@@ -81,6 +99,7 @@ class Finding extends Model
     {
         return [
             'source' => $this->source,
+            'author' => $this->author,
             'severity' => $this->severity,
             'body' => $this->body,
             'area' => $this->area,
