@@ -12,12 +12,12 @@ Repo: https://github.com/heyderekj/revisemy
    - `APP_NAME=ReviseMy`
    - `APP_URL=https://YOUR-APP.laravel.cloud` (set after first deploy if needed)
    - `DB_CONNECTION=pgsql`
-   - **Neon Postgres (Laravel Cloud):** migrations must use the **direct** endpoint, not the pooler.
-     - In Neon → Connection details, copy the **non-pooled** URL (host is `ep-…c-….neon.tech` **without** `-pooler`).
-     - Append `?sslmode=require` if it is not already in the URL.
-     - Set **`DB_MIGRATE_URL`** to that direct URL (recommended), or set **`DB_URL`** to the direct URL if you only use one connection.
-     - Optional: keep **`DB_URL`** on the **pooled** endpoint (`…-pooler…`) for runtime traffic and set **`DB_MIGRATE_URL`** to the direct URL for deploy migrations.
-     - Set **`DB_SSLMODE=require`** when not using `?sslmode=require` in the URL.
+   - **Neon Postgres (Laravel Cloud):** Cloud injects `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_DATABASE` — there is usually **no `DB_URL`** to edit.
+     - Add **`DB_SSLMODE=require`** (this is how you enable SSL when not using a connection URL).
+     - Migrations must use the **direct** endpoint, not the pooler. If `DB_HOST` contains **`-pooler`**, either:
+       - **Simple:** edit `DB_HOST` to the direct host (remove `-pooler` from the hostname), keep `DB_SSLMODE=require`, redeploy; or
+       - **Split:** add **`DB_MIGRATE_URL`** as a full direct URL, e.g. `postgresql://USER:PASSWORD@ep-xxxxx.c-xxxxx.neon.tech/DATABASE?sslmode=require` (copy user/password/database from the injected vars).
+     - Optional advanced: set **`DB_URL`** yourself only if you prefer a single connection string over the split Cloud vars.
    - `CACHE_STORE` / `SESSION_DRIVER` → `database` or Cloud Redis (not file/sqlite-backed paths)
    - `REVISEMY_DISK` / `FILESYSTEM_DISK` → Cloud object storage disk name
    - `QUEUE_CONNECTION` → Cloud queue (or `database` with a worker)
