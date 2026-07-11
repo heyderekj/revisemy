@@ -91,17 +91,37 @@ new class extends Component
 <div
     class="rm-wash relative min-h-screen"
     x-data="{
-        mobileNav: false
+        mobileNav: false,
+        pastHero: false,
+        atSetup: false,
+        get showMobileCta() { return this.pastHero && ! this.atSetup },
+        initStickyCta() {
+            const hero = document.getElementById('rm-hero-cta');
+            const setup = document.getElementById('setup');
+            if (hero) {
+                // pastHero flips true only once the inline hero button fully leaves the viewport.
+                new IntersectionObserver(
+                    ([e]) => { this.pastHero = ! e.isIntersecting }
+                ).observe(hero);
+            }
+            if (setup) {
+                new IntersectionObserver(
+                    ([e]) => { this.atSetup = e.isIntersecting },
+                    { rootMargin: '0px 0px -20% 0px' }
+                ).observe(setup);
+            }
+        }
     }"
+    x-init="initStickyCta()"
     x-on:scroll-to-setup.window="$nextTick(() => document.getElementById('setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
 >
     <div class="rm-grid pointer-events-none absolute inset-0"></div>
 
     <div class="relative z-10 mx-auto flex min-h-screen max-w-[1200px]">
         {{-- Agentation-style sidebar --}}
-        <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-900/8 px-6 py-8 lg:flex">
-            <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                <x-revisemy-logo class="!h-auto !w-[150px]" />
+        <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-900/8 px-6 pb-8 pt-10 lg:flex lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:self-start lg:overflow-y-auto">
+            <a href="/" class="mt-[0.55rem] inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                <x-revisemy-logo class="!h-auto !w-[128px]" />
             </a>
 
             <nav class="mt-12 flex flex-1 flex-col gap-8 text-[14px]">
@@ -135,10 +155,9 @@ new class extends Component
                             </a>
                         </li>
                         <li>
-                            <a
-                                href="#challenge"
-                                class="transition hover:text-zinc-900"
-                            >Why this weekend</a>
+                            <a href="https://github.com/sponsors/heyderekj" class="transition hover:text-zinc-900" target="_blank" rel="noreferrer">
+                                Sponsor ↗
+                            </a>
                         </li>
                     </ul>
                 </div>
@@ -152,7 +171,7 @@ new class extends Component
             {{-- Mobile top bar --}}
             <div class="mb-8 flex items-center justify-between lg:hidden">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                    <x-revisemy-logo class="!h-auto !w-[150px]" />
+                    <x-revisemy-logo class="!h-auto !w-[128px]" />
                 </a>
                 <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
             </div>
@@ -163,6 +182,16 @@ new class extends Component
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try with your agent</a>
                 <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub ↗</a>
             </div>
+
+            {{-- Sticky try CTA (desktop only) until the setup section, where another try button lives --}}
+            <div class="relative">
+                <div class="pointer-events-none sticky top-5 z-30 hidden h-0 sm:block lg:top-6">
+                    <div class="flex justify-end sm:pt-2">
+                        <div class="pointer-events-auto">
+                            <x-try-token-button />
+                        </div>
+                    </div>
+                </div>
 
             {{-- Hero --}}
             <section class="rm-fade-up">
@@ -179,7 +208,11 @@ new class extends Component
                             </span>
                         </span>
                     </h1>
-                    <x-try-token-button class="self-start sm:mt-2" />
+                    {{-- Mobile: inline button as before. Desktop: invisible spacer keeps hero layout while the sticky one floats. --}}
+                    <x-try-token-button id="rm-hero-cta" class="self-start sm:hidden" />
+                    <div class="invisible hidden pointer-events-none self-start sm:mt-2 sm:block" aria-hidden="true">
+                        <x-try-token-button />
+                    </div>
                 </div>
 
                 <p class="rm-fade-up-delay mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
@@ -943,8 +976,10 @@ new class extends Component
                     <li><span class="font-medium text-zinc-900">4.</span> Track marks on the board (open → resolved → verified). Agents can attach before/after evidence when they fix something.</li>
                     <li><span class="font-medium text-zinc-900">5.</span> Approve or request changes. Structured next steps return over MCP — repeat until it feels right.</li>
                 </ol>
-                <p class="rm-note mt-6 inline max-w-2xl text-[15px] leading-relaxed text-zinc-700">
-                    <span class="font-medium">Try saying:</span> “Run a design checkup,” “review this URL,” or “address my feedback.” ReviseMy handles the MCP handoff inside the agent workflow you already use.
+                <p class="mt-6 max-w-2xl text-[15px] leading-relaxed text-zinc-700">
+                    <span class="rm-note box-decoration-clone">
+                        <span class="font-medium">Try saying:</span> “Run a design checkup,” “review this URL,” or “address my feedback.” ReviseMy handles the MCP handoff inside the agent workflow you already use.
+                    </span>
                 </p>
             </section>
 
@@ -1015,6 +1050,7 @@ new class extends Component
                     <li>The MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code> can guide the full cycle</li>
                 </ul>
             </section>
+            </div>
 
             {{-- Setup --}}
             <section
@@ -1203,7 +1239,7 @@ new class extends Component
                             rel="noreferrer"
                             class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
                         >side project on the back burner</a>
-                        since September 2024, when it was just an idea and a Figma file. It was a way to pull design feedback into my agent workflow as a full-time freelance web designer building apps on the side.
+                        since September 2024, when it was just an idea and a Figma file. Originally I imagined it as my version of a productized design feedback service — inspired by Roasti, now defunct. I love giving feedback. Not to be a dick, but to be a Derek.
                     </p>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
                         Then
@@ -1213,7 +1249,7 @@ new class extends Component
                             rel="noreferrer"
                             class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
                         >Taylor Otwell’s Laravel Cloud weekend challenge</a>
-                        asked for the best side project shipped that weekend. That was the nudge to finally ship it.
+                        asked for the best side project shipped that weekend. That was the nudge to try Laravel and create an MCP.
                     </p>
                     <p class="rm-note mt-6 inline text-[15px] leading-relaxed text-zinc-700">
                         “Best side project shipped on Laravel Cloud this weekend… reply with a laravel.cloud URL.”
@@ -1227,9 +1263,64 @@ new class extends Component
                 </div>
             </section>
 
-            <footer class="mt-20 border-t border-zinc-900/8 py-8 text-sm text-zinc-400">
-                Open source · Laravel + Livewire Flux · Built for Laravel Cloud
+            <footer class="mt-20 border-t border-zinc-900/8 py-10 text-sm text-zinc-500">
+                <div class="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="max-w-sm space-y-3">
+                        <p class="text-zinc-400">
+                            Open source · Laravel + Livewire Flux · Built for Laravel Cloud
+                        </p>
+                        <a
+                            href="https://github.com/sponsors/heyderekj"
+                            target="_blank"
+                            rel="noreferrer"
+                            class="inline-flex items-center gap-2 font-medium text-zinc-700 transition hover:text-rose-600"
+                        >
+                            <span class="inline-flex size-5 items-center justify-center rounded-full bg-rose-50 text-rose-500" aria-hidden="true">
+                                <svg class="size-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                    <path d="M8 14.25c-.2 0-.4-.06-.57-.18C5.6 12.7 2 9.72 2 6.4 2 4.3 3.6 2.75 5.7 2.75c1.1 0 2.1.5 2.8 1.35A3.8 3.8 0 0 1 11.3 2.75C13.4 2.75 15 4.3 15 6.4c0 3.32-3.6 6.3-5.43 7.67A.9.9 0 0 1 8 14.25Z"/>
+                                </svg>
+                            </span>
+                            Sponsor on GitHub
+                        </a>
+                    </div>
+
+                    <div>
+                        <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Also by Derek</p>
+                        <ul class="flex flex-wrap gap-x-5 gap-y-2 text-zinc-600 sm:justify-end">
+                            <li>
+                                <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
+                                    Harvous ↗
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://dinkyfiles.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
+                                    Dinky ↗
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://binkyfiles.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
+                                    Binky ↗
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </footer>
         </main>
+    </div>
+
+    {{-- Mobile sticky try CTA: appears after the hero button scrolls away, hides at the setup section --}}
+    <div
+        class="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden"
+        x-show="showMobileCta"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="translate-y-3 opacity-0"
+        x-transition:enter-end="translate-y-0 opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="translate-y-0 opacity-100"
+        x-transition:leave-end="translate-y-3 opacity-0"
+    >
+        <x-try-token-button class="w-full justify-center !py-3 shadow-[0_16px_40px_-12px_rgba(225,29,72,0.6)]" />
     </div>
 </div>

@@ -18,6 +18,17 @@ class Review extends Model
 
     public const STATUS_EXPIRED = 'expired';
 
+    /** Default lifetime for guest share links (aligned with review expires_at). */
+    public const SHARE_EXPIRY_DAYS = 7;
+
+    public const TYPE_UI = 'ui';
+
+    public const TYPE_WEBSITE = 'website';
+
+    public const TYPE_PRESENTATION = 'presentation';
+
+    public const TYPE_EMAIL = 'email';
+
     protected $fillable = [
         'workspace_id',
         'parent_id',
@@ -26,12 +37,15 @@ class Review extends Model
         'share_token',
         'title',
         'context',
+        'type',
         'page_url',
         'pass',
         'status',
         'decision_note',
         'decision_at',
         'expires_at',
+        'share_expires_at',
+        'comments_enabled',
     ];
 
     /**
@@ -47,6 +61,8 @@ class Review extends Model
         return [
             'decision_at' => 'datetime',
             'expires_at' => 'datetime',
+            'share_expires_at' => 'datetime',
+            'comments_enabled' => 'boolean',
             'pass' => 'integer',
         ];
     }
@@ -58,9 +74,42 @@ class Review extends Model
             $review->token ??= Str::random(40);
             $review->share_token ??= Str::random(40);
             $review->expires_at ??= now()->addDays(7);
+            $review->share_expires_at ??= now()->addDays(self::SHARE_EXPIRY_DAYS)->endOfDay();
             $review->status ??= self::STATUS_PENDING;
             $review->pass ??= 1;
+            $review->type ??= self::TYPE_UI;
         });
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function types(): array
+    {
+        return [self::TYPE_UI, self::TYPE_WEBSITE, self::TYPE_PRESENTATION, self::TYPE_EMAIL];
+    }
+
+    public function typeLabel(): string
+    {
+        return match ($this->type) {
+            self::TYPE_WEBSITE => 'Website',
+            self::TYPE_PRESENTATION => 'Presentation',
+            self::TYPE_EMAIL => 'Email',
+            default => 'UI',
+        };
+    }
+
+    /**
+     * One-line reviewing hint shown to the human, tuned per content type.
+     */
+    public function typeGuidance(): string
+    {
+        return match ($this->type) {
+            self::TYPE_WEBSITE => 'Reviewing a website — check the above-the-fold story, navigation clarity, and how it holds up across viewports.',
+            self::TYPE_PRESENTATION => 'Reviewing a presentation — check one idea per slide, text density, and consistency across slides.',
+            self::TYPE_EMAIL => 'Reviewing an email — check subject/preheader, one dominant CTA, dark-mode colors, and the footer/unsubscribe.',
+            default => 'Reviewing a UI — check hierarchy, spacing rhythm, contrast, and interactive affordances.',
+        };
     }
 
     public function workspace(): BelongsTo
@@ -78,14 +127,80 @@ class Review extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    /**
+     * The reviewable screenshots. "After" evidence shots attached to resolved
+     * marks are excluded — they are reachable only via Annotation::afterScreenshot()
+     * so the 5-shot cap, payload indexes, and second-opinion loops stay intact.
+     */
     public function screenshots(): HasMany
     {
-        return $this->hasMany(Screenshot::class)->orderBy('sort_order');
+        return $this->hasMany(Screenshot::class)
+            ->where('kind', Screenshot::KIND_SOURCE)
+            ->orderBy('sort_order');
     }
 
     public function annotations(): HasManyThrough
     {
         return $this->hasManyThrough(Annotation::class, Screenshot::class);
+    }
+
+    /**
+     * Next M-number for this review. Shared across all shots so M1 can't
+     * appear on both shot 1 and shot 2 of the same pass.
+     */
+    public function nextMarkNumber(): int
+    {
+        $max = Annotation::query()
+            ->whereIn('screenshot_id', $this->screenshots()->select('screenshots.id'))
+            ->max('number');
+
+        return ((int) $max) + 1;
+    }
+
+    /**
+     * Stable 1-based S# / G# for open suggestions across every shot.
+     * Second opinions and guests stay separate sequences.
+     *
+     * @return array{s: array<int, int>, g: array<int, int>}
+     */
+    public function suggestionDisplayNumbers(): array
+    {
+        if ($this->relationLoaded('screenshots')) {
+            $findings = $this->screenshots
+                ->flatMap(function (Screenshot $shot) {
+                    if ($shot->relationLoaded('findings')) {
+                        return $shot->findings;
+                    }
+
+                    return $shot->findings()->get();
+                })
+                ->sortBy('id')
+                ->values();
+        } else {
+            $findings = Finding::query()
+                ->whereIn('screenshot_id', $this->screenshots()->select('screenshots.id'))
+                ->orderBy('id')
+                ->get();
+        }
+
+        $secondOpinion = [];
+        $guest = [];
+        $s = 0;
+        $g = 0;
+
+        foreach ($findings as $finding) {
+            if (! $finding->isOpen()) {
+                continue;
+            }
+
+            if ($finding->isGuest()) {
+                $guest[$finding->id] = ++$g;
+            } else {
+                $secondOpinion[$finding->id] = ++$s;
+            }
+        }
+
+        return ['s' => $secondOpinion, 'g' => $guest];
     }
 
     public function reviewUrl(): string
@@ -103,7 +218,33 @@ class Review extends Model
 
     public function regenerateShareToken(): void
     {
-        $this->update(['share_token' => Str::random(40)]);
+        $this->update([
+            'share_token' => Str::random(40),
+            // Fresh link gets a fresh default window.
+            'share_expires_at' => now()->addDays(self::SHARE_EXPIRY_DAYS)->endOfDay(),
+        ]);
+    }
+
+    /**
+     * Guest-link expiry is separate from the review's own expires_at.
+     * Null means the link stays open until regenerated or the review expires.
+     */
+    public function isShareLinkExpired(): bool
+    {
+        return $this->share_expires_at !== null && $this->share_expires_at->isPast();
+    }
+
+    public function allowsGuestAccess(): bool
+    {
+        return ! $this->isShareLinkExpired() && ! $this->isExpired();
+    }
+
+    /**
+     * Owner can turn commenting off without regenerating the guest link.
+     */
+    public function allowsComments(): bool
+    {
+        return (bool) $this->comments_enabled;
     }
 
     public function isExpired(): bool
@@ -176,7 +317,7 @@ class Review extends Model
      */
     public function toAgentPayload(): array
     {
-        $this->loadMissing(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations']);
+        $this->loadMissing(['screenshots.annotations.afterScreenshot', 'screenshots.findings', 'parent.screenshots.annotations.afterScreenshot']);
 
         $screenshots = $this->screenshots->map(function (Screenshot $shot, int $index) {
             $pins = $shot->annotations
@@ -207,6 +348,7 @@ class Review extends Model
                 'url' => $shot->url(),
                 'width' => $shot->width,
                 'height' => $shot->height,
+                'meta' => $shot->meta,
                 'second_opinion_status' => $shot->second_opinion_status,
                 'pins' => $pins,
                 'annotations' => $pins,
@@ -247,6 +389,7 @@ class Review extends Model
             'id' => $this->public_id,
             'title' => $this->title,
             'context' => $this->context,
+            'type' => $this->type,
             'page_url' => $this->page_url,
             'pass' => $this->pass,
             'parent_id' => $this->parent?->public_id,
@@ -315,6 +458,7 @@ class Review extends Model
             'body' => $annotation->body,
             'status' => $annotation->status,
             'resolution_note' => $annotation->resolution_note,
+            'after_screenshot_url' => $annotation->afterScreenshot?->url(),
         ];
     }
 

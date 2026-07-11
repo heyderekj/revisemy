@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Annotation extends Model
 {
@@ -155,6 +156,57 @@ class Annotation extends Model
     }
 
     /**
+     * Owner may mark resolved from the board without waiting on the agent.
+     */
+    public function canOwnerResolve(): bool
+    {
+        return in_array($this->status, [self::STATUS_OPEN, self::STATUS_IN_PROGRESS], true);
+    }
+
+    /**
+     * Board column ownership, drop affordances, and header icons for the owner UI.
+     *
+     * @return array<string, array{owner: string, droppable: bool, empty: string, icon: string, icon_bg: string, icon_class: string}>
+     */
+    public static function boardColumnMeta(): array
+    {
+        return [
+            self::STATUS_OPEN => [
+                'owner' => 'You',
+                'droppable' => true,
+                'empty' => 'Drop to reopen',
+                'icon' => 'flag',
+                'icon_bg' => 'bg-zinc-100',
+                'icon_class' => 'text-zinc-600',
+            ],
+            self::STATUS_IN_PROGRESS => [
+                'owner' => 'Agent',
+                'droppable' => false,
+                'empty' => 'Agent starts fixes here',
+                'icon' => 'cpu-chip',
+                'icon_bg' => 'bg-zinc-100',
+                'icon_class' => 'text-zinc-600',
+            ],
+            self::STATUS_RESOLVED => [
+                'owner' => 'You or agent',
+                'droppable' => true,
+                'empty' => 'Drop to mark resolved',
+                'icon' => 'check-circle',
+                'icon_bg' => 'bg-zinc-100',
+                'icon_class' => 'text-zinc-600',
+            ],
+            self::STATUS_VERIFIED => [
+                'owner' => 'You',
+                'droppable' => true,
+                'empty' => 'Drop to verify',
+                'icon' => 'shield-check',
+                'icon_bg' => 'bg-zinc-100',
+                'icon_class' => 'text-zinc-600',
+            ],
+        ];
+    }
+
+    /**
      * Tailwind classes for the small status badge in the sidebar and board.
      */
     public function statusBadgeClass(): string
@@ -272,6 +324,11 @@ class Annotation extends Model
     public function screenshot(): BelongsTo
     {
         return $this->belongsTo(Screenshot::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(AnnotationComment::class)->orderBy('created_at');
     }
 
     /**

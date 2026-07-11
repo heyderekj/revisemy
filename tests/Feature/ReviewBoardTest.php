@@ -57,7 +57,8 @@ class ReviewBoardTest extends TestCase
             ->assertSee('In progress')
             ->assertSee('Resolved')
             ->assertSee('Verified')
-            ->assertSee('Fix the CTA');
+            ->assertSee('Fix the CTA')
+            ->assertSee('Board');
     }
 
     public function test_board_rejects_the_guest_share_token(): void
@@ -79,6 +80,32 @@ class ReviewBoardTest extends TestCase
             ->assertOk()
             ->assertSee('Fix the CTA')
             ->assertDontSee('Love this spacing');
+    }
+
+    public function test_clicking_a_mark_opens_the_detail_sheet(): void
+    {
+        [$review, $mark] = $this->reviewWithMark();
+        $mark->update(['resolution_note' => 'Bumped contrast to 4.6:1']);
+
+        Livewire::test('review-board', ['token' => $review->token])
+            ->call('openMark', $mark->id)
+            ->assertSet('showMarkSheet', true)
+            ->assertSet('selectedMarkId', $mark->id)
+            ->assertSee('Mark')
+            ->assertSee('Comments')
+            ->assertSee('Fix the CTA')
+            ->assertSee('Bumped contrast to 4.6:1')
+            ->assertSee('View on review');
+    }
+
+    public function test_opening_an_unknown_mark_is_a_noop(): void
+    {
+        [$review] = $this->reviewWithMark();
+
+        Livewire::test('review-board', ['token' => $review->token])
+            ->call('openMark', 999999)
+            ->assertSet('showMarkSheet', false)
+            ->assertSet('selectedMarkId', null);
     }
 
     public function test_human_can_verify_a_resolved_mark_by_dropping_into_verified(): void
@@ -103,7 +130,7 @@ class ReviewBoardTest extends TestCase
         $this->assertSame(Annotation::STATUS_OPEN, $mark->fresh()->status);
     }
 
-    public function test_human_cannot_drag_a_mark_into_in_progress_or_resolved(): void
+    public function test_human_can_resolve_by_dropping_into_resolved(): void
     {
         [$review, $mark] = $this->reviewWithMark(Annotation::STATUS_OPEN);
 
@@ -111,7 +138,43 @@ class ReviewBoardTest extends TestCase
             ->call('moveMark', $mark->id, Annotation::STATUS_RESOLVED)
             ->assertOk();
 
-        // Those columns are agent-driven (resolve_marks), so the drop is a no-op.
+        $mark->refresh();
+        $this->assertSame(Annotation::STATUS_RESOLVED, $mark->status);
+        $this->assertNotNull($mark->resolved_at);
+    }
+
+    public function test_human_drag_to_in_progress_is_a_noop(): void
+    {
+        [$review, $mark] = $this->reviewWithMark(Annotation::STATUS_OPEN);
+
+        Livewire::test('review-board', ['token' => $review->token])
+            ->call('moveMark', $mark->id, Annotation::STATUS_IN_PROGRESS)
+            ->assertOk();
+
+        $this->assertSame(Annotation::STATUS_OPEN, $mark->fresh()->status);
+    }
+
+    public function test_human_can_resolve_by_dragging_then_verify(): void
+    {
+        [$review, $mark] = $this->reviewWithMark(Annotation::STATUS_OPEN);
+
+        Livewire::test('review-board', ['token' => $review->token])
+            ->call('moveMark', $mark->id, Annotation::STATUS_RESOLVED)
+            ->call('moveMark', $mark->id, Annotation::STATUS_VERIFIED)
+            ->assertOk();
+
+        $this->assertSame(Annotation::STATUS_VERIFIED, $mark->fresh()->status);
+    }
+
+    public function test_owner_resolved_mark_can_be_reopened_by_drag(): void
+    {
+        [$review, $mark] = $this->reviewWithMark(Annotation::STATUS_OPEN);
+
+        Livewire::test('review-board', ['token' => $review->token])
+            ->call('moveMark', $mark->id, Annotation::STATUS_RESOLVED)
+            ->call('moveMark', $mark->id, Annotation::STATUS_OPEN)
+            ->assertOk();
+
         $this->assertSame(Annotation::STATUS_OPEN, $mark->fresh()->status);
     }
 

@@ -30,7 +30,7 @@ class ReviseMyFlowTest extends TestCase
 
     public function test_homepage_loads(): void
     {
-        $this->get('/')->assertOk()->assertSee('Mark feedback for your agent');
+        $this->get('/')->assertOk()->assertSee('Visual feedback.');
     }
 
     public function test_try_token_create_review_and_open_secret_link(): void
@@ -306,7 +306,7 @@ class ReviseMyFlowTest extends TestCase
 
         $guestPage = $this->get('/r/'.$review->share_token)->assertOk();
         $guestPage->assertSee('Share me');
-        $guestPage->assertSee('your marks are suggestions until accepted');
+        $guestPage->assertSee('Guest');
         $guestPage->assertDontSee('wire:click="approve"', false);
         $guestPage->assertDontSee($review->token);
 
@@ -346,11 +346,186 @@ class ReviseMyFlowTest extends TestCase
         $finding = $shot->findings()->firstOrFail();
         $this->assertSame(Finding::SOURCE_GUEST, $finding->source);
         $this->assertSame('Sam', $finding->author);
-        $this->assertSame('nit', $finding->severity);
+        $this->assertSame('must-fix', $finding->severity);
         $this->assertSame('The heading feels cramped.', $finding->body);
         $this->assertEqualsWithDelta(0.3, $finding->x, 0.0001);
         $this->assertEqualsWithDelta(0.4, $finding->y, 0.0001);
         $this->assertSame(Finding::STATUS_OPEN, $finding->status);
+    }
+
+    public function test_guest_page_hides_second_opinion_section(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => true,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Guest view',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+
+        Livewire::test('review-page', ['token' => $review->share_token])
+            ->assertDontSee('Second opinion')
+            ->assertSee('Guest feedback');
+    }
+
+    public function test_guest_pin_with_invalid_name_shows_validation_error(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Guest validation',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+
+        Livewire::test('review-page', ['token' => $review->share_token])
+            ->call('startPin', 0.3, 0.4)
+            ->set('guestName', "Sam\n🔥")
+            ->set('draftBody', 'Needs more contrast.')
+            ->call('savePin')
+            ->assertHasErrors(['guestName']);
+
+        $this->assertSame(0, $review->screenshots()->firstOrFail()->findings()->count());
+    }
+
+    public function test_mark_numbers_are_unique_across_shots_in_a_review(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Multi shot numbers',
+            'images' => [$this->tinyPngDataUrl(), $this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+        $this->assertCount(2, $review->screenshots);
+
+        Livewire::test('review-page', ['token' => $review->token])
+            ->call('selectScreenshot', 0)
+            ->call('startPin', 0.2, 0.2)
+            ->set('draftBody', 'First shot mark')
+            ->set('draftSeverity', 'must-fix')
+            ->call('savePin')
+            ->call('selectScreenshot', 1)
+            ->call('startPin', 0.4, 0.4)
+            ->set('draftBody', 'Second shot mark')
+            ->set('draftSeverity', 'nit')
+            ->call('savePin')
+            ->assertOk();
+
+        $shots = $review->screenshots()->orderBy('sort_order')->get();
+        $first = $shots[0]->annotations()->firstOrFail();
+        $second = $shots[1]->annotations()->firstOrFail();
+
+        $this->assertSame(1, $first->number);
+        $this->assertSame(2, $second->number);
+        $this->assertSame(3, $review->fresh()->nextMarkNumber());
+    }
+
+    public function test_suggestion_numbers_are_unique_across_shots(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Multi shot suggestions',
+            'images' => [$this->tinyPngDataUrl(), $this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()
+            ->where('public_id', $id)
+            ->with('screenshots.findings')
+            ->firstOrFail();
+
+        $shots = $review->screenshots()->orderBy('sort_order')->get();
+
+        $s1 = $shots[0]->findings()->create([
+            'source' => Finding::SOURCE_AGENT,
+            'severity' => Finding::SEVERITY_A11Y,
+            'body' => 'Shot one opinion',
+            'status' => Finding::STATUS_OPEN,
+        ]);
+        $g1 = $shots[0]->findings()->create([
+            'source' => Finding::SOURCE_GUEST,
+            'author' => 'Sam',
+            'severity' => 'nit',
+            'body' => 'Shot one guest',
+            'status' => Finding::STATUS_OPEN,
+        ]);
+        $s2 = $shots[1]->findings()->create([
+            'source' => Finding::SOURCE_AGENT,
+            'severity' => Finding::SEVERITY_POLISH,
+            'body' => 'Shot two opinion',
+            'status' => Finding::STATUS_OPEN,
+        ]);
+        $g2 = $shots[1]->findings()->create([
+            'source' => Finding::SOURCE_GUEST,
+            'author' => 'Alex',
+            'severity' => 'must-fix',
+            'body' => 'Shot two guest',
+            'status' => Finding::STATUS_OPEN,
+        ]);
+
+        $review->load('screenshots.findings');
+        $numbers = $review->suggestionDisplayNumbers();
+
+        $this->assertSame(1, $numbers['s'][$s1->id]);
+        $this->assertSame(2, $numbers['s'][$s2->id]);
+        $this->assertSame(1, $numbers['g'][$g1->id]);
+        $this->assertSame(2, $numbers['g'][$g2->id]);
+
+        Livewire::test('review-page', ['token' => $review->token])
+            ->call('selectScreenshot', 1)
+            ->assertSee('S2', false)
+            ->assertSee('G2', false)
+            ->assertSee('Shot two opinion')
+            ->assertSee('Shot two guest');
+    }
+
+    public function test_blur_save_title_persists_when_changed(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => false,
+        ]);
+
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Original title',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+
+        Livewire::test('review-page', ['token' => $review->token])
+            ->call('startEditTitle')
+            ->set('titleDraft', 'Updated title')
+            ->call('blurSaveTitle')
+            ->assertHasNoErrors();
+
+        $this->assertSame('Updated title', $review->fresh()->title);
     }
 
     public function test_home_try_token_setup_can_be_restored_and_cleared(): void

@@ -7,6 +7,7 @@ use App\Models\Review;
 use App\Models\Screenshot;
 use App\Services\MarkLifecycleService;
 use App\Services\SecondOpinionService;
+use App\Support\FeedbackText;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -48,6 +49,12 @@ new class extends Component
 
     public string $secondOpinionTab = 'all';
 
+    public string $markCommentBody = '';
+
+    public ?int $activeCommentMarkId = null;
+
+    public string $shareExpiryDate = '';
+
     public function mount(string $token): void
     {
         $this->token = $token;
@@ -58,7 +65,7 @@ new class extends Component
     {
         $review = Review::query()
             ->where(fn ($q) => $q->where('token', $this->token)->orWhere('share_token', $this->token))
-            ->with(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations'])
+            ->with(['screenshots.annotations.comments', 'screenshots.annotations.afterScreenshot', 'screenshots.findings', 'parent.screenshots.annotations.comments', 'parent.screenshots.annotations.afterScreenshot'])
             ->firstOrFail();
 
         $this->mode = hash_equals((string) $review->token, $this->token) ? 'owner' : 'guest';
@@ -133,6 +140,10 @@ new class extends Component
 
     public function startPin(float $x, float $y, ?float $w = null, ?float $h = null): void
     {
+        if ($this->mode === 'guest' && ! $this->review->allowsGuestAccess()) {
+            return;
+        }
+
         if (! $this->review->isOpenForFeedback()) {
             return;
         }
@@ -163,23 +174,37 @@ new class extends Component
 
     public function savePin(): void
     {
+        if ($this->mode === 'guest' && ! $this->review->allowsGuestAccess()) {
+            return;
+        }
+
         if (! $this->review->isOpenForFeedback() || $this->pendingX === null || $this->pendingY === null) {
             return;
         }
 
+        $this->draftBody = FeedbackText::sanitizeBody($this->draftBody);
+        $this->guestName = FeedbackText::sanitizeName($this->guestName);
+
         $rules = [
-            'draftBody' => ['required', 'string', 'max:2000'],
+            'draftBody' => FeedbackText::bodyRules(),
             'draftSeverity' => ['required', 'in:'.implode(',', Annotation::severities())],
         ];
 
+        $messages = [
+            'draftBody.required' => 'Leave a note on this spot.',
+        ];
+
         if (! $this->isOwner()) {
-            $rules['guestName'] = ['required', 'string', 'max:40'];
+            $this->draftSeverity = Annotation::SEVERITY_MUST_FIX;
+            FeedbackText::throttleGuest($this->review->id);
+            $rules['guestName'] = FeedbackText::nameRules();
+            unset($rules['draftSeverity']);
+            $messages = array_merge($messages, FeedbackText::nameMessages('guestName'), [
+                'guestName.required' => 'Add your name so the owner knows who suggested this.',
+            ]);
         }
 
-        $this->validate($rules, [
-            'draftBody.required' => 'Leave a note on this spot.',
-            'guestName.required' => 'Add your name so the owner knows who suggested this.',
-        ]);
+        $this->validate($rules, $messages);
 
         $screenshot = $this->review->screenshots->values()->get($this->activeScreenshotIndex);
 
@@ -203,7 +228,7 @@ new class extends Component
         }
 
         if ($this->isOwner()) {
-            $number = ((int) $screenshot->annotations()->max('number')) + 1;
+            $number = $this->review->nextMarkNumber();
 
             $screenshot->annotations()->create([
                 'x' => $this->pendingX,
@@ -216,7 +241,7 @@ new class extends Component
         } else {
             $screenshot->findings()->create([
                 'source' => Finding::SOURCE_GUEST,
-                'author' => trim($this->guestName),
+                'author' => $this->guestName,
                 'severity' => $this->draftSeverity,
                 'body' => $this->draftBody,
                 'x' => $this->pendingX,
@@ -298,6 +323,80 @@ new class extends Component
             ->first();
     }
 
+    public function startMarkComment(int $annotationId): void
+    {
+        if (! $this->review->allowsComments()) {
+            return;
+        }
+
+        if ($this->mode === 'guest' && ! $this->review->allowsGuestAccess()) {
+            return;
+        }
+
+        if (! $this->ownedAnnotation($annotationId)) {
+            return;
+        }
+
+        $this->activeCommentMarkId = $annotationId;
+        $this->markCommentBody = '';
+        $this->resetValidation(['markCommentBody', 'guestName']);
+    }
+
+    public function cancelMarkComment(): void
+    {
+        $this->activeCommentMarkId = null;
+        $this->markCommentBody = '';
+        $this->resetValidation(['markCommentBody', 'guestName']);
+    }
+
+    /**
+     * Threaded notes on a mark. Guests must sign with a name (same as suggestions);
+     * owners may leave the name blank and post as Owner.
+     */
+    public function addMarkComment(int $annotationId): void
+    {
+        if (! $this->review->allowsComments()) {
+            return;
+        }
+
+        if ($this->mode === 'guest' && ! $this->review->allowsGuestAccess()) {
+            return;
+        }
+
+        $annotation = $this->ownedAnnotation($annotationId);
+
+        if (! $annotation) {
+            return;
+        }
+
+        $this->markCommentBody = FeedbackText::sanitizeBody($this->markCommentBody);
+        $this->guestName = FeedbackText::sanitizeName($this->guestName);
+
+        $rules = [
+            'markCommentBody' => FeedbackText::bodyRules(),
+        ];
+
+        $messages = [];
+
+        if ($this->mode === 'guest') {
+            FeedbackText::throttleGuest($this->review->id);
+            $rules['guestName'] = FeedbackText::nameRules();
+            $messages = FeedbackText::nameMessages('guestName');
+        }
+
+        $this->validate($rules, $messages);
+
+        $annotation->comments()->create([
+            'author' => $this->mode === 'guest' ? $this->guestName : 'Owner',
+            'from_owner' => $this->mode === 'owner',
+            'body' => $this->markCommentBody,
+        ]);
+
+        $this->activeCommentMarkId = null;
+        $this->markCommentBody = '';
+        $this->loadReview();
+    }
+
     public function acceptFinding(int $findingId): void
     {
         if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
@@ -314,7 +413,7 @@ new class extends Component
         }
 
         $screenshot = $finding->screenshot;
-        $number = ((int) $screenshot->annotations()->max('number')) + 1;
+        $number = $this->review->nextMarkNumber();
         $area = is_array($finding->area) ? $finding->area : null;
         $hasRegion = is_array($area)
             && (float) ($area['w'] ?? 0) >= 0.01
@@ -390,6 +489,68 @@ new class extends Component
         $this->dispatch('share-url-updated', url: $this->review->shareUrl());
     }
 
+    /**
+     * @param  '7d'|'14d'|'never'|string  $preset
+     */
+    public function setShareExpiry(string $preset): void
+    {
+        if (! $this->isOwner()) {
+            return;
+        }
+
+        if (! in_array($preset, ['7d', '14d', 'never'], true)) {
+            return;
+        }
+
+        $expiresAt = match ($preset) {
+            '7d' => now()->addDays(7)->endOfDay(),
+            '14d' => now()->addDays(14)->endOfDay(),
+            'never' => null,
+        };
+
+        $this->review->update(['share_expires_at' => $expiresAt]);
+        $this->loadReview();
+    }
+
+    /**
+     * Custom guest-link expiry from the share calendar (Y-m-d, end of that day).
+     */
+    public function setShareExpiryDate(string $date): void
+    {
+        if (! $this->isOwner()) {
+            return;
+        }
+
+        $this->shareExpiryDate = $date;
+
+        $this->validate([
+            'shareExpiryDate' => ['required', 'date', 'after_or_equal:today'],
+        ], [
+            'shareExpiryDate.after_or_equal' => 'Pick today or a future date.',
+        ]);
+
+        $this->review->update([
+            'share_expires_at' => \Illuminate\Support\Carbon::parse($this->shareExpiryDate)
+                ->timezone(config('app.timezone'))
+                ->endOfDay(),
+        ]);
+
+        $this->resetValidation('shareExpiryDate');
+        $this->loadReview();
+    }
+
+    public function toggleComments(): void
+    {
+        if (! $this->isOwner()) {
+            return;
+        }
+
+        $this->review->update([
+            'comments_enabled' => ! $this->review->allowsComments(),
+        ]);
+        $this->loadReview();
+    }
+
     public function startEditContext(): void
     {
         if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
@@ -405,6 +566,24 @@ new class extends Component
         $this->editingContext = false;
         $this->contextDraft = (string) ($this->review->context ?? '');
         $this->resetValidation('contextDraft');
+    }
+
+    public function blurSaveContext(): void
+    {
+        if (! $this->editingContext) {
+            return;
+        }
+
+        $draft = trim($this->contextDraft);
+        $current = trim((string) ($this->review->context ?? ''));
+
+        if ($draft === $current) {
+            $this->cancelEditContext();
+
+            return;
+        }
+
+        $this->saveContext();
     }
 
     public function saveContext(): void
@@ -441,6 +620,21 @@ new class extends Component
         $this->editingTitle = false;
         $this->titleDraft = (string) $this->review->title;
         $this->resetValidation('titleDraft');
+    }
+
+    public function blurSaveTitle(): void
+    {
+        if (! $this->editingTitle) {
+            return;
+        }
+
+        if (trim($this->titleDraft) === trim((string) $this->review->title)) {
+            $this->cancelEditTitle();
+
+            return;
+        }
+
+        $this->saveTitle();
     }
 
     public function saveTitle(): void
@@ -536,130 +730,169 @@ new class extends Component
 <div
     class="flex h-svh max-h-svh flex-col overflow-hidden"
     @if ($this->opinionPending)
-        wire:poll.3s="loadReview"
+        wire:poll.visible.3s="loadReview"
     @else
-        wire:poll.30s="loadReview"
+        wire:poll.visible.30s="loadReview"
     @endif
 >
-    <header class="shrink-0 border-b border-zinc-200 bg-white/90 backdrop-blur">
-        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-            <div class="min-w-0">
-                <div class="flex min-w-0 items-center gap-2 text-sm text-zinc-500">
-                    <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                        <span class="font-mark text-[1.35rem] leading-none tracking-tight text-rose-500">ReviseMy</span>
-                    </a>
-                    <span class="shrink-0">/</span>
-                    @if ($this->isOwner() && $review->isOpenForFeedback())
-                        <div class="flex min-w-0 flex-1 items-center gap-1" wire:key="title-field">
+    <header class="relative z-40 shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
+            <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                <x-revisemy-logo size="sm" />
+            </a>
+
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Review</h1>
+                <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                    Pass {{ $review->pass }}
+                </span>
+                <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
+                    {{ $review->typeLabel() }}
+                </span>
+                @if ($review->effectiveStatus() === 'changes_requested')
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Changes requested</span>
+                @elseif ($review->effectiveStatus() === 'approved')
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Approved</span>
+                @elseif ($review->effectiveStatus() === 'expired')
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800">Expired</span>
+                @endif
+                <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
+                @if ($this->isOwner() && $review->isOpenForFeedback())
+                    <div class="flex min-w-0 flex-1 items-center gap-1" wire:key="title-field">
+                        @if ($editingTitle)
+                            <input
+                                type="text"
+                                wire:model="titleDraft"
+                                maxlength="200"
+                                class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-zinc-800 outline-none ring-0 placeholder:text-zinc-400"
+                                placeholder="Review title"
+                                x-data
+                                x-init="$el.focus(); $el.select()"
+                                x-on:keydown.enter.prevent="$wire.saveTitle()"
+                                x-on:keydown.escape.prevent="$wire.cancelEditTitle()"
+                                x-on:blur="$wire.blurSaveTitle()"
+                                aria-label="Review title"
+                            />
+                        @else
+                            <button
+                                type="button"
+                                wire:click="startEditTitle"
+                                class="min-w-0 truncate text-left text-sm text-zinc-500 transition hover:text-zinc-800"
+                                title="Click to edit title"
+                            >
+                                {{ $review->title }}
+                            </button>
+                        @endif
+                        <div class="flex w-14 shrink-0 items-center justify-end gap-0.5">
                             @if ($editingTitle)
-                                <input
-                                    type="text"
-                                    wire:model="titleDraft"
-                                    maxlength="200"
-                                    class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-zinc-800 outline-none ring-0 placeholder:text-zinc-400"
-                                    placeholder="Review title"
-                                    x-data
-                                    x-init="$el.focus(); $el.select()"
-                                    x-on:keydown.enter.prevent="$wire.saveTitle()"
-                                    x-on:keydown.escape.prevent="$wire.cancelEditTitle()"
-                                    x-on:blur="$wire.cancelEditTitle()"
-                                    aria-label="Review title"
-                                />
-                            @else
                                 <button
                                     type="button"
-                                    wire:click="startEditTitle"
-                                    class="min-w-0 flex-1 truncate text-left text-zinc-600 transition hover:text-zinc-900"
-                                    title="Click to edit title"
+                                    wire:click="saveTitle"
+                                    x-on:mousedown.prevent
+                                    class="inline-flex size-6 items-center justify-center rounded-md text-rose-600 transition hover:bg-rose-50"
+                                    aria-label="Save title"
+                                    title="Save"
                                 >
-                                    {{ $review->title }}
+                                    <flux:icon.check variant="micro" class="size-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="cancelEditTitle"
+                                    x-on:mousedown.prevent
+                                    class="inline-flex size-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                                    aria-label="Cancel"
+                                    title="Cancel"
+                                >
+                                    <flux:icon.x-mark variant="micro" class="size-3.5" />
                                 </button>
                             @endif
-                            <div class="flex w-14 shrink-0 items-center justify-end gap-0.5">
-                                @if ($editingTitle)
-                                    <button
-                                        type="button"
-                                        wire:click="saveTitle"
-                                        x-on:mousedown.prevent
-                                        class="inline-flex size-6 items-center justify-center rounded-md text-rose-600 transition hover:bg-rose-50"
-                                        aria-label="Save title"
-                                        title="Save"
-                                    >
-                                        <flux:icon.check variant="micro" class="size-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        wire:click="cancelEditTitle"
-                                        x-on:mousedown.prevent
-                                        class="inline-flex size-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-                                        aria-label="Cancel"
-                                        title="Cancel"
-                                    >
-                                        <flux:icon.x-mark variant="micro" class="size-3.5" />
-                                    </button>
-                                @endif
-                            </div>
                         </div>
-                    @else
-                        <span class="truncate">{{ $review->title }}</span>
-                    @endif
-                </div>
-                <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 sm:text-sm">
-                    <span class="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600 sm:text-[11px]">
-                        Pass {{ $review->pass }}
-                    </span>
-                    @if ($review->effectiveStatus() === 'pending')
-                        <span class="sm:hidden">Mark, then decide</span>
-                        <span class="hidden sm:inline">Mark feedback, then approve or request changes</span>
-                    @elseif ($review->effectiveStatus() === 'changes_requested')
-                        <span class="sm:hidden">Changes requested — next pass needed</span>
-                        <span class="hidden sm:inline">Changes requested — agent should apply your marks and open the next pass</span>
-                    @elseif ($review->effectiveStatus() === 'approved')
-                        <span>Looks good — approved</span>
-                    @else
-                        <span>This review link expired</span>
-                    @endif
-                </div>
+                    </div>
+                @else
+                    <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
+                @endif
             </div>
 
             @if ($mode === 'guest')
                 <div class="flex shrink-0 items-center">
-                    <span class="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800 sm:px-3 sm:text-xs">
-                        <span class="sm:hidden">Guest mode</span>
-                        <span class="hidden sm:inline">Guest — your marks are suggestions until accepted</span>
-                    </span>
+                    @if (! $review->allowsGuestAccess())
+                        <span class="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-800">
+                            Guest link expired
+                        </span>
+                    @else
+                        <span class="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                            Guest
+                        </span>
+                    @endif
                 </div>
-            @elseif ($review->isOpenForFeedback())
-                <div class="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+            @elseif ($this->isOwner())
+                <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     <div
-                        class="min-w-0 flex-1 sm:flex-none"
+                        class="relative"
                         x-data="{
                             copied: false,
                             shareUrl: {{ \Illuminate\Support\Js::from($review->shareUrl()) }},
+                            pickingDate: false,
+                            cursor: (() => {
+                                const seed = {{ \Illuminate\Support\Js::from(optional($review->share_expires_at)->format('Y-m-d') ?: now()->format('Y-m-d')) }};
+                                const [y, m] = seed.split('-').map(Number);
+                                return new Date(y, m - 1, 1);
+                            })(),
+                            selected: {{ \Illuminate\Support\Js::from(optional($review->share_expires_at)->format('Y-m-d')) }},
+                            today: {{ \Illuminate\Support\Js::from(now()->format('Y-m-d')) }},
+                            weekdays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
                             async copyLink() {
                                 await navigator.clipboard.writeText(this.shareUrl);
                                 this.copied = true;
                                 setTimeout(() => this.copied = false, 2000);
+                            },
+                            monthLabel() {
+                                return this.cursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                            },
+                            shiftMonth(delta) {
+                                this.cursor = new Date(this.cursor.getFullYear(), this.cursor.getMonth() + delta, 1);
+                            },
+                            days() {
+                                const year = this.cursor.getFullYear();
+                                const month = this.cursor.getMonth();
+                                const firstDow = new Date(year, month, 1).getDay();
+                                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                                const cells = [];
+                                for (let i = 0; i < firstDow; i++) cells.push(null);
+                                for (let d = 1; d <= daysInMonth; d++) {
+                                    const iso = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                                    cells.push({ day: d, iso, disabled: iso < this.today });
+                                }
+                                while (cells.length % 7 !== 0) cells.push(null);
+                                return cells;
+                            },
+                            pick(iso) {
+                                if (! iso) return;
+                                this.selected = iso;
+                                $wire.setShareExpiryDate(iso).then(() => {
+                                    this.pickingDate = false;
+                                });
                             }
                         }"
                         x-on:share-url-updated.window="shareUrl = $event.detail.url"
+                        x-on:keydown.escape.window="pickingDate = false"
                     >
-                        <flux:dropdown position="bottom" align="end" class="w-full sm:w-auto">
+                        <flux:dropdown position="bottom" align="end">
                             <flux:button
+                                size="sm"
                                 variant="ghost"
                                 icon="link"
                                 icon:trailing="chevron-down"
-                                class="w-full !bg-zinc-100 hover:!bg-zinc-200/80 sm:w-auto"
+                                class="!bg-zinc-100 hover:!bg-zinc-200/80"
                             >
                                 <span x-show="! copied">Share</span>
                                 <span x-show="copied" x-cloak>Copied!</span>
                             </flux:button>
 
-                            <flux:menu class="min-w-52">
+                            <flux:menu class="min-w-60">
                                 <flux:menu.item icon="clipboard-document" x-on:click="copyLink()">
                                     Copy guest link
                                 </flux:menu.item>
-                                <flux:menu.separator />
                                 <flux:menu.item
                                     icon="arrow-path"
                                     wire:click="regenerateShareToken"
@@ -667,23 +900,134 @@ new class extends Component
                                 >
                                     Generate new link
                                 </flux:menu.item>
+                                <flux:menu.separator />
+                                <div class="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Guest link expires</div>
+                                <flux:menu.item wire:click="setShareExpiry('7d')">
+                                    In 7 days
+                                    <span class="ms-auto text-[10px] font-medium text-zinc-400">Default</span>
+                                </flux:menu.item>
+                                <flux:menu.item wire:click="setShareExpiry('14d')">In 14 days</flux:menu.item>
+                                <flux:menu.item wire:click="setShareExpiry('never')">Never</flux:menu.item>
+                                <flux:menu.item icon="calendar-days" x-on:click="pickingDate = true">
+                                    Custom date…
+                                </flux:menu.item>
+                                @if ($review->share_expires_at)
+                                    <p class="px-3 py-1.5 text-[11px] leading-snug text-zinc-500">
+                                        @if ($review->isShareLinkExpired())
+                                            Expired {{ $review->share_expires_at->diffForHumans() }}
+                                        @else
+                                            Expires {{ $review->share_expires_at->timezone(config('app.timezone'))->toFormattedDateString() }}
+                                            · {{ $review->share_expires_at->diffForHumans() }}
+                                        @endif
+                                    </p>
+                                @endif
+                                <flux:menu.separator />
+                                <flux:menu.item
+                                    icon="{{ $review->allowsComments() ? 'chat-bubble-left-right' : 'no-symbol' }}"
+                                    wire:click="toggleComments"
+                                >
+                                    {{ $review->allowsComments() ? 'Disable comments' : 'Enable comments' }}
+                                </flux:menu.item>
                             </flux:menu>
                         </flux:dropdown>
+
+                        <div
+                            x-show="pickingDate"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-1"
+                            class="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[17.5rem] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
+                            x-on:click.outside="pickingDate = false"
+                        >
+                            <div class="mb-3 flex items-center justify-between gap-2">
+                                <button
+                                    type="button"
+                                    class="inline-flex size-8 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+                                    x-on:click="shiftMonth(-1)"
+                                    aria-label="Previous month"
+                                >
+                                    <flux:icon.chevron-left variant="micro" class="size-4" />
+                                </button>
+                                <p class="text-sm font-medium text-zinc-800" x-text="monthLabel()"></p>
+                                <button
+                                    type="button"
+                                    class="inline-flex size-8 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+                                    x-on:click="shiftMonth(1)"
+                                    aria-label="Next month"
+                                >
+                                    <flux:icon.chevron-right variant="micro" class="size-4" />
+                                </button>
+                            </div>
+
+                            <div class="mb-1 grid grid-cols-7 gap-0.5">
+                                <template x-for="label in weekdays" :key="label">
+                                    <div class="py-1 text-center text-[10px] font-medium uppercase tracking-wide text-zinc-400" x-text="label"></div>
+                                </template>
+                            </div>
+
+                            <div class="grid grid-cols-7 gap-0.5">
+                                <template x-for="(cell, index) in days()" :key="index">
+                                    <div class="aspect-square">
+                                        <button
+                                            type="button"
+                                            x-show="cell"
+                                            x-bind:disabled="cell?.disabled"
+                                            x-on:click="pick(cell.iso)"
+                                            class="flex size-full items-center justify-center rounded-full text-sm transition disabled:cursor-not-allowed disabled:opacity-30"
+                                            x-bind:class="cell && cell.iso === selected
+                                                ? 'bg-rose-500 font-semibold text-white shadow-sm'
+                                                : (cell && cell.iso === today
+                                                    ? 'font-semibold text-rose-600 ring-1 ring-inset ring-rose-200 hover:bg-rose-50'
+                                                    : 'text-zinc-700 hover:bg-zinc-100')"
+                                            x-text="cell?.day"
+                                        ></button>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="mt-3 flex items-center justify-between gap-2 border-t border-zinc-100 pt-3">
+                                <button
+                                    type="button"
+                                    class="text-xs font-medium text-zinc-500 transition hover:text-zinc-800"
+                                    x-on:click="pickingDate = false"
+                                >Cancel</button>
+                                <button
+                                    type="button"
+                                    class="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80"
+                                    x-on:click="pick(today)"
+                                >Today</button>
+                            </div>
+                            <flux:error name="shareExpiryDate" />
+                        </div>
                     </div>
-                    <flux:button variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="min-w-0 flex-1 !bg-zinc-100 hover:!bg-zinc-200/80 sm:flex-none">Board</flux:button>
-                    <flux:button variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" class="min-w-0 flex-1 !bg-zinc-100 hover:!bg-zinc-200/80 sm:flex-none">Changes</flux:button>
-                    <flux:button variant="primary" icon="check" wire:click="approve" class="min-w-0 flex-1 !bg-rose-600 hover:!bg-rose-700 sm:flex-none">Approve</flux:button>
-                </div>
-            @elseif ($this->isOwner())
-                <div class="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
-                    <flux:button variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="min-w-0 flex-1 !bg-zinc-100 hover:!bg-zinc-200/80 sm:flex-none">Board</flux:button>
+                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-zinc-100 hover:!bg-zinc-200/80">Board</flux:button>
+                    @if ($review->isOpenForFeedback())
+                        <div class="hidden items-center gap-2 lg:flex">
+                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="!bg-zinc-100 hover:!bg-zinc-200/80">Changes</flux:button>
+                            <flux:button size="sm" variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes." class="!bg-rose-600 hover:!bg-rose-700">Approve</flux:button>
+                        </div>
+                    @endif
                 </div>
             @endif
         </div>
     </header>
 
+    @if ($mode === 'guest' && ! $review->allowsGuestAccess())
+        <div class="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-16 sm:px-6">
+            <flux:callout variant="danger" icon="lock-closed">
+                <flux:callout.heading>This guest link has expired</flux:callout.heading>
+                <flux:callout.text>
+                    Ask the owner for a new share link if you still need to leave suggestions or comments.
+                </flux:callout.text>
+            </flux:callout>
+        </div>
+    @else
     <div
-        class="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 pt-4 sm:px-6 sm:pt-5 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-x-6 xl:overflow-hidden xl:pt-6"
+        class="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 sm:px-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-x-6 xl:overflow-hidden"
         x-data
         x-init="
             if (! Alpine.store('rmFocus')) {
@@ -691,7 +1035,8 @@ new class extends Component
             }
         "
     >
-        <section class="min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto sm:space-y-4 xl:max-h-none xl:min-h-0 xl:overflow-y-auto">
+        @php($suggestionNumbers = $review->suggestionDisplayNumbers())
+        <section class="min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto pt-4 sm:space-y-4 sm:pt-5 xl:max-h-none xl:min-h-0 xl:overflow-y-auto xl:pt-6">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
                 <div class="grid gap-1.5 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
                     <flux:heading size="sm" class="sm:pt-0.5">What to look at</flux:heading>
@@ -711,7 +1056,7 @@ new class extends Component
                                     x-on:keydown.meta.enter.prevent="$wire.saveContext()"
                                     x-on:keydown.ctrl.enter.prevent="$wire.saveContext()"
                                     x-on:keydown.escape.prevent="$wire.cancelEditContext()"
-                                    x-on:blur="$wire.cancelEditContext()"
+                                    x-on:blur="$wire.blurSaveContext()"
                                 ></textarea>
                             @elseif ($this->isOwner() && $review->isOpenForFeedback())
                                 <button
@@ -768,17 +1113,24 @@ new class extends Component
             @endif
 
             @if ($review->screenshots->count() > 1)
-                <div class="flex flex-wrap gap-2">
+                <div class="flex items-center gap-1.5" role="tablist" aria-label="Screenshots">
                     @foreach ($review->screenshots as $index => $shotOption)
-                        <flux:button
-                            size="sm"
-                            variant="{{ $activeScreenshotIndex === $index ? 'primary' : 'ghost' }}"
+                        <button
+                            type="button"
+                            role="tab"
                             wire:click="selectScreenshot({{ $index }})"
                             x-on:click="$store.rmFocus && ($store.rmFocus.finding = null, $store.rmFocus.mark = null)"
-                            class="{{ $activeScreenshotIndex === $index ? '!border-zinc-800 !bg-zinc-800 !text-white hover:!bg-zinc-700' : '' }}"
+                            aria-label="Shot {{ $index + 1 }}"
+                            aria-selected="{{ $activeScreenshotIndex === $index ? 'true' : 'false' }}"
+                            title="Shot {{ $index + 1 }}"
+                            @class([
+                                'inline-flex size-7 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 active:scale-[0.96]',
+                                'bg-zinc-800 text-white shadow-sm' => $activeScreenshotIndex === $index,
+                                'bg-white text-zinc-500 ring-1 ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-700 hover:ring-zinc-300' => $activeScreenshotIndex !== $index,
+                            ])
                         >
-                            Shot {{ $index + 1 }}
-                        </flux:button>
+                            {{ $index + 1 }}
+                        </button>
                     @endforeach
                 </div>
             @endif
@@ -1023,7 +1375,7 @@ new class extends Component
                                             x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                             x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
                                         >
-                                            S{{ $findingIndex + 1 }}
+                                            S{{ $suggestionNumbers['s'][$finding->id] ?? ($findingIndex + 1) }}
                                         </button>
                                     </div>
                                 @endif
@@ -1052,7 +1404,7 @@ new class extends Component
                                             x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                             x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
                                         >
-                                            G{{ $guestIndex + 1 }}
+                                            G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}
                                         </button>
                                     </div>
                                 @elseif ($finding->x !== null && $finding->y !== null)
@@ -1066,7 +1418,7 @@ new class extends Component
                                         x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                         x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
                                     >
-                                        G{{ $guestIndex + 1 }}
+                                        G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}
                                     </button>
                                 @endif
                             @endforeach
@@ -1076,22 +1428,29 @@ new class extends Component
                                 @php($markState = $annotation->status === \App\Models\Annotation::STATUS_VERIFIED ? 'opacity-40' : ($annotation->status === \App\Models\Annotation::STATUS_RESOLVED ? 'opacity-70' : ''))
                                 @if ($region)
                                     @php($markBadgePosition = ($region['y'] ?? 0) < 0.07 ? '-left-2 -bottom-2' : (($region['x'] ?? 0) < 0.07 ? '-right-2 -top-2' : '-left-2 -top-2'))
-                                    <div
+                                    <button
+                                        type="button"
                                         data-pin
-                                        class="absolute z-[8] {{ $markState }}"
+                                        class="absolute z-[8] block cursor-pointer border-0 bg-transparent p-0 text-left {{ $markState }}"
                                         style="left: {{ $region['x'] * 100 }}%; top: {{ $region['y'] * 100 }}%; width: {{ $region['w'] * 100 }}%; height: {{ $region['h'] * 100 }}%;"
+                                        title="{{ $annotation->body }}"
+                                        x-on:click.stop="
+                                            $store.rmFocus.mark = $store.rmFocus.mark === {{ $annotation->id }} ? null : {{ $annotation->id }};
+                                            $store.rmFocus.finding = null;
+                                            document.getElementById('fb-mark-{{ $annotation->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                        "
                                     >
                                         <div
                                             class="pointer-events-none absolute inset-0 rounded-md border-2 border-rose-500/80 bg-rose-500/10 transition"
                                             x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'ring-2 ring-rose-400 ring-offset-1' : ''"
                                         ></div>
-                                        <div
+                                        <span
                                             class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white shadow-sm ring-2 ring-white transition {{ $annotation->markerClass() }}"
                                             x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110' : ''"
                                         >
                                             M{{ $annotation->number }}
-                                        </div>
-                                    </div>
+                                        </span>
+                                    </button>
                                 @else
                                     <button
                                         type="button"
@@ -1108,7 +1467,7 @@ new class extends Component
 
                             <template x-if="draft && draft.w > 0 && draft.h > 0">
                                 <div
-                                    class="pointer-events-none absolute z-[15] rounded-md border-2 border-dashed border-rose-500 bg-rose-500/15"
+                                    class="pointer-events-none absolute z-[15] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-amber-500 bg-amber-400/15' : 'border-rose-500 bg-rose-500/15' }}"
                                     x-bind:style="'left:' + (draft.x * 100) + '%;top:' + (draft.y * 100) + '%;width:' + (draft.w * 100) + '%;height:' + (draft.h * 100) + '%'"
                                 ></div>
                             </template>
@@ -1117,21 +1476,21 @@ new class extends Component
                                 @if ($pendingW !== null && $pendingH !== null && $pendingW >= 0.01 && $pendingH >= 0.01)
                                     <div
                                         data-pending-mark
-                                        class="pointer-events-none absolute z-[18] rounded-md border-2 border-rose-500 bg-rose-500/15"
+                                        class="pointer-events-none absolute z-[18] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-amber-500 bg-amber-400/15' : 'border-rose-500 bg-rose-500/15' }}"
                                         style="left: {{ ($pendingX - $pendingW / 2) * 100 }}%; top: {{ ($pendingY - $pendingH / 2) * 100 }}%; width: {{ $pendingW * 100 }}%; height: {{ $pendingH * 100 }}%;"
                                     ></div>
                                 @else
                                     <div
                                         data-pending-mark
-                                        class="pointer-events-none absolute z-[18] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                                        class="pointer-events-none absolute z-[18] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full {{ $mode === 'guest' ? 'bg-amber-500' : 'bg-rose-500' }}"
                                         style="left: {{ $pendingX * 100 }}%; top: {{ $pendingY * 100 }}%;"
                                     ></div>
                                 @endif
                                 <div
-                                    class="absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white shadow-lg ring-2 ring-white"
+                                    class="absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-semibold shadow-lg ring-2 ring-white {{ $mode === 'guest' ? 'border-2 border-dashed border-amber-500 bg-white text-amber-700' : 'bg-rose-500 text-white' }}"
                                     style="left: {{ $pendingX * 100 }}%; top: {{ $pendingY * 100 }}%;"
                                 >
-                                    +
+                                    {{ $mode === 'guest' ? 'G' : '+' }}
                                 </div>
                             @endif
                         </div>
@@ -1148,6 +1507,7 @@ new class extends Component
                                 Your marks
                             </span>
                             <span class="hidden h-3 w-px shrink-0 bg-zinc-300 sm:block" aria-hidden="true"></span>
+                            @if ($mode === 'owner')
                             <span class="inline-flex items-center gap-2">
                                 <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-sky-400/80 bg-sky-400/10" aria-hidden="true">
                                     <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-sky-500 bg-white text-[8px] font-semibold text-sky-700 ring-2 ring-white">S</span>
@@ -1155,6 +1515,7 @@ new class extends Component
                                 Second opinion
                             </span>
                             <span class="hidden h-3 w-px shrink-0 bg-zinc-300 sm:block" aria-hidden="true"></span>
+                            @endif
                             <span class="inline-flex items-center gap-2">
                                 <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-amber-400/80 bg-amber-400/10" aria-hidden="true">
                                     <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-amber-500 bg-white text-[8px] font-semibold text-amber-700 ring-2 ring-white">G</span>
@@ -1174,8 +1535,23 @@ new class extends Component
         </section>
 
         @php($stripMarks = $shot?->annotations ?? collect())
-        @php($stripSecondOpinion = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
-        @php($stripGuest = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && $f->isGuest())->values())
+        @php($stripSecondOpinion = ($shot?->findings ?? collect())->filter(function ($f) {
+            if (! $f->isOpen() || $f->isGuest()) {
+                return false;
+            }
+            $area = is_array($f->area) ? $f->area : null;
+
+            return $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01;
+        })->values())
+        @php($stripGuest = ($shot?->findings ?? collect())->filter(function ($f) {
+            if (! $f->isOpen() || ! $f->isGuest()) {
+                return false;
+            }
+            $area = is_array($f->area) ? $f->area : null;
+            $hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01;
+
+            return $hasRegion || ($f->x !== null && $f->y !== null);
+        })->values())
 
         @if ($shot && ($stripMarks->isNotEmpty() || $stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
             <div class="shrink-0 overflow-x-auto overscroll-x-contain border-y border-zinc-200 bg-white/95 px-3 py-2 [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
@@ -1200,7 +1576,7 @@ new class extends Component
                         <span class="h-4 w-px shrink-0 bg-zinc-200" aria-hidden="true"></span>
                     @endif
 
-                    @foreach ($stripSecondOpinion as $index => $finding)
+                    @foreach ($stripSecondOpinion as $finding)
                         <button
                             type="button"
                             class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-1.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
@@ -1214,9 +1590,9 @@ new class extends Component
                                     document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                                 @endif
                             "
-                            aria-label="Jump to second opinion S{{ $index + 1 }}"
+                            aria-label="Jump to second opinion S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}"
                         >
-                            S{{ $index + 1 }}
+                            S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}
                         </button>
                     @endforeach
 
@@ -1224,7 +1600,7 @@ new class extends Component
                         <span class="h-4 w-px shrink-0 bg-zinc-200" aria-hidden="true"></span>
                     @endif
 
-                    @foreach ($stripGuest as $index => $finding)
+                    @foreach ($stripGuest as $finding)
                         <button
                             type="button"
                             class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-amber-500 bg-white px-1.5 text-[10px] font-semibold text-amber-700 shadow-sm transition"
@@ -1234,9 +1610,9 @@ new class extends Component
                                 $store.rmFocus.mark = null;
                                 document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             "
-                            aria-label="Jump to guest suggestion G{{ $index + 1 }}"
+                            aria-label="Jump to guest suggestion G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}"
                         >
-                            G{{ $index + 1 }}
+                            G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}
                         </button>
                     @endforeach
                 </div>
@@ -1308,7 +1684,7 @@ new class extends Component
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <flux:heading size="sm">
                             @if ($pendingW !== null && $pendingH !== null && $pendingW >= 0.01 && $pendingH >= 0.01)
-                                {{ $mode === 'guest' ? 'Suggest a change on this region' : 'Leave a note on this region' }}
+                                {{ $mode === 'guest' ? 'Suggest a change here' : 'Leave a note here' }}
                             @else
                                 {{ $mode === 'guest' ? 'Suggest a change on this spot' : 'Leave a note on this spot' }}
                             @endif
@@ -1330,12 +1706,15 @@ new class extends Component
                                 maxlength="40"
                                 x-data
                                 x-init="if (! $wire.guestName) { $wire.guestName = localStorage.getItem('revisemy_guest_name') || '' }"
-                                x-on:change="localStorage.setItem('revisemy_guest_name', $event.target.value)"
+                                x-on:change="if ($event.target.value) { localStorage.setItem('revisemy_guest_name', $event.target.value) }"
                             />
+                            <flux:error name="guestName" />
                         @endif
                         <div x-ref="note">
                             <flux:textarea wire:model="draftBody" rows="3" placeholder="Be specific — what feels off, and what would be better?" />
+                            <flux:error name="draftBody" />
                         </div>
+                        @if ($mode === 'owner')
                         <div class="flex flex-wrap gap-2">
                             @foreach (\App\Models\Annotation::severityLabels() as $value => $label)
                                 <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-sm has-[:checked]:border-zinc-400 has-[:checked]:bg-white has-[:checked]:shadow-sm">
@@ -1344,9 +1723,10 @@ new class extends Component
                                 </label>
                             @endforeach
                         </div>
+                        @endif
                         <div class="flex flex-col gap-2 sm:flex-row">
                             @if ($mode === 'guest')
-                                <flux:button variant="primary" icon="chat-bubble-left-ellipsis" wire:click="savePin" class="w-full !bg-amber-600 hover:!bg-amber-700 sm:w-auto">Suggest</flux:button>
+                                <flux:button variant="primary" icon="chat-bubble-left-ellipsis" wire:click="savePin" class="w-full !bg-yellow-400 !text-zinc-900 hover:!bg-yellow-300 sm:w-auto">Suggest</flux:button>
                             @else
                                 <flux:button variant="primary" icon="check" wire:click="savePin" class="w-full !bg-rose-600 sm:w-auto">Save mark</flux:button>
                             @endif
@@ -1357,7 +1737,7 @@ new class extends Component
             </div>
         @endif
 
-        <aside class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t border-zinc-200 pt-4 xl:min-h-0 xl:border-t-0 xl:overflow-y-auto xl:pt-0">
+        <aside class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t border-zinc-200 px-0.5 pt-4 pb-28 [scroll-padding-top:1rem] sm:pt-5 xl:min-h-0 xl:border-t-0 xl:overflow-y-auto xl:pt-6 xl:pb-6 xl:[scroll-padding-top:1.5rem] lg:pb-6">
             <div class="space-y-4 pb-4 xl:pb-6">
             <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
                 <flux:heading size="sm" class="mb-3">{{ $mode === 'owner' ? 'My marks' : 'Owner marks' }}</flux:heading>
@@ -1379,11 +1759,11 @@ new class extends Component
                                 <div class="mb-1 flex items-center justify-between gap-2">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
-                                        <span class="text-xs uppercase tracking-wide text-zinc-500">{{ $pin->label() }}</span>
+                                        <span class="text-xs text-zinc-500">{{ $pin->label() }}</span>
                                         <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $pin->statusBadgeClass() }}">{{ $pin->statusLabel() }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
-                                        <button type="button" class="text-xs text-zinc-400 hover:text-rose-600" wire:click="deletePin({{ $pin->id }})">Remove</button>
+                                        <button type="button" class="text-xs text-zinc-400 hover:text-rose-600" wire:click="deletePin({{ $pin->id }})" wire:confirm="Remove this mark?">Remove</button>
                                     @endif
                                 </div>
                                 <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
@@ -1392,6 +1772,67 @@ new class extends Component
                                         <span class="font-medium">Agent:</span> {{ $pin->resolution_note }}
                                     </div>
                                 @endif
+                                <x-mark-before-after :mark="$pin" />
+                                @if ($pin->comments->isNotEmpty())
+                                    <div class="mt-2 space-y-1.5 border-t border-zinc-100 pt-2">
+                                        @foreach ($pin->comments as $comment)
+                                            <div wire:key="pin-comment-{{ $comment->id }}" class="rounded-lg bg-zinc-50 px-2.5 py-1.5">
+                                                <div class="mb-0.5 flex flex-wrap items-baseline justify-between gap-x-2">
+                                                    <span class="text-[11px] font-medium text-zinc-700">{{ $comment->author }}</span>
+                                                    <time
+                                                        class="text-[10px] text-zinc-400"
+                                                        datetime="{{ $comment->created_at->toIso8601String() }}"
+                                                        title="{{ $comment->created_at->timezone(config('app.timezone'))->toDayDateTimeString() }}"
+                                                    >{{ $comment->created_at->diffForHumans() }}</time>
+                                                </div>
+                                                <p class="text-xs leading-relaxed text-zinc-600">{{ $comment->body }}</p>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <div class="mt-2">
+                                    @if ($review->allowsComments())
+                                        @if ($activeCommentMarkId === $pin->id)
+                                            <div class="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50/80 p-2">
+                                                @if ($mode === 'guest')
+                                                    <flux:input
+                                                        wire:model="guestName"
+                                                        placeholder="Your name"
+                                                        maxlength="40"
+                                                        size="sm"
+                                                        x-data
+                                                        x-init="if (! $wire.guestName) { $wire.guestName = localStorage.getItem('revisemy_guest_name') || '' }"
+                                                        x-on:change="if ($event.target.value) { localStorage.setItem('revisemy_guest_name', $event.target.value) }"
+                                                    />
+                                                    <flux:error name="guestName" />
+                                                @endif
+                                                <flux:textarea wire:model="markCommentBody" rows="2" placeholder="Add a comment…" />
+                                                <flux:error name="markCommentBody" />
+                                                <div class="flex gap-2">
+                                                    <flux:button size="sm" variant="primary" wire:click="addMarkComment({{ $pin->id }})" class="!bg-zinc-900 hover:!bg-zinc-800">Post</flux:button>
+                                                    <flux:button size="sm" variant="ghost" wire:click="cancelMarkComment">Cancel</flux:button>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <button
+                                                type="button"
+                                                class="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 transition hover:text-zinc-800"
+                                                wire:click="startMarkComment({{ $pin->id }})"
+                                            >
+                                                Comment
+                                                @if ($pin->comments->isNotEmpty())
+                                                    <span class="flex h-5 min-w-5 items-center justify-center rounded-full bg-zinc-100 px-1.5 text-[10px] font-medium tabular-nums text-zinc-600">{{ $pin->comments->count() }}</span>
+                                                @endif
+                                            </button>
+                                        @endif
+                                    @elseif ($pin->comments->isNotEmpty())
+                                        <p class="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
+                                            <span>Comments</span>
+                                            <span class="flex h-5 min-w-5 items-center justify-center rounded-full bg-zinc-100 px-1.5 text-[10px] font-medium tabular-nums text-zinc-600">{{ $pin->comments->count() }}</span>
+                                            <span>· commenting off</span>
+                                        </p>
+                                    @endif
+                                </div>
                                 @if ($mode === 'owner' && $pin->severity !== \App\Models\Annotation::SEVERITY_KEEP && $this->canManageMarks())
                                     <div class="mt-2 flex items-center gap-2">
                                         @if ($pin->awaitsVerification())
@@ -1420,13 +1861,31 @@ new class extends Component
                                 <li class="rounded-xl border border-zinc-100 p-3">
                                     <div class="mb-1 flex flex-wrap items-center gap-2">
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
-                                        <span class="text-xs uppercase tracking-wide text-zinc-500">{{ $pin->label() }}</span>
+                                        <span class="text-xs text-zinc-500">{{ $pin->label() }}</span>
                                         <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $pin->statusBadgeClass() }}">{{ $pin->statusLabel() }}</span>
                                     </div>
                                     <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
                                     @if ($pin->resolution_note)
                                         <div class="mt-2 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900">
                                             <span class="font-medium">Agent:</span> {{ $pin->resolution_note }}
+                                        </div>
+                                    @endif
+                                    <x-mark-before-after :mark="$pin" />
+                                    @if ($pin->comments->isNotEmpty())
+                                        <div class="mt-2 space-y-1.5 border-t border-zinc-100 pt-2">
+                                            @foreach ($pin->comments as $comment)
+                                                <div wire:key="prev-pin-comment-{{ $comment->id }}" class="rounded-lg bg-zinc-50 px-2.5 py-1.5">
+                                                    <div class="mb-0.5 flex flex-wrap items-baseline justify-between gap-x-2">
+                                                        <span class="text-[11px] font-medium text-zinc-700">{{ $comment->author }}</span>
+                                                        <time
+                                                            class="text-[10px] text-zinc-400"
+                                                            datetime="{{ $comment->created_at->toIso8601String() }}"
+                                                            title="{{ $comment->created_at->timezone(config('app.timezone'))->toDayDateTimeString() }}"
+                                                        >{{ $comment->created_at->diffForHumans() }}</time>
+                                                    </div>
+                                                    <p class="text-xs leading-relaxed text-zinc-600">{{ $comment->body }}</p>
+                                                </div>
+                                            @endforeach
                                         </div>
                                     @endif
                                     @if ($pin->severity !== \App\Models\Annotation::SEVERITY_KEEP && $this->canManageMarks())
@@ -1446,6 +1905,7 @@ new class extends Component
                 @endif
             @endif
 
+            @if ($mode === 'owner')
             <div class="rounded-2xl border border-sky-200/80 bg-sky-50/50 p-3 shadow-sm sm:p-4">
                 <div class="mb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
@@ -1468,7 +1928,7 @@ new class extends Component
 
                 @php($findings = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
                 @php($status = $shot?->second_opinion_status ?? 'idle')
-                @php($findingNumbers = $findings->mapWithKeys(fn ($f, $i) => [$f->id => $i + 1]))
+                @php($findingNumbers = $suggestionNumbers['s'])
                 @php($tabCounts = [
                     'all' => $findings->count(),
                     Finding::SEVERITY_SUGGESTION => $findings->where('severity', Finding::SEVERITY_SUGGESTION)->count(),
@@ -1531,6 +1991,8 @@ new class extends Component
                     @else
                         <ul class="space-y-3">
                             @foreach ($visibleFindings as $finding)
+                                @php($findingArea = is_array($finding->area) ? $finding->area : null)
+                                @php($findingHasRegion = $findingArea && (float) ($findingArea['w'] ?? 0) >= 0.01 && (float) ($findingArea['h'] ?? 0) >= 0.01)
                                 <li
                                     id="fb-finding-{{ $finding->id }}"
                                     class="cursor-pointer rounded-xl border bg-white/80 p-3 transition"
@@ -1542,8 +2004,11 @@ new class extends Component
                                 >
                                     <div class="mb-1 flex items-start gap-2">
                                         <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-sky-500 text-[10px] font-semibold text-sky-700">S{{ $findingNumbers[$finding->id] }}</span>
-                                            <span class="text-xs uppercase tracking-wide text-zinc-500">{{ $finding->severity }}</span>
+                                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-sky-500 text-[10px] font-semibold text-sky-700">S{{ $findingNumbers[$finding->id] ?? '' }}</span>
+                                            <span class="text-xs text-zinc-500">{{ \App\Models\Annotation::allSeverityLabels()[$finding->severity] ?? $finding->severity }}</span>
+                                            @if (! $findingHasRegion)
+                                                <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">Text hint</span>
+                                            @endif
                                             <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">{{ $finding->sourceLabel() }}</span>
                                         </div>
                                         @if ($review->isOpenForFeedback() && $mode === 'owner')
@@ -1576,6 +2041,7 @@ new class extends Component
                     @endif
                 @endif
             </div>
+            @endif
 
             <div class="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3 shadow-sm sm:p-4">
                 <div class="mb-3">
@@ -1605,8 +2071,8 @@ new class extends Component
                             >
                                 <div class="mb-1 flex items-start gap-2">
                                     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-amber-500 text-[10px] font-semibold text-amber-700">G{{ $guestIndex + 1 }}</span>
-                                        <span class="text-xs uppercase tracking-wide text-zinc-500">{{ \App\Models\Annotation::allSeverityLabels()[$finding->severity] ?? $finding->severity }}</span>
+                                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-amber-500 text-[10px] font-semibold text-amber-700">G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}</span>
+                                        <span class="text-xs text-zinc-500">{{ \App\Models\Annotation::allSeverityLabels()[$finding->severity] ?? $finding->severity }}</span>
                                         <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">{{ $finding->sourceLabel() }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
@@ -1643,7 +2109,7 @@ new class extends Component
             @if ($this->showDecisionNote() || $this->showDecisionCallout() || $this->showStatusCallout())
                 <div class="mt-auto space-y-3 border-t border-zinc-200 pt-4 pb-4 xl:pb-6">
                     @if ($this->showDecisionNote())
-                        <div class="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
+                        <div class="hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 lg:block">
                             <flux:heading size="sm" class="mb-3">Overall note (optional)</flux:heading>
                             <flux:textarea wire:model="decisionNote" rows="2" placeholder="Anything else before you approve or request changes?" />
                         </div>
@@ -1668,4 +2134,15 @@ new class extends Component
             @endif
         </aside>
     </div>
+
+    @if ($this->isOwner() && $review->isOpenForFeedback())
+        <div class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 p-3 shadow-[0_-8px_30px_-12px_rgba(24,24,27,0.25)] backdrop-blur lg:hidden">
+            <flux:textarea wire:model="decisionNote" rows="2" placeholder="Overall note (optional)…" class="mb-2" />
+            <div class="flex gap-2">
+                <flux:button variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="min-w-0 flex-1 !bg-zinc-100 hover:!bg-zinc-200/80">Changes</flux:button>
+                <flux:button variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes." class="min-w-0 flex-1 !bg-rose-600 hover:!bg-rose-700">Approve</flux:button>
+            </div>
+        </div>
+    @endif
+    @endif
 </div>
