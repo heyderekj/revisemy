@@ -531,7 +531,7 @@ class ReviseMyFlowTest extends TestCase
     public function test_home_try_token_setup_can_be_restored_and_cleared(): void
     {
         Livewire::test('home')
-            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', 'claude mcp add')
+            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', '{}', 'claude mcp add')
             ->assertSet('token', 'tok_abc')
             ->assertSet('mcpUrl', 'https://example.test/mcp')
             ->call('clearTryTokenSetup')

@@ -45,9 +45,10 @@ class TryTokenController extends Controller
             'claude_code_command' => $result['claude_code_command'],
             'chatgpt_hint' => $result['chatgpt_hint'],
             'next_steps' => [
-                'Pick your client on the homepage (ChatGPT, Claude, or Cursor) and paste the matching config.',
-                'Ask your agent to screenshot UI work and call create_review.',
-                'Open the laravel.cloud review link, mark feedback, then approve or request changes.',
+                'Pick your client on the homepage (ChatGPT, Claude, Cursor, or VS Code) and paste the matching config.',
+                'Ask your agent to capture UI work and call create_review — or use the design_checkup_loop MCP prompt.',
+                'MCP Apps hosts: mark and approve inline in chat. CLI/link hosts: open the review_url link.',
+                'Poll get_review and follow next_action until approved or a follow-up pass is needed.',
             ],
         ], 201);
     }

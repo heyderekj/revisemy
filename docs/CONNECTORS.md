@@ -6,9 +6,10 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 | Host | How |
 |------|-----|
-| **Cursor** | Paste `mcpServers` JSON into Settings → MCP (homepage tab) |
-| **Claude Code** | `claude mcp add --transport http …` (homepage copies the command) |
-| **Claude Desktop** | Same `mcpServers` JSON as Cursor |
+| **Cursor** | Paste `mcpServers` JSON into Settings → MCP — agent shares `review_url` (no inline UI) |
+| **Claude Code** | `claude mcp add --transport http …` — agent shares `review_url` (no inline UI) |
+| **Claude Desktop** | Same `mcpServers` JSON as Cursor — inline review via MCP Apps |
+| **VS Code Copilot** | Paste `servers` JSON into MCP settings (homepage tab) — inline review via MCP Apps |
 | **ChatGPT** | Remote MCP / connector with URL + Bearer, or REST `/api/reviews` |
 | **Any MCP client** | HTTP MCP at `/mcp/revisemy` |
 | **REST-only agents** | `/api/reviews` with Sanctum Bearer token |
