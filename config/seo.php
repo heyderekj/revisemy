@@ -55,6 +55,8 @@ return [
 
     'mcp_path' => '/mcp/revisemy',
 
+    'fathom_site_id' => env('FATHOM_SITE_ID', 'SQIIUMVL'),
+
     'og_image' => '/images/og.png',
 
     // Bump when public/images/og.png changes so social crawlers fetch the new card.

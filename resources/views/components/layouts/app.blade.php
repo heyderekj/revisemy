@@ -47,6 +47,12 @@
         }
         window.Flux.applyAppearance()
     </script>
+
+    @if (config('seo.fathom_site_id'))
+        <!-- Fathom - beautiful, simple website analytics -->
+        <script src="https://cdn.usefathom.com/script.js" data-site="{{ config('seo.fathom_site_id') }}" defer></script>
+        <!-- / Fathom -->
+    @endif
 </head>
 <body class="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] antialiased">
     {{ $slot }}
