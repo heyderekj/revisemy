@@ -6,17 +6,18 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 | Host | How |
 |------|-----|
-| **Cursor** | Paste `mcpServers` JSON into Settings → MCP — agent shares `review_url` (no inline UI) |
+| **ChatGPT** | Remote MCP / connector with URL + Bearer, or REST `/api/reviews` |
 | **Claude Code** | `claude mcp add --transport http …` — agent shares `review_url` (no inline UI) |
 | **Claude Desktop** | Same `mcpServers` JSON as Cursor — inline review via MCP Apps |
-| **VS Code Copilot** | Paste `servers` JSON into MCP settings (homepage tab) — inline review via MCP Apps |
-| **ChatGPT** | Remote MCP / connector with URL + Bearer, or REST `/api/reviews` |
+| **Copilot** | Paste `servers` JSON into MCP settings (homepage tab) — inline review via MCP Apps |
+| **Cursor** | Paste `mcpServers` JSON into Settings → MCP — agent shares `review_url` (no inline UI) |
+| **Grok** | Custom MCP connector at [grok.com/connectors](https://grok.com/connectors) — URL + Bearer; agent shares `review_url` |
 | **Any MCP client** | HTTP MCP at `/mcp/revisemy` |
 | **REST-only agents** | `/api/reviews` with Sanctum Bearer token |
 
 ## Inline review (MCP Apps)
 
-`create_review` and `get_review` declare a `ui://revisemy/review-app` resource ([MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)). Hosts that support the extension (Claude web/desktop, VS Code Copilot, Goose, …) render the review inline in a sandboxed iframe — the same review-page and board surfaces, without leaving the chat:
+`create_review` and `get_review` declare a `ui://revisemy/review-app` resource ([MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)). Hosts that support the extension (Claude web/desktop, Copilot, Goose, …) render the review inline in a sandboxed iframe — the same review-page and board surfaces, without leaving the chat:
 
 - **Screenshot view**: marks and second-opinion hints overlaid on the shots; click a spot or drag a box to leave a mark, tap any marker to read its note.
 - **Board view**: marks grouped Open → In progress → Resolved → Verified (mirrors `/r/{token}/board`), with verify / reopen inline.

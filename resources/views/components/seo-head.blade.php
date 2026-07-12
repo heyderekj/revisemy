@@ -9,11 +9,13 @@
 ])
 
 @php
+    use App\Support\Seo;
+
     $siteName = config('seo.name');
     $siteUrl = rtrim(config('app.url'), '/');
     $pageTitle = $title ?? $siteName;
     $pageDescription = $description ?? config('seo.description');
-    $pageOgImage = $ogImage ?? url('/images/og.png');
+    $pageOgImage = Seo::ogImageUrl($ogImage);
     $pageOgUrl = $ogUrl ?? url()->current();
     $pageCanonical = $canonical ?? $pageOgUrl;
     $keywords = implode(', ', config('seo.keywords', []));
@@ -39,8 +41,8 @@
 <meta property="og:url" content="{{ $pageOgUrl }}">
 <meta property="og:image" content="{{ $pageOgImage }}">
 <meta property="og:image:alt" content="{{ $siteName }} — {{ config('seo.tagline') }}">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:width" content="{{ config('seo.og_image_width', 1024) }}">
+<meta property="og:image:height" content="{{ config('seo.og_image_height', 537) }}">
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="{{ config('seo.twitter') }}">

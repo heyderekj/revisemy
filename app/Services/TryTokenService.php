@@ -16,7 +16,7 @@ class TryTokenService
      *     token: string,
      *     mcp_url: string,
      *     cursor_config: array<string, mixed>,
-     *     vscode_config: array<string, mixed>,
+     *     copilot_config: array<string, mixed>,
      *     claude_desktop_config: array<string, mixed>,
      *     claude_code_command: string,
      *     chatgpt_hint: string
@@ -58,7 +58,7 @@ class TryTokenService
                 'mcp_url' => $mcpUrl,
                 'cursor_config' => $cursorStyle,
                 'claude_desktop_config' => $cursorStyle,
-                'vscode_config' => [
+                'copilot_config' => [
                     'servers' => [
                         'revisemy' => [
                             'type' => 'http',
@@ -74,7 +74,7 @@ class TryTokenService
                     $mcpUrl,
                     $authHeader
                 ),
-                'chatgpt_hint' => 'Add a remote MCP connector with this URL and Authorization: Bearer <token>. Or call the REST API at /api/reviews with the same Bearer token.',
+                'chatgpt_hint' => 'Add a remote MCP connector with this URL and Authorization: Bearer <token> (ChatGPT, Grok custom connector, etc.). Or call the REST API at /api/reviews with the same Bearer token.',
             ];
         });
     }

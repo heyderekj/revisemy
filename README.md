@@ -17,14 +17,14 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 - **Agent subagent path** — `add_findings` drops suggestion / a11y / polish notes into the same review before you look.
 - **Work packets + `next_action`** — agents know whether to wait, apply marks, open the next pass, or stop.
 - **Multi-pass checkups** — `create_review` with `parent_id` for pass 2+ after you request changes.
-- **Try token, no account** — one-click token on the homepage; paste MCP config for ChatGPT, Claude, or Cursor.
+- **Try token, no account** — one-click token on the homepage; paste MCP config for ChatGPT, Claude, Copilot, Cursor, or Grok.
 - **Secret review links** — humans open `/r/{token}` without signing up.
 
 ## Try it on any project (~2 minutes)
 
 1. Open the hosted app (your `*.laravel.cloud` URL after deploy).
 2. Click **Get a try token**.
-3. Copy the MCP config for your client (ChatGPT, Claude, or Cursor).
+3. Copy the MCP config for your client (ChatGPT, Claude, Copilot, Cursor, or Grok).
 4. Ask your agent to capture the work (screenshot, URL, PDF slides, or email HTML) and call `create_review`.
 5. Open the review link, mark feedback, approve or request changes.
 6. Ask the agent to call `get_review` and follow `next_action`.

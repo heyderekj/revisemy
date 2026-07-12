@@ -14,7 +14,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 ## Product
 
 - [Homepage]({{ $siteUrl }}/): Overview, live demo mockups, and a one-click try token for MCP setup.
-- [Try with your agent]({{ $siteUrl }}/#setup): Create a try token and copy MCP config for Cursor, Claude, or ChatGPT.
+- [Try with your agent]({{ $siteUrl }}/#setup): Create a try token and copy MCP config for ChatGPT, Claude, Copilot, Cursor, or Grok.
 - [How it works]({{ $siteUrl }}/#how): Agent uploads work → human marks feedback → agent applies changes → next pass or done.
 - [Features]({{ $siteUrl }}/#features): Marks, second opinion hints, server-side capture, before/after evidence, multi-pass checkups.
 - [For agents]({{ $siteUrl }}/#agents): MCP tool summary and the `design_checkup_loop` workflow.
@@ -23,7 +23,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 
 - [MCP endpoint]({{ $mcpUrl }}): Laravel MCP server. Authenticate with `Authorization: Bearer {try_token}` from the homepage.
 - [README]({{ $github }}/blob/main/README.md): Full tool reference, REST API, deploy notes, and terminology (`marks` in UI, `pins` in JSON).
-- [Connectors]({{ $github }}/blob/main/docs/CONNECTORS.md): Cursor, Claude Desktop, Claude Code, and ChatGPT setup.
+- [Connectors]({{ $github }}/blob/main/docs/CONNECTORS.md): ChatGPT, Claude Code, Claude Desktop, Copilot, Cursor, and Grok setup.
 - [Second opinion]({{ $github }}/blob/main/docs/SECOND-OPINION.md): How checklist and optional vision hints work (suggestions only — never override human marks).
 
 ### MCP tools
@@ -35,7 +35,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 - `add_findings` — agent subagent: push suggestion/a11y/polish notes into the review
 - `request_second_opinion` — re-queue checklist (+ vision when configured)
 
-In MCP Apps-capable hosts (Claude web/desktop, VS Code Copilot, and others), `create_review` and `get_review` render the review inline as an interactive UI: the human marks regions and approves or requests changes without leaving the chat. CLI hosts (e.g. Claude Code) fall back to the `review_url` link — the loop is unchanged. The `add_mark`, `decide_review`, and `verify_mark` tools power that inline UI and are human-only; agents never call them.
+In MCP Apps-capable hosts (Claude web/desktop, Copilot, and others), `create_review` and `get_review` render the review inline as an interactive UI: the human marks regions and approves or requests changes without leaving the chat. CLI hosts (e.g. Claude Code) fall back to the `review_url` link — the loop is unchanged. The `add_mark`, `decide_review`, and `verify_mark` tools power that inline UI and are human-only; agents never call them.
 
 ### REST API (same Bearer auth)
 

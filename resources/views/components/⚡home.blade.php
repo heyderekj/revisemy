@@ -14,7 +14,7 @@ new class extends Component
 
     public ?string $claudeDesktopConfigJson = null;
 
-    public ?string $vscodeConfigJson = null;
+    public ?string $copilotConfigJson = null;
 
     public ?string $claudeCodeCommand = null;
 
@@ -48,7 +48,7 @@ new class extends Component
         $this->mcpUrl = $result['mcp_url'];
         $this->cursorConfigJson = json_encode($result['cursor_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $this->claudeDesktopConfigJson = json_encode($result['claude_desktop_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        $this->vscodeConfigJson = json_encode($result['vscode_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $this->copilotConfigJson = json_encode($result['copilot_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $this->claudeCodeCommand = $result['claude_code_command'];
 
         $this->dispatch('revisemy-try-setup-saved', payload: [
@@ -56,7 +56,7 @@ new class extends Component
             'mcpUrl' => $this->mcpUrl,
             'cursorConfigJson' => $this->cursorConfigJson,
             'claudeDesktopConfigJson' => $this->claudeDesktopConfigJson,
-            'vscodeConfigJson' => $this->vscodeConfigJson,
+            'copilotConfigJson' => $this->copilotConfigJson,
             'claudeCodeCommand' => $this->claudeCodeCommand,
         ]);
 
@@ -68,14 +68,14 @@ new class extends Component
         string $mcpUrl,
         string $cursorConfigJson,
         string $claudeDesktopConfigJson,
-        string $vscodeConfigJson,
+        string $copilotConfigJson,
         string $claudeCodeCommand,
     ): void {
         $this->token = $token;
         $this->mcpUrl = $mcpUrl;
         $this->cursorConfigJson = $cursorConfigJson;
         $this->claudeDesktopConfigJson = $claudeDesktopConfigJson;
-        $this->vscodeConfigJson = $vscodeConfigJson ?: null;
+        $this->copilotConfigJson = $copilotConfigJson ?: null;
         $this->claudeCodeCommand = $claudeCodeCommand;
         $this->error = null;
     }
@@ -86,7 +86,7 @@ new class extends Component
         $this->mcpUrl = null;
         $this->cursorConfigJson = null;
         $this->claudeDesktopConfigJson = null;
-        $this->vscodeConfigJson = null;
+        $this->copilotConfigJson = null;
         $this->claudeCodeCommand = null;
         $this->error = null;
 
@@ -204,12 +204,17 @@ new class extends Component
             <section class="rm-fade-up">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <h1 class="max-w-xl text-[clamp(2.4rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900">
-                        <span class="rm-hero-mark">Visual feedback</span>
+                        <span class="rm-hero-mark">
+                            <svg class="rm-hero-mark-frame" aria-hidden="true" focusable="false">
+                                <rect />
+                            </svg>
+                            Visual feedback
+                        </span>
                         <br>
                         <span class="sr-only">with your agent.</span>
                         <span aria-hidden="true">
                             with&nbsp;<span class="rm-agent-cycle">
-                                @foreach (['ChatGPT', 'Claude', 'Cursor'] as $i => $label)
+                                @foreach (['ChatGPT', 'Claude', 'Copilot', 'Cursor', 'Grok'] as $i => $label)
                                     <span class="rm-agent-cycle-item" style="--i: {{ $i }}">{{ $label }}.</span>
                                 @endforeach
                             </span>
@@ -1105,7 +1110,7 @@ new class extends Component
                                     d.mcpUrl ?? '',
                                     d.cursorConfigJson ?? '',
                                     d.claudeDesktopConfigJson ?? '',
-                                    d.vscodeConfigJson ?? '',
+                                    d.copilotConfigJson ?? '',
                                     d.claudeCodeCommand ?? '',
                                 );
                             }
@@ -1115,7 +1120,7 @@ new class extends Component
             >
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Try it with your agent</h2>
                 <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
-                    Choose the app you already use. Try free — no account required — and connect ChatGPT, Claude, Cursor, or VS Code.
+                    Choose the app you already use. Try free — no account required — and connect ChatGPT, Claude, Copilot, Cursor, or Grok.
                     Any MCP client can use the same URL and Bearer token; see
                     <a href="https://github.com/heyderekj/revisemy/blob/main/docs/CONNECTORS.md" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500">Connectors</a>
                     for the full host list.
@@ -1145,8 +1150,9 @@ new class extends Component
                             @foreach ([
                                 'chatgpt' => 'ChatGPT',
                                 'claude' => 'Claude',
+                                'copilot' => 'Copilot',
                                 'cursor' => 'Cursor',
-                                'vscode' => 'VS Code',
+                                'grok' => 'Grok',
                             ] as $id => $label)
                                 <button
                                     type="button"
@@ -1157,28 +1163,33 @@ new class extends Component
                             @endforeach
                         </div>
 
-                        {{-- Cursor --}}
-                        <div x-show="client === 'cursor'" x-cloak class="space-y-4">
+                        {{-- ChatGPT --}}
+                        <div x-show="client === 'chatgpt'" x-cloak class="space-y-4">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                                Cursor agents use MCP tools in the IDE. After <code class="font-mono text-[13px] text-rose-600">create_review</code>, the agent shares a
-                                <code class="font-mono text-[13px]">review_url</code> link — open it in the browser to mark feedback and approve. (No inline MCP Apps UI in Cursor.)
+                                Add ReviseMy as a <span class="font-medium text-zinc-800">remote MCP connector</span> (or Custom GPT Action for REST).
+                                When the host supports MCP Apps, the review can render inline in chat; otherwise the agent shares a <code class="font-mono text-[13px]">review_url</code> link.
                             </p>
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Open <span class="font-medium text-zinc-800">Cursor Settings → MCP</span></li>
-                                <li>Paste the config below (or merge into <code class="font-mono text-[13px]">~/.cursor/mcp.json</code>)</li>
-                                <li>Ask your agent to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                <li>In ChatGPT, add a <span class="font-medium text-zinc-800">remote MCP / connector</span> (or Custom GPT Action)</li>
+                                <li>Use the MCP URL and Bearer token below</li>
+                                <li>Ask it to run a design checkup via <code class="font-mono text-[13px] text-rose-600">create_review</code> (MCP) or <code class="font-mono text-[13px]">POST /api/reviews</code> (REST)</li>
                             </ol>
+                            <div class="rounded-xl border border-zinc-200 bg-white p-4">
+                                <p class="text-[13px] leading-relaxed text-zinc-600">
+                                    ChatGPT’s connector UI varies by plan. Copy the URL and token, then paste them into the connector’s server URL and Authorization header fields.
+                                </p>
+                            </div>
                             <div>
                                 <div class="mb-2 flex items-center justify-between">
-                                    <p class="text-sm font-medium text-zinc-700">Cursor MCP config</p>
+                                    <p class="text-sm font-medium text-zinc-700">Authorization header</p>
                                     <button
                                         type="button"
                                         class="text-sm text-rose-600 hover:text-rose-500"
                                         x-data
-                                        x-on:click="navigator.clipboard.writeText($refs.cursorConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                        x-on:click="navigator.clipboard.writeText($refs.chatgptAuth.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
                                     >Copy</button>
                                 </div>
-                                <pre x-ref="cursorConfig" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $cursorConfigJson }}</pre>
+                                <pre x-ref="chatgptAuth" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
                             </div>
                         </div>
 
@@ -1231,20 +1242,77 @@ new class extends Component
                             </div>
                         </div>
 
-                        {{-- ChatGPT --}}
-                        <div x-show="client === 'chatgpt'" x-cloak class="space-y-4">
+                        {{-- Copilot --}}
+                        <div x-show="client === 'copilot'" x-cloak class="space-y-4">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                                Add ReviseMy as a <span class="font-medium text-zinc-800">remote MCP connector</span> (or Custom GPT Action for REST).
-                                When the host supports MCP Apps, the review can render inline in chat; otherwise the agent shares a <code class="font-mono text-[13px]">review_url</code> link.
+                                Copilot supports MCP Apps — after <code class="font-mono text-[13px] text-rose-600">create_review</code>, the review renders
+                                <span class="font-medium text-zinc-800">inline in Copilot Chat</span> so you can mark feedback and approve without leaving the editor.
                             </p>
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>In ChatGPT, add a <span class="font-medium text-zinc-800">remote MCP / connector</span> (or Custom GPT Action)</li>
-                                <li>Use the MCP URL and Bearer token below</li>
-                                <li>Ask it to run a design checkup via <code class="font-mono text-[13px] text-rose-600">create_review</code> (MCP) or <code class="font-mono text-[13px]">POST /api/reviews</code> (REST)</li>
+                                <li>Open <span class="font-medium text-zinc-800">Copilot → MCP</span> (user or workspace <code class="font-mono text-[13px]">mcp.json</code>)</li>
+                                <li>Paste or merge the config below</li>
+                                <li>Ask Copilot to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                            </ol>
+                            @if ($copilotConfigJson)
+                                <div>
+                                    <div class="mb-2 flex items-center justify-between">
+                                        <p class="text-sm font-medium text-zinc-700">Copilot MCP config</p>
+                                        <button
+                                            type="button"
+                                            class="text-sm text-rose-600 hover:text-rose-500"
+                                            x-data
+                                            x-on:click="navigator.clipboard.writeText($refs.copilotConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                        >Copy</button>
+                                    </div>
+                                    <pre x-ref="copilotConfig" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $copilotConfigJson }}</pre>
+                                </div>
+                            @else
+                                <p class="text-sm text-zinc-500">
+                                    Start over above to generate a fresh try token with Copilot config (older saved sessions may not include it).
+                                </p>
+                            @endif
+                        </div>
+
+                        {{-- Cursor --}}
+                        <div x-show="client === 'cursor'" x-cloak class="space-y-4">
+                            <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                                Cursor agents use MCP tools in the IDE. After <code class="font-mono text-[13px] text-rose-600">create_review</code>, the agent shares a
+                                <code class="font-mono text-[13px]">review_url</code> link — open it in the browser to mark feedback and approve. (No inline MCP Apps UI in Cursor.)
+                            </p>
+                            <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
+                                <li>Open <span class="font-medium text-zinc-800">Cursor Settings → MCP</span></li>
+                                <li>Paste the config below (or merge into <code class="font-mono text-[13px]">~/.cursor/mcp.json</code>)</li>
+                                <li>Ask your agent to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                            </ol>
+                            <div>
+                                <div class="mb-2 flex items-center justify-between">
+                                    <p class="text-sm font-medium text-zinc-700">Cursor MCP config</p>
+                                    <button
+                                        type="button"
+                                        class="text-sm text-rose-600 hover:text-rose-500"
+                                        x-data
+                                        x-on:click="navigator.clipboard.writeText($refs.cursorConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                    >Copy</button>
+                                </div>
+                                <pre x-ref="cursorConfig" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $cursorConfigJson }}</pre>
+                            </div>
+                        </div>
+
+                        {{-- Grok --}}
+                        <div x-show="client === 'grok'" x-cloak class="space-y-4">
+                            <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                                Add ReviseMy as a <span class="font-medium text-zinc-800">custom MCP connector</span> on Grok.
+                                After <code class="font-mono text-[13px] text-rose-600">create_review</code>, open the <code class="font-mono text-[13px]">review_url</code> link to mark feedback and approve (no MCP Apps inline UI assumed yet).
+                            </p>
+                            <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
+                                <li>Go to <a href="https://grok.com/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500" target="_blank" rel="noreferrer">grok.com/connectors</a></li>
+                                <li>Click <span class="font-medium text-zinc-800">New Connector → Custom</span></li>
+                                <li>Paste the MCP URL below and authorize with the Bearer token</li>
+                                <li>Ask Grok to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
                             </ol>
                             <div class="rounded-xl border border-zinc-200 bg-white p-4">
                                 <p class="text-[13px] leading-relaxed text-zinc-600">
-                                    ChatGPT’s connector UI varies by plan. Copy the URL and token, then paste them into the connector’s server URL and Authorization header fields.
+                                    The MCP server must be reachable on the public internet (Laravel Cloud is fine). Copy the URL and token into the custom connector’s server URL and Authorization fields.
                                 </p>
                             </div>
                             <div>
@@ -1254,42 +1322,11 @@ new class extends Component
                                         type="button"
                                         class="text-sm text-rose-600 hover:text-rose-500"
                                         x-data
-                                        x-on:click="navigator.clipboard.writeText($refs.chatgptAuth.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                        x-on:click="navigator.clipboard.writeText($refs.grokAuth.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
                                     >Copy</button>
                                 </div>
-                                <pre x-ref="chatgptAuth" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
+                                <pre x-ref="grokAuth" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
                             </div>
-                        </div>
-
-                        {{-- VS Code --}}
-                        <div x-show="client === 'vscode'" x-cloak class="space-y-4">
-                            <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                                VS Code Copilot supports MCP Apps — after <code class="font-mono text-[13px] text-rose-600">create_review</code>, the review renders
-                                <span class="font-medium text-zinc-800">inline in Copilot Chat</span> so you can mark feedback and approve without leaving the editor.
-                            </p>
-                            <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Open <span class="font-medium text-zinc-800">VS Code → MCP</span> (user or workspace <code class="font-mono text-[13px]">mcp.json</code>)</li>
-                                <li>Paste or merge the config below</li>
-                                <li>Ask Copilot to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
-                            </ol>
-                            @if ($vscodeConfigJson)
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between">
-                                        <p class="text-sm font-medium text-zinc-700">VS Code MCP config</p>
-                                        <button
-                                            type="button"
-                                            class="text-sm text-rose-600 hover:text-rose-500"
-                                            x-data
-                                            x-on:click="navigator.clipboard.writeText($refs.vscodeConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                        >Copy</button>
-                                    </div>
-                                    <pre x-ref="vscodeConfig" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $vscodeConfigJson }}</pre>
-                                </div>
-                            @else
-                                <p class="text-sm text-zinc-500">
-                                    Start over above to generate a fresh try token with VS Code config (older saved sessions may not include it).
-                                </p>
-                            @endif
                         </div>
 
                         <div class="grid gap-3 sm:grid-cols-2">
@@ -1324,10 +1361,10 @@ new class extends Component
                             <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                 <li>Ask your agent to capture the UI and call <code class="font-mono text-[13px] text-rose-600">create_review</code> (or try the MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code>)</li>
                                 <li>
-                                    <span class="font-medium text-zinc-800">MCP Apps hosts</span> (Claude Desktop, claude.ai, VS Code Copilot): mark and approve inline in chat
+                                    <span class="font-medium text-zinc-800">MCP Apps hosts</span> (Claude Desktop, claude.ai, Copilot): mark and approve inline in chat
                                 </li>
                                 <li>
-                                    <span class="font-medium text-zinc-800">CLI / link hosts</span> (Cursor, Claude Code): open the <code class="font-mono text-[13px]">review_url</code> the agent returns
+                                    <span class="font-medium text-zinc-800">CLI / link hosts</span> (Claude Code, Cursor, Grok): open the <code class="font-mono text-[13px]">review_url</code> the agent returns
                                 </li>
                                 <li>Your agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code> and follows <code class="font-mono text-[13px]">next_action</code> until approved or a follow-up pass is needed</li>
                             </ol>

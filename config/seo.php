@@ -15,9 +15,11 @@ return [
         'Laravel MCP',
         'MCP server',
         'AI agents',
-        'Cursor',
-        'Claude',
         'ChatGPT',
+        'Claude',
+        'Copilot',
+        'Cursor',
+        'Grok',
         'UI review',
         'screenshot review',
         'design critique',
@@ -52,5 +54,14 @@ return [
     ],
 
     'mcp_path' => '/mcp/revisemy',
+
+    'og_image' => '/images/og.png',
+
+    // Bump when public/images/og.png changes so social crawlers fetch the new card.
+    'og_image_version' => '2',
+
+    'og_image_width' => 1024,
+
+    'og_image_height' => 537,
 
 ];

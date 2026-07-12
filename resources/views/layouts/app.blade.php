@@ -4,9 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @php
+        use App\Support\Seo;
+
         $pageTitle = $title ?? 'ReviseMy';
         $pageDescription = $description ?? 'Visual feedback. With your agent.';
-        $ogImage = $ogImage ?? url('/images/og.png');
+        $ogImage = Seo::ogImageUrl($ogImage ?? null);
         $ogUrl = $ogUrl ?? url()->current();
     @endphp
     <title>{{ $pageTitle }}</title>
@@ -18,8 +20,8 @@
     <meta property="og:description" content="{{ $pageDescription }}">
     <meta property="og:url" content="{{ $ogUrl }}">
     <meta property="og:image" content="{{ $ogImage }}">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    <meta property="og:image:width" content="{{ config('seo.og_image_width', 1024) }}">
+    <meta property="og:image:height" content="{{ config('seo.og_image_height', 537) }}">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $pageTitle }}">
