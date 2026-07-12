@@ -78,9 +78,9 @@
 
     .rm-hero-mark {
         display: inline-block;
-        border: 2px dashed rgb(244 63 94 / 0.85);
+        border: 2px dashed rgb(56 189 248 / 0.8);
         border-radius: 0.375rem;
-        background: rgb(244 63 94 / 0.1);
+        background: rgb(56 189 248 / 0.1);
         padding: 0.02em 0.22em 0.06em;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
