@@ -58,10 +58,10 @@ return [
     'og_image' => '/images/og.png',
 
     // Bump when public/images/og.png changes so social crawlers fetch the new card.
-    'og_image_version' => '2',
+    'og_image_version' => '3',
 
-    'og_image_width' => 1024,
+    'og_image_width' => 1200,
 
-    'og_image_height' => 537,
+    'og_image_height' => 630,
 
 ];

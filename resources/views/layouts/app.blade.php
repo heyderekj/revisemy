@@ -20,8 +20,8 @@
     <meta property="og:description" content="{{ $pageDescription }}">
     <meta property="og:url" content="{{ $ogUrl }}">
     <meta property="og:image" content="{{ $ogImage }}">
-    <meta property="og:image:width" content="{{ config('seo.og_image_width', 1024) }}">
-    <meta property="og:image:height" content="{{ config('seo.og_image_height', 537) }}">
+    <meta property="og:image:width" content="{{ config('seo.og_image_width', 1200) }}">
+    <meta property="og:image:height" content="{{ config('seo.og_image_height', 630) }}">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $pageTitle }}">
