@@ -335,20 +335,24 @@ new class extends Component
 
     <header class="shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
         <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
-            <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                <x-revisemy-logo size="sm" />
-            </a>
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5">
+                <div class="flex shrink-0 items-center gap-3">
+                    <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                        <x-revisemy-logo size="sm" />
+                    </a>
+                    <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Board</h1>
+                </div>
 
-            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Board</h1>
-                <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
-                    Pass {{ $review->pass }}
-                </span>
-                <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
-                    {{ $review->typeLabel() }}
-                </span>
-                <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
-                <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
+                <div class="flex min-w-0 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:basis-auto sm:flex-1">
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                        Pass {{ $review->pass }}
+                    </span>
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
+                        {{ $review->typeLabel() }}
+                    </span>
+                    <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
+                    <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
+                </div>
             </div>
 
             @if ($total > 0)

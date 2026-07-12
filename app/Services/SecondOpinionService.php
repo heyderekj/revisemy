@@ -9,6 +9,7 @@ use App\Models\Screenshot;
 use App\Services\Vision\AnthropicVisionProvider;
 use App\Services\Vision\OpenAiVisionProvider;
 use App\Services\Vision\VisionProvider;
+use App\Support\DomDigest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -459,7 +460,7 @@ Taste lens (marketing/content website):
 - If this looks like a narrow/mobile capture, check tap targets and horizontal overflow.
 LENS,
             Review::TYPE_PRESENTATION => <<<'LENS'
-Taste lens (presentation slide):
+Taste lens (slide):
 - One idea per slide; the title should state the point, not just the topic.
 - Text density: flag walls of text (~6 lines / 6 words per line is a good ceiling).
 - Readability at distance: small or thin low-contrast type dies on projectors.
@@ -485,6 +486,22 @@ Taste lens (Emil Kowalski design-engineering / emilkowalski/skills — apply whe
 LENS,
         };
 
+        $domSection = '';
+        $domRule = '';
+
+        if ($dom = $review?->domHtml()) {
+            $cleaned = DomDigest::clean($dom);
+            $domRule = "\n- A DOM snapshot is provided: quote exact copy and reference concrete elements (tag/class/text) in finding bodies.";
+            $domSection = <<<DOM
+
+
+Rendered DOM snapshot (cleaned/truncated) captured alongside the screenshot — use it to reference concrete elements, selectors, and exact copy:
+```html
+{$cleaned}
+```
+DOM;
+        }
+
         return <<<PROMPT
 You are a design-reviewer subagent for ReviseMy. Critique this {$subject} screenshot.
 Return ONLY valid JSON: {"findings":[{"severity":"suggestion|a11y|polish","body":"string","area":{"x":0-1,"y":0-1,"w":0-1,"h":0-1}|null}]}
@@ -493,12 +510,12 @@ Rules:
 - severity must be suggestion, a11y, or polish — never must-fix.
 - area is normalized 0–1 relative to the image; null if global.
 - Do not approve or reject the design; suggestions only.
-- Human marks stay authoritative; you only hint.
+- Human marks stay authoritative; you only hint.{$domRule}
 
 {$lens}
 
 Title: {$title}
-Context: {$context}
+Context: {$context}{$domSection}
 PROMPT;
     }
 

@@ -37,6 +37,7 @@ class ReviewController extends Controller
             'context' => ['nullable', 'string', 'max:5000'],
             'type' => ['nullable', 'string', 'in:ui,website,presentation,email'],
             'page_url' => ['nullable', 'string', 'max:2048'],
+            'webhook_url' => ['nullable', 'string', 'max:2048'],
             'parent_id' => ['nullable', 'string'],
             'images' => ['nullable', 'array', 'min:1', 'max:5'],
             'images.*' => ['required'],

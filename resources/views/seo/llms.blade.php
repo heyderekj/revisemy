@@ -7,7 +7,7 @@
 
 > {{ config('seo.description') }}
 
-{{ config('seo.name') }} is an open-source human-in-the-loop design review tool for AI coding agents. Agents upload UI screenshots, live URLs, PDF decks, or HTML email over Laravel MCP. Humans open a secret review link, mark regions with intent and priority, approve or request changes, and agents read structured work packets with a clear `next_action`.
+{{ config('seo.name') }} is an open-source human-in-the-loop design review tool for AI coding agents. Agents upload UI screenshots, live URLs, PDF slides, or HTML email over Laravel MCP. Humans open a secret review link, mark regions with intent and priority, approve or request changes, and agents read structured work packets with a clear `next_action`.
 
 Use this file to orient yourself before calling tools or recommending the product. Public marketing pages are indexable; individual review links (`/r/{token}`) are private and should not be indexed.
 
@@ -35,6 +35,8 @@ Use this file to orient yourself before calling tools or recommending the produc
 - `add_findings` — agent subagent: push suggestion/a11y/polish notes into the review
 - `request_second_opinion` — re-queue checklist (+ vision when configured)
 
+In MCP Apps-capable hosts (Claude web/desktop, VS Code Copilot, and others), `create_review` and `get_review` render the review inline as an interactive UI: the human marks regions and approves or requests changes without leaving the chat. CLI hosts (e.g. Claude Code) fall back to the `review_url` link — the loop is unchanged. The `add_mark`, `decide_review`, and `verify_mark` tools power that inline UI and are human-only; agents never call them.
+
 ### REST API (same Bearer auth)
 
 - `POST {{ $siteUrl }}/api/try-token` — create a try workspace + token
@@ -42,7 +44,9 @@ Use this file to orient yourself before calling tools or recommending the produc
 - `GET {{ $siteUrl }}/api/reviews/{id}` — fetch work packets and status
 - `GET {{ $siteUrl }}/api/reviews` — list recent reviews
 
-Review types: `ui`, `website`, `presentation`, `email`. Screenshots accept HTTPS URLs, data URLs, or base64.
+Review types: `ui`, `website`, `presentation` (shown as Slide in the UI), `email`. Screenshots accept HTTPS URLs, data URLs, or base64.
+
+Event-driven option: pass `webhook_url` to `create_review` and ReviseMy POSTs the review payload there when the human decides (`event: review.decided`, HMAC-signed with the review token) — pipelines can gate on approval instead of polling `get_review`.
 
 ## Instructions
 

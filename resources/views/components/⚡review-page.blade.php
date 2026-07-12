@@ -1,11 +1,11 @@
 <?php
 
-use App\Events\ReviewDecided;
 use App\Models\Annotation;
 use App\Models\Finding;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Services\MarkLifecycleService;
+use App\Services\ReviewService;
 use App\Services\SecondOpinionService;
 use App\Support\FeedbackText;
 use Livewire\Attributes\Locked;
@@ -228,16 +228,14 @@ new class extends Component
         }
 
         if ($this->isOwner()) {
-            $number = $this->review->nextMarkNumber();
-
-            $screenshot->annotations()->create([
-                'x' => $this->pendingX,
-                'y' => $this->pendingY,
-                'area' => $area,
-                'severity' => $this->draftSeverity,
-                'body' => $this->draftBody,
-                'number' => $number,
-            ]);
+            app(MarkLifecycleService::class)->createMark(
+                $screenshot,
+                $this->pendingX,
+                $this->pendingY,
+                $area,
+                $this->draftSeverity,
+                $this->draftBody,
+            );
         } else {
             $screenshot->findings()->create([
                 'source' => Finding::SOURCE_GUEST,
@@ -413,7 +411,6 @@ new class extends Component
         }
 
         $screenshot = $finding->screenshot;
-        $number = $this->review->nextMarkNumber();
         $area = is_array($finding->area) ? $finding->area : null;
         $hasRegion = is_array($area)
             && (float) ($area['w'] ?? 0) >= 0.01
@@ -426,19 +423,19 @@ new class extends Component
             ? (float) $finding->y
             : ($hasRegion ? (float) $area['y'] + ((float) $area['h'] / 2) : 0.5);
 
-        $pin = $screenshot->annotations()->create([
-            'x' => max(0, min(1, $x)),
-            'y' => max(0, min(1, $y)),
-            'area' => $hasRegion ? [
+        $pin = app(MarkLifecycleService::class)->createMark(
+            $screenshot,
+            (float) $x,
+            (float) $y,
+            $hasRegion ? [
                 'x' => (float) $area['x'],
                 'y' => (float) $area['y'],
                 'w' => (float) $area['w'],
                 'h' => (float) $area['h'],
             ] : null,
-            'severity' => $finding->pinSeverity(),
-            'body' => $finding->body,
-            'number' => $number,
-        ]);
+            $finding->pinSeverity(),
+            $finding->body,
+        );
 
         $finding->update([
             'status' => Finding::STATUS_ACCEPTED,
@@ -677,23 +674,7 @@ new class extends Component
             'decisionNote' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $this->review->update([
-            'status' => $status,
-            'decision_note' => $this->decisionNote ?: null,
-            'decision_at' => now(),
-        ]);
-
-        // Approving accepts the agent's resolutions on this pass and the one it built on.
-        if ($status === Review::STATUS_APPROVED) {
-            $lifecycle = app(MarkLifecycleService::class);
-            $lifecycle->verifyResolvedForReview($this->review);
-
-            if ($this->review->parent) {
-                $lifecycle->verifyResolvedForReview($this->review->parent);
-            }
-        }
-
-        ReviewDecided::dispatch($this->review);
+        app(ReviewService::class)->decide($this->review, $status, $this->decisionNote ?: null);
 
         $this->loadReview();
     }
@@ -737,80 +718,101 @@ new class extends Component
 >
     <header class="relative z-40 shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
         <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
-            <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                <x-revisemy-logo size="sm" />
-            </a>
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5">
+                <div class="flex shrink-0 items-center gap-3">
+                    <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                        <x-revisemy-logo size="sm" />
+                    </a>
+                    <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Review</h1>
+                </div>
 
-            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Review</h1>
-                <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
-                    Pass {{ $review->pass }}
-                </span>
-                <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
-                    {{ $review->typeLabel() }}
-                </span>
-                @if ($review->effectiveStatus() === 'changes_requested')
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Changes requested</span>
-                @elseif ($review->effectiveStatus() === 'approved')
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Approved</span>
-                @elseif ($review->effectiveStatus() === 'expired')
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800">Expired</span>
-                @endif
-                <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
-                @if ($this->isOwner() && $review->isOpenForFeedback())
-                    <div class="flex min-w-0 flex-1 items-center gap-1" wire:key="title-field">
-                        @if ($editingTitle)
-                            <input
-                                type="text"
-                                wire:model="titleDraft"
-                                maxlength="200"
-                                class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-zinc-800 outline-none ring-0 placeholder:text-zinc-400"
-                                placeholder="Review title"
-                                x-data
-                                x-init="$el.focus(); $el.select()"
-                                x-on:keydown.enter.prevent="$wire.saveTitle()"
-                                x-on:keydown.escape.prevent="$wire.cancelEditTitle()"
-                                x-on:blur="$wire.blurSaveTitle()"
-                                aria-label="Review title"
-                            />
-                        @else
-                            <button
-                                type="button"
-                                wire:click="startEditTitle"
-                                class="min-w-0 truncate text-left text-sm text-zinc-500 transition hover:text-zinc-800"
-                                title="Click to edit title"
-                            >
-                                {{ $review->title }}
-                            </button>
-                        @endif
-                        <div class="flex w-14 shrink-0 items-center justify-end gap-0.5">
+                <div class="flex min-w-0 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:basis-auto sm:flex-1">
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                        Pass {{ $review->pass }}
+                    </span>
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
+                        {{ $review->typeLabel() }}
+                    </span>
+                    @php($sourceKind = $review->sourceKind())
+                    @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
+                        <span
+                            class="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
+                            title="Snapshot of {{ $review->page_url }} captured {{ $review->capturedAt()?->format('M j, Y g:ia') }}"
+                        >
+                            <flux:icon.link variant="micro" class="size-3 text-zinc-400" />
+                            <span class="max-w-40 truncate">{{ $review->sourceDomain() }}</span>
+                            @if ($review->capturedAt())
+                                <span class="font-normal text-zinc-400">· captured {{ $review->capturedAt()->format('M j') }}</span>
+                            @endif
+                        </span>
+                    @else
+                        <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+                            {{ $review->sourceKindLabel() }}
+                        </span>
+                    @endif
+                    @if ($review->effectiveStatus() === 'changes_requested')
+                        <span class="inline-flex shrink-0 items-center rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Changes requested</span>
+                    @elseif ($review->effectiveStatus() === 'approved')
+                        <span class="inline-flex shrink-0 items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Approved</span>
+                    @elseif ($review->effectiveStatus() === 'expired')
+                        <span class="inline-flex shrink-0 items-center rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800">Expired</span>
+                    @endif
+                    <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
+                    @if ($this->isOwner() && $review->isOpenForFeedback())
+                        <div class="flex min-w-0 flex-1 items-center gap-1" wire:key="title-field">
                             @if ($editingTitle)
+                                <input
+                                    type="text"
+                                    wire:model="titleDraft"
+                                    maxlength="200"
+                                    class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-zinc-800 outline-none ring-0 placeholder:text-zinc-400"
+                                    placeholder="Review title"
+                                    x-data
+                                    x-init="$el.focus(); $el.select()"
+                                    x-on:keydown.enter.prevent="$wire.saveTitle()"
+                                    x-on:keydown.escape.prevent="$wire.cancelEditTitle()"
+                                    x-on:blur="$wire.blurSaveTitle()"
+                                    aria-label="Review title"
+                                />
+                            @else
                                 <button
                                     type="button"
-                                    wire:click="saveTitle"
-                                    x-on:mousedown.prevent
-                                    class="inline-flex size-6 items-center justify-center rounded-md text-rose-600 transition hover:bg-rose-50"
-                                    aria-label="Save title"
-                                    title="Save"
+                                    wire:click="startEditTitle"
+                                    class="min-w-0 truncate text-left text-sm text-zinc-500 transition hover:text-zinc-800"
+                                    title="Click to edit title"
                                 >
-                                    <flux:icon.check variant="micro" class="size-3.5" />
-                                </button>
-                                <button
-                                    type="button"
-                                    wire:click="cancelEditTitle"
-                                    x-on:mousedown.prevent
-                                    class="inline-flex size-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-                                    aria-label="Cancel"
-                                    title="Cancel"
-                                >
-                                    <flux:icon.x-mark variant="micro" class="size-3.5" />
+                                    {{ $review->title }}
                                 </button>
                             @endif
+                            <div class="flex w-14 shrink-0 items-center justify-end gap-0.5">
+                                @if ($editingTitle)
+                                    <button
+                                        type="button"
+                                        wire:click="saveTitle"
+                                        x-on:mousedown.prevent
+                                        class="inline-flex size-6 items-center justify-center rounded-md text-rose-600 transition hover:bg-rose-50"
+                                        aria-label="Save title"
+                                        title="Save"
+                                    >
+                                        <flux:icon.check variant="micro" class="size-3.5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        wire:click="cancelEditTitle"
+                                        x-on:mousedown.prevent
+                                        class="inline-flex size-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                                        aria-label="Cancel"
+                                        title="Cancel"
+                                    >
+                                        <flux:icon.x-mark variant="micro" class="size-3.5" />
+                                    </button>
+                                @endif
+                            </div>
                         </div>
-                    </div>
-                @else
-                    <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
-                @endif
+                    @else
+                        <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
+                    @endif
+                </div>
             </div>
 
             @if ($mode === 'guest')
@@ -1112,30 +1114,49 @@ new class extends Component
                 </div>
             @endif
 
+            @php($shot = $this->activeScreenshot)
+
+            <div @class(['sm:flex sm:items-start sm:gap-3' => $review->screenshots->count() > 1])>
+
             @if ($review->screenshots->count() > 1)
-                <div class="flex items-center gap-1.5" role="tablist" aria-label="Screenshots">
+                <div
+                    class="mb-2 flex gap-2 overflow-x-auto p-1 sm:mb-0 sm:max-h-[min(70svh,560px)] sm:w-24 sm:shrink-0 sm:flex-col sm:overflow-y-auto sm:overflow-x-visible"
+                    role="tablist"
+                    aria-label="Screenshots"
+                    aria-orientation="vertical"
+                >
                     @foreach ($review->screenshots as $index => $shotOption)
                         <button
                             type="button"
                             role="tab"
+                            wire:key="rail-{{ $shotOption->id }}"
                             wire:click="selectScreenshot({{ $index }})"
                             x-on:click="$store.rmFocus && ($store.rmFocus.finding = null, $store.rmFocus.mark = null)"
-                            aria-label="Shot {{ $index + 1 }}"
+                            aria-label="{{ $shotOption->railLabel($index) }}"
                             aria-selected="{{ $activeScreenshotIndex === $index ? 'true' : 'false' }}"
-                            title="Shot {{ $index + 1 }}"
+                            title="{{ $shotOption->railLabel($index) }}"
                             @class([
-                                'inline-flex size-7 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 active:scale-[0.96]',
-                                'bg-zinc-800 text-white shadow-sm' => $activeScreenshotIndex === $index,
-                                'bg-white text-zinc-500 ring-1 ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-700 hover:ring-zinc-300' => $activeScreenshotIndex !== $index,
+                                'group relative w-16 shrink-0 overflow-hidden rounded-xl transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 active:scale-[0.97] sm:w-full',
+                                'shadow-sm ring-2 ring-rose-500 ring-offset-2' => $activeScreenshotIndex === $index,
+                                'opacity-80 ring-1 ring-zinc-200 hover:opacity-100 hover:ring-zinc-300' => $activeScreenshotIndex !== $index,
                             ])
                         >
-                            {{ $index + 1 }}
+                            <img
+                                src="{{ $shotOption->thumbUrl() }}"
+                                alt=""
+                                loading="lazy"
+                                draggable="false"
+                                class="pointer-events-none block aspect-[4/5] w-full bg-zinc-100 object-cover object-top"
+                            />
+                            <span class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-900/70 to-transparent px-1.5 pb-1 pt-4 text-left text-[10px] font-medium text-white">
+                                {{ $shotOption->railLabel($index) }}
+                            </span>
                         </button>
                     @endforeach
                 </div>
             @endif
 
-            @php($shot = $this->activeScreenshot)
+            <div class="min-w-0 flex-1 space-y-3 sm:space-y-4">
 
             @if ($shot)
                 <div
@@ -1532,6 +1553,9 @@ new class extends Component
             @else
                 <flux:callout variant="warning">No screenshots on this review yet.</flux:callout>
             @endif
+
+            </div>
+            </div>
         </section>
 
         @php($stripMarks = $shot?->annotations ?? collect())

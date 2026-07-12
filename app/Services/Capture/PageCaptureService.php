@@ -2,6 +2,7 @@
 
 namespace App\Services\Capture;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class PageCaptureService
@@ -29,6 +30,22 @@ class PageCaptureService
     public function captureHtml(string $html): array
     {
         return $this->requireDriver()->captureHtml($html, [[600, 800, 'email-600']]);
+    }
+
+    /**
+     * Best-effort rendered-DOM snapshot for AI context; null when the driver
+     * is missing, unconfigured for content, or the fetch fails. Never blocks
+     * review creation.
+     */
+    public function captureDom(string $url): ?string
+    {
+        try {
+            return $this->driver()?->captureDom($url);
+        } catch (\Throwable $e) {
+            Log::warning('DOM capture failed', ['url' => $url, 'error' => $e->getMessage()]);
+
+            return null;
+        }
     }
 
     /**

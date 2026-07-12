@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Screenshot extends Model
 {
@@ -24,6 +25,7 @@ class Screenshot extends Model
     protected $fillable = [
         'review_id',
         'path',
+        'thumb_path',
         'disk',
         'width',
         'height',
@@ -59,6 +61,36 @@ class Screenshot extends Model
     public function url(): string
     {
         return Storage::disk($this->disk)->url($this->path);
+    }
+
+    /**
+     * Small rail thumbnail; screenshots stored before thumbnails existed
+     * fall back to the full image (the rail crops it client-side).
+     */
+    public function thumbUrl(): string
+    {
+        return $this->thumb_path
+            ? Storage::disk($this->disk)->url($this->thumb_path)
+            : $this->url();
+    }
+
+    /**
+     * Short label for the thumbnail rail, derived from capture metadata:
+     * viewport for URL/HTML captures, page number for PDFs, else the index.
+     */
+    public function railLabel(int $index): string
+    {
+        $meta = $this->meta ?? [];
+
+        if (is_string($viewport = $meta['viewport'] ?? null) && $viewport !== '') {
+            return Str::of($viewport)->before('-')->ucfirst()->toString();
+        }
+
+        if (is_numeric($page = $meta['page'] ?? null)) {
+            return 'Page '.$page;
+        }
+
+        return 'Shot '.($index + 1);
     }
 
     public function secondOpinionIsPending(): bool

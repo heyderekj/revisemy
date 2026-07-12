@@ -1,48 +1,7 @@
 <?php
 
-use App\Support\PostgresHost;
 use Illuminate\Support\Str;
 use Pdo\Mysql;
-
-$dbConnection = (string) env('DB_CONNECTION', 'sqlite');
-$dbHost = PostgresHost::sanitizeHost((string) env('DB_HOST', '127.0.0.1'));
-$dbUrl = (string) env('DB_URL', '');
-$dbMigrateUrl = env('DB_MIGRATE_URL');
-$dbPort = (string) env('DB_PORT', '5432');
-$dbDatabase = (string) env('DB_DATABASE', 'laravel');
-$dbUsername = (string) env('DB_USERNAME', 'root');
-$dbPassword = (string) env('DB_PASSWORD', '');
-$dbSslMode = env('DB_SSLMODE', PostgresHost::defaultSslMode($dbHost, $dbUrl));
-$dbConnectTimeout = (int) env('DB_CONNECT_TIMEOUT', 60);
-$isServerless = PostgresHost::isServerlessHost($dbHost) || PostgresHost::isServerlessHost($dbUrl);
-$neonEndpointId = $isServerless ? PostgresHost::endpointId($dbHost) : null;
-// Neon recommends embedding the endpoint id in the password for Laravel/PDO clients
-// without SNI: https://neon.tech/docs/connect/connection-errors#d-specify-the-endpoint-id-in-the-password-field
-$dbPasswordForServerless = PostgresHost::passwordForServerless($dbPassword, $neonEndpointId);
-$useMigrateConnection = PostgresHost::shouldUseMigrateConnection($dbConnection, $dbHost, $dbUrl, $dbMigrateUrl);
-
-$migrateUrl = $dbMigrateUrl;
-
-if ($migrateUrl !== null && $migrateUrl !== '' && $isServerless) {
-    $migrateUrl = PostgresHost::ensureUrlParams($migrateUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
-}
-
-$runtimePgsqlUrl = $dbUrl;
-
-if ($runtimePgsqlUrl !== '' && $isServerless) {
-    $runtimePgsqlUrl = PostgresHost::ensureUrlParams($runtimePgsqlUrl, $dbConnectTimeout, is_string($dbSslMode) ? $dbSslMode : 'require');
-}
-
-$pgsqlConnectionUrl = null;
-if ($isServerless && PostgresHost::isServerlessHost($dbHost)) {
-    $pgsqlConnectionUrl = null;
-} elseif ($runtimePgsqlUrl !== '') {
-    $pgsqlConnectionUrl = $runtimePgsqlUrl;
-} else {
-    $pgsqlConnectionUrl = env('DB_URL') ?: null;
-}
-
-$pgsqlMigrateConnectionUrl = ($dbMigrateUrl !== null && $dbMigrateUrl !== '') ? $migrateUrl : null;
 
 return [
 
@@ -58,7 +17,7 @@ return [
     |
     */
 
-    'default' => $dbConnection,
+    'default' => env('DB_CONNECTION', 'sqlite'),
 
     /*
     |--------------------------------------------------------------------------
@@ -127,36 +86,17 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => $pgsqlConnectionUrl,
-            'host' => $dbHost,
-            'port' => $dbPort,
-            'database' => $dbDatabase,
-            'username' => $dbUsername,
-            'password' => $dbPasswordForServerless,
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => $dbSslMode,
-            'connect_timeout' => $isServerless ? $dbConnectTimeout : null,
-        ],
-
-        // Neon / Laravel Cloud Serverless Postgres: migrations use the direct host
-        // (no -pooler) with a longer connect_timeout for cold-start wake-ups.
-        'pgsql_migrate' => [
-            'driver' => 'pgsql',
-            'url' => $pgsqlMigrateConnectionUrl,
-            'host' => PostgresHost::directHost($dbHost),
-            'port' => $dbPort,
-            'database' => $dbDatabase,
-            'username' => $dbUsername,
-            'password' => $dbPasswordForServerless,
-            'charset' => env('DB_CHARSET', 'utf8'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'search_path' => 'public',
-            'sslmode' => is_string($dbSslMode) ? $dbSslMode : 'require',
-            'connect_timeout' => $dbConnectTimeout,
+            'sslmode' => 'prefer',
         ],
 
         'sqlsrv' => [
@@ -190,7 +130,6 @@ return [
     'migrations' => [
         'table' => 'migrations',
         'update_date_on_publish' => true,
-        'connection' => $useMigrateConnection ? 'pgsql_migrate' : null,
     ],
 
     /*

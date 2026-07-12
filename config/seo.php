@@ -6,7 +6,7 @@ return [
 
     'tagline' => 'Visual feedback. With your agent.',
 
-    'description' => 'Human-in-the-loop design review for AI agents. Capture UI, websites, presentations, or email from screenshots, URLs, PDFs, or HTML; mark what matters; track fixes; and send structured next steps back over Laravel MCP.',
+    'description' => 'Human-in-the-loop design review for AI agents. Capture UI, websites, slides, or email from screenshots, URLs, PDFs, or HTML; mark what matters; track fixes; and send structured next steps back over Laravel MCP.',
 
     'keywords' => [
         'design review',
@@ -43,8 +43,8 @@ return [
     'features' => [
         'Rectangle and point marks on screenshots with must-fix, tweak, nit, question, and keep intents',
         'Laravel MCP tools: create_review, get_review, list_reviews, add_screenshot, add_findings, request_second_opinion',
-        'Review types for UI, websites, presentations, and email with tailored checklists',
-        'Server-side capture from live URLs, PDF decks, and raw HTML',
+        'Review types for UI, websites, slides, and email with tailored checklists',
+        'Server-side capture from live URLs, PDF slides, and raw HTML',
         'Second opinion hints from a design checklist with optional vision models',
         'Before/after evidence when agents resolve marks',
         'Multi-pass checkups with parent reviews and structured work packets',

@@ -60,12 +60,39 @@ return [
     'capture' => [
         'driver' => env('REVISEMY_CAPTURE_DRIVER'),
         'endpoint' => env('REVISEMY_CAPTURE_ENDPOINT'),
+        // Browserless /content-compatible endpoint: POST {url} in, rendered
+        // HTML out. Optional — enables DOM snapshots as hidden AI context.
+        'content_endpoint' => env('REVISEMY_CAPTURE_CONTENT_ENDPOINT'),
         'api_key' => env('REVISEMY_CAPTURE_KEY'),
         'timeout' => (int) env('REVISEMY_CAPTURE_TIMEOUT', 30),
+        'chrome_path' => env('REVISEMY_CAPTURE_CHROME_PATH', PHP_OS_FAMILY === 'Darwin'
+            ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+            : null),
+        'node_modules' => env('REVISEMY_CAPTURE_NODE_MODULES', base_path('node_modules')),
         'viewports' => [
             'mobile' => [375, 812],
             'desktop' => [1280, 800],
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCP App (inline review UI)
+    |--------------------------------------------------------------------------
+    |
+    | In hosts that support MCP Apps the review renders inline in a sandboxed
+    | iframe. Its CSP resource-domain allowlist is derived from app.url plus
+    | the screenshot disk's URL. Set REVISEMY_MCP_APP_RESOURCE_DOMAINS (a
+    | comma-separated list of origins) to override when screenshots load from
+    | a CDN/bucket host the derivation can't see.
+    |
+    */
+
+    'mcp_app' => [
+        'resource_domains' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('REVISEMY_MCP_APP_RESOURCE_DOMAINS', '')),
+        ))),
     ],
 
 ];

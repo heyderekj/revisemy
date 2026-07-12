@@ -21,4 +21,10 @@ interface CaptureDriver
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
     public function captureHtml(string $html, array $viewports): array;
+
+    /**
+     * Rendered-DOM snapshot of a live URL, kept as hidden AI context.
+     * Best-effort: null when the driver can't provide one.
+     */
+    public function captureDom(string $url): ?string;
 }

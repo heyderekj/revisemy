@@ -197,7 +197,7 @@ new class extends Component
             <section class="rm-fade-up">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <h1 class="max-w-xl text-[clamp(2.4rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900">
-                        <span class="rm-highlight">Visual feedback.</span>
+                        <span class="rm-hero-mark">Visual feedback.</span>
                         <br>
                         <span class="sr-only">With your agent.</span>
                         <span aria-hidden="true">
@@ -215,8 +215,8 @@ new class extends Component
                     </div>
                 </div>
 
-                <p class="rm-fade-up-delay mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                    Human-in-the-loop design review for agents. Capture UI, websites, decks, or email from a screenshot, URL, PDF, or HTML; mark what matters; track fixes on the board; and send clear next steps back over MCP on
+                <p class="rm-fade-up-delay mt-5 w-full max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
+                    Human-in-the-loop design review for agents. Capture UI, websites, slides, or email from a screenshot, URL, PDF, or HTML; mark what matters; track fixes on the board; and send clear next steps back over MCP on
                     <a
                         href="https://laravel.com/cloud"
                         target="_blank"
@@ -286,12 +286,12 @@ new class extends Component
                                     packets: 'Changes requested — fix the promise wrap and action hierarchy; sharpen the labor outcome.',
                                 },
                                 presentations: {
-                                    capture: 'Opening a design checkup on the harvest review deck…',
+                                    capture: 'Opening a design checkup on the harvest review slides…',
                                     hintBody: 'The comparison has no visible baseline, making the 13-point difference look larger than it is.',
                                     hintMeta: 'finding: a11y · hint',
                                     markBody: 'Name the harvest window in the title so the 18% yield lift is not read as a permanent baseline.',
                                     markMeta: 'must-fix · M1',
-                                    mark2Body: 'The methodology note is presentation detail — move it to speaker notes.',
+                                    mark2Body: 'The methodology note is slide detail — move it to speaker notes.',
                                     mark2Meta: 'polish · M2',
                                     markTarget: 'slide.title',
                                     markSeverity: 'must-fix',
@@ -366,7 +366,7 @@ new class extends Component
                                 <template x-for="tab in [
                                     { id: 'product', label: 'Interfaces' },
                                     { id: 'websites', label: 'Websites' },
-                                    { id: 'presentations', label: 'Presentations' },
+                                    { id: 'presentations', label: 'Slides' },
                                     { id: 'email', label: 'Email' }
                                 ]" :key="tab.id">
                                     <button
@@ -997,7 +997,7 @@ new class extends Component
             <section id="how" class="mt-20 scroll-mt-8 sm:mt-24">
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">One feedback loop for anything visual</h2>
                 <ol class="mt-6 max-w-2xl space-y-3 text-[15px] leading-relaxed text-zinc-600">
-                    <li><span class="font-medium text-zinc-900">1.</span> Ask your agent to open a review — from screenshots, or by capturing a page URL, PDF deck, or email HTML.</li>
+                    <li><span class="font-medium text-zinc-900">1.</span> Ask your agent to open a review — from screenshots, or by capturing a page URL, PDF slides, or email HTML.</li>
                     <li><span class="font-medium text-zinc-900">2.</span> An optional second opinion can land first: useful hints, never decisions.</li>
                     <li><span class="font-medium text-zinc-900">3.</span> Open the review link, mark regions, comment, and share a guest link when you want another set of eyes.</li>
                     <li><span class="font-medium text-zinc-900">4.</span> Track marks on the board (open → resolved → verified). Agents can attach before/after evidence when they fix something.</li>
@@ -1022,8 +1022,8 @@ new class extends Component
                         <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
                             <flux:icon.photo variant="micro" class="size-[18px]" />
                         </div>
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">UI, websites, decks, and email</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Each review type gets its own checklist and vision lens tuned for sites, decks, or email.</p>
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">UI, websites, slides, and email</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Each review type gets its own checklist and vision lens tuned for UI, sites, slides, and email.</p>
                     </article>
 
                     <article>
@@ -1031,7 +1031,7 @@ new class extends Component
                             <flux:icon.computer-desktop variant="micro" class="size-[18px]" />
                         </div>
                         <h3 class="mt-3 text-sm font-semibold text-zinc-900">Capture without screenshots</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Agents can send a page URL (mobile + desktop), a PDF deck, or raw email HTML — ReviseMy renders the shots for you.</p>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Agents can send a page URL (mobile + desktop), a PDF of slides, or raw email HTML — ReviseMy renders the shots for you.</p>
                     </article>
 
                     <article>
@@ -1057,7 +1057,7 @@ new class extends Component
                             <flux:icon.check variant="micro" class="size-[18px]" />
                         </div>
                         <h3 class="mt-3 text-sm font-semibold text-zinc-900">Track every mark to done</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">A board moves marks from open to resolved to verified, so you always know what is left.</p>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">A board moves marks from open to resolved to verified, with optional before/after evidence on resolution, so you always know what is left.</p>
                     </article>
                 </div>
             </section>
@@ -1068,6 +1068,7 @@ new class extends Component
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                     <code class="font-mono text-[13px] text-rose-600">create_review</code> accepts images, a capture URL, PDF, or HTML. When you finish,
                     <code class="font-mono text-[13px] text-rose-600">get_review</code> returns work packets and one clear <code class="font-mono text-[13px]">next_action</code>: wait, apply marks, open another pass, or stop.
+                    In <a href="https://github.com/heyderekj/revisemy/blob/main/docs/CONNECTORS.md#inline-review-mcp-apps" class="text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700" target="_blank" rel="noreferrer">MCP Apps hosts</a>, the review renders inline in chat; CLI hosts still use the <code class="font-mono text-[13px]">review_url</code> link.
                 </p>
                 <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
                     <li>Marks include intent and priority: <span class="font-medium text-zinc-800">must-fix</span>, tweak, nit, question, or keep</li>

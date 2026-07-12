@@ -81,6 +81,39 @@ class MarkLifecycleService
     }
 
     /**
+     * Human drops a new mark on a screenshot. Coordinates are normalized
+     * (0–1); an optional area is a top-left {x, y, w, h} rectangle clamped
+     * inside the image. Shared by the review page and the MCP app's
+     * add_mark tool. Broadcasts so open review pages refresh live.
+     *
+     * @param  array{x: float, y: float, w: float, h: float}|null  $area
+     */
+    public function createMark(Screenshot $screenshot, float $x, float $y, ?array $area, string $severity, string $body): Annotation
+    {
+        if ($area !== null) {
+            $area = [
+                'x' => max(0.0, min(1.0 - (float) $area['w'], (float) $area['x'])),
+                'y' => max(0.0, min(1.0 - (float) $area['h'], (float) $area['y'])),
+                'w' => (float) $area['w'],
+                'h' => (float) $area['h'],
+            ];
+        }
+
+        $annotation = $screenshot->annotations()->create([
+            'x' => max(0.0, min(1.0, $x)),
+            'y' => max(0.0, min(1.0, $y)),
+            'area' => $area,
+            'severity' => $severity,
+            'body' => $body,
+            'number' => $screenshot->review->nextMarkNumber(),
+        ]);
+
+        MarkUpdated::dispatch($annotation);
+
+        return $annotation;
+    }
+
+    /**
      * Human verifies a resolved mark. No-op unless it is currently resolved.
      */
     public function verify(Annotation $annotation): bool

@@ -2,6 +2,7 @@
 
 namespace App\Services\Capture;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Spatie\Browsershot\Browsershot;
 
@@ -35,6 +36,32 @@ class BrowsershotCaptureDriver implements CaptureDriver
         );
     }
 
+    public function captureDom(string $url): ?string
+    {
+        if (! $this->enabled()) {
+            return null;
+        }
+
+        try {
+            $shot = Browsershot::url($url)
+                ->timeout((int) config('revisemy.capture.timeout', 30));
+
+            if ($nodeModules = config('revisemy.capture.node_modules')) {
+                $shot->setNodeModulePath($nodeModules);
+            }
+
+            if ($chromePath = config('revisemy.capture.chrome_path')) {
+                $shot->setChromePath($chromePath);
+            }
+
+            return $shot->bodyHtml();
+        } catch (\Throwable $e) {
+            Log::warning('Browsershot DOM capture failed', ['url' => $url, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
     /**
      * @param  callable(): Browsershot  $factory
      * @param  list<array{0: int, 1: int, 2: string}>  $viewports
@@ -52,11 +79,20 @@ class BrowsershotCaptureDriver implements CaptureDriver
         $shots = [];
 
         foreach ($viewports as [$width, $height, $label]) {
-            $binary = $factory()
+            $shot = $factory()
                 ->windowSize($width, $height)
                 ->fullPage()
-                ->timeout((int) config('revisemy.capture.timeout', 30))
-                ->screenshot();
+                ->timeout((int) config('revisemy.capture.timeout', 30));
+
+            if ($nodeModules = config('revisemy.capture.node_modules')) {
+                $shot->setNodeModulePath($nodeModules);
+            }
+
+            if ($chromePath = config('revisemy.capture.chrome_path')) {
+                $shot->setChromePath($chromePath);
+            }
+
+            $binary = $shot->screenshot();
 
             $shots[] = [
                 'binary' => $binary,

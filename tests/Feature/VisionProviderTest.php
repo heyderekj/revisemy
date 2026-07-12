@@ -197,6 +197,39 @@ class VisionProviderTest extends TestCase
         });
     }
 
+    public function test_prompt_includes_cleaned_dom_snapshot_when_one_exists(): void
+    {
+        config([
+            'revisemy.vision.provider' => 'anthropic',
+            'revisemy.anthropic.api_key' => 'test-key',
+            'revisemy.openai.api_key' => null,
+        ]);
+
+        Http::fake([
+            'api.anthropic.com/*' => Http::response($this->anthropicResponse([])),
+        ]);
+
+        $screenshot = $this->makeScreenshot();
+
+        $review = $screenshot->review;
+        Storage::disk('public')->put(
+            'reviews/'.$review->public_id.'/dom.html',
+            '<html><script>var secret = "tracking";</script><body><h1>Hero headline</h1></body></html>',
+        );
+        $review->update(['dom_path' => 'reviews/'.$review->public_id.'/dom.html']);
+
+        app(SecondOpinionService::class)->generate($screenshot->fresh());
+
+        Http::assertSent(function ($request) {
+            $body = json_encode($request->data());
+
+            return str_contains($request->url(), 'api.anthropic.com')
+                && str_contains($body, 'Rendered DOM snapshot')
+                && str_contains($body, 'Hero headline')
+                && ! str_contains($body, 'tracking');
+        });
+    }
+
     public function test_vision_findings_similar_to_checklist_are_deduped(): void
     {
         config([

@@ -12,6 +12,15 @@ use Illuminate\Validation\ValidationException;
 
 class ScreenshotStorage
 {
+    /**
+     * The disk every review artifact (screenshots, thumbs, DOM snapshots)
+     * lives on.
+     */
+    public static function diskName(): string
+    {
+        return (string) config('filesystems.revisemy_disk', config('filesystems.default', 'public'));
+    }
+
     public function store(Review $review, string|UploadedFile $image, int $sortOrder = 0, string $kind = Screenshot::KIND_SOURCE): Screenshot
     {
         $binary = $this->resolveBinary($image);
@@ -45,15 +54,23 @@ class ScreenshotStorage
      */
     protected function persist(Review $review, string $binary, string $extension, int $sortOrder, string $kind, ?array $meta = null): Screenshot
     {
-        $disk = (string) config('filesystems.revisemy_disk', config('filesystems.default', 'public'));
+        $disk = self::diskName();
         $path = 'reviews/'.$review->public_id.'/'.Str::ulid().'.'.$extension;
 
         Storage::disk($disk)->put($path, $binary);
+
+        $thumbPath = null;
+
+        if ($thumb = $this->makeThumbnail($binary)) {
+            $thumbPath = preg_replace('/\.[a-z]+$/', '', $path).'.thumb.jpg';
+            Storage::disk($disk)->put($thumbPath, $thumb);
+        }
 
         [$width, $height] = @getimagesizefromstring($binary) ?: [null, null];
 
         return $review->screenshots()->create([
             'path' => $path,
+            'thumb_path' => $thumbPath,
             'disk' => $disk,
             'width' => $width,
             'height' => $height,
@@ -61,6 +78,45 @@ class ScreenshotStorage
             'kind' => $kind,
             'meta' => $meta,
         ]);
+    }
+
+    /**
+     * Small rail thumbnail: top-cropped so full-page captures don't encode
+     * into unreadable strips, flattened on white so transparent PNGs survive
+     * JPEG. Best-effort — returns null instead of throwing so a bad image
+     * never blocks the screenshot itself.
+     */
+    public function makeThumbnail(string $binary): ?string
+    {
+        $source = @imagecreatefromstring($binary);
+
+        if ($source === false) {
+            return null;
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+
+        if ($width < 1 || $height < 1) {
+            return null;
+        }
+
+        $cropHeight = min($height, (int) ceil($width * 1.25));
+        $flat = imagecreatetruecolor($width, $cropHeight);
+        imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255));
+        imagecopy($flat, $source, 0, 0, 0, 0, $width, $cropHeight);
+
+        $thumb = imagescale($flat, min(320, $width));
+
+        if ($thumb === false) {
+            return null;
+        }
+
+        ob_start();
+        imagejpeg($thumb, null, 72);
+        $encoded = (string) ob_get_clean();
+
+        return $encoded !== '' ? $encoded : null;
     }
 
     /**

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\ScreenshotStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Review extends Model
@@ -29,6 +32,14 @@ class Review extends Model
 
     public const TYPE_EMAIL = 'email';
 
+    public const SOURCE_IMAGE = 'image';
+
+    public const SOURCE_URL = 'url';
+
+    public const SOURCE_PDF = 'pdf';
+
+    public const SOURCE_HTML = 'html';
+
     protected $fillable = [
         'workspace_id',
         'parent_id',
@@ -39,6 +50,8 @@ class Review extends Model
         'context',
         'type',
         'page_url',
+        'webhook_url',
+        'dom_path',
         'pass',
         'status',
         'decision_note',
@@ -50,10 +63,12 @@ class Review extends Model
 
     /**
      * Never let the secret capability tokens leak through serialization.
+     * webhook_url stays hidden too — callback URLs often embed secrets.
      */
     protected $hidden = [
         'token',
         'share_token',
+        'webhook_url',
     ];
 
     protected function casts(): array
@@ -93,7 +108,7 @@ class Review extends Model
     {
         return match ($this->type) {
             self::TYPE_WEBSITE => 'Website',
-            self::TYPE_PRESENTATION => 'Presentation',
+            self::TYPE_PRESENTATION => 'Slide',
             self::TYPE_EMAIL => 'Email',
             default => 'UI',
         };
@@ -106,10 +121,73 @@ class Review extends Model
     {
         return match ($this->type) {
             self::TYPE_WEBSITE => 'Reviewing a website — check the above-the-fold story, navigation clarity, and how it holds up across viewports.',
-            self::TYPE_PRESENTATION => 'Reviewing a presentation — check one idea per slide, text density, and consistency across slides.',
+            self::TYPE_PRESENTATION => 'Reviewing slides — check one idea per slide, text density, and consistency across the deck.',
             self::TYPE_EMAIL => 'Reviewing an email — check subject/preheader, one dominant CTA, dark-mode colors, and the footer/unsubscribe.',
             default => 'Reviewing a UI — check hierarchy, spacing rhythm, contrast, and interactive affordances.',
         };
+    }
+
+    /**
+     * The kind of input this review was created from, derived from the first
+     * source screenshot's capture metadata. Plain uploads carry no meta, so
+     * they (and legacy reviews) resolve to image.
+     */
+    public function sourceKind(): string
+    {
+        $origin = $this->screenshots->first()?->meta['origin'] ?? null;
+
+        return match ($origin) {
+            'capture' => self::SOURCE_URL,
+            'pdf' => self::SOURCE_PDF,
+            'html' => self::SOURCE_HTML,
+            default => self::SOURCE_IMAGE,
+        };
+    }
+
+    public function sourceKindLabel(): string
+    {
+        return match ($this->sourceKind()) {
+            self::SOURCE_URL => 'URL',
+            self::SOURCE_PDF => 'PDF',
+            self::SOURCE_HTML => 'HTML',
+            default => 'Image',
+        };
+    }
+
+    /**
+     * When the source was captured — a URL snapshot is frozen at this moment.
+     */
+    public function capturedAt(): ?Carbon
+    {
+        return $this->screenshots->first()?->created_at;
+    }
+
+    public function sourceDomain(): ?string
+    {
+        $url = $this->page_url ?? $this->screenshots->first()?->meta['page_url'] ?? null;
+
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+
+        return parse_url($url, PHP_URL_HOST) ?: null;
+    }
+
+    /**
+     * Rendered-DOM snapshot stored at capture time. AI context only — never
+     * surfaced to reviewers.
+     */
+    public function domHtml(): ?string
+    {
+        if (! $this->dom_path) {
+            return null;
+        }
+
+        try {
+            return Storage::disk(ScreenshotStorage::diskName())->get($this->dom_path);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function workspace(): BelongsTo
@@ -345,6 +423,7 @@ class Review extends Model
 
             return [
                 'index' => $index,
+                'id' => $shot->id,
                 'url' => $shot->url(),
                 'width' => $shot->width,
                 'height' => $shot->height,

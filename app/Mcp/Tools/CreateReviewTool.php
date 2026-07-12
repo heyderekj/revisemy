@@ -3,24 +3,28 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Concerns\ResolvesWorkspace;
+use App\Mcp\Resources\ReviewApp;
 use App\Services\ReviewService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
+use Laravel\Mcp\Server\Attributes\RendersApp;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('create_review')]
-#[Description('Start or continue a design checkup loop: upload screenshots, get a review URL for the human. Pass parent_id after changes_requested to open the next pass with new shots of the fixed UI. Optional page_url; call add_findings before sharing if you want a subagent critique.')]
+#[Description('Start or continue a design checkup loop: upload screenshots, get a review URL for the human. Pass parent_id after changes_requested to open the next pass with new shots of the fixed UI. Optional page_url; call add_findings before sharing if you want a subagent critique. In MCP Apps hosts the review renders inline so the human can start marking right away.')]
+#[RendersApp(ReviewApp::class)]
 class CreateReviewTool extends Tool
 {
     use ResolvesWorkspace;
 
     public function __construct(protected ReviewService $reviews) {}
 
-    public function handle(Request $request): Response
+    public function handle(Request $request): Response|ResponseFactory
     {
         $workspace = $this->workspace($request);
 
@@ -33,6 +37,7 @@ class CreateReviewTool extends Tool
             'context' => 'nullable|string|max:5000',
             'type' => 'nullable|string|in:ui,website,presentation,email',
             'page_url' => 'nullable|string|max:2048',
+            'webhook_url' => 'nullable|string|max:2048',
             'parent_id' => 'nullable|string',
             'images' => 'nullable|array|min:1|max:5',
             'images.*' => 'required|string',
@@ -52,14 +57,14 @@ class CreateReviewTool extends Tool
         $payload = $review->toAgentPayload();
         $passLabel = $payload['pass'] > 1 ? " (pass {$payload['pass']})" : '';
 
-        return Response::text(
+        return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
             "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
             "Open this link:\n{$payload['review_url']}\n\n".
             "Then poll get_review with id `{$payload['id']}`.\n\n".
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
+        ))->withStructuredContent($payload);
     }
 
     /**
@@ -72,8 +77,9 @@ class CreateReviewTool extends Tool
             'context' => $schema->string()->description('What should the human look at on this pass? Set a new focus for each pass — do not reuse the previous pass’s notes blindly.'),
             'type' => $schema->string()
                 ->enum(['ui', 'website', 'presentation', 'email'])
-                ->description('What kind of content this is — ui (default), website, presentation, or email. Drives the second-opinion lens: emails get CTA/dark-mode/client checks, presentations get slide-density checks, websites get above-the-fold/responsive checks. Follow-up passes inherit the parent type.'),
+                ->description('What kind of content this is — ui (default), website, slide (`presentation`), or email. Drives the second-opinion lens: emails get CTA/dark-mode/client checks, slides get slide-density checks, websites get above-the-fold/responsive checks. Follow-up passes inherit the parent type.'),
             'page_url' => $schema->string()->description('Optional live page URL for future DOM grounding'),
+            'webhook_url' => $schema->string()->description('Optional https URL POSTed when the human decides (event review.decided, HMAC-signed with the review token) — lets pipelines gate on approval instead of polling. Follow-up passes inherit it.'),
             'parent_id' => $schema->string()->description('Previous review id when opening the next pass after changes_requested'),
             'images' => $schema->array()
                 ->items($schema->string()->description('Screenshot as https URL, data URL, or base64'))
@@ -83,7 +89,7 @@ class CreateReviewTool extends Tool
             'capture_url' => $schema->boolean()
                 ->description('Capture page_url server-side instead of uploading screenshots (mobile + desktop viewports; type defaults to website). Requires the server to have capture configured.'),
             'pdf' => $schema->string()
-                ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to presentation).'),
+                ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
             'html' => $schema->string()
                 ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email). Requires capture to be configured.'),
         ];

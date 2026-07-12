@@ -163,6 +163,106 @@ class CaptureIngestionTest extends TestCase
         $this->assertSame(1, $response->json('screenshots.0.meta.page'));
     }
 
+    public function test_screenshots_get_rail_thumbnails(): void
+    {
+        $token = $this->setUpEnv();
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Thumbnails',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->assertCreated();
+
+        $shot = Review::query()->firstOrFail()->screenshots()->firstOrFail();
+
+        $this->assertNotNull($shot->thumb_path);
+        Storage::disk('public')->assertExists($shot->thumb_path);
+        $this->assertStringContainsString('.thumb.jpg', $shot->thumbUrl());
+
+        // Legacy screenshots without a stored thumb fall back to the original.
+        $shot->update(['thumb_path' => null]);
+        $this->assertSame($shot->url(), $shot->thumbUrl());
+    }
+
+    public function test_url_capture_stores_dom_snapshot(): void
+    {
+        $token = $this->setUpEnv();
+        config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
+
+        Http::fake([
+            'capture.test/content' => Http::response('<html><body><h1>Hero headline</h1></body></html>'),
+            'capture.test/*' => Http::response($this->tinyPngBinary()),
+        ]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $review = Review::query()->firstOrFail();
+
+        $this->assertSame(Review::SOURCE_URL, $review->sourceKind());
+        $this->assertNotNull($review->dom_path);
+        $this->assertStringContainsString('Hero headline', (string) $review->domHtml());
+    }
+
+    public function test_dom_capture_failure_still_creates_the_review(): void
+    {
+        $token = $this->setUpEnv();
+        config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
+
+        Http::fake([
+            'capture.test/content' => Http::response('nope', 500),
+            'capture.test/*' => Http::response($this->tinyPngBinary()),
+        ]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $review = Review::query()->firstOrFail();
+        $this->assertNull($review->dom_path);
+        $this->assertNull($review->domHtml());
+    }
+
+    public function test_html_review_stores_submitted_html_as_dom_snapshot(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake([
+            'capture.test/*' => Http::response($this->tinyPngBinary()),
+        ]);
+
+        $html = '<table><tr><td>Hello</td></tr></table>';
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Welcome email',
+            'html' => $html,
+        ])->assertCreated();
+
+        $review = Review::query()->firstOrFail();
+
+        $this->assertSame(Review::SOURCE_HTML, $review->sourceKind());
+        $this->assertSame($html, $review->domHtml());
+    }
+
+    public function test_plain_uploads_resolve_to_the_image_source_kind(): void
+    {
+        $token = $this->setUpEnv();
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Classic upload',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->assertCreated();
+
+        $review = Review::query()->firstOrFail();
+
+        $this->assertSame(Review::SOURCE_IMAGE, $review->sourceKind());
+        $this->assertNull($review->dom_path);
+    }
+
     public function test_oversized_capture_is_downscaled_under_the_cap(): void
     {
         $token = $this->setUpEnv();
