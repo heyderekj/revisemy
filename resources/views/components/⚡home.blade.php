@@ -204,11 +204,11 @@ new class extends Component
             <section class="rm-fade-up">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <h1 class="max-w-xl text-[clamp(2.4rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900">
-                        <span class="rm-hero-mark">Visual feedback.</span>
+                        <span class="rm-hero-mark">Visual feedback</span>
                         <br>
-                        <span class="sr-only">With your agent.</span>
+                        <span class="sr-only">with your agent.</span>
                         <span aria-hidden="true">
-                            With&nbsp;<span class="rm-agent-cycle">
+                            with&nbsp;<span class="rm-agent-cycle">
                                 @foreach (['ChatGPT', 'Claude', 'Cursor'] as $i => $label)
                                     <span class="rm-agent-cycle-item" style="--i: {{ $i }}">{{ $label }}.</span>
                                 @endforeach
