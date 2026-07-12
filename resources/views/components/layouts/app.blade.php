@@ -50,7 +50,24 @@
 
     @if (config('seo.fathom_site_id'))
         <!-- Fathom - beautiful, simple website analytics -->
-        <script src="https://cdn.usefathom.com/script.js" data-site="{{ config('seo.fathom_site_id') }}" defer></script>
+        <script src="https://cdn.usefathom.com/script.js" data-site="{{ config('seo.fathom_site_id') }}" data-auto="false" defer></script>
+        <script>
+            (function () {
+                function shouldTrackPageview() {
+                    return !/^\/r\//.test(window.location.pathname);
+                }
+
+                function trackPageview() {
+                    if (!window.fathom || !shouldTrackPageview()) {
+                        return;
+                    }
+
+                    fathom.trackPageview();
+                }
+
+                window.addEventListener('load', trackPageview);
+            })();
+        </script>
         <!-- / Fathom -->
     @endif
 </head>
