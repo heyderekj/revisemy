@@ -748,7 +748,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                Yep. Your review link is secret — anyone with it can mark and decide. Need a teammate or client? Use <span class="font-medium text-zinc-800">Share</span> to copy or regenerate a <span class="font-medium text-zinc-800">guest link</span> (suggestions only; your marks still run the show). Guest links can expire; individual <code class="font-mono text-[13px]">/r/…</code> pages stay out of search.
+                                Yep. Your review link is secret — anyone with it can mark and decide. Need a teammate or client? Use <span class="font-medium text-zinc-800">Share</span> to copy or regenerate a <span class="font-medium text-zinc-800">guest link</span> (suggestions only; your marks still run the show). Set expiry to <span class="font-medium text-zinc-800">7 days</span> (default), <span class="font-medium text-zinc-800">14 days</span>, <span class="font-medium text-zinc-800">never</span>, or a custom date.
                             </p>
                         </details>
                     </div>
