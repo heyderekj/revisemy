@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class Screenshot extends Model
@@ -58,9 +58,17 @@ class Screenshot extends Model
         return $this->hasMany(Finding::class)->orderBy('id');
     }
 
+    /**
+     * Signed app URL so the browser does not depend on a public /storage
+     * symlink (missing on Laravel Cloud when using the local public disk).
+     */
     public function url(): string
     {
-        return Storage::disk($this->disk)->url($this->path);
+        return URL::temporarySignedRoute(
+            'screenshots.show',
+            $this->signedUrlExpiry(),
+            ['screenshot' => $this->id],
+        );
     }
 
     /**
@@ -69,9 +77,28 @@ class Screenshot extends Model
      */
     public function thumbUrl(): string
     {
-        return $this->thumb_path
-            ? Storage::disk($this->disk)->url($this->thumb_path)
-            : $this->url();
+        if (! $this->thumb_path) {
+            return $this->url();
+        }
+
+        return URL::temporarySignedRoute(
+            'screenshots.thumb',
+            $this->signedUrlExpiry(),
+            ['screenshot' => $this->id],
+        );
+    }
+
+    protected function signedUrlExpiry(): \DateTimeInterface
+    {
+        $this->loadMissing('review');
+
+        $expires = $this->review?->expires_at;
+
+        if ($expires instanceof \DateTimeInterface && $expires > now()) {
+            return $expires;
+        }
+
+        return now()->addDays(7);
     }
 
     /**

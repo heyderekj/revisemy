@@ -21,12 +21,47 @@ class SecondOpinionService
             return;
         }
 
-        $screenshot->update([
-            'second_opinion_status' => Screenshot::OPINION_QUEUED,
-            'second_opinion_error' => null,
-        ]);
+        $screenshot->loadMissing('review');
 
-        GenerateSecondOpinionJob::dispatch($screenshot->id);
+        try {
+            // Free checklist is local and fast — run it now so the review page
+            // is never empty waiting on a Cloud queue worker.
+            $screenshot->findings()
+                ->whereIn('source', [Finding::SOURCE_CHECKLIST, Finding::SOURCE_OPENAI, Finding::SOURCE_ANTHROPIC])
+                ->delete();
+
+            $this->persistFindings(
+                $screenshot,
+                $this->checklistFindings($screenshot),
+                Finding::SOURCE_CHECKLIST,
+            );
+
+            if ($this->visionProvider()) {
+                $screenshot->update([
+                    'second_opinion_status' => Screenshot::OPINION_QUEUED,
+                    'second_opinion_error' => null,
+                ]);
+
+                GenerateSecondOpinionJob::dispatch($screenshot->id);
+
+                return;
+            }
+
+            $screenshot->update([
+                'second_opinion_status' => Screenshot::OPINION_READY,
+                'second_opinion_error' => null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Second opinion checklist failed', [
+                'screenshot_id' => $screenshot->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            $screenshot->update([
+                'second_opinion_status' => Screenshot::OPINION_FAILED,
+                'second_opinion_error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function generate(Screenshot $screenshot): void

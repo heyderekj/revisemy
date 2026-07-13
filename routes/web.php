@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,3 +19,11 @@ Route::get('/r/{token}', function (string $token) {
 Route::get('/r/{token}/board', function (string $token) {
     return view('review-board', ['token' => $token]);
 })->name('reviews.board');
+
+Route::get('/shots/{screenshot}', [ScreenshotController::class, 'show'])
+    ->middleware('signed')
+    ->name('screenshots.show');
+
+Route::get('/shots/{screenshot}/thumb', [ScreenshotController::class, 'thumb'])
+    ->middleware('signed')
+    ->name('screenshots.thumb');

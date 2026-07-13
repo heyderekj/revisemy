@@ -1970,12 +1970,14 @@ new class extends Component
                     : $findings->where('severity', $secondOpinionTab)->values())
 
                 @if ($status === 'queued')
-                    <p class="text-sm text-sky-700">Running on Laravel Cloud…</p>
+                    <p class="mb-2 text-sm text-sky-700">{{ $findings->isEmpty() ? 'Generating hints…' : 'Adding vision hints…' }}</p>
                 @elseif ($status === 'failed')
-                    <p class="text-sm text-rose-600">Second opinion failed{{ $shot?->second_opinion_error ? ': '.$shot->second_opinion_error : '.' }}</p>
-                @elseif ($findings->isEmpty())
+                    <p class="mb-2 text-sm text-rose-600">Second opinion failed{{ $shot?->second_opinion_error ? ': '.$shot->second_opinion_error : '.' }}</p>
+                @endif
+
+                @if ($findings->isEmpty() && $status !== 'queued')
                     <p class="text-sm text-zinc-500">No open suggestions. Accept ones you want as marks, dismiss the rest, or refresh for a new pass.</p>
-                @else
+                @elseif ($findings->isNotEmpty())
                     <div class="mb-3 overflow-x-auto overscroll-x-contain rounded-full border border-sky-200/80 bg-white/80 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <div class="flex w-max gap-1">
                             @foreach ($tabLabels as $tabId => $tabLabel)

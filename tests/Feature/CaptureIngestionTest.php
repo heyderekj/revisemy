@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\GenerateSecondOpinionJob;
 use App\Models\Review;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -62,7 +61,7 @@ class CaptureIngestionTest extends TestCase
         $this->assertSame('desktop-1280', $shots[1]['meta']['viewport']);
         $this->assertSame('capture', $shots[0]['meta']['origin']);
 
-        Queue::assertPushed(GenerateSecondOpinionJob::class, 2);
+        Queue::assertNothingPushed();
         Http::assertSentCount(2);
     }
 
@@ -176,11 +175,12 @@ class CaptureIngestionTest extends TestCase
 
         $this->assertNotNull($shot->thumb_path);
         Storage::disk('public')->assertExists($shot->thumb_path);
-        $this->assertStringContainsString('.thumb.jpg', $shot->thumbUrl());
+        $this->assertStringContainsString('/shots/'.$shot->id.'/thumb', $shot->thumbUrl());
 
         // Legacy screenshots without a stored thumb fall back to the original.
         $shot->update(['thumb_path' => null]);
         $this->assertSame($shot->url(), $shot->thumbUrl());
+        $this->assertStringContainsString('/shots/'.$shot->id.'?', $shot->url());
     }
 
     public function test_url_capture_stores_dom_snapshot(): void

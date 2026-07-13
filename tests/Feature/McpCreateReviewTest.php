@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\GenerateSecondOpinionJob;
 use App\Mcp\Servers\ReviseMyServer;
 use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\GetReviewTool;
@@ -86,7 +85,7 @@ class McpCreateReviewTest extends TestCase
                 ->etc()
         );
 
-        Queue::assertPushed(GenerateSecondOpinionJob::class, 2);
+        Queue::assertNothingPushed();
         Http::assertSentCount(2);
     }
 

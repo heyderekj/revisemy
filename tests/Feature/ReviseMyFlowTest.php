@@ -63,20 +63,53 @@ class ReviseMyFlowTest extends TestCase
         $this->assertNotNull($review->expires_at);
     }
 
-    public function test_creating_a_review_queues_second_opinion_job(): void
+    public function test_creating_a_review_seeds_checklist_without_a_queue_worker(): void
     {
         Storage::fake('public');
-        config(['filesystems.revisemy_disk' => 'public']);
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => true,
+            'revisemy.openai.api_key' => null,
+            'revisemy.openai.base_url' => null,
+            'revisemy.anthropic.api_key' => null,
+            'revisemy.vision.provider' => 'auto',
+        ]);
         Queue::fake();
 
         $token = $this->postJson('/api/try-token')->json('token');
 
-        $this->withToken($token)->postJson('/api/reviews', [
+        $payload = $this->withToken($token)->postJson('/api/reviews', [
             'title' => 'Queue check',
             'images' => [$this->tinyPngDataUrl()],
-        ])->assertCreated();
+        ])->assertCreated()->json();
+
+        Queue::assertNothingPushed();
+        $this->assertNotEmpty($payload['work_packets']['second_opinion']);
+        $this->assertSame('ready', $payload['screenshots'][0]['second_opinion_status']);
+    }
+
+    public function test_vision_provider_queues_enrichment_after_checklist(): void
+    {
+        Storage::fake('public');
+        config([
+            'filesystems.revisemy_disk' => 'public',
+            'revisemy.second_opinion_enabled' => true,
+            'revisemy.vision.provider' => 'openai',
+            'revisemy.openai.api_key' => 'sk-test',
+            'revisemy.openai.base_url' => null,
+        ]);
+        Queue::fake();
+
+        $token = $this->postJson('/api/try-token')->json('token');
+
+        $payload = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Vision queue',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->assertCreated()->json();
 
         Queue::assertPushed(GenerateSecondOpinionJob::class);
+        $this->assertNotEmpty($payload['work_packets']['second_opinion']);
+        $this->assertSame('queued', $payload['screenshots'][0]['second_opinion_status']);
     }
 
     public function test_checklist_second_opinion_writes_findings_without_changing_status(): void
