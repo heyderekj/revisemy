@@ -18,6 +18,10 @@ new class extends Component
 
     public ?string $claudeCodeCommand = null;
 
+    public ?string $setupPromptsJson = null;
+
+    public ?string $checkupPromptsJson = null;
+
     public ?string $error = null;
 
     public function getTryToken(TryTokenService $tryTokens): void
@@ -50,6 +54,8 @@ new class extends Component
         $this->claudeDesktopConfigJson = json_encode($result['claude_desktop_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $this->copilotConfigJson = json_encode($result['copilot_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $this->claudeCodeCommand = $result['claude_code_command'];
+        $this->setupPromptsJson = json_encode($result['setup_prompts'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $this->checkupPromptsJson = json_encode($result['checkup_prompts'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $this->dispatch('revisemy-try-setup-saved', payload: [
             'token' => $this->token,
@@ -58,6 +64,8 @@ new class extends Component
             'claudeDesktopConfigJson' => $this->claudeDesktopConfigJson,
             'copilotConfigJson' => $this->copilotConfigJson,
             'claudeCodeCommand' => $this->claudeCodeCommand,
+            'setupPromptsJson' => $this->setupPromptsJson,
+            'checkupPromptsJson' => $this->checkupPromptsJson,
         ]);
 
         $this->dispatch('scroll-to-setup');
@@ -70,6 +78,8 @@ new class extends Component
         string $claudeDesktopConfigJson,
         string $copilotConfigJson,
         string $claudeCodeCommand,
+        string $setupPromptsJson = '',
+        string $checkupPromptsJson = '',
     ): void {
         $this->token = $token;
         $this->mcpUrl = $mcpUrl;
@@ -77,6 +87,8 @@ new class extends Component
         $this->claudeDesktopConfigJson = $claudeDesktopConfigJson;
         $this->copilotConfigJson = $copilotConfigJson ?: null;
         $this->claudeCodeCommand = $claudeCodeCommand;
+        $this->setupPromptsJson = $setupPromptsJson ?: null;
+        $this->checkupPromptsJson = $checkupPromptsJson ?: null;
         $this->error = null;
     }
 
@@ -88,6 +100,8 @@ new class extends Component
         $this->claudeDesktopConfigJson = null;
         $this->copilotConfigJson = null;
         $this->claudeCodeCommand = null;
+        $this->setupPromptsJson = null;
+        $this->checkupPromptsJson = null;
         $this->error = null;
 
         $this->dispatch('revisemy-try-setup-cleared');
@@ -448,6 +462,8 @@ new class extends Component
                                     d.claudeDesktopConfigJson ?? '',
                                     d.copilotConfigJson ?? '',
                                     d.claudeCodeCommand ?? '',
+                                    d.setupPromptsJson ?? '',
+                                    d.checkupPromptsJson ?? '',
                                 );
                             }
                         } catch (e) {}
@@ -482,21 +498,35 @@ new class extends Component
                         class="mt-4 space-y-5"
                         x-data="{ client: 'chatgpt' }"
                     >
-                        <div class="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
-                            @foreach ([
-                                'chatgpt' => 'ChatGPT',
-                                'claude' => 'Claude',
-                                'copilot' => 'Copilot',
-                                'cursor' => 'Cursor',
-                                'grok' => 'Grok',
-                            ] as $id => $label)
-                                <button
-                                    type="button"
-                                    class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                                    :class="client === '{{ $id }}' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-800'"
-                                    x-on:click="client = '{{ $id }}'"
-                                >{{ $label }}</button>
-                            @endforeach
+                        @php
+                            $setupPrompts = json_decode($setupPromptsJson ?: '[]', true) ?: [];
+                            $checkupPrompts = json_decode($checkupPromptsJson ?: '[]', true) ?: [];
+                            $fallbackCheckups = \App\Services\TryTokenService::checkupPrompts();
+                            $checkupPrompts = array_merge($fallbackCheckups, $checkupPrompts);
+                        @endphp
+                        <div>
+                            <p class="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
+                                Host
+                            </p>
+                            <div class="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                                @foreach ([
+                                    'chatgpt' => 'ChatGPT',
+                                    'claude' => 'Claude',
+                                    'copilot' => 'Copilot',
+                                    'cursor' => 'Cursor',
+                                    'grok' => 'Grok',
+                                ] as $id => $label)
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                                        :class="client === '{{ $id }}' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-800'"
+                                        x-on:click="client = '{{ $id }}'"
+                                    >
+                                        <x-host-icon :name="$id" class="opacity-90" />
+                                        {{ $label }}
+                                    </button>
+                                @endforeach
+                            </div>
                         </div>
 
                         {{-- ChatGPT --}}
@@ -505,33 +535,64 @@ new class extends Component
                                 Add ReviseMy as a <span class="font-medium text-zinc-800">remote MCP connector</span> (or a Custom GPT Action for REST).
                                 If the host supports MCP Apps, the review can open inline; otherwise your agent shares a <code class="font-mono text-[13px]">review_url</code>.
                             </p>
-                            <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>In ChatGPT, open <span class="font-medium text-zinc-800">Settings → Connectors</span> (or Custom GPT → Actions for REST)</li>
-                                <li>Add a remote MCP connector named <span class="font-medium text-zinc-800">revisemy</span></li>
-                                <li>Paste the <span class="font-medium text-zinc-800">MCP URL</span> and the <span class="font-medium text-zinc-800">Authorization</span> header below</li>
-                                <li>Paste a starter prompt and ask ChatGPT to run the checkup</li>
-                            </ol>
-                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                                <p class="text-[13px] leading-relaxed text-zinc-600">
-                                    ChatGPT’s connector UI varies by plan. Look for fields like server URL and Authorization / Bearer token — not a full JSON paste.
-                                </p>
-                            </div>
-                            <div>
-                                <div class="mb-2 flex items-center justify-between">
-                                    <p class="text-sm font-medium text-zinc-700">Authorization header</p>
-                                    <button
-                                        type="button"
-                                        class="text-sm text-rose-600 hover:text-rose-500"
-                                        x-data
-                                        x-on:click="navigator.clipboard.writeText($refs.chatgptAuth.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                    >Copy</button>
-                                </div>
-                                <pre x-ref="chatgptAuth" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
-                            </div>
-                            <x-copy-prompt
-                                label="Starter prompt"
-                                text="Run a ReviseMy design checkup on the work I just changed. Use create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF), share the review_url if you get one, wait for my marks, then poll get_review and follow next_action until I approve."
-                            />
+                            <x-host-setup>
+                                <x-slot:agent>
+                                    <p class="text-[15px] leading-relaxed text-zinc-600">
+                                        Copy this into ChatGPT and let it walk you through Connectors (or Custom GPT Actions). Values are already filled in.
+                                    </p>
+                                    <x-setup-journey>
+                                        @if (! empty($setupPrompts['chatgpt']))
+                                            <x-copy-prompt
+                                                step="1"
+                                                label="Paste this to ChatGPT"
+                                                :text="$setupPrompts['chatgpt']"
+                                                multiline
+                                            />
+                                        @else
+                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                        @endif
+                                        <x-copy-prompt
+                                            step="2"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['chatgpt']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:agent>
+                                <x-slot:manual>
+                                    <x-setup-journey>
+                                        <x-setup-step step="1" label="Open Connectors in ChatGPT">
+                                            <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                Open <span class="font-medium text-zinc-800">Settings → Connectors</span>
+                                                (or Custom GPT → Actions for REST) and add a remote MCP connector named
+                                                <span class="font-medium text-zinc-800">revisemy</span>.
+                                            </p>
+                                            <p class="text-[13px] leading-relaxed text-zinc-500">
+                                                ChatGPT’s connector UI varies by plan. Look for server URL and Authorization / Bearer fields — not a full JSON paste.
+                                            </p>
+                                        </x-setup-step>
+                                        <x-setup-step step="2" label="Paste the Authorization header">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Authorization</p>
+                                                <button
+                                                    type="button"
+                                                    class="text-sm text-rose-600 hover:text-rose-500"
+                                                    x-data
+                                                    x-on:click="navigator.clipboard.writeText($refs.chatgptAuth.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                >Copy</button>
+                                            </div>
+                                            <pre x-ref="chatgptAuth" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
+                                            <p class="text-[13px] leading-relaxed text-zinc-500">
+                                                Also paste the MCP URL from the cards below into the connector’s server URL field.
+                                            </p>
+                                        </x-setup-step>
+                                        <x-copy-prompt
+                                            step="3"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['chatgpt']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:manual>
+                            </x-host-setup>
                         </div>
 
                         {{-- Claude --}}
@@ -541,60 +602,99 @@ new class extends Component
                                 <span class="font-medium text-zinc-800">inline in chat</span> via MCP Apps.
                                 <span class="font-medium text-zinc-800">Claude Code</span> is CLI-only — it shares a <code class="font-mono text-[13px]">review_url</code> instead.
                             </p>
-
-                            <div class="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-                                <p class="text-sm font-medium text-zinc-800">Claude Desktop — Edit Config (Bearer try token)</p>
-                                <ol class="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                    <li>Open <span class="font-medium text-zinc-800">Settings → Developer → Edit Config</span> (opens <code class="font-mono text-[13px]">claude_desktop_config.json</code>)</li>
-                                    <li>Merge the JSON below into <code class="font-mono text-[13px]">mcpServers</code>, save, then fully quit and reopen Claude Desktop</li>
-                                    <li>Confirm <span class="font-medium text-zinc-800">revisemy</span> appears under tools, then paste a starter prompt</li>
-                                    <li>Mark feedback and approve in the review panel inside the chat</li>
-                                </ol>
-                                <div class="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-[13px] leading-relaxed text-amber-950/80">
-                                    Don’t use <span class="font-medium">Connectors → Add custom connector</span> for this try token — that UI is OAuth-oriented and has no Bearer header field. Needs Node.js (<code class="font-mono text-[12px]">npx</code>) for the bridge below.
-                                </div>
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between">
-                                        <p class="text-sm font-medium text-zinc-700">Claude Desktop config</p>
-                                        <button
-                                            type="button"
-                                            class="text-sm text-rose-600 hover:text-rose-500"
-                                            x-data
-                                            x-on:click="navigator.clipboard.writeText($refs.claudeDesktop.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                        >Copy</button>
-                                    </div>
-                                    <pre x-ref="claudeDesktop" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeDesktopConfigJson }}</pre>
-                                </div>
-                                <x-copy-prompt
-                                    label="Starter prompt (Desktop)"
-                                    text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF). Open the review inline so I can mark and approve, then follow next_action until I’m done. Prefer the design_checkup_loop prompt if available."
-                                />
-                            </div>
-
-                            <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                                <p class="text-sm font-medium text-zinc-800">Claude Code — terminal CLI</p>
-                                <ol class="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                    <li>Run the command below in your project terminal</li>
-                                    <li>Paste a starter prompt; Claude will call <code class="font-mono text-[13px] text-rose-600">create_review</code> and share a <code class="font-mono text-[13px]">review_url</code></li>
-                                    <li>Open the link, mark feedback, approve or request changes</li>
-                                </ol>
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between">
-                                        <p class="text-sm font-medium text-zinc-700">Claude Code</p>
-                                        <button
-                                            type="button"
-                                            class="text-sm text-rose-600 hover:text-rose-500"
-                                            x-data
-                                            x-on:click="navigator.clipboard.writeText($refs.claudeCmd.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                        >Copy</button>
-                                    </div>
-                                    <pre x-ref="claudeCmd" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeCodeCommand }}</pre>
-                                </div>
-                                <x-copy-prompt
-                                    label="Starter prompt (Claude Code)"
-                                    text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source, give me the review_url to mark and approve, then poll get_review and follow next_action until I approve. Prefer the design_checkup_loop prompt if available."
-                                />
-                            </div>
+                            <x-host-setup>
+                                <x-slot:agent>
+                                    <p class="text-[15px] leading-relaxed text-zinc-600">
+                                        Prefer <span class="font-medium text-zinc-800">Claude Code</span> if you have a terminal agent — it can run the install command.
+                                        For <span class="font-medium text-zinc-800">Desktop</span>, paste the prompt and let Claude guide the config edit (don’t use Connectors).
+                                    </p>
+                                    <x-setup-journey>
+                                        @if (! empty($setupPrompts['claude_code']))
+                                            <x-copy-prompt
+                                                step="1"
+                                                label="Paste this to Claude Code"
+                                                :text="$setupPrompts['claude_code']"
+                                                multiline
+                                            />
+                                        @endif
+                                        @if (! empty($setupPrompts['claude_desktop']))
+                                            <x-copy-prompt
+                                                step="2"
+                                                label="Or paste this to Claude Desktop"
+                                                :text="$setupPrompts['claude_desktop']"
+                                                multiline
+                                            />
+                                        @endif
+                                        @if (empty($setupPrompts['claude_code']) && empty($setupPrompts['claude_desktop']))
+                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                        @endif
+                                        <x-copy-prompt
+                                            step="3"
+                                            label="Then run a checkup (Claude Code)"
+                                            :text="$checkupPrompts['claude_code']"
+                                        />
+                                        <x-copy-prompt
+                                            step="4"
+                                            label="Or run a checkup (Desktop)"
+                                            :text="$checkupPrompts['claude_desktop']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:agent>
+                                <x-slot:manual>
+                                    <x-setup-journey>
+                                        <x-setup-step step="1" label="Claude Desktop — Edit Config">
+                                            <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                Open <span class="font-medium text-zinc-800">Settings → Developer → Edit Config</span>
+                                                (<code class="font-mono text-[13px]">claude_desktop_config.json</code>).
+                                                Merge the JSON below into <code class="font-mono text-[13px]">mcpServers</code>, save, then fully quit and reopen Claude Desktop.
+                                            </p>
+                                            <div class="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-[13px] leading-relaxed text-amber-950/80">
+                                                Don’t use <span class="font-medium">Connectors → Add custom connector</span> — that UI is OAuth-oriented and has no Bearer header field. Needs Node.js (<code class="font-mono text-[12px]">npx</code>).
+                                            </div>
+                                            <div>
+                                                <div class="mb-2 flex items-center justify-between">
+                                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Claude Desktop config</p>
+                                                    <button
+                                                        type="button"
+                                                        class="text-sm text-rose-600 hover:text-rose-500"
+                                                        x-data
+                                                        x-on:click="navigator.clipboard.writeText($refs.claudeDesktop.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                    >Copy</button>
+                                                </div>
+                                                <pre x-ref="claudeDesktop" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeDesktopConfigJson }}</pre>
+                                            </div>
+                                        </x-setup-step>
+                                        <x-setup-step step="2" label="Or Claude Code — run this command">
+                                            <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                In your project terminal, run the command below. Claude Code shares a
+                                                <code class="font-mono text-[13px]">review_url</code> instead of inline review.
+                                            </p>
+                                            <div>
+                                                <div class="mb-2 flex items-center justify-between">
+                                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Claude Code</p>
+                                                    <button
+                                                        type="button"
+                                                        class="text-sm text-rose-600 hover:text-rose-500"
+                                                        x-data
+                                                        x-on:click="navigator.clipboard.writeText($refs.claudeCmd.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                    >Copy</button>
+                                                </div>
+                                                <pre x-ref="claudeCmd" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeCodeCommand }}</pre>
+                                            </div>
+                                        </x-setup-step>
+                                        <x-copy-prompt
+                                            step="3"
+                                            label="Then run a checkup (Claude Code)"
+                                            :text="$checkupPrompts['claude_code']"
+                                        />
+                                        <x-copy-prompt
+                                            step="4"
+                                            label="Or run a checkup (Desktop)"
+                                            :text="$checkupPrompts['claude_desktop']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:manual>
+                            </x-host-setup>
                         </div>
 
                         {{-- Copilot --}}
@@ -603,33 +703,64 @@ new class extends Component
                                 Copilot supports MCP Apps — after <code class="font-mono text-[13px] text-rose-600">create_review</code>, the review renders
                                 <span class="font-medium text-zinc-800">inline in Copilot Chat</span> so you can mark and approve without leaving the editor.
                             </p>
-                            <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Open <span class="font-medium text-zinc-800">Copilot → MCP</span> (user or workspace <code class="font-mono text-[13px]">mcp.json</code>)</li>
-                                <li>Paste or merge the config below under <code class="font-mono text-[13px]">servers</code></li>
-                                <li>Reload Copilot / the window if tools don’t appear, then paste a starter prompt</li>
-                            </ol>
-                            @if ($copilotConfigJson)
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between">
-                                        <p class="text-sm font-medium text-zinc-700">Copilot MCP config</p>
-                                        <button
-                                            type="button"
-                                            class="text-sm text-rose-600 hover:text-rose-500"
-                                            x-data
-                                            x-on:click="navigator.clipboard.writeText($refs.copilotConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                        >Copy</button>
-                                    </div>
-                                    <pre x-ref="copilotConfig" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $copilotConfigJson }}</pre>
-                                </div>
-                            @else
-                                <p class="text-sm text-zinc-500">
-                                    Start over above to generate a fresh try token with Copilot config (older saved sessions may not include it).
-                                </p>
-                            @endif
-                            <x-copy-prompt
-                                label="Starter prompt"
-                                text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF). Open the review inline so I can mark and approve, then follow next_action until I’m done. Prefer the design_checkup_loop prompt if available."
-                            />
+                            <x-host-setup>
+                                <x-slot:agent>
+                                    <p class="text-[15px] leading-relaxed text-zinc-600">
+                                        Copy this into Copilot Chat and let it merge the MCP config for you.
+                                    </p>
+                                    <x-setup-journey>
+                                        @if (! empty($setupPrompts['copilot']))
+                                            <x-copy-prompt
+                                                step="1"
+                                                label="Paste this to Copilot"
+                                                :text="$setupPrompts['copilot']"
+                                                multiline
+                                            />
+                                        @else
+                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                        @endif
+                                        <x-copy-prompt
+                                            step="2"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['copilot']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:agent>
+                                <x-slot:manual>
+                                    <x-setup-journey>
+                                        <x-setup-step step="1" label="Open Copilot → MCP">
+                                            <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                Open <span class="font-medium text-zinc-800">Copilot → MCP</span>
+                                                (user or workspace <code class="font-mono text-[13px]">mcp.json</code>) and merge the config below under
+                                                <code class="font-mono text-[13px]">servers</code>. Reload Copilot / the window if tools don’t appear.
+                                            </p>
+                                            @if ($copilotConfigJson)
+                                                <div>
+                                                    <div class="mb-2 flex items-center justify-between">
+                                                        <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Copilot MCP config</p>
+                                                        <button
+                                                            type="button"
+                                                            class="text-sm text-rose-600 hover:text-rose-500"
+                                                            x-data
+                                                            x-on:click="navigator.clipboard.writeText($refs.copilotConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                        >Copy</button>
+                                                    </div>
+                                                    <pre x-ref="copilotConfig" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $copilotConfigJson }}</pre>
+                                                </div>
+                                            @else
+                                                <p class="text-sm text-zinc-500">
+                                                    Start over above to generate a fresh try token with Copilot config (older saved sessions may not include it).
+                                                </p>
+                                            @endif
+                                        </x-setup-step>
+                                        <x-copy-prompt
+                                            step="2"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['copilot']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:manual>
+                            </x-host-setup>
                         </div>
 
                         {{-- Cursor --}}
@@ -638,27 +769,59 @@ new class extends Component
                                 Cursor agents use MCP tools in the IDE. After <code class="font-mono text-[13px] text-rose-600">create_review</code>, the agent shares a
                                 <code class="font-mono text-[13px]">review_url</code> — open it in the browser to mark and approve. (No inline MCP Apps UI in Cursor yet.)
                             </p>
-                            <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Open <span class="font-medium text-zinc-800">Cursor Settings → MCP</span></li>
-                                <li>Add a new server, or merge the JSON below into <code class="font-mono text-[13px]">~/.cursor/mcp.json</code></li>
-                                <li>Enable <span class="font-medium text-zinc-800">revisemy</span>, then paste a starter prompt in Agent chat</li>
-                            </ol>
-                            <div>
-                                <div class="mb-2 flex items-center justify-between">
-                                    <p class="text-sm font-medium text-zinc-700">Cursor MCP config</p>
-                                    <button
-                                        type="button"
-                                        class="text-sm text-rose-600 hover:text-rose-500"
-                                        x-data
-                                        x-on:click="navigator.clipboard.writeText($refs.cursorConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                    >Copy</button>
-                                </div>
-                                <pre x-ref="cursorConfig" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $cursorConfigJson }}</pre>
-                            </div>
-                            <x-copy-prompt
-                                label="Starter prompt"
-                                text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots as data URLs for localhost, or public URL + capture_url). Give me the review_url to mark and approve, then poll get_review and follow next_action until I approve. Prefer the design_checkup_loop prompt if available."
-                            />
+                            <x-host-setup>
+                                <x-slot:agent>
+                                    <p class="text-[15px] leading-relaxed text-zinc-600">
+                                        Copy this into Cursor Agent chat and let it edit <code class="font-mono text-[13px]">~/.cursor/mcp.json</code> for you.
+                                    </p>
+                                    <x-setup-journey>
+                                        @if (! empty($setupPrompts['cursor']))
+                                            <x-copy-prompt
+                                                step="1"
+                                                label="Paste this to Cursor"
+                                                :text="$setupPrompts['cursor']"
+                                                multiline
+                                            />
+                                        @else
+                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                        @endif
+                                        <x-copy-prompt
+                                            step="2"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['cursor']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:agent>
+                                <x-slot:manual>
+                                    <x-setup-journey>
+                                        <x-setup-step step="1" label="Add ReviseMy in Cursor MCP">
+                                            <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                Open <span class="font-medium text-zinc-800">Cursor Settings → MCP</span>,
+                                                then add a server or merge the JSON below into
+                                                <code class="font-mono text-[13px]">~/.cursor/mcp.json</code>.
+                                                Enable <span class="font-medium text-zinc-800">revisemy</span> when it appears.
+                                            </p>
+                                            <div>
+                                                <div class="mb-2 flex items-center justify-between">
+                                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Cursor MCP config</p>
+                                                    <button
+                                                        type="button"
+                                                        class="text-sm text-rose-600 hover:text-rose-500"
+                                                        x-data
+                                                        x-on:click="navigator.clipboard.writeText($refs.cursorConfig.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                    >Copy</button>
+                                                </div>
+                                                <pre x-ref="cursorConfig" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $cursorConfigJson }}</pre>
+                                            </div>
+                                        </x-setup-step>
+                                        <x-copy-prompt
+                                            step="2"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['cursor']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:manual>
+                            </x-host-setup>
                         </div>
 
                         {{-- Grok --}}
@@ -667,33 +830,62 @@ new class extends Component
                                 Add ReviseMy as a <span class="font-medium text-zinc-800">custom MCP connector</span> on Grok.
                                 After <code class="font-mono text-[13px] text-rose-600">create_review</code>, open the <code class="font-mono text-[13px]">review_url</code> to mark and approve.
                             </p>
-                            <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Go to <a href="https://grok.com/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500" target="_blank" rel="noreferrer">grok.com/connectors</a></li>
-                                <li>Click <span class="font-medium text-zinc-800">New Connector → Custom</span></li>
-                                <li>Name it <span class="font-medium text-zinc-800">revisemy</span>, paste the MCP URL, and set Authorization to the Bearer header below</li>
-                                <li>Paste a starter prompt and ask Grok to run the checkup</li>
-                            </ol>
-                            <div class="rounded-xl border border-zinc-200 bg-white p-4">
-                                <p class="text-[13px] leading-relaxed text-zinc-600">
-                                    The MCP server must be reachable on the public internet. Copy the URL and token into the connector’s server URL and Authorization fields — not the full JSON block.
-                                </p>
-                            </div>
-                            <div>
-                                <div class="mb-2 flex items-center justify-between">
-                                    <p class="text-sm font-medium text-zinc-700">Authorization header</p>
-                                    <button
-                                        type="button"
-                                        class="text-sm text-rose-600 hover:text-rose-500"
-                                        x-data
-                                        x-on:click="navigator.clipboard.writeText($refs.grokAuth.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                    >Copy</button>
-                                </div>
-                                <pre x-ref="grokAuth" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
-                            </div>
-                            <x-copy-prompt
-                                label="Starter prompt"
-                                text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source, give me the review_url to mark and approve, then poll get_review and follow next_action until I approve."
-                            />
+                            <x-host-setup>
+                                <x-slot:agent>
+                                    <p class="text-[15px] leading-relaxed text-zinc-600">
+                                        Copy this into Grok and let it walk you through the custom connector UI. Values are already filled in.
+                                    </p>
+                                    <x-setup-journey>
+                                        @if (! empty($setupPrompts['grok']))
+                                            <x-copy-prompt
+                                                step="1"
+                                                label="Paste this to Grok"
+                                                :text="$setupPrompts['grok']"
+                                                multiline
+                                            />
+                                        @else
+                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                        @endif
+                                        <x-copy-prompt
+                                            step="2"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['grok']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:agent>
+                                <x-slot:manual>
+                                    <x-setup-journey>
+                                        <x-setup-step step="1" label="Add a custom connector on Grok">
+                                            <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                Go to
+                                                <a href="https://grok.com/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500" target="_blank" rel="noreferrer">grok.com/connectors</a>,
+                                                click <span class="font-medium text-zinc-800">New Connector → Custom</span>,
+                                                name it <span class="font-medium text-zinc-800">revisemy</span>, paste the MCP URL, and set Authorization to the header below.
+                                            </p>
+                                            <p class="text-[13px] leading-relaxed text-zinc-500">
+                                                Use the connector’s server URL and Authorization fields — not the full JSON block.
+                                            </p>
+                                            <div>
+                                                <div class="mb-2 flex items-center justify-between">
+                                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Authorization</p>
+                                                    <button
+                                                        type="button"
+                                                        class="text-sm text-rose-600 hover:text-rose-500"
+                                                        x-data
+                                                        x-on:click="navigator.clipboard.writeText($refs.grokAuth.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                    >Copy</button>
+                                                </div>
+                                                <pre x-ref="grokAuth" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
+                                            </div>
+                                        </x-setup-step>
+                                        <x-copy-prompt
+                                            step="2"
+                                            label="Then run a checkup"
+                                            :text="$checkupPrompts['grok']"
+                                        />
+                                    </x-setup-journey>
+                                </x-slot:manual>
+                            </x-host-setup>
                         </div>
 
                         <div class="grid gap-3 sm:grid-cols-2">
@@ -726,7 +918,7 @@ new class extends Component
                         <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                             <p class="text-sm font-medium text-zinc-800">After you connect</p>
                             <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Paste a host starter prompt above (or ask for the MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code>)</li>
+                                <li>Use <span class="font-medium text-zinc-800">Ask agent</span> (or <span class="font-medium text-zinc-800">Do it myself</span>), then paste a checkup prompt</li>
                                 <li>
                                     <span class="font-medium text-zinc-800">MCP Apps hosts</span> (Claude Desktop, Copilot): mark and approve inline in chat
                                 </li>

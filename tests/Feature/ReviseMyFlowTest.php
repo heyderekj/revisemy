@@ -41,6 +41,14 @@ class ReviseMyFlowTest extends TestCase
         $tokenResponse = $this->postJson('/api/try-token')->assertCreated();
         $token = $tokenResponse->json('token');
 
+        $tokenResponse
+            ->assertJsonStructure([
+                'setup_prompts' => ['chatgpt', 'claude_desktop', 'claude_code', 'copilot', 'cursor', 'grok'],
+                'checkup_prompts' => ['chatgpt', 'cursor'],
+            ]);
+        $this->assertStringContainsString('mcp-remote', (string) data_get($tokenResponse->json(), 'setup_prompts.claude_desktop'));
+        $this->assertStringContainsString('~/.cursor/mcp.json', (string) data_get($tokenResponse->json(), 'setup_prompts.cursor'));
+
         $reviewResponse = $this->withToken($token)->postJson('/api/reviews', [
             'title' => 'Hero pass',
             'context' => 'Check the CTA',
@@ -561,15 +569,26 @@ class ReviseMyFlowTest extends TestCase
         $this->assertSame('Updated title', $review->fresh()->title);
     }
 
+    public function test_home_try_token_includes_agent_setup_prompts(): void
+    {
+        $component = Livewire::test('home')->call('getTryToken');
+
+        $this->assertNotEmpty($component->get('token'));
+        $this->assertStringContainsString('~/.cursor/mcp.json', (string) $component->get('setupPromptsJson'));
+        $this->assertStringContainsString('mcp-remote', (string) $component->get('setupPromptsJson'));
+    }
+
     public function test_home_try_token_setup_can_be_restored_and_cleared(): void
     {
         Livewire::test('home')
-            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', '{}', 'claude mcp add')
+            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', '{}', 'claude mcp add', '{"cursor":"setup"}', '{"cursor":"checkup"}')
             ->assertSet('token', 'tok_abc')
             ->assertSet('mcpUrl', 'https://example.test/mcp')
+            ->assertSet('setupPromptsJson', '{"cursor":"setup"}')
             ->call('clearTryTokenSetup')
             ->assertSet('token', null)
-            ->assertSet('mcpUrl', null);
+            ->assertSet('mcpUrl', null)
+            ->assertSet('setupPromptsJson', null);
     }
 
     public function test_home_try_token_failure_sets_error_instead_of_throwing(): void

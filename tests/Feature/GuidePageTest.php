@@ -18,9 +18,10 @@ class GuidePageTest extends TestCase
             ->assertSee('How ReviseMy fits', false)
             ->assertSee('ChatGPT', false)
             ->assertSee('Cursor', false)
+            ->assertSee('Ask agent', false)
             ->assertSee('Hosts', false)
             ->assertSee('Developer → Edit Config', false)
-            ->assertSee('Starter prompt', false);
+            ->assertSee('Checkup prompt', false);
     }
 
     public function test_second_opinion_page_returns_success(): void
