@@ -129,11 +129,11 @@ class ScreenshotStorage
 
     /**
      * GD downscale for oversized server-side captures: shrink until the
-     * encoded image fits the 8MB cap, falling back to JPEG re-encoding.
+     * encoded image fits the cap, preferring PNG before JPEG re-encode.
      */
     protected function normalizeSize(string $binary): string
     {
-        $cap = 8 * 1024 * 1024;
+        $cap = 16 * 1024 * 1024;
 
         if (strlen($binary) <= $cap) {
             return $binary;
@@ -148,26 +148,61 @@ class ScreenshotStorage
         }
 
         $scale = 1.0;
+        $best = $binary;
 
         do {
-            $scaled = $scale < 1.0
+            $working = $scale < 1.0
                 ? imagescale($image, (int) (imagesx($image) * $scale))
                 : $image;
 
-            ob_start();
-            imagejpeg($scaled, null, 85);
-            $binary = (string) ob_get_clean();
-
-            if ($scaled !== $image) {
-                imagedestroy($scaled);
+            if ($working === false) {
+                break;
             }
 
-            $scale *= 0.7;
-        } while (strlen($binary) > $cap && $scale > 0.1);
+            ob_start();
+            imagepng($working, null, 6);
+            $png = (string) ob_get_clean();
+
+            if ($png !== '' && strlen($png) <= $cap) {
+                if ($working !== $image) {
+                    imagedestroy($working);
+                }
+                imagedestroy($image);
+
+                return $png;
+            }
+
+            if ($png !== '') {
+                $best = $png;
+            }
+
+            ob_start();
+            imagejpeg($working, null, 88);
+            $jpeg = (string) ob_get_clean();
+
+            if ($jpeg !== '' && strlen($jpeg) <= $cap) {
+                if ($working !== $image) {
+                    imagedestroy($working);
+                }
+                imagedestroy($image);
+
+                return $jpeg;
+            }
+
+            if ($jpeg !== '') {
+                $best = $jpeg;
+            }
+
+            if ($working !== $image) {
+                imagedestroy($working);
+            }
+
+            $scale *= 0.85;
+        } while ($scale > 0.1);
 
         imagedestroy($image);
 
-        return $binary;
+        return $best;
     }
 
     protected function resolveBinary(string|UploadedFile $image): string

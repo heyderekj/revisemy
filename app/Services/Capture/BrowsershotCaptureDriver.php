@@ -81,6 +81,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
         foreach ($viewports as [$width, $height, $label]) {
             $shot = $factory()
                 ->windowSize($width, $height)
+                ->deviceScaleFactor(max(1, (int) config('revisemy.capture.device_scale_factor', 2)))
                 ->fullPage()
                 ->timeout((int) config('revisemy.capture.timeout', 30));
 

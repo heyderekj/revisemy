@@ -8,8 +8,8 @@ ReviseMy’s **human marks stay authoritative**. Second opinion is optional, lab
 
 On every screenshot upload, Laravel Cloud queues `GenerateSecondOpinionJob`:
 
-1. **Free checklist** — tuned to the review `type`: `ui` gets hierarchy/contrast/spacing plus Emil Kowalski taste checks; `website` gets above-the-fold/nav/responsive checks; `presentation` (Slide) gets slide-density/consistency checks; `email` gets CTA/dark-mode/images-off/client-rendering checks. Checklist findings are text-only (no `area`) — they never point at pixels they haven't seen.
-2. **Vision upgrade** — when `ANTHROPIC_API_KEY` (Claude, preferred), `OPENAI_API_KEY`, or a custom `REVISEMY_OPENAI_BASE_URL` (Ollama / Groq / OpenRouter / LM Studio) is set, the same job merges vision findings (`suggestion` / `a11y` / `polish` only), guided by a type-specific lens. Force a provider with `REVISEMY_VISION_PROVIDER=anthropic|openai` (default `auto`). Only vision findings carry an `area`.
+1. **Free checklist** — tuned to the review `type`: `ui` gets hierarchy/contrast/spacing plus Emil Kowalski taste checks; `website` gets above-the-fold/nav/responsive checks; `presentation` (Slide) gets slide-density/consistency checks; `email` gets CTA/dark-mode/images-off/client-rendering checks. Checklist findings are **sidebar text only** (`area: null`) — they never draw on the capture.
+2. **Vision upgrade** — when `ANTHROPIC_API_KEY` (Claude, preferred), `OPENAI_API_KEY`, or a custom `REVISEMY_OPENAI_BASE_URL` (Ollama / Groq / OpenRouter / LM Studio) is set, the queued job merges vision findings (`suggestion` / `a11y` / `polish` only), guided by a type-specific lens. Force a provider with `REVISEMY_VISION_PROVIDER=anthropic|openai` (default `auto`). **Only vision findings carry an `area` and render dashed regions on the screenshot.**
 
 Agents can also act as a **design-reviewer subagent** via `add_findings` before the human opens the link. Those land in the same review UI with an `Agent` badge.
 
@@ -42,8 +42,8 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 ### Review UI
 
 - Solid rose selection rectangles = **your marks**
-- Dashed sky markers / areas = **second opinion**
-- Sidebar: **Your marks** vs **Second opinion** (Refresh re-queues the Cloud job)
+- Dashed sky markers / areas = **vision second opinion** (checklist stays in the sidebar)
+- Sidebar: **Your marks** vs **Second opinion** (upgrade note when vision keys are missing; Refresh re-queues the job)
 - After a decision: clear copy for “next pass” vs “loop complete”
 
 ### Agent payload shape

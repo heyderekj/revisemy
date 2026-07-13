@@ -73,6 +73,8 @@ return [
             'desktop' => [1280, 800],
             'mobile' => [375, 812],
         ],
+        // Retina captures: 2× device pixels (Browserless deviceScaleFactor / Browsershot DPR).
+        'device_scale_factor' => max(1, (int) env('REVISEMY_CAPTURE_DPR', 2)),
     ],
 
     /*

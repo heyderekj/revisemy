@@ -10,7 +10,7 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 
 - **Marks, not pins** — product UI speaks in marks (rose rectangles + M1/M2 badges). Human marks are authoritative; API keys stay `pins` for compatibility.
 - **Rectangle-first review** — drag to outline a region or click for a point note; zoom with +/− and pan with Space+drag (or middle mouse).
-- **Second opinion (hints only)** — Cloud-queued, type-aware design checklist on every screenshot; optional Claude (Anthropic) or OpenAI-compatible vision when keyed (or pointed at local Ollama). Sky S-markers never override your marks — accept or dismiss them in the review UI.
+- **Second opinion (hints only)** — Free type-aware checklist in the sidebar on every screenshot; optional Claude/OpenAI vision when keyed draws dashed regions on the capture. Sky S-markers never override your marks — accept or dismiss them in the review UI.
 - **Review types** — `ui`, `website`, `presentation` (Slide in the UI), or `email`: each gets its own checklist and vision lens (emails get CTA/dark-mode/client checks, slides get slide-density checks, sites get above-the-fold/responsive checks).
 - **Four ways to ingest** — `images` (https URL, data URL, or base64), `capture_url` + `page_url` (desktop + mobile screenshots), `pdf` (one shot per page), or raw `html` (email at ~600px). URL capture also stores a DOM snapshot for grounding.
 - **Before/after evidence** — agents attach an `after_image` when resolving a mark; the review page and board show a before/after crop next to the resolution note.
@@ -142,6 +142,7 @@ MCP tests use `ReviseMyServer::actingAs($user)->tool(...)` — no Cursor config 
    - Optional `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) for the vision second opinion — `REVISEMY_VISION_PROVIDER=auto` prefers Claude when both are set
    - Optional free local vision: run Ollama, set `REVISEMY_VISION_PROVIDER=openai`, `REVISEMY_OPENAI_BASE_URL=http://localhost:11434/v1`, and `REVISEMY_OPENAI_MODEL=llama3.2-vision` (blank key is fine). Local/OSS models give helpful hints, not Claude/GPT-4o quality.
    - Optional `REVISEMY_CAPTURE_DRIVER=hosted` + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for server-side URL/email/PDF capture — Cloud containers have no Chrome, so use the hosted driver there
+   - Optional `REVISEMY_CAPTURE_DPR=2` (default) — retina URL captures via Browserless `deviceScaleFactor`
    - Optional Reverb (`BROADCAST_CONNECTION=reverb` + `REVERB_*`/`VITE_REVERB_*`) for live updates — without it the UI polls
 5. Deploy. Run migrations from Cloud commands: `php artisan migrate --force`
 

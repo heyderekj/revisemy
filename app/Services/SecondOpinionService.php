@@ -452,6 +452,14 @@ class SecondOpinionService
     }
 
     /**
+     * Whether a vision provider is configured (Anthropic, OpenAI, or compatible).
+     */
+    public function visionEnabled(): bool
+    {
+        return $this->visionProvider() !== null;
+    }
+
+    /**
      * The active vision provider, or null when none is configured.
      *
      * REVISEMY_VISION_PROVIDER forces one; the default "auto" prefers

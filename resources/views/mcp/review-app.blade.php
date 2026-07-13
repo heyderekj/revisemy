@@ -100,19 +100,18 @@
                                     </div>
                                 </template>
 
-                                {{-- second-opinion hints: dashed sky region + S# badge --}}
+                                {{-- second-opinion hints: dashed sky region + corner S# badge (vision only) --}}
                                 <template x-for="(f, fi) in activeShot().second_opinion" :key="'s'+fi">
-                                    <div>
-                                        <template x-if="f.area">
-                                            <div class="pointer-events-none absolute rounded-md border border-dashed border-sky-400/80 bg-sky-400/10"
-                                                :style="rectStyle(f.area)"></div>
-                                        </template>
-                                        <button type="button"
-                                            class="absolute z-[6] flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
-                                            :class="activeNote && activeNote.key === 's'+fi ? 'ring-2 ring-sky-300' : ''"
-                                            :style="pinStyle(f)" x-text="'S' + (fi + 1)"
-                                            @pointerdown.stop @pointerup.stop @click.stop="showFindingNote(f, fi)"></button>
-                                    </div>
+                                    <template x-if="f.area && f.area.w >= 0.01 && f.area.h >= 0.01">
+                                        <div class="absolute" :style="rectStyle(f.area)">
+                                            <div class="pointer-events-none absolute inset-0 rounded-md border border-dashed border-sky-400/80 bg-sky-400/10"></div>
+                                            <button type="button"
+                                                class="absolute -left-2 -top-2 z-[6] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
+                                                :class="activeNote && activeNote.key === 's'+fi ? 'ring-2 ring-sky-300' : ''"
+                                                x-text="'S' + (fi + 1)"
+                                                @pointerdown.stop @pointerup.stop @click.stop="showFindingNote(f, fi)"></button>
+                                        </div>
+                                    </template>
                                 </template>
 
                                 {{-- draft rectangle / pending composer pin (rose dashed, like the page) --}}

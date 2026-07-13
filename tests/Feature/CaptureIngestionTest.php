@@ -63,6 +63,13 @@ class CaptureIngestionTest extends TestCase
 
         Queue::assertNothingPushed();
         Http::assertSentCount(2);
+
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+            $viewport = $body['viewport'] ?? [];
+
+            return ($viewport['deviceScaleFactor'] ?? null) === 2;
+        });
     }
 
     public function test_html_source_renders_an_email_review(): void
@@ -267,15 +274,15 @@ class CaptureIngestionTest extends TestCase
     {
         $token = $this->setUpEnv();
 
-        // An uncompressed PNG (level 0) blows past the 8MB cap without needing
-        // slow noise generation: 1800×1800 truecolor ≈ 13MB on disk.
-        $image = imagecreatetruecolor(1800, 1800);
+        // An uncompressed PNG (level 0) blows past the 16MB cap without needing
+        // slow noise generation: 2600×2600 truecolor ≈ 17MB on disk.
+        $image = imagecreatetruecolor(2600, 2600);
         ob_start();
         imagepng($image, null, 0);
         $binary = (string) ob_get_clean();
         imagedestroy($image);
 
-        $this->assertGreaterThan(8 * 1024 * 1024, strlen($binary));
+        $this->assertGreaterThan(16 * 1024 * 1024, strlen($binary));
 
         Http::fake(['capture.test/*' => Http::response($binary)]);
 
@@ -286,6 +293,34 @@ class CaptureIngestionTest extends TestCase
 
         $review = Review::query()->firstOrFail();
         $shot = $review->screenshots()->firstOrFail();
-        $this->assertLessThanOrEqual(8 * 1024 * 1024, strlen(Storage::disk('public')->get($shot->path)));
+        $this->assertLessThanOrEqual(16 * 1024 * 1024, strlen(Storage::disk('public')->get($shot->path)));
+    }
+
+    public function test_moderate_capture_keeps_png_without_jpeg_reencode(): void
+    {
+        $token = $this->setUpEnv();
+
+        // Under the 16MB cap — should persist the original PNG bytes unchanged.
+        $image = imagecreatetruecolor(1200, 1200);
+        ob_start();
+        imagepng($image, null, 0);
+        $binary = (string) ob_get_clean();
+        imagedestroy($image);
+
+        $this->assertGreaterThan(1024 * 1024, strlen($binary));
+        $this->assertLessThanOrEqual(16 * 1024 * 1024, strlen($binary));
+
+        Http::fake(['capture.test/*' => Http::response($binary)]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Sharp capture',
+            'html' => '<p>ok</p>',
+        ])->assertCreated();
+
+        $shot = Review::query()->firstOrFail()->screenshots()->firstOrFail();
+        $stored = Storage::disk('public')->get($shot->path);
+
+        $this->assertSame($binary, $stored);
+        $this->assertStringEndsWith('.png', $shot->path);
     }
 }

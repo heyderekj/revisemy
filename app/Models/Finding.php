@@ -67,6 +67,16 @@ class Finding extends Model
         return $this->source === self::SOURCE_GUEST;
     }
 
+    public function isVisionSource(): bool
+    {
+        return in_array($this->source, [self::SOURCE_OPENAI, self::SOURCE_ANTHROPIC], true);
+    }
+
+    public function isChecklistSource(): bool
+    {
+        return $this->source === self::SOURCE_CHECKLIST;
+    }
+
     public function sourceLabel(): string
     {
         return match ($this->source) {

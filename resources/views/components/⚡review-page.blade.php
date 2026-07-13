@@ -49,6 +49,8 @@ new class extends Component
 
     public string $secondOpinionTab = 'all';
 
+    public string $secondOpinionSourceTab = 'all';
+
     public string $markCommentBody = '';
 
     public ?int $activeCommentMarkId = null;
@@ -106,7 +108,20 @@ new class extends Component
     {
         $this->activeScreenshotIndex = $index;
         $this->secondOpinionTab = 'all';
+        $this->secondOpinionSourceTab = 'all';
         $this->cancelPin();
+    }
+
+    public function setSecondOpinionSourceTab(string $tab): void
+    {
+        $allowed = ['all', 'checklist', 'vision'];
+
+        if (! in_array($tab, $allowed, true)) {
+            return;
+        }
+
+        $this->secondOpinionSourceTab = $tab;
+        $this->secondOpinionTab = 'all';
     }
 
     public function setSecondOpinionTab(string $tab): void
@@ -121,21 +136,52 @@ new class extends Component
     }
 
     /**
-     * Fall back to All when the active severity tab has no open findings left.
+     * Fall back to All when the active source or severity tab has no open findings left.
      */
     protected function syncSecondOpinionTab(): void
     {
+        $shot = $this->review->screenshots->values()->get($this->activeScreenshotIndex);
+        $findings = ($shot?->findings ?? collect())
+            ->filter(fn (Finding $f) => $f->isOpen() && ! $f->isGuest());
+
+        if ($this->secondOpinionSourceTab !== 'all') {
+            $hasSource = $findings->contains(fn (Finding $f) => match ($this->secondOpinionSourceTab) {
+                'checklist' => $f->isChecklistSource(),
+                'vision' => $f->isVisionSource(),
+                default => true,
+            });
+
+            if (! $hasSource) {
+                $this->secondOpinionSourceTab = 'all';
+                $this->secondOpinionTab = 'all';
+
+                return;
+            }
+        }
+
         if ($this->secondOpinionTab === 'all') {
             return;
         }
 
-        $shot = $this->review->screenshots->values()->get($this->activeScreenshotIndex);
-        $hasTab = ($shot?->findings ?? collect())
-            ->contains(fn (Finding $f) => $f->isOpen() && ! $f->isGuest() && $f->severity === $this->secondOpinionTab);
+        $sourceFiltered = $this->filterFindingsBySource($findings, $this->secondOpinionSourceTab);
+        $hasTab = $sourceFiltered->contains(fn (Finding $f) => $f->severity === $this->secondOpinionTab);
 
         if (! $hasTab) {
             $this->secondOpinionTab = 'all';
         }
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Finding>  $findings
+     * @return \Illuminate\Support\Collection<int, Finding>
+     */
+    protected function filterFindingsBySource($findings, string $sourceTab)
+    {
+        return match ($sourceTab) {
+            'checklist' => $findings->filter(fn (Finding $f) => $f->isChecklistSource())->values(),
+            'vision' => $findings->filter(fn (Finding $f) => $f->isVisionSource())->values(),
+            default => $findings->values(),
+        };
     }
 
     public function startPin(float $x, float $y, ?float $w = null, ?float $h = null): void
@@ -1426,11 +1472,6 @@ new class extends Component
 
                             @php($openFindings = $shot->findings->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
                             @php($guestFindings = $shot->findings->filter(fn ($f) => $f->isOpen() && $f->isGuest())->values())
-                            @php($textOnlySecondOpinion = $openFindings->filter(function ($f) {
-                                $area = is_array($f->area) ? $f->area : null;
-
-                                return ! ($area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01);
-                            })->values())
                             @php($textOnlyGuest = $guestFindings->filter(function ($f) {
                                 $area = is_array($f->area) ? $f->area : null;
                                 $hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01;
@@ -1439,7 +1480,8 @@ new class extends Component
                             })->values())
                             @foreach ($openFindings as $findingIndex => $finding)
                                 @php($area = is_array($finding->area) ? $finding->area : null)
-                                @if ($area)
+                                @php($hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01)
+                                @if ($hasRegion)
                                     @php($badgePosition = ($area['y'] ?? 0) < 0.07 ? '-left-2 -bottom-2' : (($area['x'] ?? 0) < 0.07 ? '-right-2 -top-2' : '-left-2 -top-2'))
                                     <div
                                         data-finding
@@ -1507,34 +1549,11 @@ new class extends Component
                                 @endif
                             @endforeach
 
-                            @if (($mode === 'owner' && $textOnlySecondOpinion->isNotEmpty()) || $textOnlyGuest->isNotEmpty())
+                            @if ($textOnlyGuest->isNotEmpty())
                                 <div
                                     class="pointer-events-none absolute right-2 top-2 z-[12] flex max-w-[min(100%,12rem)] flex-col items-end gap-1"
-                                    aria-label="Text hints on capture"
+                                    aria-label="Guest text hints on capture"
                                 >
-                                    @if ($mode === 'owner')
-                                        @foreach ($textOnlySecondOpinion as $finding)
-                                            <button
-                                                type="button"
-                                                data-finding
-                                                class="pointer-events-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
-                                                title="{{ $finding->body }}"
-                                                x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
-                                                x-on:click.stop="
-                                                    $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
-                                                    $store.rmFocus.mark = null;
-                                                    @if ($secondOpinionTab !== 'all' && $secondOpinionTab !== $finding->severity)
-                                                        $wire.setSecondOpinionTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-                                                    @else
-                                                        document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                                    @endif
-                                                "
-                                                x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
-                                            >
-                                                S{{ $suggestionNumbers['s'][$finding->id] ?? ($loop->iteration) }}
-                                            </button>
-                                        @endforeach
-                                    @endif
                                     @foreach ($textOnlyGuest as $finding)
                                         <button
                                             type="button"
@@ -1719,7 +1738,12 @@ new class extends Component
                             x-on:click="
                                 $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
                                 $store.rmFocus.mark = null;
-                                @if ($secondOpinionTab !== 'all' && $secondOpinionTab !== $finding->severity)
+                                @if ($secondOpinionSourceTab !== 'all' && (
+                                    ($secondOpinionSourceTab === 'checklist' && ! $finding->isChecklistSource())
+                                    || ($secondOpinionSourceTab === 'vision' && ! $finding->isVisionSource())
+                                ))
+                                    $wire.setSecondOpinionSourceTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+                                @elseif ($secondOpinionTab !== 'all' && $secondOpinionTab !== $finding->severity)
                                     $wire.setSecondOpinionTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                                 @else
                                     document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2064,11 +2088,26 @@ new class extends Component
                 @php($findings = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
                 @php($status = $shot?->second_opinion_status ?? 'idle')
                 @php($findingNumbers = $suggestionNumbers['s'])
-                @php($tabCounts = [
+                @php($sourceTabLabels = [
+                    'all' => 'All',
+                    'checklist' => 'Checklist',
+                    'vision' => 'Vision',
+                ])
+                @php($sourceTabCounts = [
                     'all' => $findings->count(),
-                    Finding::SEVERITY_SUGGESTION => $findings->where('severity', Finding::SEVERITY_SUGGESTION)->count(),
-                    Finding::SEVERITY_A11Y => $findings->where('severity', Finding::SEVERITY_A11Y)->count(),
-                    Finding::SEVERITY_POLISH => $findings->where('severity', Finding::SEVERITY_POLISH)->count(),
+                    'checklist' => $findings->filter(fn ($f) => $f->isChecklistSource())->count(),
+                    'vision' => $findings->filter(fn ($f) => $f->isVisionSource())->count(),
+                ])
+                @php($sourceFilteredFindings = match ($secondOpinionSourceTab) {
+                    'checklist' => $findings->filter(fn ($f) => $f->isChecklistSource())->values(),
+                    'vision' => $findings->filter(fn ($f) => $f->isVisionSource())->values(),
+                    default => $findings,
+                })
+                @php($tabCounts = [
+                    'all' => $sourceFilteredFindings->count(),
+                    Finding::SEVERITY_SUGGESTION => $sourceFilteredFindings->where('severity', Finding::SEVERITY_SUGGESTION)->count(),
+                    Finding::SEVERITY_A11Y => $sourceFilteredFindings->where('severity', Finding::SEVERITY_A11Y)->count(),
+                    Finding::SEVERITY_POLISH => $sourceFilteredFindings->where('severity', Finding::SEVERITY_POLISH)->count(),
                 ])
                 @php($tabLabels = [
                     'all' => 'All',
@@ -2077,8 +2116,8 @@ new class extends Component
                     Finding::SEVERITY_POLISH => 'Polish',
                 ])
                 @php($visibleFindings = $secondOpinionTab === 'all'
-                    ? $findings
-                    : $findings->where('severity', $secondOpinionTab)->values())
+                    ? $sourceFilteredFindings
+                    : $sourceFilteredFindings->where('severity', $secondOpinionTab)->values())
 
                 @if ($status === 'queued')
                     <p class="mb-2 text-sm text-sky-700">{{ $findings->isEmpty() ? 'Generating hints…' : 'Adding vision hints…' }}</p>
@@ -2086,9 +2125,40 @@ new class extends Component
                     <p class="mb-2 text-sm text-rose-600">Second opinion failed{{ $shot?->second_opinion_error ? ': '.$shot->second_opinion_error : '.' }}</p>
                 @endif
 
+                @if ($mode === 'owner' && ! app(SecondOpinionService::class)->visionEnabled())
+                    <p class="mb-3 rounded-lg border border-sky-100 bg-white/80 px-2.5 py-2 text-xs leading-relaxed text-sky-900">
+                        Checklist hints stay in this sidebar. Add <span class="font-mono text-[10px]">ANTHROPIC_API_KEY</span> or <span class="font-mono text-[10px]">OPENAI_API_KEY</span> on the server (and a queue worker) for vision hints that mark regions on the capture.
+                    </p>
+                @endif
+
                 @if ($findings->isEmpty() && $status !== 'queued')
                     <p class="text-sm text-zinc-500">No open suggestions. Accept ones you want as marks, dismiss the rest, or refresh for a new pass.</p>
                 @elseif ($findings->isNotEmpty())
+                    <div class="mb-2 overflow-x-auto overscroll-x-contain rounded-full border border-sky-300/80 bg-sky-50/60 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <div class="flex w-max gap-1">
+                            @foreach ($sourceTabLabels as $sourceTabId => $sourceTabLabel)
+                                @if ($sourceTabId === 'all' || $sourceTabCounts[$sourceTabId] > 0 || ($sourceTabId === 'vision' && app(SecondOpinionService::class)->visionEnabled()))
+                                    <button
+                                        type="button"
+                                        wire:click="setSecondOpinionSourceTab('{{ $sourceTabId }}')"
+                                        @class([
+                                            'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition',
+                                            'border border-sky-300/80 bg-white text-sky-900 shadow-sm' => $secondOpinionSourceTab === $sourceTabId,
+                                            'border border-transparent text-sky-800/80 hover:bg-white/70 hover:text-sky-900' => $secondOpinionSourceTab !== $sourceTabId,
+                                        ])
+                                    >
+                                        <span>{{ $sourceTabLabel }}</span>
+                                        <span @class([
+                                            'rounded-full px-1.5 py-px text-[10px] tabular-nums',
+                                            'font-semibold text-sky-800' => $secondOpinionSourceTab === $sourceTabId,
+                                            'bg-sky-100/80 text-sky-700' => $secondOpinionSourceTab !== $sourceTabId,
+                                        ])>{{ $sourceTabCounts[$sourceTabId] }}</span>
+                                    </button>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+
                     <div class="mb-3 overflow-x-auto overscroll-x-contain rounded-full border border-sky-200/80 bg-white/80 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <div class="flex w-max gap-1">
                             @foreach ($tabLabels as $tabId => $tabLabel)
@@ -2124,7 +2194,15 @@ new class extends Component
                     </div>
 
                     @if ($visibleFindings->isEmpty())
-                        <p class="text-sm text-zinc-500">No open {{ strtolower($tabLabels[$secondOpinionTab] ?? $secondOpinionTab) }} hints.</p>
+                        <p class="text-sm text-zinc-500">
+                            @if ($secondOpinionSourceTab === 'vision')
+                                No open vision hints{{ $secondOpinionTab !== 'all' ? ' in this category' : '' }}.
+                            @elseif ($secondOpinionSourceTab === 'checklist')
+                                No open checklist hints{{ $secondOpinionTab !== 'all' ? ' in this category' : '' }}.
+                            @else
+                                No open {{ strtolower($tabLabels[$secondOpinionTab] ?? $secondOpinionTab) }} hints.
+                            @endif
+                        </p>
                     @else
                         <ul class="space-y-3">
                             @foreach ($visibleFindings as $finding)

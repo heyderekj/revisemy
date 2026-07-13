@@ -62,7 +62,11 @@ class HostedCaptureDriver implements CaptureDriver
         foreach ($viewports as [$width, $height, $label]) {
             $response = Http::timeout((int) config('revisemy.capture.timeout', 30))
                 ->post($endpoint, $source + [
-                    'viewport' => ['width' => $width, 'height' => $height],
+                    'viewport' => [
+                        'width' => $width,
+                        'height' => $height,
+                        'deviceScaleFactor' => max(1, (int) config('revisemy.capture.device_scale_factor', 2)),
+                    ],
                     'options' => ['type' => 'png', 'fullPage' => true],
                 ]);
 
