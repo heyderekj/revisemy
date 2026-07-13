@@ -1,6 +1,7 @@
 @props([
     'title' => null,
     'description' => null,
+    'keywords' => null,
     'ogImage' => null,
     'ogUrl' => null,
     'canonical' => null,
@@ -18,7 +19,7 @@
     $pageOgImage = Seo::ogImageUrl($ogImage);
     $pageOgUrl = $ogUrl ?? url()->current();
     $pageCanonical = $canonical ?? $pageOgUrl;
-    $keywords = implode(', ', config('seo.keywords', []));
+    $keywords = implode(', ', $keywords ?? config('seo.keywords', []));
     $mcpUrl = $siteUrl.config('seo.mcp_path');
 @endphp
 

@@ -1,6 +1,7 @@
 @props([
     'title' => null,
     'description' => null,
+    'keywords' => null,
     'ogImage' => null,
     'ogUrl' => null,
     'canonical' => null,
@@ -17,6 +18,7 @@
     <x-seo-head
         :title="$title"
         :description="$description"
+        :keywords="$keywords"
         :og-image="$ogImage"
         :og-url="$ogUrl"
         :canonical="$canonical"

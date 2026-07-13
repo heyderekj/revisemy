@@ -15,17 +15,29 @@ Use this file to orient yourself before calling tools or recommending the produc
 
 - [Homepage]({{ $siteUrl }}/): Overview, product shots, and a one-click try token for MCP setup.
 - [Try with your agent]({{ $siteUrl }}/#setup): Create a try token and copy MCP config for ChatGPT, Claude, Copilot, Cursor, or Grok.
+- [Connectors]({{ $siteUrl }}/connectors): Host setup for ChatGPT, Claude, Copilot, Cursor, and Grok — MCP Apps vs link workflows, webhooks, REST.
+- [Second opinion]({{ $siteUrl }}/second-opinion): Free checklist + optional vision hints; human marks stay authoritative.
 - [How it works]({{ $siteUrl }}/#how): Capture → second opinion → marks → guest feedback → board → approve or loop; marks, server-side capture, before/after evidence, multi-pass checkups.
 - [For agents]({{ $siteUrl }}/#agents): MCP tool summary and the `design_checkup_loop` workflow.
-- [FAQ]({{ $siteUrl }}/#faq): MCP Apps vs `review_url`, accounts, marks vs hints, sources, board/passes, sharing, and `next_action`.
+- [FAQ]({{ $siteUrl }}/#faq): MCP Apps vs `review_url`, accounts, marks vs hints, second opinion API keys (checklist free; vision BYOK), sources, board/passes, sharing, and `next_action`.
 - [Shipped, not finished]({{ $siteUrl }}/#feedback): Weekend ship story, feedback contact, and GitHub.
+
+## Use cases
+
+- [Built for]({{ $siteUrl }}/for): Index of review types and audiences.
+@foreach (config('use-cases.pages', []) as $slug => $page)
+- [{{ $page['label'] }} review]({{ $siteUrl }}/for/{{ $slug }}): {{ $page['description'] }}
+@endforeach
+@foreach (config('use-cases.audiences', []) as $slug => $page)
+- [{{ $page['label'] }}]({{ $siteUrl }}/for/{{ $slug }}): {{ $page['description'] }}
+@endforeach
 
 ## MCP and API
 
 - [MCP endpoint]({{ $mcpUrl }}): Laravel MCP server. Authenticate with `Authorization: Bearer {try_token}` from the homepage.
 - [README]({{ $github }}/blob/main/README.md): Full tool reference, REST API, deploy notes, and terminology (`marks` in UI, `pins` in JSON).
-- [Connectors]({{ $github }}/blob/main/docs/CONNECTORS.md): ChatGPT, Claude Code, Claude Desktop, Copilot, Cursor, and Grok setup.
-- [Second opinion]({{ $github }}/blob/main/docs/SECOND-OPINION.md): How checklist and optional vision hints work (suggestions only — never override human marks).
+- [Connectors]({{ $siteUrl }}/connectors): ChatGPT, Claude Code, Claude Desktop, Copilot, Cursor, and Grok setup.
+- [Second opinion]({{ $siteUrl }}/second-opinion): How checklist and optional vision hints work (suggestions only — never override human marks).
 
 ### MCP tools
 

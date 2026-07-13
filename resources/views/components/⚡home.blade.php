@@ -102,6 +102,14 @@ new class extends Component
         pastHero: false,
         atSetup: false,
         get showMobileCta() { return this.pastHero && ! this.atSetup },
+        openFaqFromHash() {
+            const hash = window.location.hash;
+            if (! hash.startsWith('#faq-')) return;
+            const details = document.querySelector(hash);
+            if (details instanceof HTMLDetailsElement) {
+                details.open = true;
+            }
+        },
         initStickyCta() {
             const hero = document.getElementById('rm-hero-cta');
             const setup = document.getElementById('setup');
@@ -119,7 +127,11 @@ new class extends Component
             }
         }
     }"
-    x-init="initStickyCta()"
+    x-init="
+        initStickyCta();
+        openFaqFromHash();
+        window.addEventListener('hashchange', () => openFaqFromHash());
+    "
     x-on:scroll-to-setup.window="$nextTick(() => document.getElementById('setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
 >
     <div class="rm-grid pointer-events-none absolute inset-0"></div>
@@ -156,8 +168,8 @@ new class extends Component
                             </a>
                         </li>
                         <li>
-                            <a href="https://github.com/heyderekj/revisemy/blob/main/docs/CONNECTORS.md" class="inline-flex items-center gap-2 transition hover:text-zinc-900" target="_blank" rel="noreferrer">
-                                Connectors ↗
+                            <a href="/connectors" class="inline-flex items-center gap-2 transition hover:text-zinc-900">
+                                Connectors
                                 <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">MCP</span>
                             </a>
                         </li>
@@ -320,6 +332,10 @@ new class extends Component
                         <x-mark-type-icon type="s" />
                         <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Optional hints can land first — checklist immediately, optional Claude or OpenAI vision when a key is set. Useful suggestions, never decisions.</p>
+                        <a
+                            href="/second-opinion"
+                            class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                        >Learn more</a>
                     </article>
 
                     <article>
@@ -356,6 +372,42 @@ new class extends Component
                         <span class="font-medium">Try saying:</span> “Run a design checkup,” “review this URL,” or “address my feedback.” ReviseMy handles the MCP handoff inside the agent workflow you already use.
                     </span>
                 </p>
+
+                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for every visual you ship</h2>
+                    <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                        Same loop, different checklist — pick the artifact you’re reviewing.
+                    </p>
+
+                    <ul class="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 min-[30rem]:grid-cols-2">
+                        @foreach (config('use-cases.pages', []) as $slug => $useCase)
+                            <li>
+                                <a href="{{ url('/for/'.$slug) }}" class="group flex items-start gap-3">
+                                    <x-use-case-icon
+                                        :name="$useCase['icon']"
+                                        class="mt-0.5 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
+                                    />
+                                    <span class="min-w-0">
+                                        <span class="block text-sm font-semibold text-zinc-900 transition group-hover:text-rose-600">
+                                            {{ $useCase['label'] }}
+                                        </span>
+                                        <span class="mt-1 block text-sm leading-relaxed text-zinc-500">
+                                            {{ $useCase['teaser'] ?? $useCase['headline'] }}
+                                        </span>
+                                    </span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    <p class="mt-8 text-sm text-zinc-500">
+                        Also:
+                        <a href="/for/reviewers" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">for reviewers</a>,
+                        <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">connectors</a>,
+                        or
+                        <a href="/for" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">see all paths</a>.
+                    </p>
+                </div>
             </section>
 
             {{-- How agents use it --}}
@@ -364,7 +416,7 @@ new class extends Component
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                     <code class="font-mono text-[13px] text-rose-600">create_review</code> accepts images, a capture URL, PDF, or HTML. When you finish,
                     <code class="font-mono text-[13px] text-rose-600">get_review</code> returns work packets and one clear <code class="font-mono text-[13px]">next_action</code>: wait, apply marks, open another pass, or stop.
-                    In <a href="https://github.com/heyderekj/revisemy/blob/main/docs/CONNECTORS.md#inline-review-mcp-apps" class="text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700" target="_blank" rel="noreferrer">MCP Apps hosts</a>, the review renders inline in chat; CLI hosts still use the <code class="font-mono text-[13px]">review_url</code> link.
+                    In <a href="/connectors#claude" class="text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">MCP Apps hosts</a>, the review renders inline in chat; CLI hosts still use the <code class="font-mono text-[13px]">review_url</code> link.
                 </p>
                 <ul class="mt-5 max-w-2xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-600">
                     <li>Marks include intent and priority: <span class="font-medium text-zinc-800">must-fix</span>, nice to have, question, or keep</li>
@@ -406,7 +458,7 @@ new class extends Component
                 <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
                     Choose the app you already use. Try free — no account required — and connect ChatGPT, Claude, Copilot, Cursor, or Grok.
                     Any MCP client can use the same URL and Bearer token; see
-                    <a href="https://github.com/heyderekj/revisemy/blob/main/docs/CONNECTORS.md" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500">Connectors</a>
+                    <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500">Connectors</a>
                     for the full host list.
                 </p>
 
@@ -675,7 +727,7 @@ new class extends Component
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
                                 You always get a <code class="font-mono text-[13px]">review_url</code>. Open it, mark, approve — works everywhere. On
-                                <a href="https://github.com/heyderekj/revisemy/blob/main/docs/CONNECTORS.md#inline-review-mcp-apps" class="text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700" target="_blank" rel="noreferrer">MCP Apps</a>
+                                <a href="/connectors#claude" class="text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">MCP Apps</a>
                                 hosts (Claude web/Desktop, Copilot, …) the same review can also show up <span class="font-medium text-zinc-800">inline in chat</span>. Cursor, Claude Code, and Grok are link-only for now — same loop, just in a tab.
                             </p>
                         </details>
@@ -701,6 +753,18 @@ new class extends Component
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
                                 You. <span class="font-medium text-zinc-800">M# marks</span> are the brief — that’s what the agent should fix. <span class="font-medium text-zinc-800">S#</span> second opinion and <span class="font-medium text-zinc-800">G#</span> guest notes stay suggestions until you accept them.
+                            </p>
+                        </details>
+
+                        <details id="faq-second-opinion-keys" class="group scroll-mt-24 py-4">
+                            <summary class="cursor-pointer list-none text-[15px] font-medium text-zinc-900 marker:content-none [&::-webkit-details-marker]:hidden">
+                                <span class="flex items-start justify-between gap-4">
+                                    <span>Do I need API keys for second opinion?</span>
+                                    <span class="mt-0.5 shrink-0 text-zinc-400 transition group-open:rotate-180" aria-hidden="true">▾</span>
+                                </span>
+                            </summary>
+                            <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
+                                For the free <span class="font-medium text-zinc-800">checklist</span>, no — it runs on every upload. For <span class="font-medium text-zinc-800">vision</span> hints that mark regions on the capture, add <span class="font-medium text-zinc-800">your own</span> <code class="font-mono text-[13px] text-rose-600">ANTHROPIC_API_KEY</code> or <code class="font-mono text-[13px] text-rose-600">OPENAI_API_KEY</code> on the server (your deploy, your usage). Optional: <code class="font-mono text-[13px] text-rose-600">REVISEMY_VISION_PROVIDER</code> to pick Claude vs OpenAI, custom models, or <code class="font-mono text-[13px] text-rose-600">REVISEMY_OPENAI_BASE_URL</code> for Ollama and other OpenAI-compatible endpoints. Then <span class="font-medium text-zinc-800">Refresh second opinion</span> on the review. Still suggestions — your marks win. See <a href="/second-opinion" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">second opinion</a> for the full picture.
                             </p>
                         </details>
 
