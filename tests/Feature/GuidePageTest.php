@@ -27,6 +27,11 @@ class GuidePageTest extends TestCase
             ->assertOk()
             ->assertSee($page['headline'], false)
             ->assertSee($page['title'], false)
-            ->assertSee('How it stays non-contradictory', false);
+            ->assertSee('How it stays non-contradictory', false)
+            ->assertSee('Where the craft lenses come from', false)
+            ->assertSee('IIDS', false)
+            ->assertSee('Good Email Code', false)
+            ->assertSee('UI craft', false)
+            ->assertSee('Are these designers reviewing my UI?', false);
     }
 }

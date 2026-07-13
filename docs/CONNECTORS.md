@@ -17,14 +17,27 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 ## Inline review (MCP Apps)
 
-`create_review` and `get_review` declare a `ui://revisemy/review-app` resource ([MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)). Hosts that support the extension (Claude web/desktop, Copilot, Goose, …) render the review inline in a sandboxed iframe — the same review-page and board surfaces, without leaving the chat:
+`create_review` and `get_review` declare a `ui://revisemy/review-app` resource ([MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)). Hosts that support the extension (Claude web/desktop, Copilot, Goose, …) render the review inline in a sandboxed iframe — the human loop (mark, verify, decide) plus a board view, without leaving the chat. The full owner workspace (comment threads, share/guest, drag columns, second-opinion triage) remains on `review_url` / `board_url`.
 
-- **Screenshot view**: marks and second-opinion hints overlaid on the shots; click a spot or drag a box to leave a mark, tap any marker to read its note.
-- **Board view**: marks grouped Open → In progress → Resolved → Verified (mirrors `/r/{token}/board`), with verify / reopen inline.
-- **Decision bar**: approve / request changes with an optional note.
-- A **Refresh** control plus a slow auto-poll while the review is in `changes_requested`, so the board updates as the agent resolves marks (the inline echo of the review page's Echo broadcasting).
+- **Screenshot view**: marks and second-opinion hints overlaid on the shots; click a spot or drag a box to leave a mark; open a mark for the focus-cropped detail (same `MarkFocus` crop as the web board sheet).
+- **Board view**: marks grouped Open → In progress → Resolved → Verified (including previous-pass marks), with a detail panel, verify / reopen, and a link out when comments exist.
+- **Decision bar**: approve / request changes with an optional note (`h-8` controls aligned with web Flux `size="sm"`).
+- A **Refresh** control plus a slow auto-poll while the review is `pending` or `changes_requested`, so the board updates as the agent resolves marks.
 
 These are backed by the app-only `add_mark`, `decide_review`, and `verify_mark` tools. Hosts without MCP Apps (e.g. Claude Code CLI) ignore the UI metadata and use the `review_url` link — the loop is unchanged.
+
+### MCP ↔ web parity checklist
+
+When changing review/board chrome, ship the matching update in `resources/views/mcp/review-app.blade.php` in the **same PR**.
+
+| Keep aligned | Source of truth |
+|--------------|-----------------|
+| Marker / status / severity colors & labels | `Annotation::markerClass()`, `statusBadgeClass()`, `severityLabels()`, `statusLabels()` |
+| Board column owners & empty copy | `Annotation::boardColumnMeta()` |
+| Mark focus crop | `MarkFocus` → pin `focus_preview` in `Review::markToArray()` |
+| Control height | Web Flux `size="sm"` (`h-8`) |
+
+**Intentionally web-only:** comment threads (inline shows `comment_count` + “View comments” → `board_url` / `review_url`), share/guest link management, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.
 
 The three app tools are marked `Visibility::App`, so the model does not see them in its tool list. Note this is **hiding, not authorization**: any holder of the Sanctum token can still invoke them by name over the same endpoint. That matches ReviseMy's existing trust model — the token owner *is* the human, exactly as the token-gated `/r/{token}` owner link already assumes. Their descriptions say "human-in-the-loop UI only — agents must never call this," mirroring the "never verify a mark yourself" instruction agents already follow.
 
@@ -67,7 +80,7 @@ Add a small `SKILL.md` that teaches agents *when* to call ReviseMy:
 
 The skill should not reimplement tools — it only points at the MCP server.
 
-For **taste while implementing** (animation easing, press feedback, depth), pair with [emilkowalski/skills](https://github.com/emilkowalski/skills) (`npx skills@latest add emilkowalski/skills`). Those skills guide the coding agent; ReviseMy second opinion stays hints only and never overrides human marks.
+For **taste while implementing** (animation easing, press feedback, depth), pair with [emilkowalski/skills](https://github.com/emilkowalski/skills) (`npx skills@latest add emilkowalski/skills`). Those skills guide the coding agent; ReviseMy second opinion stays hints only, discloses craft lenses via the review chip / `taste` payload, and never overrides human marks.
 
 ## Design rule
 

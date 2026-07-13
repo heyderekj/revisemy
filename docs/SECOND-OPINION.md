@@ -43,14 +43,30 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 - Solid rose selection rectangles = **your marks**
 - Dashed sky markers / areas = **vision second opinion** (checklist stays in the sidebar)
 - Sidebar: **Your marks** vs **Second opinion** (upgrade note when vision keys are missing; Refresh re-runs the job)
-- Taste hints that borrow Emil Kowalski’s design-engineering rules show a **BY Emil Kowalski** byline under that finding (checklist + UI vision)
+- A **craft chip** on Second opinion (e.g. UI craft / Website craft) opens the public lenses for that review type — findings themselves stay uncredited (no personal bylines)
 - After a decision: clear copy for “next pass” vs “loop complete”
+
+### Craft lenses (by `type`)
+
+| Type | Chip | Lenses (public sources) |
+|------|------|-------------------------|
+| `ui` | UI craft | Design engineering, IIDS, Fluid interfaces |
+| `website` | Website craft | IIDS, Design engineering (when motion/chrome context) |
+| `presentation` | Slide craft | Presentation Zen, Slide craft |
+| `email` | Email craft | Good Email Code |
+
+Disclosure also lives on [/second-opinion](https://revisemy.com/second-opinion) (“Where the craft lenses come from”). Heuristics are ReviseMy distillations — **not** affiliated with, endorsed by, or quoting the people behind those works on your review.
 
 ### Agent payload shape
 
 ```json
 {
   "pass": 1,
+  "taste": {
+    "label": "UI craft",
+    "disclaimer": "…",
+    "lenses": [{ "id": "iids", "name": "IIDS", "blurb": "…", "source_url": "…" }]
+  },
   "next_action": { "action": "wait_for_human", "summary": "…" },
   "guidance": "Apply human marks first (work_packets.pins)…",
   "work_packets": {
@@ -92,9 +108,13 @@ Enable a queue worker only if you rely on other queued jobs (e.g. decision webho
 | v1.2 | If `page_url` is set, attach selector / a11y role via Playwright MCP / UIPE |
 | v1.3 | Optional OmniParser pass for element labels when no DOM is available |
 
-Research references (implementer skills for consumer repos):
+Research references (public craft sources + implementer skills):
 
-- [emilkowalski/skills](https://github.com/emilkowalski/skills) — design-engineering taste (animation decisions, press feedback, depth, reduced motion). Install: `npx skills@latest add emilkowalski/skills`. ReviseMy’s free checklist + vision prompt already borrow these rules as **hints only**.
+- [IIDS](https://shiftnudge.com/iids) — International Interface Design Style (Shift Nudge / MDS)
+- [animations.dev](https://animations.dev/) / [emilkowalski/skills](https://github.com/emilkowalski/skills) — design-engineering principles for coding agents
+- [WWDC: Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/)
+- [Presentation Zen design tips](https://www.garrreynolds.com/design-tips) · [Duarte slide design](https://www.duarte.com/blog/perfect-your-slide-design/)
+- [Good Email Code](https://www.goodemailcode.com/)
 - [design-review-skill](https://github.com/aslanmazhidov/design-review-skill)
 - [ui-craft](https://github.com/educlopez/ui-craft)
 - [OmniParser](https://github.com/microsoft/OmniParser) / [UIPE](https://github.com/dirkknibbe/uipe) / [Playwright MCP](https://github.com/microsoft/playwright-mcp)

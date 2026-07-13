@@ -507,7 +507,6 @@ new class extends Component
     >
         @if ($selectedMark)
             @php($shot = $selectedMark->screenshot)
-            @php($region = $selectedMark->region())
             @php($markReview = $shot?->review)
 
             <div class="grid min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] lg:items-stretch">
@@ -532,22 +531,7 @@ new class extends Component
                     </div>
 
                     @if ($shot)
-                        <div class="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
-                            <div class="relative">
-                                <img src="{{ $shot->url() }}" alt="Screenshot for mark M{{ $selectedMark->number }}" class="block h-auto max-h-[min(48dvh,28rem)] w-full object-contain object-top lg:max-h-[min(62dvh,36rem)]" />
-                                @if ($region)
-                                    <div
-                                        class="pointer-events-none absolute rounded-md border-2 border-rose-500 bg-rose-500/15"
-                                        style="left: {{ $region['x'] * 100 }}%; top: {{ $region['y'] * 100 }}%; width: {{ $region['w'] * 100 }}%; height: {{ $region['h'] * 100 }}%;"
-                                    ></div>
-                                @else
-                                    <span
-                                        class="pointer-events-none absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow ring-2 ring-white {{ $selectedMark->markerClass() }}"
-                                        style="left: {{ $selectedMark->x * 100 }}%; top: {{ $selectedMark->y * 100 }}%;"
-                                    >M{{ $selectedMark->number }}</span>
-                                @endif
-                            </div>
-                        </div>
+                        <x-mark-focus-preview :mark="$selectedMark" />
                     @else
                         <div class="rounded-xl border border-dashed border-zinc-200 px-4 py-10 text-center text-sm text-zinc-400">
                             No screenshot for this mark.
@@ -606,14 +590,14 @@ new class extends Component
                     </div>
                 </div>
 
-                {{-- Comments column --}}
-                <div class="flex min-h-0 flex-col border-t border-zinc-100 bg-zinc-50/60 p-5 sm:p-6 lg:border-t-0">
-                    <div class="mb-3 flex items-center gap-2">
+                {{-- Comments column: stretch to left column height on desktop; composer sticks to bottom --}}
+                <div class="flex min-h-0 flex-col border-t border-zinc-100 bg-zinc-50/60 p-5 sm:p-6 lg:h-full lg:border-t-0">
+                    <div class="mb-3 flex shrink-0 items-center gap-2">
                         <flux:heading size="sm">Comments</flux:heading>
                         <span class="flex h-5 min-w-5 items-center justify-center rounded-full bg-zinc-100 px-1.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ $selectedMark->comments->count() }}</span>
                     </div>
 
-                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 lg:max-h-[min(58dvh,32rem)]">
+                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                         @forelse ($selectedMark->comments as $comment)
                             <div wire:key="mark-comment-{{ $comment->id }}" class="rounded-xl border border-zinc-200/80 bg-white px-3 py-2.5 shadow-sm">
                                 <div class="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
@@ -643,7 +627,7 @@ new class extends Component
                     </div>
 
                     @if ($review->allowsComments())
-                        <div class="mt-4 space-y-2 border-t border-zinc-200/80 pt-4">
+                        <div class="mt-4 shrink-0 space-y-2 border-t border-zinc-200/80 pt-4 lg:mt-auto">
                             <flux:input
                                 wire:model="commentAuthor"
                                 placeholder="Your name (optional)"
@@ -659,12 +643,12 @@ new class extends Component
                                 placeholder="Add context, a question, or a note…"
                             />
                             <flux:error name="commentBody" />
-                            <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="w-full !bg-zinc-900 hover:!bg-zinc-800">
+                            <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="!h-8 w-full !bg-zinc-900 hover:!bg-zinc-800">
                                 Comment
                             </flux:button>
                         </div>
                     @else
-                        <p class="mt-4 border-t border-zinc-200/80 pt-4 text-center text-xs text-zinc-400">
+                        <p class="mt-4 shrink-0 border-t border-zinc-200/80 pt-4 text-center text-xs text-zinc-400 lg:mt-auto">
                             Commenting is disabled. Turn it back on from Share on the review.
                         </p>
                     @endif

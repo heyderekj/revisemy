@@ -73,7 +73,7 @@ class VisionProviderTest extends TestCase
 
         $this->assertCount(3, $vision);
         $this->assertSame('a11y', $vision[0]->severity);
-        $this->assertSame(SecondOpinionService::SKILL_CREDIT_EMIL_KOWALSKI, $vision[0]->author);
+        $this->assertNull($vision[0]->author);
         $this->assertEqualsWithDelta(0.1, $vision[0]->area['x'], 0.001);
         // Unknown severities get capped to suggestion — never must-fix.
         $this->assertSame('suggestion', $vision[1]->severity);

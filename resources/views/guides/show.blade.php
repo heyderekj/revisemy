@@ -2,7 +2,10 @@
     $hasHosts = ! empty($page['hosts']);
     $hasFeatures = ! empty($page['features']);
     $hasChecklist = ! empty($page['checklist']);
+    $hasSources = ! empty($page['sources']);
     $hasFaq = ! empty($page['faq']);
+    $tasteSources = $hasSources ? \App\Support\TasteLenses::allTypes() : [];
+    $tasteDisclaimer = \App\Support\TasteLenses::disclaimer();
 @endphp
 
 <x-layouts.app
@@ -73,6 +76,13 @@
 
                 @if ($hasChecklist)
                     @include('guides.partials.checklist')
+                @endif
+
+                @if ($hasSources)
+                    @include('guides.partials.sources', [
+                        'sources' => $tasteSources,
+                        'disclaimer' => $tasteDisclaimer,
+                    ])
                 @endif
 
                 @if ($hasFaq)

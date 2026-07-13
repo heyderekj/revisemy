@@ -89,18 +89,11 @@ class Finding extends Model
     }
 
     /**
-     * Skill / taste credit for second-opinion hints (not guest names).
+     * Per-finding taste bylines were removed — craft lenses are disclosed on
+     * the Second opinion chip. Guest names still use author via sourceLabel().
      */
     public function creditLabel(): ?string
     {
-        if ($this->isGuest() || ! filled($this->author)) {
-            return null;
-        }
-
-        if (in_array($this->source, [self::SOURCE_CHECKLIST, self::SOURCE_OPENAI, self::SOURCE_ANTHROPIC], true)) {
-            return $this->author;
-        }
-
         return null;
     }
 

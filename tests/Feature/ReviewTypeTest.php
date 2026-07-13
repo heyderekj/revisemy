@@ -134,13 +134,32 @@ class ReviewTypeTest extends TestCase
         $uiFindings = Review::query()->where('type', 'ui')->firstOrFail()
             ->screenshots()->firstOrFail()->fresh('findings')->findings;
 
-        $emilCredits = $uiFindings->filter(
-            fn (Finding $f) => $f->author === SecondOpinionService::SKILL_CREDIT_EMIL_KOWALSKI
-        );
-        $this->assertGreaterThanOrEqual(2, $emilCredits->count());
-
         foreach ($uiFindings as $finding) {
+            $this->assertNull($finding->author, 'System findings must not carry taste-person bylines');
+            $this->assertNull($finding->creditLabel());
             $this->assertStringNotContainsString('emilkowalski', strtolower($finding->body));
+            $this->assertStringNotContainsString('Emil says', $finding->body);
         }
+
+        $craftBodies = $uiFindings->pluck('body')->implode("\n");
+        $this->assertStringContainsString('pressed/active', $craftBodies);
+        $this->assertStringNotContainsString('Craft check:', $craftBodies);
+
+        $emailBodies = collect($bodiesByType['email'])->implode("\n");
+        $this->assertTrue(
+            str_contains($emailBodies, 'live HTML text') || str_contains($emailBodies, 'still communicate and convert') || str_contains($emailBodies, 'Images-off'),
+            'Email checklist should include Good Email Code craft heuristics'
+        );
+
+        $slideBodies = collect($bodiesByType['presentation'])->implode("\n");
+        $this->assertTrue(
+            str_contains($slideBodies, 'three seconds') || str_contains($slideBodies, 'space is a feature') || str_contains($slideBodies, 'One idea'),
+            'Presentation checklist should include slide craft heuristics'
+        );
+
+        $payload = Review::query()->where('type', 'ui')->firstOrFail()->toAgentPayload();
+        $this->assertSame('UI craft', $payload['taste']['label']);
+        $this->assertNotEmpty($payload['taste']['lenses']);
+        $this->assertSame('IIDS', collect($payload['taste']['lenses'])->firstWhere('id', 'iids')['name'] ?? null);
     }
 }

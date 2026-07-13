@@ -94,7 +94,7 @@ class McpAppTest extends TestCase
 
         ReviseMyServer::resource(ReviewApp::class)
             ->assertOk()
-            ->assertSee(['reviewApp', 'mcpBridge', 'add_mark']);
+            ->assertSee(['reviewApp', 'mcpBridge', 'add_mark', 'focus_preview', 'View comments', 'boardPins']);
     }
 
     public function test_add_mark_creates_a_human_mark_and_returns_fresh_payload(): void
@@ -210,6 +210,46 @@ class McpAppTest extends TestCase
             'review_id' => $review->public_id, 'mark_id' => $mark->id, 'action' => 'reopen',
         ])->assertHasNoErrors();
         $this->assertSame(Annotation::STATUS_OPEN, $mark->fresh()->status);
+    }
+
+    public function test_add_mark_payload_includes_focus_preview_and_comment_count(): void
+    {
+        [$user, $review] = $this->setUpReview();
+        $shot = $review->screenshots()->firstOrFail();
+
+        ReviseMyServer::actingAs($user)->tool(AddMarkTool::class, [
+            'review_id' => $review->public_id,
+            'screenshot_id' => $shot->id,
+            'x' => 0.5,
+            'y' => 0.4,
+            'area' => ['x' => 0.2, 'y' => 0.3, 'w' => 0.4, 'h' => 0.2],
+            'severity' => 'must-fix',
+            'body' => 'Crop this mark.',
+        ])->assertHasNoErrors()->assertStructuredContent(
+            fn ($json) => $json
+                ->has('work_packets.pins.0.focus_preview.window')
+                ->has('work_packets.pins.0.focus_preview.ratio')
+                ->has('work_packets.pins.0.focus_preview.bg_style')
+                ->where('work_packets.pins.0.comment_count', 0)
+                ->etc()
+        );
+
+        $mark = Annotation::query()->firstOrFail();
+        $mark->comments()->create([
+            'author' => 'Alex',
+            'body' => 'Agree — tighten spacing.',
+            'from_owner' => false,
+        ]);
+
+        $payload = $review->fresh()->toAgentPayload();
+        $pin = $payload['work_packets']['pins'][0];
+
+        $this->assertSame(1, $pin['comment_count']);
+        $this->assertSame(0.0, $pin['focus_preview']['window']['x']);
+        $this->assertSame(1.0, $pin['focus_preview']['window']['w']);
+        $this->assertNotNull($pin['focus_preview']['overlay']);
+        $this->assertIsFloat($pin['focus_preview']['ratio']);
+        $this->assertStringContainsString('background-image:', $pin['focus_preview']['bg_style']);
     }
 
     public function test_add_mark_refuses_a_closed_review(): void

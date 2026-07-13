@@ -2112,35 +2112,46 @@ new class extends Component
             @endif
 
             @if ($mode === 'owner')
+            @php($taste = \App\Support\TasteLenses::forType($review->type))
             <div class="rounded-2xl border border-sky-200/80 bg-sky-50/50 shadow-sm" data-panel="second">
-                <div class="flex items-center gap-1 px-3 py-3 sm:px-4">
+                <div class="flex items-center gap-1.5 px-3 py-3 sm:px-4">
                     <button
                         type="button"
                         class="flex min-w-0 flex-1 items-center gap-2 text-left"
                         x-on:click="panels.second = ! panels.second"
                         x-bind:aria-expanded="panels.second.toString()"
                     >
-                        <flux:heading size="sm" class="min-w-0 truncate">Second opinion</flux:heading>
+                        <flux:heading size="sm" class="min-w-0 flex-1 truncate">Second opinion</flux:heading>
+                    </button>
+                    @if ($review->isOpenForFeedback())
+                        <button
+                            type="button"
+                            wire:click="refreshSecondOpinion"
+                            wire:loading.attr="disabled"
+                            class="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-sky-700 transition hover:bg-sky-100/80 hover:text-sky-900 disabled:opacity-50"
+                            title="Refresh second opinion"
+                            aria-label="Refresh second opinion"
+                        >
+                            <flux:icon.arrow-path variant="micro" class="size-3.5" wire:loading.class="animate-spin" wire:target="refreshSecondOpinion" />
+                        </button>
+                    @endif
+                    <button
+                        type="button"
+                        class="flex shrink-0 items-center gap-1.5"
+                        x-on:click="panels.second = ! panels.second"
+                        x-bind:aria-expanded="panels.second.toString()"
+                        aria-label="Toggle second opinion"
+                    >
                         <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-sky-800">{{ $secondOpinionFindings->count() }}</span>
                         <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-sky-700/60 transition" x-bind:class="panels.second && 'rotate-180'" />
                     </button>
-                    @if ($review->isOpenForFeedback() && $mode === 'owner')
-                        <flux:button
-                            size="sm"
-                            variant="ghost"
-                            icon="arrow-path"
-                            wire:click="refreshSecondOpinion"
-                            wire:loading.attr="disabled"
-                            class="shrink-0 [&_[data-flux-loading-indicator]]:rounded-md [&_[data-flux-loading-indicator]]:bg-sky-100/95"
-                            x-on:click.stop
-                        >
-                            Refresh
-                        </flux:button>
-                    @endif
                 </div>
 
                 <div class="border-t border-sky-200/60 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.second" x-cloak>
-                <p class="mb-3 text-xs leading-snug text-zinc-500">Hints until you accept — then they become your marks</p>
+                <div class="relative mb-3 flex items-start justify-between gap-2">
+                    <p class="min-w-0 text-xs leading-snug text-zinc-500">Hints until you accept — then they become your marks</p>
+                    <x-taste-craft-chip :taste="$taste" />
+                </div>
 
                 @php($findings = $secondOpinionFindings)
                 @php($status = $shot?->second_opinion_status ?? 'idle')
@@ -2332,9 +2343,6 @@ new class extends Component
                                         @endif
                                     </div>
                                     <p class="text-sm leading-relaxed text-zinc-700">{{ $finding->body }}</p>
-                                    @if ($finding->creditLabel())
-                                        <p class="mt-2 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">BY {{ $finding->creditLabel() }}</p>
-                                    @endif
                                 </li>
                             @endforeach
                         </ul>

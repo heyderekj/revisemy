@@ -125,6 +125,7 @@ return [
             'path' => '/second-opinion',
             'label' => 'Second opinion',
             'icon' => 'light-bulb',
+            'mark_icon' => 's',
             'title' => 'Second opinion design hints — checklist and vision that never override your marks',
             'description' => 'ReviseMy second opinion runs a free design checklist and optional Claude or OpenAI vision on each screenshot. Hints only — human marks stay authoritative and never auto-flip approve or request-changes.',
             'keywords' => [
@@ -167,8 +168,10 @@ return [
                 'Findings = suggestions only (suggestion / a11y / polish)',
                 'Checklist findings have no area; only vision findings may point at a region',
                 'request_second_opinion re-runs checklist (+ vision when keyed)',
-                'Taste hints may credit Emil Kowalski design-engineering rules — still hints',
+                'Open the craft chip on a review to see which public lenses apply for that type',
             ],
+            'sources' => true,
+            'sources_intro' => 'Type-aware second opinion draws on published craft principles. Findings are ReviseMy hints — not quotes, reviews, or endorsements from the people or organizations behind these works.',
             'faq' => [
                 [
                     'q' => 'Do I need an API key for second opinion?',
@@ -181,6 +184,10 @@ return [
                 [
                     'q' => 'How do I refresh hints?',
                     'a' => 'Use Refresh second opinion on the review page, or have the agent call request_second_opinion.',
+                ],
+                [
+                    'q' => 'Are these designers reviewing my UI?',
+                    'a' => 'No. ReviseMy distills public craft principles into checklist and vision hints. The craft chip and this page name the sources; nobody outside your loop is reviewing or endorsing your screenshots.',
                 ],
             ],
         ],

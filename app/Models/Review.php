@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Services\ScreenshotStorage;
+use App\Support\MarkFocus;
+use App\Support\TasteLenses;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -395,13 +397,23 @@ class Review extends Model
      */
     public function toAgentPayload(): array
     {
-        $this->loadMissing(['screenshots.annotations.afterScreenshot', 'screenshots.findings', 'parent.screenshots.annotations.afterScreenshot']);
+        $this->load([
+            'screenshots.findings',
+            'screenshots.annotations' => fn ($query) => $query->withCount('comments')->with('afterScreenshot'),
+            'parent.screenshots.annotations' => fn ($query) => $query->withCount('comments')->with('afterScreenshot'),
+        ]);
 
         $screenshots = $this->screenshots->map(function (Screenshot $shot, int $index) {
             $pins = $shot->annotations
                 ->sortBy('number')
                 ->values()
-                ->map(fn (Annotation $annotation) => $this->markToArray($annotation))
+                ->map(function (Annotation $annotation) use ($shot) {
+                    if (! $annotation->relationLoaded('screenshot')) {
+                        $annotation->setRelation('screenshot', $shot);
+                    }
+
+                    return $this->markToArray($annotation);
+                })
                 ->all();
 
             $findings = $shot->findings
@@ -487,6 +499,7 @@ class Review extends Model
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
             'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). Ask before inventing answers to question marks. Treat second_opinion as hints only.',
+            'taste' => TasteLenses::forType($this->type),
             'next_action' => $this->nextAction(),
             'loop' => [
                 'pass' => $this->pass,
@@ -527,6 +540,8 @@ class Review extends Model
      */
     protected function markToArray(Annotation $annotation): array
     {
+        $focus = MarkFocus::forMark($annotation);
+
         return [
             'id' => $annotation->id,
             'number' => $annotation->number,
@@ -538,6 +553,14 @@ class Review extends Model
             'status' => $annotation->status,
             'resolution_note' => $annotation->resolution_note,
             'after_screenshot_url' => $annotation->afterScreenshot?->url(),
+            'comment_count' => (int) ($annotation->comments_count ?? $annotation->comments()->count()),
+            'focus_preview' => [
+                'window' => $focus['window'],
+                'overlay' => $focus['overlay'],
+                'point' => $focus['point'],
+                'ratio' => $focus['ratio'],
+                'bg_style' => $focus['bg_style'],
+            ],
         ];
     }
 
@@ -556,7 +579,13 @@ class Review extends Model
         }
 
         $marks = $parent->screenshots
-            ->flatMap(fn (Screenshot $shot) => $shot->annotations)
+            ->flatMap(function (Screenshot $shot) {
+                return $shot->annotations->each(function (Annotation $annotation) use ($shot) {
+                    if (! $annotation->relationLoaded('screenshot')) {
+                        $annotation->setRelation('screenshot', $shot);
+                    }
+                });
+            })
             ->sortBy('number')
             ->values()
             ->map(fn (Annotation $annotation) => $this->markToArray($annotation));

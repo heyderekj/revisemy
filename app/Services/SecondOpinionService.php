@@ -10,13 +10,12 @@ use App\Services\Vision\AnthropicVisionProvider;
 use App\Services\Vision\OpenAiVisionProvider;
 use App\Services\Vision\VisionProvider;
 use App\Support\DomDigest;
+use App\Support\TasteLenses;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class SecondOpinionService
 {
-    public const SKILL_CREDIT_EMIL_KOWALSKI = 'Emil Kowalski';
-
     public function queue(Screenshot $screenshot): void
     {
         if (! config('revisemy.second_opinion_enabled', true)) {
@@ -90,12 +89,10 @@ class SecondOpinionService
             if ($provider) {
                 $vision = $provider->findings($screenshot, $this->visionPrompt($screenshot->review));
                 $merged = $this->dedupeAgainstExisting($screenshot->fresh('findings'), $vision);
-                $reviewType = $screenshot->review?->type ?? Review::TYPE_UI;
                 $this->persistFindings(
                     $screenshot,
                     $merged,
                     $provider->source(),
-                    creditSkillAuthor: $reviewType === Review::TYPE_UI,
                 );
             }
 
@@ -212,25 +209,29 @@ class SecondOpinionService
     /**
      * Free rule-based checklist, tuned to the review type. These are static
      * heuristics that never look at the pixels, so they carry no area — only
-     * vision findings may point at a region.
+     * vision findings may point at a region. Taste credits are not stored on
+     * findings; disclosure lives on the craft chip / taste payload.
      *
-     * @return list<array{severity: string, body: string, area: array<string, float>|null, credit?: string}>
+     * @return list<array{severity: string, body: string, area: array<string, float>|null}>
      */
     protected function checklistFindings(Screenshot $screenshot): array
     {
         $review = $screenshot->review;
+        $type = $review?->type ?? Review::TYPE_UI;
         $width = (int) ($screenshot->width ?: 0);
         $height = (int) ($screenshot->height ?: 0);
         $context = strtolower((string) ($review?->context ?? ''));
         $title = strtolower((string) ($review?->title ?? ''));
         $haystack = $context.' '.$title;
 
-        $findings = match ($review?->type) {
+        $findings = match ($type) {
             Review::TYPE_WEBSITE => $this->websiteChecklist($review, $width, $height, $haystack),
             Review::TYPE_PRESENTATION => $this->presentationChecklist(),
             Review::TYPE_EMAIL => $this->emailChecklist(),
             default => $this->uiChecklist($width, $height, $haystack),
         };
+
+        $findings = array_merge($findings, TasteLenses::checklistItems($type, $haystack));
 
         if ($review?->page_url) {
             $findings[] = [
@@ -240,11 +241,11 @@ class SecondOpinionService
             ];
         }
 
-        return $findings;
+        return TasteLenses::capChecklist($this->dedupeBodies($findings));
     }
 
     /**
-     * @return list<array{severity: string, body: string, area: array<string, float>|null, credit?: string}>
+     * @return list<array{severity: string, body: string, area: array<string, float>|null}>
      */
     protected function uiChecklist(int $width, int $height, string $haystack): array
     {
@@ -263,19 +264,6 @@ class SecondOpinionService
                 'severity' => Finding::SEVERITY_POLISH,
                 'body' => 'Scan spacing rhythm: look for uneven gaps between sections or cramped clusters near the edges.',
                 'area' => null,
-            ],
-            // Emil Kowalski / design-engineering taste (static-frame heuristics)
-            [
-                'severity' => Finding::SEVERITY_POLISH,
-                'body' => 'Taste check: primary pressables should feel responsive — confirm a clear pressed/active treatment (subtle scale ~0.97), not only a hover color swap.',
-                'area' => null,
-                'credit' => self::SKILL_CREDIT_EMIL_KOWALSKI,
-            ],
-            [
-                'severity' => Finding::SEVERITY_POLISH,
-                'body' => 'Taste check: floating surfaces (cards, popovers, toolbars) often read better with soft depth (semi-transparent shadow/ring) than a hard opaque border — flag harsh boxes that fight the background.',
-                'area' => null,
-                'credit' => self::SKILL_CREDIT_EMIL_KOWALSKI,
             ],
         ];
 
@@ -309,23 +297,6 @@ class SecondOpinionService
                 'severity' => Finding::SEVERITY_A11Y,
                 'body' => 'Context mentions navigation — check focus order, link names, and that the current section is obvious without color alone.',
                 'area' => null,
-            ];
-        }
-
-        if (
-            str_contains($haystack, 'animat')
-            || str_contains($haystack, 'modal')
-            || str_contains($haystack, 'drawer')
-            || str_contains($haystack, 'toast')
-            || str_contains($haystack, 'popover')
-            || str_contains($haystack, 'dropdown')
-            || str_contains($haystack, 'motion')
-        ) {
-            $findings[] = [
-                'severity' => Finding::SEVERITY_POLISH,
-                'body' => 'Motion context: prefer ease-out under ~300ms for UI chrome; never ease-in; don’t animate keyboard-triggered actions; popovers should scale from the trigger (modals stay centered).',
-                'area' => null,
-                'credit' => self::SKILL_CREDIT_EMIL_KOWALSKI,
             ];
         }
 
@@ -497,50 +468,14 @@ class SecondOpinionService
     }
 
     /**
-     * Vision prompt: shared contract + a taste lens tuned to the review type.
+     * Vision prompt: shared contract + craft lenses for the review type.
      */
     protected function visionPrompt(?Review $review): string
     {
         $context = trim((string) ($review?->context ?? ''));
         $title = (string) ($review?->title ?? 'UI review');
         $subject = $review?->typeLabel() ?? 'UI';
-
-        $lens = match ($review?->type) {
-            Review::TYPE_WEBSITE => <<<'LENS'
-Taste lens (marketing/content website):
-- Above the fold: value proposition and next step must be clear without scrolling.
-- One dominant CTA per view; the label states the outcome.
-- Navigation: plain-language labels, obvious current section, no mystery-meat icons.
-- Typography: readable measure (~45–75 chars), clear heading hierarchy.
-- Trust: consistent brand color roles; flag hero text with weak contrast over imagery.
-- If this looks like a narrow/mobile capture, check tap targets and horizontal overflow.
-LENS,
-            Review::TYPE_PRESENTATION => <<<'LENS'
-Taste lens (slide):
-- One idea per slide; the title should state the point, not just the topic.
-- Text density: flag walls of text (~6 lines / 6 words per line is a good ceiling).
-- Readability at distance: small or thin low-contrast type dies on projectors.
-- Alignment and consistency: title position, type scale, color roles should look systematic.
-- Charts: each should make one point; flag chart junk, unreadable labels, rainbow palettes.
-LENS,
-            Review::TYPE_EMAIL => <<<'LENS'
-Taste lens (HTML email):
-- One dominant CTA; secondary links visibly defer to it.
-- Dark-mode risk: transparent-logo halos, pure-black text, borders that vanish on inverted backgrounds.
-- Images-off resilience: key copy and the CTA should be real text, not baked into images.
-- Client constraints: ~600px width, single column preferred; flag layouts that need modern CSS to survive Outlook.
-- Footer: unsubscribe, physical address, sender identity present.
-LENS,
-            default => <<<'LENS'
-Taste lens (Emil Kowalski design-engineering / emilkowalski/skills — apply when visible in the still):
-- Hierarchy & restraint: one clear primary action; avoid competing chrome.
-- Pressables: look for missing pressed/active affordance; hover-only feedback is weak.
-- Depth: soft shadow/ring often beats hard opaque borders on floating surfaces.
-- Motion (if UI implies modals/drawers/toasts/popovers): ease-out, under ~300ms for chrome; never ease-in; no motion on keyboard-triggered actions; popovers origin from trigger (modals centered); never scale(0) — use ~0.95 + opacity.
-- Accessibility: contrast, focus visibility, reduced-motion awareness when motion is implied.
-- Prefer concrete CSS/layout fixes in the body when possible.
-LENS,
-        };
+        $lens = TasteLenses::visionLensMarkdown($review?->type);
 
         $domSection = '';
         $domRule = '';
@@ -566,6 +501,7 @@ Rules:
 - severity must be suggestion, a11y, or polish — never must-fix.
 - area is normalized 0–1 relative to the image; null if global.
 - Do not approve or reject the design; suggestions only.
+- Do not attribute findings to named people or claim they reviewed this screenshot.
 - Human marks stay authoritative; you only hint.{$domRule}
 
 {$lens}
@@ -597,20 +533,46 @@ PROMPT;
     }
 
     /**
-     * @param  list<array{severity: string, body: string, area: array<string, float>|null, credit?: string}>  $items
+     * @param  list<array{severity: string, body: string, area: array<string, float>|null}>  $items
+     * @return list<array{severity: string, body: string, area: array<string, float>|null}>
+     */
+    protected function dedupeBodies(array $items): array
+    {
+        $kept = [];
+        $bodies = [];
+
+        foreach ($items as $item) {
+            $body = strtolower((string) ($item['body'] ?? ''));
+            $dup = false;
+            foreach ($bodies as $existing) {
+                similar_text($body, $existing, $percent);
+                if ($percent > 72) {
+                    $dup = true;
+                    break;
+                }
+            }
+            if ($dup) {
+                continue;
+            }
+            $bodies[] = $body;
+            $kept[] = $item;
+        }
+
+        return $kept;
+    }
+
+    /**
+     * @param  list<array{severity: string, body: string, area: array<string, float>|null}>  $items
      */
     protected function persistFindings(
         Screenshot $screenshot,
         array $items,
         string $source,
-        bool $creditSkillAuthor = false,
     ): void {
         foreach ($items as $item) {
-            $author = $item['credit'] ?? ($creditSkillAuthor ? self::SKILL_CREDIT_EMIL_KOWALSKI : null);
-
             $screenshot->findings()->create([
                 'source' => $source,
-                'author' => $author,
+                'author' => null,
                 'severity' => $item['severity'],
                 'body' => $item['body'],
                 'area' => $item['area'],
