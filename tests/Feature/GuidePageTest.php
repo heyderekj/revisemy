@@ -14,6 +14,8 @@ class GuidePageTest extends TestCase
             ->assertOk()
             ->assertSee($page['headline'], false)
             ->assertSee($page['title'], false)
+            ->assertSee('The problem', false)
+            ->assertSee('How ReviseMy fits', false)
             ->assertSee('ChatGPT', false)
             ->assertSee('Cursor', false)
             ->assertSee('Hosts', false);

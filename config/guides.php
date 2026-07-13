@@ -25,6 +25,29 @@ return [
             'features_heading' => 'What you get once connected',
             'problem' => 'Agent setup docs often live on GitHub while the product lives on a marketing homepage. You need a crawlable place that explains which hosts support inline review, which share a link, and how to plug in without guessing.',
             'loop' => 'Get a free try token on the homepage, copy the host-specific MCP config, then ask your agent to call `create_review`. On MCP Apps hosts the review opens inline; on CLI and link hosts you open the `review_url`. Your agent polls `get_review` and follows `next_action` until you approve.',
+            'loop_steps' => [
+                [
+                    'text' => 'Get a free try token on the homepage and copy the host-specific MCP config.',
+                ],
+                [
+                    'command' => 'create_review',
+                    'text' => 'opens inline on MCP Apps hosts, or shares a',
+                    'after' => [
+                        ['type' => 'text', 'value' => ' '],
+                        ['type' => 'command', 'value' => 'review_url'],
+                        ['type' => 'text', 'value' => ' on CLI and link hosts.'],
+                    ],
+                ],
+                [
+                    'command' => 'get_review',
+                    'text' => 'polls until you decide;',
+                    'after' => [
+                        ['type' => 'text', 'value' => ' '],
+                        ['type' => 'command', 'value' => 'next_action'],
+                        ['type' => 'text', 'value' => ' tells the agent what to do next.'],
+                    ],
+                ],
+            ],
             'hosts' => [
                 [
                     'id' => 'chatgpt',

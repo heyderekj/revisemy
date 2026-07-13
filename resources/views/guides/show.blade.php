@@ -62,12 +62,7 @@
 
                 @include('guides.partials.hero')
 
-                @if (! empty($page['loop_steps']))
-                    @include('guides.partials.problem-loop')
-                @else
-                    @include('use-cases.partials.problem')
-                    @include('use-cases.partials.loop')
-                @endif
+                @include('guides.partials.problem-loop')
 
                 @if ($hasHosts)
                     @include('guides.partials.hosts')

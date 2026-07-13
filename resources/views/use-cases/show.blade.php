@@ -61,9 +61,7 @@
 
                 @include('use-cases.partials.hero')
 
-                @include('use-cases.partials.problem')
-
-                @include('use-cases.partials.loop')
+                @include('guides.partials.problem-loop')
 
                 @if ($hasInputs)
                     @include('use-cases.partials.inputs')
