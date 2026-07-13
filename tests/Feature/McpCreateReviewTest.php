@@ -186,7 +186,7 @@ class McpCreateReviewTest extends TestCase
         config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
 
         Http::fake([
-            'capture.test/content' => Http::response('<html><body><h1>Hero headline</h1></body></html>'),
+            'capture.test/content*' => Http::response('<html><body><h1>Hero headline</h1></body></html>'),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
 
@@ -209,7 +209,7 @@ class McpCreateReviewTest extends TestCase
         config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
 
         Http::fake([
-            'capture.test/content' => Http::response('nope', 500),
+            'capture.test/content*' => Http::response('nope', 500),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
 

@@ -36,13 +36,8 @@ class HostedCaptureDriver implements CaptureDriver
             return null;
         }
 
-        $request = Http::timeout((int) config('revisemy.capture.timeout', 30));
-
-        if ($key = config('revisemy.capture.api_key')) {
-            $request = $request->withToken((string) $key);
-        }
-
-        $response = $request->post($endpoint, ['url' => $url]);
+        $response = Http::timeout((int) config('revisemy.capture.timeout', 30))
+            ->post($this->authenticatedUrl($endpoint), ['url' => $url]);
 
         if (! $response->successful() || $response->body() === '') {
             Log::warning('Hosted DOM capture failed', ['url' => $url, 'status' => $response->status()]);
@@ -61,20 +56,15 @@ class HostedCaptureDriver implements CaptureDriver
      */
     protected function capture(array $source, array $viewports, array $baseMeta): array
     {
-        $endpoint = (string) config('revisemy.capture.endpoint');
+        $endpoint = $this->authenticatedUrl((string) config('revisemy.capture.endpoint'));
         $shots = [];
 
         foreach ($viewports as [$width, $height, $label]) {
-            $request = Http::timeout((int) config('revisemy.capture.timeout', 30));
-
-            if ($key = config('revisemy.capture.api_key')) {
-                $request = $request->withToken((string) $key);
-            }
-
-            $response = $request->post($endpoint, $source + [
-                'viewport' => ['width' => $width, 'height' => $height],
-                'options' => ['type' => 'png', 'fullPage' => true],
-            ]);
+            $response = Http::timeout((int) config('revisemy.capture.timeout', 30))
+                ->post($endpoint, $source + [
+                    'viewport' => ['width' => $width, 'height' => $height],
+                    'options' => ['type' => 'png', 'fullPage' => true],
+                ]);
 
             if (! $response->successful() || $response->body() === '') {
                 throw ValidationException::withMessages([
@@ -89,5 +79,23 @@ class HostedCaptureDriver implements CaptureDriver
         }
 
         return $shots;
+    }
+
+    /**
+     * Browserless (and compatible hosts) expect ?token=…, not a Bearer header.
+     */
+    protected function authenticatedUrl(string $endpoint): string
+    {
+        $key = config('revisemy.capture.api_key');
+
+        if (! is_string($key) || $key === '') {
+            return $endpoint;
+        }
+
+        if (str_contains($endpoint, 'token=')) {
+            return $endpoint;
+        }
+
+        return $endpoint.(str_contains($endpoint, '?') ? '&' : '?').'token='.urlencode($key);
     }
 }
