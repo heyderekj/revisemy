@@ -51,13 +51,33 @@ class TryTokenService
                 ],
             ];
 
+            // Claude Desktop's Connectors UI is OAuth-oriented and won't take a
+            // Bearer header. Bridge the remote HTTP server via mcp-remote + Edit Config.
+            $claudeDesktopConfig = [
+                'mcpServers' => [
+                    'revisemy' => [
+                        'command' => 'npx',
+                        'args' => [
+                            '-y',
+                            'mcp-remote',
+                            $mcpUrl,
+                            '--header',
+                            'Authorization:${AUTH_HEADER}',
+                        ],
+                        'env' => [
+                            'AUTH_HEADER' => $authHeader,
+                        ],
+                    ],
+                ],
+            ];
+
             return [
                 'workspace' => $workspace,
                 'user' => $user,
                 'token' => $plainTextToken,
                 'mcp_url' => $mcpUrl,
                 'cursor_config' => $cursorStyle,
-                'claude_desktop_config' => $cursorStyle,
+                'claude_desktop_config' => $claudeDesktopConfig,
                 'copilot_config' => [
                     'servers' => [
                         'revisemy' => [

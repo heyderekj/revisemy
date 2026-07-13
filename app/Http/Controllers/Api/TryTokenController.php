@@ -45,8 +45,8 @@ class TryTokenController extends Controller
             'claude_code_command' => $result['claude_code_command'],
             'chatgpt_hint' => $result['chatgpt_hint'],
             'next_steps' => [
-                'Pick your client on the homepage (ChatGPT, Claude, Copilot, Cursor, or Grok) and paste the matching config.',
-                'Ask your agent to capture your work and call create_review — or use the design_checkup_loop MCP prompt.',
+                'Pick your client on the homepage (ChatGPT, Claude, Copilot, Cursor, or Grok) and follow that host’s setup — Claude Desktop uses Developer → Edit Config, not Connectors.',
+                'Paste a starter prompt (or use the design_checkup_loop MCP prompt) so the agent calls create_review.',
                 'MCP Apps hosts: mark and approve inline in chat. CLI/link hosts: open the review_url link.',
                 'Poll get_review and follow next_action until approved or a follow-up pass is needed.',
             ],

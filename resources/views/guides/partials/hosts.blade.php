@@ -19,6 +19,11 @@
                         <li>{{ $step }}</li>
                     @endforeach
                 </ol>
+                @if (! empty($host['prompt']))
+                    <div class="mt-4">
+                        <x-copy-prompt :text="$host['prompt']" />
+                    </div>
+                @endif
             </article>
         @endforeach
     </div>

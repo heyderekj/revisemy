@@ -502,17 +502,18 @@ new class extends Component
                         {{-- ChatGPT --}}
                         <div x-show="client === 'chatgpt'" x-cloak class="space-y-4">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                                Add ReviseMy as a <span class="font-medium text-zinc-800">remote MCP connector</span> (or Custom GPT Action for REST).
-                                When the host supports MCP Apps, the review can render inline in chat; otherwise the agent shares a <code class="font-mono text-[13px]">review_url</code> link.
+                                Add ReviseMy as a <span class="font-medium text-zinc-800">remote MCP connector</span> (or a Custom GPT Action for REST).
+                                If the host supports MCP Apps, the review can open inline; otherwise your agent shares a <code class="font-mono text-[13px]">review_url</code>.
                             </p>
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>In ChatGPT, add a <span class="font-medium text-zinc-800">remote MCP / connector</span> (or Custom GPT Action)</li>
-                                <li>Use the MCP URL and Bearer token below</li>
-                                <li>Ask it to run a design checkup via <code class="font-mono text-[13px] text-rose-600">create_review</code> (MCP) or <code class="font-mono text-[13px]">POST /api/reviews</code> (REST)</li>
+                                <li>In ChatGPT, open <span class="font-medium text-zinc-800">Settings → Connectors</span> (or Custom GPT → Actions for REST)</li>
+                                <li>Add a remote MCP connector named <span class="font-medium text-zinc-800">revisemy</span></li>
+                                <li>Paste the <span class="font-medium text-zinc-800">MCP URL</span> and the <span class="font-medium text-zinc-800">Authorization</span> header below</li>
+                                <li>Paste a starter prompt and ask ChatGPT to run the checkup</li>
                             </ol>
-                            <div class="rounded-xl border border-zinc-200 bg-white p-4">
+                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                                 <p class="text-[13px] leading-relaxed text-zinc-600">
-                                    ChatGPT’s connector UI varies by plan. Copy the URL and token, then paste them into the connector’s server URL and Authorization header fields.
+                                    ChatGPT’s connector UI varies by plan. Look for fields like server URL and Authorization / Bearer token — not a full JSON paste.
                                 </p>
                             </div>
                             <div>
@@ -527,22 +528,31 @@ new class extends Component
                                 </div>
                                 <pre x-ref="chatgptAuth" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
                             </div>
+                            <x-copy-prompt
+                                label="Starter prompt"
+                                text="Run a ReviseMy design checkup on the work I just changed. Use create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF), share the review_url if you get one, wait for my marks, then poll get_review and follow next_action until I approve."
+                            />
                         </div>
 
                         {{-- Claude --}}
                         <div x-show="client === 'claude'" x-cloak class="space-y-5">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                                Claude has two paths: <span class="font-medium text-zinc-800">Desktop and claude.ai</span> render the review
-                                <span class="font-medium text-zinc-800">inline in chat</span> via MCP Apps (mark and approve there). <span class="font-medium text-zinc-800">Claude Code</span> is CLI-only — the agent shares a <code class="font-mono text-[13px]">review_url</code> link instead.
+                                Claude has two paths: <span class="font-medium text-zinc-800">Desktop</span> can render the review
+                                <span class="font-medium text-zinc-800">inline in chat</span> via MCP Apps.
+                                <span class="font-medium text-zinc-800">Claude Code</span> is CLI-only — it shares a <code class="font-mono text-[13px]">review_url</code> instead.
                             </p>
 
                             <div class="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-                                <p class="text-sm font-medium text-zinc-800">Claude Desktop &amp; claude.ai — inline review (MCP Apps)</p>
+                                <p class="text-sm font-medium text-zinc-800">Claude Desktop — Edit Config (Bearer try token)</p>
                                 <ol class="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                    <li>Paste the JSON below into MCP / connector settings</li>
-                                    <li>Ask Claude to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                    <li>Open <span class="font-medium text-zinc-800">Settings → Developer → Edit Config</span> (opens <code class="font-mono text-[13px]">claude_desktop_config.json</code>)</li>
+                                    <li>Merge the JSON below into <code class="font-mono text-[13px]">mcpServers</code>, save, then fully quit and reopen Claude Desktop</li>
+                                    <li>Confirm <span class="font-medium text-zinc-800">revisemy</span> appears under tools, then paste a starter prompt</li>
                                     <li>Mark feedback and approve in the review panel inside the chat</li>
                                 </ol>
+                                <div class="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-[13px] leading-relaxed text-amber-950/80">
+                                    Don’t use <span class="font-medium">Connectors → Add custom connector</span> for this try token — that UI is OAuth-oriented and has no Bearer header field. Needs Node.js (<code class="font-mono text-[12px]">npx</code>) for the bridge below.
+                                </div>
                                 <div>
                                     <div class="mb-2 flex items-center justify-between">
                                         <p class="text-sm font-medium text-zinc-700">Claude Desktop config</p>
@@ -555,13 +565,18 @@ new class extends Component
                                     </div>
                                     <pre x-ref="claudeDesktop" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeDesktopConfigJson }}</pre>
                                 </div>
+                                <x-copy-prompt
+                                    label="Starter prompt (Desktop)"
+                                    text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF). Open the review inline so I can mark and approve, then follow next_action until I’m done. Prefer the design_checkup_loop prompt if available."
+                                />
                             </div>
 
                             <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                                 <p class="text-sm font-medium text-zinc-800">Claude Code — terminal CLI</p>
                                 <ol class="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                     <li>Run the command below in your project terminal</li>
-                                    <li>Ask Claude to call <code class="font-mono text-[13px] text-rose-600">create_review</code> and open the returned <code class="font-mono text-[13px]">review_url</code></li>
+                                    <li>Paste a starter prompt; Claude will call <code class="font-mono text-[13px] text-rose-600">create_review</code> and share a <code class="font-mono text-[13px]">review_url</code></li>
+                                    <li>Open the link, mark feedback, approve or request changes</li>
                                 </ol>
                                 <div>
                                     <div class="mb-2 flex items-center justify-between">
@@ -575,6 +590,10 @@ new class extends Component
                                     </div>
                                     <pre x-ref="claudeCmd" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeCodeCommand }}</pre>
                                 </div>
+                                <x-copy-prompt
+                                    label="Starter prompt (Claude Code)"
+                                    text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source, give me the review_url to mark and approve, then poll get_review and follow next_action until I approve. Prefer the design_checkup_loop prompt if available."
+                                />
                             </div>
                         </div>
 
@@ -582,12 +601,12 @@ new class extends Component
                         <div x-show="client === 'copilot'" x-cloak class="space-y-4">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                                 Copilot supports MCP Apps — after <code class="font-mono text-[13px] text-rose-600">create_review</code>, the review renders
-                                <span class="font-medium text-zinc-800">inline in Copilot Chat</span> so you can mark feedback and approve without leaving the editor.
+                                <span class="font-medium text-zinc-800">inline in Copilot Chat</span> so you can mark and approve without leaving the editor.
                             </p>
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                 <li>Open <span class="font-medium text-zinc-800">Copilot → MCP</span> (user or workspace <code class="font-mono text-[13px]">mcp.json</code>)</li>
-                                <li>Paste or merge the config below</li>
-                                <li>Ask Copilot to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                <li>Paste or merge the config below under <code class="font-mono text-[13px]">servers</code></li>
+                                <li>Reload Copilot / the window if tools don’t appear, then paste a starter prompt</li>
                             </ol>
                             @if ($copilotConfigJson)
                                 <div>
@@ -607,18 +626,22 @@ new class extends Component
                                     Start over above to generate a fresh try token with Copilot config (older saved sessions may not include it).
                                 </p>
                             @endif
+                            <x-copy-prompt
+                                label="Starter prompt"
+                                text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF). Open the review inline so I can mark and approve, then follow next_action until I’m done. Prefer the design_checkup_loop prompt if available."
+                            />
                         </div>
 
                         {{-- Cursor --}}
                         <div x-show="client === 'cursor'" x-cloak class="space-y-4">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                                 Cursor agents use MCP tools in the IDE. After <code class="font-mono text-[13px] text-rose-600">create_review</code>, the agent shares a
-                                <code class="font-mono text-[13px]">review_url</code> link — open it in the browser to mark feedback and approve. (No inline MCP Apps UI in Cursor.)
+                                <code class="font-mono text-[13px]">review_url</code> — open it in the browser to mark and approve. (No inline MCP Apps UI in Cursor yet.)
                             </p>
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                 <li>Open <span class="font-medium text-zinc-800">Cursor Settings → MCP</span></li>
-                                <li>Paste the config below (or merge into <code class="font-mono text-[13px]">~/.cursor/mcp.json</code>)</li>
-                                <li>Ask your agent to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                <li>Add a new server, or merge the JSON below into <code class="font-mono text-[13px]">~/.cursor/mcp.json</code></li>
+                                <li>Enable <span class="font-medium text-zinc-800">revisemy</span>, then paste a starter prompt in Agent chat</li>
                             </ol>
                             <div>
                                 <div class="mb-2 flex items-center justify-between">
@@ -632,23 +655,27 @@ new class extends Component
                                 </div>
                                 <pre x-ref="cursorConfig" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $cursorConfigJson }}</pre>
                             </div>
+                            <x-copy-prompt
+                                label="Starter prompt"
+                                text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots as data URLs for localhost, or public URL + capture_url). Give me the review_url to mark and approve, then poll get_review and follow next_action until I approve. Prefer the design_checkup_loop prompt if available."
+                            />
                         </div>
 
                         {{-- Grok --}}
                         <div x-show="client === 'grok'" x-cloak class="space-y-4">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                                 Add ReviseMy as a <span class="font-medium text-zinc-800">custom MCP connector</span> on Grok.
-                                After <code class="font-mono text-[13px] text-rose-600">create_review</code>, open the <code class="font-mono text-[13px]">review_url</code> link to mark feedback and approve (no MCP Apps inline UI assumed yet).
+                                After <code class="font-mono text-[13px] text-rose-600">create_review</code>, open the <code class="font-mono text-[13px]">review_url</code> to mark and approve.
                             </p>
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                 <li>Go to <a href="https://grok.com/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500" target="_blank" rel="noreferrer">grok.com/connectors</a></li>
                                 <li>Click <span class="font-medium text-zinc-800">New Connector → Custom</span></li>
-                                <li>Paste the MCP URL below and authorize with the Bearer token</li>
-                                <li>Ask Grok to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                <li>Name it <span class="font-medium text-zinc-800">revisemy</span>, paste the MCP URL, and set Authorization to the Bearer header below</li>
+                                <li>Paste a starter prompt and ask Grok to run the checkup</li>
                             </ol>
                             <div class="rounded-xl border border-zinc-200 bg-white p-4">
                                 <p class="text-[13px] leading-relaxed text-zinc-600">
-                                    The MCP server must be reachable on the public internet (Laravel Cloud is fine). Copy the URL and token into the custom connector’s server URL and Authorization fields.
+                                    The MCP server must be reachable on the public internet. Copy the URL and token into the connector’s server URL and Authorization fields — not the full JSON block.
                                 </p>
                             </div>
                             <div>
@@ -663,6 +690,10 @@ new class extends Component
                                 </div>
                                 <pre x-ref="grokAuth" class="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
                             </div>
+                            <x-copy-prompt
+                                label="Starter prompt"
+                                text="Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source, give me the review_url to mark and approve, then poll get_review and follow next_action until I approve."
+                            />
                         </div>
 
                         <div class="grid gap-3 sm:grid-cols-2">
@@ -695,12 +726,12 @@ new class extends Component
                         <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                             <p class="text-sm font-medium text-zinc-800">After you connect</p>
                             <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Ask your agent to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code> (or try the MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code>)</li>
+                                <li>Paste a host starter prompt above (or ask for the MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code>)</li>
                                 <li>
-                                    <span class="font-medium text-zinc-800">MCP Apps hosts</span> (Claude Desktop, claude.ai, Copilot): mark and approve inline in chat
+                                    <span class="font-medium text-zinc-800">MCP Apps hosts</span> (Claude Desktop, Copilot): mark and approve inline in chat
                                 </li>
                                 <li>
-                                    <span class="font-medium text-zinc-800">CLI / link hosts</span> (Claude Code, Cursor, Grok): open the <code class="font-mono text-[13px]">review_url</code> the agent returns
+                                    <span class="font-medium text-zinc-800">CLI / link hosts</span> (Claude Code, Cursor, Grok, many ChatGPT setups): open the <code class="font-mono text-[13px]">review_url</code> the agent returns
                                 </li>
                                 <li>Your agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code> and follows <code class="font-mono text-[13px]">next_action</code> until approved or a follow-up pass is needed</li>
                             </ol>
