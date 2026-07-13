@@ -43,9 +43,14 @@ class ReviseMyFlowTest extends TestCase
 
         $tokenResponse
             ->assertJsonStructure([
+                'token_expires_at',
                 'setup_prompts' => ['chatgpt', 'claude_desktop', 'claude_code', 'copilot', 'cursor', 'grok'],
                 'checkup_prompts' => ['chatgpt', 'cursor'],
             ]);
+        $this->assertNotEmpty($tokenResponse->json('token_expires_at'));
+        $this->assertTrue(
+            now()->diffInDays(\Illuminate\Support\Carbon::parse($tokenResponse->json('token_expires_at')), false) >= 6
+        );
         $this->assertStringContainsString('mcp-remote', (string) data_get($tokenResponse->json(), 'setup_prompts.claude_desktop'));
         $this->assertStringContainsString('~/.cursor/mcp.json', (string) data_get($tokenResponse->json(), 'setup_prompts.cursor'));
 
@@ -574,6 +579,7 @@ class ReviseMyFlowTest extends TestCase
         $component = Livewire::test('home')->call('getTryToken');
 
         $this->assertNotEmpty($component->get('token'));
+        $this->assertNotEmpty($component->get('tokenExpiresAt'));
         $this->assertStringContainsString('~/.cursor/mcp.json', (string) $component->get('setupPromptsJson'));
         $this->assertStringContainsString('mcp-remote', (string) $component->get('setupPromptsJson'));
     }
@@ -581,14 +587,16 @@ class ReviseMyFlowTest extends TestCase
     public function test_home_try_token_setup_can_be_restored_and_cleared(): void
     {
         Livewire::test('home')
-            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', '{}', 'claude mcp add', '{"cursor":"setup"}', '{"cursor":"checkup"}')
+            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', '{}', 'claude mcp add', '{"cursor":"setup"}', '{"cursor":"checkup"}', '2030-01-01T00:00:00+00:00')
             ->assertSet('token', 'tok_abc')
             ->assertSet('mcpUrl', 'https://example.test/mcp')
             ->assertSet('setupPromptsJson', '{"cursor":"setup"}')
+            ->assertSet('tokenExpiresAt', '2030-01-01T00:00:00+00:00')
             ->call('clearTryTokenSetup')
             ->assertSet('token', null)
             ->assertSet('mcpUrl', null)
-            ->assertSet('setupPromptsJson', null);
+            ->assertSet('setupPromptsJson', null)
+            ->assertSet('tokenExpiresAt', null);
     }
 
     public function test_home_try_token_failure_sets_error_instead_of_throwing(): void

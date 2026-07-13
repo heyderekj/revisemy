@@ -22,6 +22,8 @@ new class extends Component
 
     public ?string $checkupPromptsJson = null;
 
+    public ?string $tokenExpiresAt = null;
+
     public ?string $error = null;
 
     public function getTryToken(TryTokenService $tryTokens): void
@@ -49,6 +51,7 @@ new class extends Component
         }
 
         $this->token = $result['token'];
+        $this->tokenExpiresAt = $result['token_expires_at'];
         $this->mcpUrl = $result['mcp_url'];
         $this->cursorConfigJson = json_encode($result['cursor_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $this->claudeDesktopConfigJson = json_encode($result['claude_desktop_config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -59,6 +62,7 @@ new class extends Component
 
         $this->dispatch('revisemy-try-setup-saved', payload: [
             'token' => $this->token,
+            'tokenExpiresAt' => $this->tokenExpiresAt,
             'mcpUrl' => $this->mcpUrl,
             'cursorConfigJson' => $this->cursorConfigJson,
             'claudeDesktopConfigJson' => $this->claudeDesktopConfigJson,
@@ -80,8 +84,10 @@ new class extends Component
         string $claudeCodeCommand,
         string $setupPromptsJson = '',
         string $checkupPromptsJson = '',
+        string $tokenExpiresAt = '',
     ): void {
         $this->token = $token;
+        $this->tokenExpiresAt = $tokenExpiresAt ?: null;
         $this->mcpUrl = $mcpUrl;
         $this->cursorConfigJson = $cursorConfigJson;
         $this->claudeDesktopConfigJson = $claudeDesktopConfigJson;
@@ -95,6 +101,7 @@ new class extends Component
     public function clearTryTokenSetup(): void
     {
         $this->token = null;
+        $this->tokenExpiresAt = null;
         $this->mcpUrl = null;
         $this->cursorConfigJson = null;
         $this->claudeDesktopConfigJson = null;
@@ -464,6 +471,7 @@ new class extends Component
                                     d.claudeCodeCommand ?? '',
                                     d.setupPromptsJson ?? '',
                                     d.checkupPromptsJson ?? '',
+                                    d.tokenExpiresAt ?? '',
                                 );
                             }
                         } catch (e) {}
@@ -487,16 +495,28 @@ new class extends Component
                         <x-try-token-button fathom-event="Try token setup" />
                     </div>
                 @else
-                    <div class="mt-4 flex justify-end">
-                        <button
-                            type="button"
-                            class="text-sm text-zinc-500 transition hover:text-zinc-800"
-                            wire:click="clearTryTokenSetup"
-                        >Start over</button>
-                    </div>
                     <div
-                        class="mt-4 space-y-5"
-                        x-data="{ client: 'chatgpt' }"
+                        class="mt-8 flex flex-col gap-5"
+                        x-data="{
+                            client: 'chatgpt',
+                            mode: 'agent',
+                            init() {
+                                try {
+                                    const savedClient = sessionStorage.getItem('revisemy_try_client');
+                                    const savedMode = sessionStorage.getItem('revisemy_try_setup_mode');
+                                    if (savedClient) this.client = savedClient;
+                                    if (savedMode === 'agent' || savedMode === 'manual') this.mode = savedMode;
+                                } catch (e) {}
+                            },
+                            setClient(id) {
+                                this.client = id;
+                                try { sessionStorage.setItem('revisemy_try_client', id) } catch (e) {}
+                            },
+                            setMode(next) {
+                                this.mode = next;
+                                try { sessionStorage.setItem('revisemy_try_setup_mode', next) } catch (e) {}
+                            },
+                        }"
                     >
                         @php
                             $setupPrompts = json_decode($setupPromptsJson ?: '[]', true) ?: [];
@@ -504,9 +524,9 @@ new class extends Component
                             $fallbackCheckups = \App\Services\TryTokenService::checkupPrompts();
                             $checkupPrompts = array_merge($fallbackCheckups, $checkupPrompts);
                         @endphp
-                        <div>
+                        <div class="order-1">
                             <p class="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
-                                Host
+                                Agent
                             </p>
                             <div class="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
                                 @foreach ([
@@ -520,7 +540,7 @@ new class extends Component
                                         type="button"
                                         class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
                                         :class="client === '{{ $id }}' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-800'"
-                                        x-on:click="client = '{{ $id }}'"
+                                        x-on:click="setClient('{{ $id }}')"
                                     >
                                         <x-host-icon :name="$id" class="opacity-90" />
                                         {{ $label }}
@@ -529,6 +549,15 @@ new class extends Component
                             </div>
                         </div>
 
+                        <div :class="mode === 'manual' ? 'order-2' : 'order-4'">
+                            <x-try-credentials
+                                :mcp-url="$mcpUrl"
+                                :token="$token"
+                                :token-expires-at="$tokenExpiresAt"
+                            />
+                        </div>
+
+                        <div class="order-3 space-y-5">
                         {{-- ChatGPT --}}
                         <div x-show="client === 'chatgpt'" x-cloak class="space-y-4">
                             <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
@@ -549,7 +578,7 @@ new class extends Component
                                                 multiline
                                             />
                                         @else
-                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                            <p class="text-sm text-zinc-500">Generate a new token from the credentials card to refresh agent setup prompts.</p>
                                         @endif
                                         <x-copy-prompt
                                             step="2"
@@ -582,7 +611,7 @@ new class extends Component
                                             </div>
                                             <pre x-ref="chatgptAuth" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">Authorization: Bearer {{ $token }}</pre>
                                             <p class="text-[13px] leading-relaxed text-zinc-500">
-                                                Also paste the MCP URL from the cards below into the connector’s server URL field.
+                                                Also paste the MCP URL from the credentials card into the connector’s server URL field.
                                             </p>
                                         </x-setup-step>
                                         <x-copy-prompt
@@ -604,95 +633,106 @@ new class extends Component
                             </p>
                             <x-host-setup>
                                 <x-slot:agent>
-                                    <p class="text-[15px] leading-relaxed text-zinc-600">
-                                        Prefer <span class="font-medium text-zinc-800">Claude Code</span> if you have a terminal agent — it can run the install command.
-                                        For <span class="font-medium text-zinc-800">Desktop</span>, paste the prompt and let Claude guide the config edit (don’t use Connectors).
-                                    </p>
-                                    <x-setup-journey>
-                                        @if (! empty($setupPrompts['claude_code']))
-                                            <x-copy-prompt
-                                                step="1"
-                                                label="Paste this to Claude Code"
-                                                :text="$setupPrompts['claude_code']"
-                                                multiline
-                                            />
-                                        @endif
-                                        @if (! empty($setupPrompts['claude_desktop']))
-                                            <x-copy-prompt
-                                                step="2"
-                                                label="Or paste this to Claude Desktop"
-                                                :text="$setupPrompts['claude_desktop']"
-                                                multiline
-                                            />
-                                        @endif
-                                        @if (empty($setupPrompts['claude_code']) && empty($setupPrompts['claude_desktop']))
-                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
-                                        @endif
-                                        <x-copy-prompt
-                                            step="3"
-                                            label="Then run a checkup (Claude Code)"
-                                            :text="$checkupPrompts['claude_code']"
-                                        />
-                                        <x-copy-prompt
-                                            step="4"
-                                            label="Or run a checkup (Desktop)"
-                                            :text="$checkupPrompts['claude_desktop']"
-                                        />
-                                    </x-setup-journey>
+                                    <div x-data="{ claudePath: 'desktop' }" class="space-y-4">
+                                        <x-claude-path-picker />
+                                        <x-setup-journey>
+                                            <div x-show="claudePath === 'code'" x-cloak class="space-y-4 sm:space-y-5">
+                                                @if (! empty($setupPrompts['claude_code']))
+                                                    <x-copy-prompt
+                                                        step="1"
+                                                        label="Paste this to Claude Code"
+                                                        :text="$setupPrompts['claude_code']"
+                                                        multiline
+                                                    />
+                                                @else
+                                                    <p class="text-sm text-zinc-500">Generate a new token from the credentials card to refresh agent setup prompts.</p>
+                                                @endif
+                                                <x-copy-prompt
+                                                    step="2"
+                                                    label="Then run a checkup"
+                                                    :text="$checkupPrompts['claude_code']"
+                                                />
+                                            </div>
+                                            <div x-show="claudePath === 'desktop'" x-cloak class="space-y-4 sm:space-y-5">
+                                                @if (! empty($setupPrompts['claude_desktop']))
+                                                    <x-copy-prompt
+                                                        step="1"
+                                                        label="Paste this to Claude Desktop"
+                                                        :text="$setupPrompts['claude_desktop']"
+                                                        multiline
+                                                    />
+                                                @else
+                                                    <p class="text-sm text-zinc-500">Generate a new token from the credentials card to refresh agent setup prompts.</p>
+                                                @endif
+                                                <x-copy-prompt
+                                                    step="2"
+                                                    label="Then run a checkup"
+                                                    :text="$checkupPrompts['claude_desktop']"
+                                                />
+                                            </div>
+                                        </x-setup-journey>
+                                    </div>
                                 </x-slot:agent>
                                 <x-slot:manual>
-                                    <x-setup-journey>
-                                        <x-setup-step step="1" label="Claude Desktop — Edit Config">
-                                            <p class="text-[15px] leading-relaxed text-zinc-600">
-                                                Open <span class="font-medium text-zinc-800">Settings → Developer → Edit Config</span>
-                                                (<code class="font-mono text-[13px]">claude_desktop_config.json</code>).
-                                                Merge the JSON below into <code class="font-mono text-[13px]">mcpServers</code>, save, then fully quit and reopen Claude Desktop.
-                                            </p>
-                                            <div class="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-[13px] leading-relaxed text-amber-950/80">
-                                                Don’t use <span class="font-medium">Connectors → Add custom connector</span> — that UI is OAuth-oriented and has no Bearer header field. Needs Node.js (<code class="font-mono text-[12px]">npx</code>).
+                                    <div x-data="{ claudePath: 'desktop' }" class="space-y-4">
+                                        <x-claude-path-picker />
+                                        <x-setup-journey>
+                                            <div x-show="claudePath === 'code'" x-cloak class="space-y-4 sm:space-y-5">
+                                                <x-setup-step step="1" label="Run this in your project terminal">
+                                                    <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                        Claude Code will share a <code class="font-mono text-[13px]">review_url</code> after
+                                                        <code class="font-mono text-[13px] text-rose-600">create_review</code> — open it to mark and approve.
+                                                    </p>
+                                                    <div>
+                                                        <div class="mb-2 flex items-center justify-between">
+                                                            <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Claude Code</p>
+                                                            <button
+                                                                type="button"
+                                                                class="text-sm text-rose-600 hover:text-rose-500"
+                                                                x-data
+                                                                x-on:click="navigator.clipboard.writeText($refs.claudeCmd.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                            >Copy</button>
+                                                        </div>
+                                                        <pre x-ref="claudeCmd" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeCodeCommand }}</pre>
+                                                    </div>
+                                                </x-setup-step>
+                                                <x-copy-prompt
+                                                    step="2"
+                                                    label="Then run a checkup"
+                                                    :text="$checkupPrompts['claude_code']"
+                                                />
                                             </div>
-                                            <div>
-                                                <div class="mb-2 flex items-center justify-between">
-                                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Claude Desktop config</p>
-                                                    <button
-                                                        type="button"
-                                                        class="text-sm text-rose-600 hover:text-rose-500"
-                                                        x-data
-                                                        x-on:click="navigator.clipboard.writeText($refs.claudeDesktop.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                                    >Copy</button>
-                                                </div>
-                                                <pre x-ref="claudeDesktop" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeDesktopConfigJson }}</pre>
+                                            <div x-show="claudePath === 'desktop'" x-cloak class="space-y-4 sm:space-y-5">
+                                                <x-setup-step step="1" label="Edit Claude Desktop config">
+                                                    <p class="text-[15px] leading-relaxed text-zinc-600">
+                                                        Open <span class="font-medium text-zinc-800">Settings → Developer → Edit Config</span>
+                                                        (<code class="font-mono text-[13px]">claude_desktop_config.json</code>).
+                                                        Merge the JSON below into <code class="font-mono text-[13px]">mcpServers</code>, save, then fully quit and reopen Claude Desktop.
+                                                    </p>
+                                                    <div class="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-[13px] leading-relaxed text-amber-950/80">
+                                                        Don’t use <span class="font-medium">Connectors → Add custom connector</span> — that UI is OAuth-oriented and has no Bearer header field. Needs Node.js (<code class="font-mono text-[12px]">npx</code>).
+                                                    </div>
+                                                    <div>
+                                                        <div class="mb-2 flex items-center justify-between">
+                                                            <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Claude Desktop config</p>
+                                                            <button
+                                                                type="button"
+                                                                class="text-sm text-rose-600 hover:text-rose-500"
+                                                                x-data
+                                                                x-on:click="navigator.clipboard.writeText($refs.claudeDesktop.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
+                                                            >Copy</button>
+                                                        </div>
+                                                        <pre x-ref="claudeDesktop" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeDesktopConfigJson }}</pre>
+                                                    </div>
+                                                </x-setup-step>
+                                                <x-copy-prompt
+                                                    step="2"
+                                                    label="Then run a checkup"
+                                                    :text="$checkupPrompts['claude_desktop']"
+                                                />
                                             </div>
-                                        </x-setup-step>
-                                        <x-setup-step step="2" label="Or Claude Code — run this command">
-                                            <p class="text-[15px] leading-relaxed text-zinc-600">
-                                                In your project terminal, run the command below. Claude Code shares a
-                                                <code class="font-mono text-[13px]">review_url</code> instead of inline review.
-                                            </p>
-                                            <div>
-                                                <div class="mb-2 flex items-center justify-between">
-                                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Claude Code</p>
-                                                    <button
-                                                        type="button"
-                                                        class="text-sm text-rose-600 hover:text-rose-500"
-                                                        x-data
-                                                        x-on:click="navigator.clipboard.writeText($refs.claudeCmd.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                                    >Copy</button>
-                                                </div>
-                                                <pre x-ref="claudeCmd" class="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-rose-100/90">{{ $claudeCodeCommand }}</pre>
-                                            </div>
-                                        </x-setup-step>
-                                        <x-copy-prompt
-                                            step="3"
-                                            label="Then run a checkup (Claude Code)"
-                                            :text="$checkupPrompts['claude_code']"
-                                        />
-                                        <x-copy-prompt
-                                            step="4"
-                                            label="Or run a checkup (Desktop)"
-                                            :text="$checkupPrompts['claude_desktop']"
-                                        />
-                                    </x-setup-journey>
+                                        </x-setup-journey>
+                                    </div>
                                 </x-slot:manual>
                             </x-host-setup>
                         </div>
@@ -717,7 +757,7 @@ new class extends Component
                                                 multiline
                                             />
                                         @else
-                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                            <p class="text-sm text-zinc-500">Generate a new token from the credentials card to refresh agent setup prompts.</p>
                                         @endif
                                         <x-copy-prompt
                                             step="2"
@@ -749,7 +789,7 @@ new class extends Component
                                                 </div>
                                             @else
                                                 <p class="text-sm text-zinc-500">
-                                                    Start over above to generate a fresh try token with Copilot config (older saved sessions may not include it).
+                                                    Generate a new token from the credentials card to refresh Copilot config (older saved sessions may not include it).
                                                 </p>
                                             @endif
                                         </x-setup-step>
@@ -783,7 +823,7 @@ new class extends Component
                                                 multiline
                                             />
                                         @else
-                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                            <p class="text-sm text-zinc-500">Generate a new token from the credentials card to refresh agent setup prompts.</p>
                                         @endif
                                         <x-copy-prompt
                                             step="2"
@@ -844,7 +884,7 @@ new class extends Component
                                                 multiline
                                             />
                                         @else
-                                            <p class="text-sm text-zinc-500">Start over above to generate a fresh try token with agent setup prompts.</p>
+                                            <p class="text-sm text-zinc-500">Generate a new token from the credentials card to refresh agent setup prompts.</p>
                                         @endif
                                         <x-copy-prompt
                                             step="2"
@@ -887,46 +927,6 @@ new class extends Component
                                 </x-slot:manual>
                             </x-host-setup>
                         </div>
-
-                        <div class="grid gap-3 sm:grid-cols-2">
-                            <div class="rounded-xl border border-zinc-200 bg-white p-4">
-                                <div class="mb-2 flex items-center justify-between gap-2">
-                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">MCP URL</p>
-                                    <button
-                                        type="button"
-                                        class="text-xs text-rose-600 hover:text-rose-500"
-                                        x-data
-                                        x-on:click="navigator.clipboard.writeText($refs.mcpUrl.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                    >Copy</button>
-                                </div>
-                                <p x-ref="mcpUrl" class="break-all font-mono text-sm text-zinc-700">{{ $mcpUrl }}</p>
-                            </div>
-                            <div class="rounded-xl border border-zinc-200 bg-white p-4">
-                                <div class="mb-2 flex items-center justify-between gap-2">
-                                    <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Bearer token</p>
-                                    <button
-                                        type="button"
-                                        class="text-xs text-rose-600 hover:text-rose-500"
-                                        x-data
-                                        x-on:click="navigator.clipboard.writeText($refs.bearerToken.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
-                                    >Copy</button>
-                                </div>
-                                <p x-ref="bearerToken" class="break-all font-mono text-sm text-zinc-700">{{ $token }}</p>
-                            </div>
-                        </div>
-
-                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                            <p class="text-sm font-medium text-zinc-800">After you connect</p>
-                            <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Use <span class="font-medium text-zinc-800">Ask agent</span> (or <span class="font-medium text-zinc-800">Do it myself</span>), then paste a checkup prompt</li>
-                                <li>
-                                    <span class="font-medium text-zinc-800">MCP Apps hosts</span> (Claude Desktop, Copilot): mark and approve inline in chat
-                                </li>
-                                <li>
-                                    <span class="font-medium text-zinc-800">CLI / link hosts</span> (Claude Code, Cursor, Grok, many ChatGPT setups): open the <code class="font-mono text-[13px]">review_url</code> the agent returns
-                                </li>
-                                <li>Your agent polls <code class="font-mono text-[13px] text-rose-600">get_review</code> and follows <code class="font-mono text-[13px]">next_action</code> until approved or a follow-up pass is needed</li>
-                            </ol>
                         </div>
                     </div>
                 @endif

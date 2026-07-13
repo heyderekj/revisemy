@@ -9,11 +9,15 @@ use Illuminate\Support\Str;
 
 class TryTokenService
 {
+    /** Align try-token lifetime with default review expiry. */
+    public const TOKEN_DAYS = 7;
+
     /**
      * @return array{
      *     workspace: Workspace,
      *     user: User,
      *     token: string,
+     *     token_expires_at: string,
      *     mcp_url: string,
      *     cursor_config: array<string, mixed>,
      *     copilot_config: array<string, mixed>,
@@ -38,7 +42,8 @@ class TryTokenService
                 'password' => Str::password(32),
             ]);
 
-            $plainTextToken = $user->createToken('revisemy-try', ['*'])->plainTextToken;
+            $expiresAt = now()->addDays(self::TOKEN_DAYS);
+            $plainTextToken = $user->createToken('revisemy-try', ['*'], $expiresAt)->plainTextToken;
             $mcpUrl = url('/mcp/revisemy');
             $authHeader = 'Bearer '.$plainTextToken;
 
@@ -95,6 +100,7 @@ class TryTokenService
                 'workspace' => $workspace,
                 'user' => $user,
                 'token' => $plainTextToken,
+                'token_expires_at' => $expiresAt->toIso8601String(),
                 'mcp_url' => $mcpUrl,
                 'cursor_config' => $cursorConfig,
                 'claude_desktop_config' => $claudeDesktopConfig,

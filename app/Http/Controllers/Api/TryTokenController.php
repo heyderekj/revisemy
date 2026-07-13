@@ -37,6 +37,7 @@ class TryTokenController extends Controller
 
         return response()->json([
             'token' => $result['token'],
+            'token_expires_at' => $result['token_expires_at'],
             'mcp_url' => $result['mcp_url'],
             'workspace_id' => $result['workspace']->public_id,
             'cursor_config' => $result['cursor_config'],
@@ -46,12 +47,6 @@ class TryTokenController extends Controller
             'chatgpt_hint' => $result['chatgpt_hint'],
             'setup_prompts' => $result['setup_prompts'],
             'checkup_prompts' => $result['checkup_prompts'],
-                'Pick your client on the homepage. Prefer Ask agent and paste the generated prompt, or follow Do it myself.',
-                'Claude Desktop uses Developer → Edit Config with mcp-remote — not Connectors → Add custom connector.',
-                'After MCP is connected, paste a checkup prompt (or use design_checkup_loop).',
-                'MCP Apps hosts: mark and approve inline. CLI/link hosts: open the review_url.',
-                'Poll get_review and follow next_action until approved or a follow-up pass is needed.',
-            ],
         ], 201);
     }
 }

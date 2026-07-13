@@ -1,9 +1,7 @@
 @props([])
 
-<div
-    x-data="{ mode: 'agent' }"
-    {{ $attributes->class('space-y-4') }}
->
+{{-- Expects parent Alpine scope with `mode` and `setMode(mode)`. --}}
+<div {{ $attributes->class('space-y-4') }}>
     <div class="border-b border-zinc-200/90">
         <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <p class="pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
@@ -18,7 +16,7 @@
                         ? 'border-zinc-900 text-zinc-900'
                         : 'border-transparent text-zinc-400 hover:text-zinc-700'"
                     :aria-selected="mode === 'agent'"
-                    x-on:click="mode = 'agent'"
+                    x-on:click="setMode('agent')"
                 >
                     <flux:icon.sparkles variant="micro" class="size-3.5 shrink-0" />
                     Ask agent
@@ -31,7 +29,7 @@
                         ? 'border-zinc-900 text-zinc-900'
                         : 'border-transparent text-zinc-400 hover:text-zinc-700'"
                     :aria-selected="mode === 'manual'"
-                    x-on:click="mode = 'manual'"
+                    x-on:click="setMode('manual')"
                 >
                     <flux:icon.wrench-screwdriver variant="micro" class="size-3.5 shrink-0" />
                     Do it myself
