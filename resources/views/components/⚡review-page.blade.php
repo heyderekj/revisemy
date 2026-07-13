@@ -764,7 +764,7 @@ new class extends Component
 >
     <header class="relative z-40 shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
         <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
-            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5">
+            <div class="flex min-w-0 flex-1 flex-col gap-y-1.5 sm:flex-row sm:flex-nowrap sm:items-center sm:gap-x-2 sm:gap-y-0">
                 <div class="flex shrink-0 items-center gap-3">
                     <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                         <x-revisemy-logo size="sm" />
@@ -772,7 +772,7 @@ new class extends Component
                     <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Review</h1>
                 </div>
 
-                <div class="flex min-w-0 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:basis-auto sm:flex-1">
+                <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
                     <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
                         Pass {{ $review->pass }}
                     </span>
