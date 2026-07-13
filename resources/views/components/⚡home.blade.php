@@ -307,7 +307,7 @@ new class extends Component
                     From capture to approval, ReviseMy keeps reviews, marks, guest feedback, and lifecycle together — so nothing gets lost between passes.
                 </p>
 
-                <div class="mt-8 grid gap-x-8 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="mt-8 grid grid-cols-1 gap-x-8 gap-y-9 min-[30rem]:grid-cols-2 lg:grid-cols-3">
                     <article>
                         <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
                             <flux:icon.photo variant="micro" class="size-[18px]" />
