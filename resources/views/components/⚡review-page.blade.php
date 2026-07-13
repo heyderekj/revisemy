@@ -780,12 +780,12 @@ new class extends Component
                     @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
                         <span
                             class="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
-                            title="Snapshot of {{ $review->page_url }} captured {{ $review->capturedAt()?->format('M j, Y g:ia') }}"
+                            title="Snapshot of {{ $review->page_url }}{{ $review->capturedAt() ? ' · '.$review->capturedAt()->timezone(config('app.timezone'))->toDayDateTimeString() : '' }}"
                         >
                             <flux:icon.link variant="micro" class="size-3 text-zinc-400" />
                             <span class="max-w-40 truncate">{{ $review->sourceDomain() }}</span>
                             @if ($review->capturedAt())
-                                <span class="font-normal text-zinc-400">· captured {{ $review->capturedAt()->format('M j') }}</span>
+                                <span class="font-normal text-zinc-400">· captured {{ $review->capturedAt()->diffForHumans() }}</span>
                             @endif
                         </span>
                     @else
