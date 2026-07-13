@@ -540,7 +540,7 @@ new class extends Component
                                 <p class="text-sm font-medium text-zinc-800">Claude Desktop &amp; claude.ai — inline review (MCP Apps)</p>
                                 <ol class="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                     <li>Paste the JSON below into MCP / connector settings</li>
-                                    <li>Ask Claude to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                    <li>Ask Claude to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
                                     <li>Mark feedback and approve in the review panel inside the chat</li>
                                 </ol>
                                 <div>
@@ -587,7 +587,7 @@ new class extends Component
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                 <li>Open <span class="font-medium text-zinc-800">Copilot → MCP</span> (user or workspace <code class="font-mono text-[13px]">mcp.json</code>)</li>
                                 <li>Paste or merge the config below</li>
-                                <li>Ask Copilot to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                <li>Ask Copilot to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
                             </ol>
                             @if ($copilotConfigJson)
                                 <div>
@@ -618,7 +618,7 @@ new class extends Component
                             <ol class="max-w-2xl list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
                                 <li>Open <span class="font-medium text-zinc-800">Cursor Settings → MCP</span></li>
                                 <li>Paste the config below (or merge into <code class="font-mono text-[13px]">~/.cursor/mcp.json</code>)</li>
-                                <li>Ask your agent to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                <li>Ask your agent to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
                             </ol>
                             <div>
                                 <div class="mb-2 flex items-center justify-between">
@@ -644,7 +644,7 @@ new class extends Component
                                 <li>Go to <a href="https://grok.com/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500" target="_blank" rel="noreferrer">grok.com/connectors</a></li>
                                 <li>Click <span class="font-medium text-zinc-800">New Connector → Custom</span></li>
                                 <li>Paste the MCP URL below and authorize with the Bearer token</li>
-                                <li>Ask Grok to capture UI work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
+                                <li>Ask Grok to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code></li>
                             </ol>
                             <div class="rounded-xl border border-zinc-200 bg-white p-4">
                                 <p class="text-[13px] leading-relaxed text-zinc-600">
@@ -695,7 +695,7 @@ new class extends Component
                         <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                             <p class="text-sm font-medium text-zinc-800">After you connect</p>
                             <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-zinc-600">
-                                <li>Ask your agent to capture the UI and call <code class="font-mono text-[13px] text-rose-600">create_review</code> (or try the MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code>)</li>
+                                <li>Ask your agent to capture your work and call <code class="font-mono text-[13px] text-rose-600">create_review</code> (or try the MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code>)</li>
                                 <li>
                                     <span class="font-medium text-zinc-800">MCP Apps hosts</span> (Claude Desktop, claude.ai, Copilot): mark and approve inline in chat
                                 </li>

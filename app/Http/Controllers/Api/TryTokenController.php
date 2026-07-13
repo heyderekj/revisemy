@@ -46,7 +46,7 @@ class TryTokenController extends Controller
             'chatgpt_hint' => $result['chatgpt_hint'],
             'next_steps' => [
                 'Pick your client on the homepage (ChatGPT, Claude, Copilot, Cursor, or Grok) and paste the matching config.',
-                'Ask your agent to capture UI work and call create_review — or use the design_checkup_loop MCP prompt.',
+                'Ask your agent to capture your work and call create_review — or use the design_checkup_loop MCP prompt.',
                 'MCP Apps hosts: mark and approve inline in chat. CLI/link hosts: open the review_url link.',
                 'Poll get_review and follow next_action until approved or a follow-up pass is needed.',
             ],

@@ -68,7 +68,7 @@ return [
                     'steps' => [
                         'Desktop / claude.ai: paste mcpServers JSON into MCP settings, then call create_review and mark inline',
                         'Claude Code: run `claude mcp add --transport http …` with your try token',
-                        'Ask Claude to capture UI work and follow the design_checkup_loop prompt',
+                        'Ask Claude to capture your work and follow the design_checkup_loop prompt',
                     ],
                 ],
                 [
@@ -79,7 +79,7 @@ return [
                     'steps' => [
                         'Open Copilot → MCP',
                         'Paste the try-token Copilot config from the homepage',
-                        'Ask Copilot to capture UI and call create_review',
+                        'Ask Copilot to capture your work and call create_review',
                     ],
                 ],
                 [
@@ -90,7 +90,7 @@ return [
                     'steps' => [
                         'Open Cursor Settings → MCP',
                         'Paste mcpServers JSON (or merge into ~/.cursor/mcp.json)',
-                        'Ask your agent to capture UI work and call create_review',
+                        'Ask your agent to capture your work and call create_review',
                     ],
                 ],
                 [
@@ -101,7 +101,7 @@ return [
                     'steps' => [
                         'Go to grok.com/connectors → New Connector → Custom',
                         'Paste the public MCP URL and authorize with the Bearer token',
-                        'Ask Grok to capture UI and call create_review',
+                        'Ask Grok to capture your work and call create_review',
                     ],
                 ],
             ],
