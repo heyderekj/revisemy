@@ -730,9 +730,6 @@ new class extends Component
                     <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
                         Pass {{ $review->pass }}
                     </span>
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
-                        {{ $review->typeLabel() }}
-                    </span>
                     @php($sourceKind = $review->sourceKind())
                     @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
                         <span
@@ -1167,6 +1164,9 @@ new class extends Component
                         zoomMin: 1,
                         zoomMax: 3,
                         zoomStep: 0.25,
+                        naturalWidth: {{ (int) ($shot->width ?: 0) }},
+                        naturalHeight: {{ (int) ($shot->height ?: 0) }},
+                        baseWidth: 0,
                         drawing: false,
                         panning: false,
                         spaceHeld: false,
@@ -1177,6 +1177,53 @@ new class extends Component
                         startX: 0,
                         startY: 0,
                         draft: null,
+                        resizeObserver: null,
+                        init() {
+                            this.$nextTick(() => {
+                                this.measureLayout();
+                                const img = this.$refs.shotImg;
+                                if (img?.complete && img.naturalWidth) {
+                                    this.naturalWidth = img.naturalWidth;
+                                    this.naturalHeight = img.naturalHeight;
+                                    this.measureLayout();
+                                }
+                                this.resizeObserver = new ResizeObserver(() => this.measureLayout());
+                                if (this.$refs.viewport) {
+                                    this.resizeObserver.observe(this.$refs.viewport);
+                                }
+                            });
+                        },
+                        destroy() {
+                            this.resizeObserver?.disconnect();
+                        },
+                        onImageLoad() {
+                            const img = this.$refs.shotImg;
+                            if (! img) return;
+                            this.naturalWidth = img.naturalWidth;
+                            this.naturalHeight = img.naturalHeight;
+                            this.measureLayout();
+                        },
+                        measureLayout() {
+                            const vp = this.$refs.viewport;
+                            if (! vp) return;
+                            const containerWidth = vp.clientWidth;
+                            const natural = this.naturalWidth || containerWidth;
+                            this.baseWidth = natural > 0 ? Math.min(containerWidth, natural) : containerWidth;
+                        },
+                        canvasStyle() {
+                            const w = Math.max(1, Math.round(this.baseWidth * this.zoom));
+
+                            return 'width: ' + w + 'px';
+                        },
+                        viewportCanScroll() {
+                            const vp = this.$refs.viewport;
+                            if (! vp) return false;
+
+                            return vp.scrollHeight > vp.clientHeight + 1 || vp.scrollWidth > vp.clientWidth + 1;
+                        },
+                        canPan() {
+                            return this.viewportCanScroll();
+                        },
                         zoomIn() {
                             this.zoom = Math.min(this.zoomMax, +(this.zoom + this.zoomStep).toFixed(2));
                         },
@@ -1191,7 +1238,7 @@ new class extends Component
                             if (e.code !== 'Space') return;
                             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
                             this.spaceHeld = true;
-                            if (this.zoom > 1) e.preventDefault();
+                            if (this.canPan()) e.preventDefault();
                         },
                         onKeyUp(e) {
                             if (e.code !== 'Space') return;
@@ -1199,7 +1246,7 @@ new class extends Component
                             this.panning = false;
                         },
                         isPanMode(e) {
-                            return e.button === 1 || (this.spaceHeld && e.button === 0 && this.zoom > 1);
+                            return e.button === 1 || (this.spaceHeld && e.button === 0 && this.canPan());
                         },
                         beginPan(e) {
                             e.preventDefault();
@@ -1237,8 +1284,9 @@ new class extends Component
                             return null;
                         },
                         onWheel(e) {
-                            // At 100% the canvas does not scroll — forward wheel to the page.
-                            if (this.zoom > 1) return;
+                            if (this.viewportCanScroll()) {
+                                return;
+                            }
 
                             const parent = this.scrollParentEl();
                             if (! parent) return;
@@ -1315,6 +1363,7 @@ new class extends Component
                             this.panning = false;
                         }
                     }"
+                    x-init="init(); return () => destroy()"
                     x-on:keydown.window="onKeyDown($event)"
                     x-on:keyup.window="onKeyUp($event)"
                 >
@@ -1344,10 +1393,9 @@ new class extends Component
 
                     <div
                         x-ref="viewport"
+                        class="max-h-[min(52svh,420px)] overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] lg:max-h-[min(70svh,560px)] flex justify-center"
                         x-bind:class="{
-                            'max-h-[min(52svh,420px)] overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] lg:max-h-[min(70svh,560px)]': zoom > 1,
-                            'overflow-hidden': zoom <= 1,
-                            'cursor-grab': zoom > 1 && spaceHeld && !panning,
+                            'cursor-grab': canPan() && spaceHeld && !panning,
                             'cursor-grabbing': panning
                         }"
                         x-on:wheel="onWheel($event)"
@@ -1357,8 +1405,8 @@ new class extends Component
                     >
                         <div
                             x-ref="canvas"
-                            class="relative min-w-full select-none"
-                            x-bind:style="'width: ' + (zoom * 100) + '%'"
+                            class="relative shrink-0 select-none"
+                            x-bind:style="canvasStyle()"
                             @if ($review->isOpenForFeedback())
                                 x-bind:class="!spaceHeld ? 'cursor-crosshair' : ''"
                                 x-on:mousedown="beginDraw($event)"
@@ -1366,14 +1414,29 @@ new class extends Component
                             @endif
                         >
                             <img
+                                x-ref="shotImg"
                                 src="{{ $shot->url() }}"
                                 alt="Screenshot {{ $activeScreenshotIndex + 1 }}"
-                                class="pointer-events-none block w-full"
+                                @if ($shot->width) width="{{ $shot->width }}" @endif
+                                @if ($shot->height) height="{{ $shot->height }}" @endif
+                                class="pointer-events-none block h-auto w-full"
                                 draggable="false"
+                                x-on:load="onImageLoad()"
                             />
 
                             @php($openFindings = $shot->findings->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
                             @php($guestFindings = $shot->findings->filter(fn ($f) => $f->isOpen() && $f->isGuest())->values())
+                            @php($textOnlySecondOpinion = $openFindings->filter(function ($f) {
+                                $area = is_array($f->area) ? $f->area : null;
+
+                                return ! ($area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01);
+                            })->values())
+                            @php($textOnlyGuest = $guestFindings->filter(function ($f) {
+                                $area = is_array($f->area) ? $f->area : null;
+                                $hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01;
+
+                                return ! $hasRegion && ($f->x === null || $f->y === null);
+                            })->values())
                             @foreach ($openFindings as $findingIndex => $finding)
                                 @php($area = is_array($finding->area) ? $finding->area : null)
                                 @if ($area)
@@ -1443,6 +1506,54 @@ new class extends Component
                                     </button>
                                 @endif
                             @endforeach
+
+                            @if (($mode === 'owner' && $textOnlySecondOpinion->isNotEmpty()) || $textOnlyGuest->isNotEmpty())
+                                <div
+                                    class="pointer-events-none absolute right-2 top-2 z-[12] flex max-w-[min(100%,12rem)] flex-col items-end gap-1"
+                                    aria-label="Text hints on capture"
+                                >
+                                    @if ($mode === 'owner')
+                                        @foreach ($textOnlySecondOpinion as $finding)
+                                            <button
+                                                type="button"
+                                                data-finding
+                                                class="pointer-events-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
+                                                title="{{ $finding->body }}"
+                                                x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
+                                                x-on:click.stop="
+                                                    $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
+                                                    $store.rmFocus.mark = null;
+                                                    @if ($secondOpinionTab !== 'all' && $secondOpinionTab !== $finding->severity)
+                                                        $wire.setSecondOpinionTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+                                                    @else
+                                                        document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                                    @endif
+                                                "
+                                                x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
+                                            >
+                                                S{{ $suggestionNumbers['s'][$finding->id] ?? ($loop->iteration) }}
+                                            </button>
+                                        @endforeach
+                                    @endif
+                                    @foreach ($textOnlyGuest as $finding)
+                                        <button
+                                            type="button"
+                                            data-finding
+                                            class="pointer-events-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-amber-500 bg-white px-0.5 text-[10px] font-semibold text-amber-700 shadow-sm transition"
+                                            title="{{ $finding->body }}"
+                                            x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
+                                            x-on:click.stop="
+                                                $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
+                                                $store.rmFocus.mark = null;
+                                                document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                            "
+                                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
+                                        >
+                                            G{{ $suggestionNumbers['g'][$finding->id] ?? ($loop->iteration) }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
 
                             @foreach ($shot->annotations as $annotation)
                                 @php($region = $annotation->region())
