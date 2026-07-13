@@ -89,6 +89,22 @@ class Finding extends Model
     }
 
     /**
+     * Skill / taste credit for second-opinion hints (not guest names).
+     */
+    public function creditLabel(): ?string
+    {
+        if ($this->isGuest() || ! filled($this->author)) {
+            return null;
+        }
+
+        if (in_array($this->source, [self::SOURCE_CHECKLIST, self::SOURCE_OPENAI, self::SOURCE_ANTHROPIC], true)) {
+            return $this->author;
+        }
+
+        return null;
+    }
+
+    /**
      * Map a suggestion severity into a human mark severity when accepting.
      * Guest suggestions already use mark severities, so those pass through.
      */

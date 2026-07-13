@@ -130,5 +130,17 @@ class ReviewTypeTest extends TestCase
             Screenshot::OPINION_READY,
             Review::query()->where('type', 'ui')->firstOrFail()->screenshots()->firstOrFail()->second_opinion_status,
         );
+
+        $uiFindings = Review::query()->where('type', 'ui')->firstOrFail()
+            ->screenshots()->firstOrFail()->fresh('findings')->findings;
+
+        $emilCredits = $uiFindings->filter(
+            fn (Finding $f) => $f->author === SecondOpinionService::SKILL_CREDIT_EMIL_KOWALSKI
+        );
+        $this->assertGreaterThanOrEqual(2, $emilCredits->count());
+
+        foreach ($uiFindings as $finding) {
+            $this->assertStringNotContainsString('emilkowalski', strtolower($finding->body));
+        }
     }
 }

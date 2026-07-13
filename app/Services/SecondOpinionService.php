@@ -15,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class SecondOpinionService
 {
+    public const SKILL_CREDIT_EMIL_KOWALSKI = 'Emil Kowalski';
+
     public function queue(Screenshot $screenshot): void
     {
         if (! config('revisemy.second_opinion_enabled', true)) {
@@ -88,7 +90,13 @@ class SecondOpinionService
             if ($provider) {
                 $vision = $provider->findings($screenshot, $this->visionPrompt($screenshot->review));
                 $merged = $this->dedupeAgainstExisting($screenshot->fresh('findings'), $vision);
-                $this->persistFindings($screenshot, $merged, $provider->source());
+                $reviewType = $screenshot->review?->type ?? Review::TYPE_UI;
+                $this->persistFindings(
+                    $screenshot,
+                    $merged,
+                    $provider->source(),
+                    creditSkillAuthor: $reviewType === Review::TYPE_UI,
+                );
             }
 
             $screenshot->update([
@@ -206,7 +214,7 @@ class SecondOpinionService
      * heuristics that never look at the pixels, so they carry no area — only
      * vision findings may point at a region.
      *
-     * @return list<array{severity: string, body: string, area: array<string, float>|null}>
+     * @return list<array{severity: string, body: string, area: array<string, float>|null, credit?: string}>
      */
     protected function checklistFindings(Screenshot $screenshot): array
     {
@@ -236,7 +244,7 @@ class SecondOpinionService
     }
 
     /**
-     * @return list<array{severity: string, body: string, area: array<string, float>|null}>
+     * @return list<array{severity: string, body: string, area: array<string, float>|null, credit?: string}>
      */
     protected function uiChecklist(int $width, int $height, string $haystack): array
     {
@@ -259,13 +267,15 @@ class SecondOpinionService
             // Emil Kowalski / design-engineering taste (static-frame heuristics)
             [
                 'severity' => Finding::SEVERITY_POLISH,
-                'body' => 'Taste check (emilkowalski/skills): primary pressables should feel responsive — confirm a clear pressed/active treatment (subtle scale ~0.97), not only a hover color swap.',
+                'body' => 'Taste check: primary pressables should feel responsive — confirm a clear pressed/active treatment (subtle scale ~0.97), not only a hover color swap.',
                 'area' => null,
+                'credit' => self::SKILL_CREDIT_EMIL_KOWALSKI,
             ],
             [
                 'severity' => Finding::SEVERITY_POLISH,
                 'body' => 'Taste check: floating surfaces (cards, popovers, toolbars) often read better with soft depth (semi-transparent shadow/ring) than a hard opaque border — flag harsh boxes that fight the background.',
                 'area' => null,
+                'credit' => self::SKILL_CREDIT_EMIL_KOWALSKI,
             ],
         ];
 
@@ -313,8 +323,9 @@ class SecondOpinionService
         ) {
             $findings[] = [
                 'severity' => Finding::SEVERITY_POLISH,
-                'body' => 'Motion context (emilkowalski/skills): prefer ease-out under ~300ms for UI chrome; never ease-in; don’t animate keyboard-triggered actions; popovers should scale from the trigger (modals stay centered).',
+                'body' => 'Motion context: prefer ease-out under ~300ms for UI chrome; never ease-in; don’t animate keyboard-triggered actions; popovers should scale from the trigger (modals stay centered).',
                 'area' => null,
+                'credit' => self::SKILL_CREDIT_EMIL_KOWALSKI,
             ];
         }
 
@@ -586,13 +597,20 @@ PROMPT;
     }
 
     /**
-     * @param  list<array{severity: string, body: string, area: array<string, float>|null}>  $items
+     * @param  list<array{severity: string, body: string, area: array<string, float>|null, credit?: string}>  $items
      */
-    protected function persistFindings(Screenshot $screenshot, array $items, string $source): void
-    {
+    protected function persistFindings(
+        Screenshot $screenshot,
+        array $items,
+        string $source,
+        bool $creditSkillAuthor = false,
+    ): void {
         foreach ($items as $item) {
+            $author = $item['credit'] ?? ($creditSkillAuthor ? self::SKILL_CREDIT_EMIL_KOWALSKI : null);
+
             $screenshot->findings()->create([
                 'source' => $source,
+                'author' => $author,
                 'severity' => $item['severity'],
                 'body' => $item['body'],
                 'area' => $item['area'],

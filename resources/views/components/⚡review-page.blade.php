@@ -2332,6 +2332,9 @@ new class extends Component
                                         @endif
                                     </div>
                                     <p class="text-sm leading-relaxed text-zinc-700">{{ $finding->body }}</p>
+                                    @if ($finding->creditLabel())
+                                        <p class="mt-2 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">BY {{ $finding->creditLabel() }}</p>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>

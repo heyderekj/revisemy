@@ -43,6 +43,7 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 - Solid rose selection rectangles = **your marks**
 - Dashed sky markers / areas = **vision second opinion** (checklist stays in the sidebar)
 - Sidebar: **Your marks** vs **Second opinion** (upgrade note when vision keys are missing; Refresh re-runs the job)
+- Taste hints that borrow Emil Kowalski’s design-engineering rules show a **BY Emil Kowalski** byline under that finding (checklist + UI vision)
 - After a decision: clear copy for “next pass” vs “loop complete”
 
 ### Agent payload shape

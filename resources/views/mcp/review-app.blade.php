@@ -140,6 +140,9 @@
                             <button type="button" class="text-zinc-400 transition hover:text-zinc-600" @click="activeNote = null" aria-label="Close">×</button>
                         </div>
                         <p class="mt-1.5 text-sm leading-relaxed text-zinc-700" x-text="activeNote && activeNote.body"></p>
+                        <p class="mt-2 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400"
+                            x-show="activeNote && activeNote.credit"
+                            x-text="activeNote && activeNote.credit ? 'BY ' + activeNote.credit : ''"></p>
                         <div class="mt-2 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900"
                             x-show="activeNote && activeNote.resolution">
                             <span class="font-medium">Agent:</span> <span x-text="activeNote && activeNote.resolution"></span>
@@ -454,6 +457,7 @@
                 this.activeNote = this.activeNote && this.activeNote.key === key ? null : {
                     key, sky: true, label: 'S' + (index + 1), severity: finding.severity,
                     status: '', body: finding.body, resolution: '',
+                    credit: finding.author || '',
                 };
             },
 
