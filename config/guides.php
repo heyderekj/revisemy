@@ -141,6 +141,28 @@ return [
             'features_heading' => 'How second opinion works',
             'problem' => 'One-shot AI critique often sounds decisive — and agents treat it that way. You need optional design hints that stay labeled as suggestions while humans remain the authority on approve / request-changes.',
             'loop' => 'On create_review, ReviseMy runs the free checklist immediately. If an Anthropic or OpenAI key is set on the server, vision can add dashed region hints after the response. Agents may also push findings via add_findings. You mark what matters; get_review returns work_packets with pins first and second_opinion as hints.',
+            'loop_steps' => [
+                [
+                    'command' => 'create_review',
+                    'text' => 'runs the free checklist immediately.',
+                ],
+                [
+                    'text' => 'With an Anthropic or OpenAI key, vision can add dashed region hints.',
+                ],
+                [
+                    'command' => 'add_findings',
+                    'text' => 'lets agents push suggestions before you open the link.',
+                ],
+                [
+                    'command' => 'get_review',
+                    'text' => 'returns pins first;',
+                    'after' => [
+                        ['type' => 'text', 'value' => ' '],
+                        ['type' => 'command', 'value' => 'second_opinion'],
+                        ['type' => 'text', 'value' => ' stays hints.'],
+                    ],
+                ],
+            ],
             'features' => [
                 [
                     'icon' => 'check',

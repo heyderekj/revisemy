@@ -50,10 +50,12 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 
 | Type | Chip | Lenses (public sources) |
 |------|------|-------------------------|
-| `ui` | UI craft | Design engineering, IIDS, Fluid interfaces |
-| `website` | Website craft | IIDS, Design engineering (when motion/chrome context) |
+| `ui` | UI craft | IIDS, Laws of UX |
+| `website` | Website craft | IIDS, A List Apart |
 | `presentation` | Slide craft | Presentation Zen, Slide craft |
 | `email` | Email craft | Good Email Code |
+
+Reviews are **static captures**, so craft lenses stay visual (hierarchy, density, contrast, layout, scannability). Motion / press-feedback sources (e.g. animations.dev) are out of scope for second opinion.
 
 Disclosure also lives on [/second-opinion](https://revisemy.com/second-opinion) (“Where the craft lenses come from”). Heuristics are ReviseMy distillations — **not** affiliated with, endorsed by, or quoting the people behind those works on your review.
 
@@ -111,10 +113,12 @@ Enable a queue worker only if you rely on other queued jobs (e.g. decision webho
 Research references (public craft sources + implementer skills):
 
 - [IIDS](https://shiftnudge.com/iids) — International Interface Design Style (Shift Nudge / MDS)
-- [animations.dev](https://animations.dev/) / [emilkowalski/skills](https://github.com/emilkowalski/skills) — design-engineering principles for coding agents
-- [WWDC: Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/)
+- [Laws of UX](https://lawsofux.com/) — psychology heuristics for interfaces (Jon Yablonski)
+- [A List Apart](https://alistapart.com/) / [A Book Apart](https://abookapart.com/) — web craft lineage
 - [Presentation Zen design tips](https://www.garrreynolds.com/design-tips) · [Duarte slide design](https://www.duarte.com/blog/perfect-your-slide-design/)
 - [Good Email Code](https://www.goodemailcode.com/)
 - [design-review-skill](https://github.com/aslanmazhidov/design-review-skill)
 - [ui-craft](https://github.com/educlopez/ui-craft)
 - [OmniParser](https://github.com/microsoft/OmniParser) / [UIPE](https://github.com/dirkknibbe/uipe) / [Playwright MCP](https://github.com/microsoft/playwright-mcp)
+
+Agent-side motion polish (not second-opinion lenses — captures are stills): [animations.dev](https://animations.dev/) / [emilkowalski/skills](https://github.com/emilkowalski/skills), [WWDC: Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/)

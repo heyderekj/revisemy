@@ -14,14 +14,6 @@ return [
 
     'lenses' => [
 
-        'design_engineering' => [
-            'id' => 'design_engineering',
-            'name' => 'Design engineering',
-            'blurb' => 'Press feedback, soft depth on floating surfaces, and restrained motion (ease-out, skip keyboard-triggered chrome).',
-            'source_url' => 'https://animations.dev/',
-            'source_label' => 'animations.dev',
-        ],
-
         'iids' => [
             'id' => 'iids',
             'name' => 'IIDS',
@@ -30,12 +22,20 @@ return [
             'source_label' => 'shiftnudge.com/iids',
         ],
 
-        'fluid_interfaces' => [
-            'id' => 'fluid_interfaces',
-            'name' => 'Fluid interfaces',
-            'blurb' => 'Respond on press, continuous feedback during interaction, and interruptible motion when gesture UI is implied.',
-            'source_url' => 'https://developer.apple.com/videos/play/wwdc2018/803/',
-            'source_label' => 'WWDC: Designing Fluid Interfaces',
+        'laws_of_ux' => [
+            'id' => 'laws_of_ux',
+            'name' => 'Laws of UX',
+            'blurb' => 'Psychology heuristics visible in a still — aesthetic-usability, simplicity (Prägnanz), similarity, choice density, and target size.',
+            'source_url' => 'https://lawsofux.com/',
+            'source_label' => 'lawsofux.com',
+        ],
+
+        'a_list_apart' => [
+            'id' => 'a_list_apart',
+            'name' => 'A List Apart',
+            'blurb' => 'Web-native craft for a still — content hierarchy, responsive layout clarity, web typography, and progressive enhancement.',
+            'source_url' => 'https://alistapart.com/',
+            'source_label' => 'alistapart.com',
         ],
 
         'presentation_zen' => [
@@ -68,12 +68,12 @@ return [
 
         'ui' => [
             'label' => 'UI craft',
-            'lenses' => ['design_engineering', 'iids', 'fluid_interfaces'],
+            'lenses' => ['iids', 'laws_of_ux'],
         ],
 
         'website' => [
             'label' => 'Website craft',
-            'lenses' => ['iids', 'design_engineering'],
+            'lenses' => ['iids', 'a_list_apart'],
         ],
 
         'presentation' => [

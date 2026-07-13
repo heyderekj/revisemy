@@ -142,8 +142,20 @@ class ReviewTypeTest extends TestCase
         }
 
         $craftBodies = $uiFindings->pluck('body')->implode("\n");
-        $this->assertStringContainsString('pressed/active', $craftBodies);
+        $this->assertStringContainsString('proportion', $craftBodies);
+        $this->assertTrue(
+            str_contains($craftBodies, 'Hick') || str_contains($craftBodies, 'Fitts') || str_contains($craftBodies, 'similarity'),
+            'UI checklist should include Laws of UX still-visible heuristics'
+        );
+        $this->assertStringNotContainsString('pressed/active', $craftBodies);
+        $this->assertStringNotContainsString('ease-out', $craftBodies);
         $this->assertStringNotContainsString('Craft check:', $craftBodies);
+
+        $websiteBodies = collect($bodiesByType['website'])->implode("\n");
+        $this->assertTrue(
+            str_contains($websiteBodies, 'scanned') || str_contains($websiteBodies, 'clickable') || str_contains($websiteBodies, 'measure'),
+            'Website checklist should include A List Apart web-craft heuristics'
+        );
 
         $emailBodies = collect($bodiesByType['email'])->implode("\n");
         $this->assertTrue(
@@ -159,7 +171,13 @@ class ReviewTypeTest extends TestCase
 
         $payload = Review::query()->where('type', 'ui')->firstOrFail()->toAgentPayload();
         $this->assertSame('UI craft', $payload['taste']['label']);
-        $this->assertNotEmpty($payload['taste']['lenses']);
-        $this->assertSame('IIDS', collect($payload['taste']['lenses'])->firstWhere('id', 'iids')['name'] ?? null);
+        $this->assertCount(2, $payload['taste']['lenses']);
+        $this->assertSame(['iids', 'laws_of_ux'], collect($payload['taste']['lenses'])->pluck('id')->all());
+        $this->assertNull(collect($payload['taste']['lenses'])->firstWhere('id', 'design_engineering'));
+        $this->assertNull(collect($payload['taste']['lenses'])->firstWhere('id', 'fluid_interfaces'));
+
+        $websitePayload = Review::query()->where('type', 'website')->firstOrFail()->toAgentPayload();
+        $this->assertSame(['iids', 'a_list_apart'], collect($websitePayload['taste']['lenses'])->pluck('id')->all());
+        $this->assertSame('alistapart.com', collect($websitePayload['taste']['lenses'])->firstWhere('id', 'a_list_apart')['source_label'] ?? null);
     }
 }

@@ -60,11 +60,9 @@ class TasteLenses
     public static function checklistItems(string $type, string $haystack = ''): array
     {
         $type = self::normalizeType($type);
-        $haystack = strtolower($haystack);
-        $motion = self::hasMotionContext($haystack);
 
         return match ($type) {
-            Review::TYPE_WEBSITE => array_values(array_filter([
+            Review::TYPE_WEBSITE => [
                 [
                     'severity' => Finding::SEVERITY_POLISH,
                     'body' => 'Type hierarchy should lead the eye — one clear heading scale, not competing display sizes fighting for attention.',
@@ -75,12 +73,27 @@ class TasteLenses
                     'body' => 'Alignment and spacing should feel systematic (grid rhythm) — flag accidental uneven gaps and nudge-level misalignment.',
                     'area' => null,
                 ],
-                $motion ? [
+                [
                     'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Prefer ease-out under ~300ms for UI chrome; never ease-in; don’t animate keyboard-triggered actions.',
+                    'body' => 'Floating surfaces often read better with soft depth (semi-transparent shadow/ring) than a hard opaque border.',
                     'area' => null,
-                ] : null,
-            ])),
+                ],
+                [
+                    'severity' => Finding::SEVERITY_SUGGESTION,
+                    'body' => 'Headings and sections should tell the story when scanned — can someone get what this page is and what to do next from the still alone?',
+                    'area' => null,
+                ],
+                [
+                    'severity' => Finding::SEVERITY_POLISH,
+                    'body' => 'Primary links and CTAs should look obviously clickable in the capture — don’t rely on hover to reveal affordance.',
+                    'area' => null,
+                ],
+                [
+                    'severity' => Finding::SEVERITY_POLISH,
+                    'body' => 'Body measure and type contrast should stay readable — long lines or low-contrast copy fail progressive enhancement on the web.',
+                    'area' => null,
+                ],
+            ],
             Review::TYPE_PRESENTATION => [
                 [
                     'severity' => Finding::SEVERITY_SUGGESTION,
@@ -110,10 +123,10 @@ class TasteLenses
                     'area' => null,
                 ],
             ],
-            default => array_values(array_filter([
+            default => [
                 [
                     'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Primary pressables should feel responsive — confirm a clear pressed/active treatment (subtle scale ~0.97), not only a hover color swap.',
+                    'body' => 'Type and spacing should follow a clear proportion system — uneven gaps and accidental misalignment read as unfinished.',
                     'area' => null,
                 ],
                 [
@@ -123,25 +136,31 @@ class TasteLenses
                 ],
                 [
                     'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Type and spacing should follow a clear proportion system — uneven gaps and accidental misalignment read as unfinished.',
+                    'body' => 'Primary actions should read as pressable from the still — clear affordance in weight, contrast, or shape, not hover-only cues.',
                     'area' => null,
                 ],
                 [
                     'severity' => Finding::SEVERITY_SUGGESTION,
-                    'body' => 'Feedback should start on press (pointer-down), not only on release — dead controls feel like a laggy computer.',
+                    'body' => 'Reduce competing choices in the primary viewport — dense equal-weight options raise decision cost (Hick) without helping the task.',
                     'area' => null,
                 ],
-                $motion ? [
+                [
                     'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Prefer ease-out under ~300ms for UI chrome; never ease-in; don’t animate keyboard-triggered actions; popovers should scale from the trigger (modals stay centered).',
+                    'body' => 'Interactive targets should look large enough to hit — tiny icons or cramped tap areas fail Fitts even before anyone moves a cursor.',
                     'area' => null,
-                ] : null,
-            ])),
+                ],
+                [
+                    'severity' => Finding::SEVERITY_POLISH,
+                    'body' => 'Related controls should share visual properties (color, shape, size) — break similarity only when meaning differs (Gestalt similarity).',
+                    'area' => null,
+                ],
+            ],
         };
     }
 
     /**
      * Vision taste-lens markdown for a review type (framework language, not personal quotes).
+     * Reviews are static captures — do not ask for press feedback, easing, or motion timing.
      */
     public static function visionLensMarkdown(?string $type): string
     {
@@ -150,12 +169,16 @@ class TasteLenses
         return match ($type) {
             Review::TYPE_WEBSITE => <<<'LENS'
 Craft lenses (marketing/content website — ReviseMy-distilled public principles; suggestions only):
+Judge the still frame only — no press, hover, or motion timing.
 IIDS (visual craft):
 - Typography hierarchy, grids/alignment, proportion, precision, restraint.
-- Above the fold: value proposition and next step clear without scrolling.
-- One dominant CTA; plain-language nav; readable measure (~45–75 chars).
-Design engineering (when chrome/motion is visible):
-- Soft depth over hard boxes on floating UI; restrained motion if implied.
+- Soft depth over hard boxes on floating UI when visible in the shot.
+A List Apart (web craft):
+- Content hierarchy and scannable sections — headings that tell the story.
+- Above the fold: what is this site and what should I do next?
+- Layout clarity across viewports (desktop vs mobile captures if both exist).
+- Web typography: readable measure, contrast, type scale that isn’t competing.
+- Progressive enhancement: primary message/CTA readable without app-like chrome.
 LENS,
             Review::TYPE_PRESENTATION => <<<'LENS'
 Craft lenses (slide — ReviseMy-distilled public principles; suggestions only):
@@ -175,15 +198,18 @@ Good Email Code:
 LENS,
             default => <<<'LENS'
 Craft lenses (UI — ReviseMy-distilled public principles; suggestions only):
-Design engineering:
-- Hierarchy & restraint; pressables need pressed/active affordance (not hover-only).
-- Soft shadow/ring often beats hard opaque borders on floating surfaces.
-- Motion if implied: ease-out, under ~300ms; never ease-in; no keyboard-triggered motion; popovers from trigger; never scale(0).
+Judge the still frame only — no press, hover, or motion timing.
 IIDS:
 - Typography hierarchy, grids/alignment, proportion, precision, restraint, affordance.
-Fluid interfaces:
-- Respond on press; continuous feedback during interaction; interruptible motion when gesture UI is implied.
-Accessibility: contrast, focus visibility, reduced-motion awareness when motion is implied.
+- Soft shadow/ring often beats hard opaque borders on floating surfaces.
+- Primary actions should read as interactive from the capture alone.
+Laws of UX (still-visible psychology):
+- Aesthetic-usability: polish that reads unfinished undermines trust.
+- Prägnanz: reduce visual noise; simplest clear form wins.
+- Similarity: related controls share look; break similarity to signal difference.
+- Hick: don’t present equal-weight choice piles in the primary viewport.
+- Fitts: interactive targets look large enough and spaced enough to hit.
+Accessibility: contrast and focus-ring visibility when focus chrome is shown.
 Prefer concrete CSS/layout fixes when possible.
 LENS,
         };
@@ -230,16 +256,5 @@ LENS,
         }
 
         return $out;
-    }
-
-    protected static function hasMotionContext(string $haystack): bool
-    {
-        return str_contains($haystack, 'animat')
-            || str_contains($haystack, 'modal')
-            || str_contains($haystack, 'drawer')
-            || str_contains($haystack, 'toast')
-            || str_contains($haystack, 'popover')
-            || str_contains($haystack, 'dropdown')
-            || str_contains($haystack, 'motion');
     }
 }
