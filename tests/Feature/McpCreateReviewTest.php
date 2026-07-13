@@ -246,6 +246,38 @@ class McpCreateReviewTest extends TestCase
         $this->assertSame($html, $review->domHtml());
     }
 
+    public function test_create_review_rejects_page_url_in_images(): void
+    {
+        $user = $this->setUpUser();
+
+        Http::fake([
+            'example.com/*' => Http::response(
+                '<html><body>not an image</body></html>',
+                200,
+                ['Content-Type' => 'text/html'],
+            ),
+        ]);
+
+        ReviseMyServer::actingAs($user)->tool(CreateReviewTool::class, [
+            'title' => 'Page URL mistaken for image',
+            'images' => ['https://example.com'],
+        ])->assertHasErrors();
+
+        $this->assertSame(0, Review::query()->count());
+    }
+
+    public function test_create_review_rejects_invalid_image_payload(): void
+    {
+        $user = $this->setUpUser();
+
+        ReviseMyServer::actingAs($user)->tool(CreateReviewTool::class, [
+            'title' => 'Not an image',
+            'images' => [base64_encode('definitely not a png')],
+        ])->assertHasErrors();
+
+        $this->assertSame(0, Review::query()->count());
+    }
+
     public function test_get_review_round_trips_the_created_payload(): void
     {
         $user = $this->setUpUser();

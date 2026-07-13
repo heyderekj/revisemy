@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\RendersApp;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('create_review')]
-#[Description('Start or continue a design checkup loop: upload screenshots, get a review URL for the human. Pass parent_id after changes_requested to open the next pass with new shots of the fixed UI. Optional page_url; call add_findings before sharing if you want a subagent critique. In MCP Apps hosts the review renders inline so the human can start marking right away.')]
+#[Description('Start or continue a design checkup loop: provide exactly one source — capture_url+page_url (public website), html (email), pdf (slides), or images (local UI as data URLs) — and get a review URL for the human. Pass parent_id after changes_requested to open the next pass with a fresh source. Call add_findings before sharing if you want a subagent critique. In MCP Apps hosts the review renders inline so the human can start marking right away.')]
 #[RendersApp(ReviewApp::class)]
 class CreateReviewTool extends Tool
 {
@@ -78,20 +78,20 @@ class CreateReviewTool extends Tool
             'type' => $schema->string()
                 ->enum(['ui', 'website', 'presentation', 'email'])
                 ->description('What kind of content this is — ui (default), website, slide (`presentation`), or email. Drives the second-opinion lens: emails get CTA/dark-mode/client checks, slides get slide-density checks, websites get above-the-fold/responsive checks. Follow-up passes inherit the parent type.'),
-            'page_url' => $schema->string()->description('Optional live page URL for future DOM grounding'),
+            'page_url' => $schema->string()->description('Live page URL. Required with capture_url:true for server-side website capture (mobile + desktop). Metadata only when using images/html/pdf — does not trigger capture on its own.'),
             'webhook_url' => $schema->string()->description('Optional https URL POSTed when the human decides (event review.decided, HMAC-signed with the review token) — lets pipelines gate on approval instead of polling. Follow-up passes inherit it.'),
             'parent_id' => $schema->string()->description('Previous review id when opening the next pass after changes_requested'),
             'images' => $schema->array()
-                ->items($schema->string()->description('Screenshot as https URL, data URL, or base64'))
+                ->items($schema->string()->description('Screenshot as https image URL, data URL, or base64 — not a page URL'))
                 ->min(1)
                 ->max(5)
-                ->description('One to five screenshots. Provide exactly one source: images, capture_url, pdf, or html.'),
+                ->description('Local or app UI: 1–5 screenshots as data URLs or base64. For public websites use capture_url instead. Provide exactly one source: images, capture_url, pdf, or html.'),
             'capture_url' => $schema->boolean()
-                ->description('Capture page_url server-side instead of uploading screenshots (mobile + desktop viewports; type defaults to website). Requires the server to have capture configured.'),
+                ->description('Capture page_url server-side (mobile + desktop viewports; type defaults to website). Requires REVISEMY_CAPTURE_DRIVER. If capture is unavailable, fall back to images with data URLs for local UI.'),
             'pdf' => $schema->string()
                 ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
             'html' => $schema->string()
-                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email). Requires capture to be configured.'),
+                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email). Requires REVISEMY_CAPTURE_DRIVER. If capture is unavailable, fall back to images with data URLs.'),
         ];
     }
 }

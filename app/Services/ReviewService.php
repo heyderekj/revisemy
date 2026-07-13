@@ -119,6 +119,12 @@ class ReviewService
             ]);
         }
 
+        foreach (array_values($images) as $image) {
+            if (! is_array($image)) {
+                $this->screenshots->validateSource($image);
+            }
+        }
+
         $parent = null;
         $pass = 1;
 

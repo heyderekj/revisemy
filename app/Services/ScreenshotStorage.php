@@ -29,6 +29,14 @@ class ScreenshotStorage
     }
 
     /**
+     * Validate an image source before persisting a review row.
+     */
+    public function validateSource(string|UploadedFile $image): void
+    {
+        $this->resolveBinary($image);
+    }
+
+    /**
      * Store server-originated image bytes (captures, rendered PDF pages).
      * Unlike user uploads these are never rejected for size — anything over
      * the 8MB cap is downscaled/re-encoded instead.
@@ -164,6 +172,8 @@ class ScreenshotStorage
 
     protected function resolveBinary(string|UploadedFile $image): string
     {
+        $sourceHint = null;
+
         if ($image instanceof UploadedFile) {
             if ($image->getSize() > 8 * 1024 * 1024) {
                 throw ValidationException::withMessages([
@@ -178,6 +188,8 @@ class ScreenshotStorage
                     'images' => 'Could not read that screenshot.',
                 ]);
             }
+
+            $this->assertIsImage($contents);
 
             return $contents;
         }
@@ -200,15 +212,26 @@ class ScreenshotStorage
                 ]);
             }
 
+            $this->assertIsImage($binary);
+
             return $binary;
         }
 
         if (filter_var($image, FILTER_VALIDATE_URL)) {
+            $sourceHint = $image;
             $response = Http::timeout(20)->get($image);
 
             if (! $response->successful()) {
                 throw ValidationException::withMessages([
                     'images' => 'Could not download that screenshot URL.',
+                ]);
+            }
+
+            $contentType = strtolower((string) $response->header('Content-Type'));
+
+            if ($contentType !== '' && ! str_starts_with($contentType, 'image/')) {
+                throw ValidationException::withMessages([
+                    'images' => 'That URL is not an image — use capture_url + page_url to screenshot a page.',
                 ]);
             }
 
@@ -219,6 +242,8 @@ class ScreenshotStorage
                     'images' => 'That screenshot URL is larger than 8MB.',
                 ]);
             }
+
+            $this->assertIsImage($binary, $sourceHint);
 
             return $binary;
         }
@@ -237,7 +262,26 @@ class ScreenshotStorage
             ]);
         }
 
+        $this->assertIsImage($binary);
+
         return $binary;
+    }
+
+    protected function assertIsImage(string $binary, ?string $sourceUrl = null): void
+    {
+        if (@getimagesizefromstring($binary) !== false) {
+            return;
+        }
+
+        if ($sourceUrl !== null && filter_var($sourceUrl, FILTER_VALIDATE_URL)) {
+            throw ValidationException::withMessages([
+                'images' => 'That URL is not an image — use capture_url + page_url to screenshot a page.',
+            ]);
+        }
+
+        throw ValidationException::withMessages([
+            'images' => 'That payload is not a valid image.',
+        ]);
     }
 
     protected function guessExtension(string $binary, string|UploadedFile $image): string

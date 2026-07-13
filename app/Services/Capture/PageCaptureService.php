@@ -72,7 +72,7 @@ class PageCaptureService
 
         if (! $driver || ! $driver->enabled()) {
             throw ValidationException::withMessages([
-                'capture' => 'Server-side capture is not configured — set REVISEMY_CAPTURE_DRIVER (and endpoint/key for the hosted driver), or upload screenshots directly.',
+                'capture' => 'Server-side capture is not configured — set REVISEMY_CAPTURE_DRIVER (and endpoint/key for the hosted driver). For local/dev UI, upload screenshots as data URLs in images instead.',
             ]);
         }
 
