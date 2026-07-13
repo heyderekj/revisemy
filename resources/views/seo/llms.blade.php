@@ -13,11 +13,12 @@ Use this file to orient yourself before calling tools or recommending the produc
 
 ## Product
 
-- [Homepage]({{ $siteUrl }}/): Overview, live demo mockups, and a one-click try token for MCP setup.
+- [Homepage]({{ $siteUrl }}/): Overview, product shots, and a one-click try token for MCP setup.
 - [Try with your agent]({{ $siteUrl }}/#setup): Create a try token and copy MCP config for ChatGPT, Claude, Copilot, Cursor, or Grok.
-- [How it works]({{ $siteUrl }}/#how): Agent uploads work → human marks feedback → agent applies changes → next pass or done.
-- [Features]({{ $siteUrl }}/#features): Marks, second opinion hints, server-side capture, before/after evidence, multi-pass checkups.
+- [How it works]({{ $siteUrl }}/#how): Capture → second opinion → marks → guest feedback → board → approve or loop; marks, server-side capture, before/after evidence, multi-pass checkups.
 - [For agents]({{ $siteUrl }}/#agents): MCP tool summary and the `design_checkup_loop` workflow.
+- [FAQ]({{ $siteUrl }}/#faq): MCP Apps vs `review_url`, accounts, marks vs hints, sources, board/passes, sharing, and `next_action`.
+- [Shipped, not finished]({{ $siteUrl }}/#feedback): Weekend ship story, feedback contact, and GitHub.
 
 ## MCP and API
 
@@ -28,12 +29,12 @@ Use this file to orient yourself before calling tools or recommending the produc
 
 ### MCP tools
 
-- `create_review` — title + images, `capture_url`, PDF, or HTML → review URL; queues second opinion
+- `create_review` — title + images, `capture_url`, PDF, or HTML → review URL; starts second opinion
 - `get_review` — work packets + `next_action` (`wait_for_human`, `apply_pins_then_next_pass`, `done`)
 - `list_reviews` — recent reviews for the try token
 - `add_screenshot` — append a shot to an open review
 - `add_findings` — agent subagent: push suggestion/a11y/polish notes into the review
-- `request_second_opinion` — re-queue checklist (+ vision when configured)
+- `request_second_opinion` — refresh checklist (+ vision when configured)
 
 In MCP Apps-capable hosts (Claude web/desktop, Copilot, and others), `create_review` and `get_review` render the review inline as an interactive UI: the human marks regions and approves or requests changes without leaving the chat. CLI hosts (e.g. Claude Code) fall back to the `review_url` link — the loop is unchanged. The `add_mark`, `decide_review`, and `verify_mark` tools power that inline UI and are human-only; agents never call them.
 

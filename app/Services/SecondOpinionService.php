@@ -42,7 +42,9 @@ class SecondOpinionService
                     'second_opinion_error' => null,
                 ]);
 
-                GenerateSecondOpinionJob::dispatch($screenshot->id);
+                // After the response so create_review stays fast — no separate
+                // queue worker required; an API key is enough.
+                GenerateSecondOpinionJob::dispatch($screenshot->id)->afterResponse();
 
                 return;
             }

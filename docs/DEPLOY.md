@@ -6,8 +6,9 @@ Repo: https://github.com/heyderekj/revisemy
 
 1. Open https://cloud.laravel.com and sign in.
 2. **New application** → import `heyderekj/revisemy`.
-3. Attach **Postgres**, **object storage**, and a **queue worker**.
+3. Attach **Postgres** and **object storage**.
    - Do **not** use SQLite on Cloud. The app filesystem is ephemeral, so `database/database.sqlite` disappears on every deploy and try-token / reviews will 500.
+   - A **queue worker** is optional (useful for webhooks); vision second opinion does not need one.
 4. Environment variables:
    - `APP_NAME=ReviseMy`
    - `APP_URL=https://YOUR-APP.laravel.cloud` (set after first deploy if needed)
@@ -21,9 +22,9 @@ Repo: https://github.com/heyderekj/revisemy
      - Optional: **`DB_CONNECT_TIMEOUT=60`** (default for serverless hosts) if you need a longer wake window.
    - `CACHE_STORE` / `SESSION_DRIVER` → `database` or Cloud Redis (not file/sqlite-backed paths)
    - `REVISEMY_DISK` / `FILESYSTEM_DISK` → Cloud object storage disk name
-   - `QUEUE_CONNECTION` → Cloud queue (or `database` with a worker)
+   - `QUEUE_CONNECTION` → optional (Cloud queue or `database` if you want workers for webhooks)
    - `REVISEMY_SECOND_OPINION=true` (default)
-   - Optional: `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` — vision second opinion with regions on the capture (checklist alone is sidebar text only)
+   - Optional: `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` — vision second opinion with regions on the capture (checklist alone is sidebar text only). No queue worker required.
    - Optional: `REVISEMY_CAPTURE_DRIVER=hosted` + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for URL/email capture on Cloud
    - Optional: `REVISEMY_CAPTURE_DPR=2` (default) — retina captures via Browserless `deviceScaleFactor`
 5. Build commands should include `npm ci && npm run build` (Cloud default for Node apps) and `composer install`. Cloud injects database credentials while building Laravel's cached configuration; raw `DB_*` variables may not be available later in the Commands shell.
@@ -48,14 +49,14 @@ Cloud’s UI advice maps to two different knobs:
 
 After the code-side fixes, runtime stays on the pooled `-pooler` host (good for concurrency) while migrations use the direct host automatically — so you should not need manual `DB_HOST` surgery for pooler vs direct.
 
-## Why the queue worker matters
+## Second opinion (no worker required)
 
-Every screenshot upload runs a free design checklist immediately, then queues vision when `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is set. Without a worker, checklist hints still appear in the sidebar but vision stays `queued` and no regions draw on the capture.
+Every screenshot gets a free checklist immediately. When `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is set, vision enrichment runs **after the HTTP response** in the same process — add the key, refresh, and regions appear on the capture. A queue worker is only needed for other background jobs (e.g. decision webhooks).
 
 ## Local verify before Cloud
 
 ```bash
 composer run dev
-# or: php artisan serve + php artisan queue:listen + npm run dev
+# or: php artisan serve + npm run dev
 # Get try token, create review via API/MCP, open /r/{token}
 ```

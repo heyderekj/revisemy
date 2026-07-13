@@ -88,7 +88,7 @@ class ReviseMyFlowTest extends TestCase
         $this->assertSame('ready', $payload['screenshots'][0]['second_opinion_status']);
     }
 
-    public function test_vision_provider_queues_enrichment_after_checklist(): void
+    public function test_vision_provider_schedules_enrichment_after_response(): void
     {
         Storage::fake('public');
         config([
@@ -98,7 +98,7 @@ class ReviseMyFlowTest extends TestCase
             'revisemy.openai.api_key' => 'sk-test',
             'revisemy.openai.base_url' => null,
         ]);
-        Queue::fake();
+        \Illuminate\Support\Facades\Bus::fake();
 
         $token = $this->postJson('/api/try-token')->json('token');
 
@@ -107,7 +107,7 @@ class ReviseMyFlowTest extends TestCase
             'images' => [$this->tinyPngDataUrl()],
         ])->assertCreated()->json();
 
-        Queue::assertPushed(GenerateSecondOpinionJob::class);
+        \Illuminate\Support\Facades\Bus::assertDispatchedAfterResponse(GenerateSecondOpinionJob::class);
         $this->assertNotEmpty($payload['work_packets']['second_opinion']);
         $this->assertSame('queued', $payload['screenshots'][0]['second_opinion_status']);
     }

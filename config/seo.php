@@ -43,7 +43,7 @@ return [
     'application_category' => 'DesignApplication',
 
     'features' => [
-        'Rectangle and point marks on screenshots with must-fix, tweak, nit, question, and keep intents',
+        'Rectangle and point marks on screenshots with must-fix, nice to have, question, and keep intents',
         'Laravel MCP tools: create_review, get_review, list_reviews, add_screenshot, add_findings, request_second_opinion',
         'Review types for UI, websites, slides, and email with tailored checklists',
         'Server-side capture from live URLs, PDF slides, and raw HTML',
@@ -60,7 +60,7 @@ return [
     'og_image' => '/images/og.png',
 
     // Bump when public/images/og.png changes so social crawlers fetch the new card.
-    'og_image_version' => '3',
+    'og_image_version' => '4',
 
     'og_image_width' => 1200,
 

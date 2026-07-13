@@ -42,8 +42,8 @@ new class extends Component
     }
 
     /**
-     * Actionable marks from this pass and the one it built on, grouped by status.
-     * Keeps are excluded — they are "leave alone" reminders, not board tasks.
+     * Marks from this pass and the one it built on, grouped by status.
+     * Includes "Keep this" (they land verified — leave-alone reminders).
      * Sorted by pass → shot → mark number so multi-shot boards stay scannable.
      *
      * @return array<string, \Illuminate\Support\Collection<int, Annotation>>
@@ -66,7 +66,6 @@ new class extends Component
 
         $marks = $reviews
             ->flatMap(fn (Review $review) => $review->screenshots->flatMap->annotations)
-            ->reject(fn (Annotation $mark) => $mark->severity === Annotation::SEVERITY_KEEP)
             ->unique('id')
             ->sortBy([
                 fn (Annotation $mark) => $shotMeta[$mark->screenshot_id]['pass'] ?? 0,
@@ -334,25 +333,23 @@ new class extends Component
     @php($verifiedPct = $total > 0 ? (int) round(($verified / $total) * 100) : 0)
 
     <header class="shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
-        <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
-            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5">
-                <div class="flex shrink-0 items-center gap-3">
-                    <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                        <x-revisemy-logo size="sm" />
-                    </a>
-                    <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Board</h1>
-                </div>
+        <div class="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:flex sm:gap-4 sm:px-6">
+            <div class="col-start-1 row-start-1 flex shrink-0 items-center gap-2 sm:gap-3">
+                <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                    <x-revisemy-logo size="sm" />
+                </a>
+                <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Board</h1>
+            </div>
 
-                <div class="flex min-w-0 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:basis-auto sm:flex-1">
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
-                        Pass {{ $review->pass }}
-                    </span>
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
-                        {{ $review->typeLabel() }}
-                    </span>
-                    <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
-                    <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
-                </div>
+            <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:col-span-1 sm:row-start-1 sm:flex-1 sm:flex-nowrap">
+                <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                    Pass {{ $review->pass }}
+                </span>
+                <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
+                    {{ $review->typeLabel() }}
+                </span>
+                <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
+                <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
             </div>
 
             @if ($total > 0)
@@ -364,7 +361,7 @@ new class extends Component
                 </div>
             @endif
 
-            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ $review->reviewUrl() }}" class="shrink-0 !bg-zinc-100 hover:!bg-zinc-200/80">
+            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ $review->reviewUrl() }}" class="col-start-3 row-start-1 shrink-0 justify-self-end !bg-zinc-100 hover:!bg-zinc-200/80">
                 Review
             </flux:button>
         </div>
@@ -379,7 +376,7 @@ new class extends Component
     <div class="mx-auto w-full max-w-7xl flex-1 py-4 sm:py-5">
         @if ($total === 0)
             <div class="px-4 sm:px-6">
-                <flux:callout>No actionable marks yet. Add must-fix, tweak, question, or nit marks on the review, then request changes.</flux:callout>
+                <flux:callout>No marks yet. Add must-fix, nice-to-have, question, or keep marks on the review.</flux:callout>
             </div>
         @else
             <div

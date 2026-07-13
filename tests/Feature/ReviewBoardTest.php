@@ -69,7 +69,7 @@ class ReviewBoardTest extends TestCase
         $this->get('/r/'.$review->share_token.'/board')->assertNotFound();
     }
 
-    public function test_keep_marks_are_not_shown_on_the_board(): void
+    public function test_keep_marks_show_in_the_verified_column(): void
     {
         [$review] = $this->reviewWithMark();
         $review->screenshots()->firstOrFail()->annotations()->create([
@@ -79,7 +79,8 @@ class ReviewBoardTest extends TestCase
         Livewire::test('review-board', ['token' => $review->token])
             ->assertOk()
             ->assertSee('Fix the CTA')
-            ->assertDontSee('Love this spacing');
+            ->assertSee('Love this spacing')
+            ->assertSee('Keep this');
     }
 
     public function test_clicking_a_mark_opens_the_detail_sheet(): void

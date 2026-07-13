@@ -224,17 +224,7 @@ class Annotation extends Model
      */
     public function markerClass(): string
     {
-        return match ($this->severity) {
-            self::SEVERITY_NIT => 'bg-amber-500',
-            self::SEVERITY_QUESTION => 'bg-violet-500',
-            self::SEVERITY_KEEP => 'bg-emerald-500',
-            self::SEVERITY_WORDING => 'bg-sky-500',
-            self::SEVERITY_SPACING => 'bg-orange-500',
-            self::SEVERITY_SIZE => 'bg-fuchsia-500',
-            self::SEVERITY_COLOR => 'bg-pink-500',
-            self::SEVERITY_ALIGNMENT => 'bg-teal-500',
-            default => 'bg-rose-600',
-        };
+        return 'bg-rose-600';
     }
 
     /**
@@ -242,17 +232,7 @@ class Annotation extends Model
      */
     public static function accentClass(string $severity): string
     {
-        return match ($severity) {
-            self::SEVERITY_NIT => 'accent-amber-500',
-            self::SEVERITY_QUESTION => 'accent-violet-500',
-            self::SEVERITY_KEEP => 'accent-emerald-500',
-            self::SEVERITY_WORDING => 'accent-sky-500',
-            self::SEVERITY_SPACING => 'accent-orange-500',
-            self::SEVERITY_SIZE => 'accent-fuchsia-500',
-            self::SEVERITY_COLOR => 'accent-pink-500',
-            self::SEVERITY_ALIGNMENT => 'accent-teal-500',
-            default => 'accent-rose-600',
-        };
+        return 'accent-rose-600';
     }
 
     protected $fillable = [

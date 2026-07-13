@@ -6,10 +6,9 @@ ReviseMy’s **human marks stay authoritative**. Second opinion is optional, lab
 
 ## What ships today (v1.1)
 
-On every screenshot upload, Laravel Cloud queues `GenerateSecondOpinionJob`:
-
-1. **Free checklist** — tuned to the review `type`: `ui` gets hierarchy/contrast/spacing plus Emil Kowalski taste checks; `website` gets above-the-fold/nav/responsive checks; `presentation` (Slide) gets slide-density/consistency checks; `email` gets CTA/dark-mode/images-off/client-rendering checks. Checklist findings are **sidebar text only** (`area: null`) — they never draw on the capture.
-2. **Vision upgrade** — when `ANTHROPIC_API_KEY` (Claude, preferred), `OPENAI_API_KEY`, or a custom `REVISEMY_OPENAI_BASE_URL` (Ollama / Groq / OpenRouter / LM Studio) is set, the queued job merges vision findings (`suggestion` / `a11y` / `polish` only), guided by a type-specific lens. Force a provider with `REVISEMY_VISION_PROVIDER=anthropic|openai` (default `auto`). **Only vision findings carry an `area` and render dashed regions on the screenshot.**
+On every screenshot upload:
+1. **Free checklist** runs immediately (no worker).
+2. **Vision upgrade** — when `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` (or a custom OpenAI-compatible base URL) is set, vision runs **after the HTTP response** in the same app process. No separate queue worker is required — just the API key. Force a provider with `REVISEMY_VISION_PROVIDER=anthropic|openai` (default `auto`). **Only vision findings carry an `area` and render dashed regions on the screenshot.**
 
 Agents can also act as a **design-reviewer subagent** via `add_findings` before the human opens the link. Those land in the same review UI with an `Agent` badge.
 
@@ -24,7 +23,7 @@ Agents can also act as a **design-reviewer subagent** via `add_findings` before 
 
 | Tool | Role |
 |------|------|
-| `create_review` | Screenshots + optional `page_url`; auto-queues second opinion. Pass `parent_id` for the next checkup pass. |
+| `create_review` | Screenshots + optional `page_url`; starts second opinion. Pass `parent_id` for the next checkup pass. |
 | `add_findings` | Subagent path — push critique into the open review |
 | `request_second_opinion` | Re-queue checklist (+ vision if keyed) |
 | `get_review` | Work packets + **`next_action`** (`wait_for_human` / `apply_pins_then_next_pass` / `done`) |
@@ -43,7 +42,7 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 
 - Solid rose selection rectangles = **your marks**
 - Dashed sky markers / areas = **vision second opinion** (checklist stays in the sidebar)
-- Sidebar: **Your marks** vs **Second opinion** (upgrade note when vision keys are missing; Refresh re-queues the job)
+- Sidebar: **Your marks** vs **Second opinion** (upgrade note when vision keys are missing; Refresh re-runs the job)
 - After a decision: clear copy for “next pass” vs “loop complete”
 
 ### Agent payload shape
@@ -65,10 +64,10 @@ Prompt: **`design_checkup_loop`** — teaches agents the full cycle.
 ### Cloud env
 
 ```
-QUEUE_CONNECTION=database   # or Cloud’s queue
+QUEUE_CONNECTION=database   # optional — vision second opinion no longer needs a worker
 REVISEMY_SECOND_OPINION=true
 REVISEMY_VISION_PROVIDER=auto   # anthropic | openai | auto (prefer Claude when keyed)
-ANTHROPIC_API_KEY=              # optional — Claude vision second opinion
+ANTHROPIC_API_KEY=              # optional — Claude vision second opinion (regions on capture)
 REVISEMY_ANTHROPIC_MODEL=claude-opus-4-8
 OPENAI_API_KEY=                 # optional — OpenAI vision second opinion
 REVISEMY_OPENAI_MODEL=gpt-4o-mini
@@ -83,7 +82,7 @@ REVISEMY_OPENAI_MODEL=gpt-4o-mini
 
 Local/OSS vision (e.g. Llama 3.2 Vision via Ollama) is a solid free upgrade over checklist-only, but weaker than Claude/GPT-4o at fine critique and clean JSON — severity caps, area normalize, and dedupe still apply so output degrades gracefully.
 
-Enable a **queue worker** on Laravel Cloud so jobs run after upload.
+Enable a queue worker only if you rely on other queued jobs (e.g. decision webhooks). Vision second opinion runs after the HTTP response without one — set an API key and refresh.
 
 ## Roadmap (not blocking contest)
 

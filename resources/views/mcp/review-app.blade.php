@@ -85,7 +85,7 @@
                                 @pointerdown="startDraw($event)" @pointermove="moveDraw($event)"
                                 @pointerup="endDraw($event)" @pointerleave="cancelDraw()">
 
-                                {{-- human marks: rose region + severity-colored M# badge (review page classes) --}}
+                                {{-- human marks: rose region + rose M# badge (review page classes) --}}
                                 <template x-for="pin in activeShot().pins" :key="'p'+pin.id">
                                     <div>
                                         <template x-if="pin.area">
@@ -350,8 +350,8 @@
         // Annotation::markerClass(), severityLabels(), statusBadgeClass(),
         // statusLabels(), and boardColumnMeta().
         const MARKER_BG = {
-            'must-fix': 'bg-rose-600', 'nit': 'bg-amber-500', 'question': 'bg-violet-500', 'keep': 'bg-emerald-500',
-            'wording': 'bg-sky-500', 'spacing': 'bg-orange-500', 'size': 'bg-fuchsia-500', 'color': 'bg-pink-500', 'alignment': 'bg-teal-500',
+            'must-fix': 'bg-rose-600', 'nit': 'bg-rose-600', 'question': 'bg-rose-600', 'keep': 'bg-rose-600',
+            'wording': 'bg-rose-600', 'spacing': 'bg-rose-600', 'size': 'bg-rose-600', 'color': 'bg-rose-600', 'alignment': 'bg-rose-600',
         };
         const SEVERITY_LABELS = {
             'must-fix': 'Must fix', 'nit': 'Nice to have', 'question': 'Question', 'keep': 'Keep this',

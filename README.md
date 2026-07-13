@@ -41,13 +41,13 @@ No account required for the human reviewer.
 
 | Tool | Purpose |
 |------|---------|
-| `create_review` | title + one source — `images`, `capture_url` (renders `page_url`), `pdf`, or `html` — (+ optional `type`, `page_url`, `parent_id`, `webhook_url`) → review URL; queues second opinion |
+| `create_review` | title + one source — `images`, `capture_url` (renders `page_url`), `pdf`, or `html` — (+ optional `type`, `page_url`, `parent_id`, `webhook_url`) → review URL; starts second opinion |
 | `get_review` | work packets + `next_action` (`wait_for_human` / `apply_pins_then_next_pass` / `done`) |
 | `list_reviews` | recent reviews for this try token |
 | `add_screenshot` | append a shot to an open review |
 | `add_findings` | agent subagent — push suggestion/a11y/polish into the review |
 | `resolve_marks` | agent progress on human marks: `in_progress` → `resolved` (+ note, optional `after_image`); never `verified` |
-| `request_second_opinion` | re-queue Cloud checklist (+ vision if keyed) |
+| `request_second_opinion` | refresh checklist (+ vision if keyed) |
 | `add_mark` | **MCP Apps UI only** — human leaves a mark inline (agents must not call) |
 | `decide_review` | **MCP Apps UI only** — human approves or requests changes |
 | `verify_mark` | **MCP Apps UI only** — human verifies or reopens a resolved mark |
@@ -108,7 +108,7 @@ npm install && npm run build
 php artisan serve
 ```
 
-Run a queue worker (`php artisan queue:listen`) when testing second opinion or webhooks locally.
+Run a queue worker (`php artisan queue:listen`) only if you are testing decision webhooks or other queued jobs locally. Vision second opinion does not need one.
 
 Visit `http://127.0.0.1:8000`, get a try token, and create a review.
 
@@ -138,8 +138,8 @@ MCP tests use `ReviseMyServer::actingAs($user)->tool(...)` — no Cursor config 
    - `APP_NAME=ReviseMy`
    - `FILESYSTEM_DISK` / `REVISEMY_DISK` to the Cloud object storage disk
    - `APP_URL` to your `https://….laravel.cloud` URL
-   - Queue worker enabled (`QUEUE_CONNECTION`)
-   - Optional `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) for the vision second opinion — `REVISEMY_VISION_PROVIDER=auto` prefers Claude when both are set
+   - Queue worker optional (`QUEUE_CONNECTION`) — not required for vision second opinion
+   - Optional `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) for the vision second opinion — `REVISEMY_VISION_PROVIDER=auto` prefers Claude when both are set. Just the key; no worker needed.
    - Optional free local vision: run Ollama, set `REVISEMY_VISION_PROVIDER=openai`, `REVISEMY_OPENAI_BASE_URL=http://localhost:11434/v1`, and `REVISEMY_OPENAI_MODEL=llama3.2-vision` (blank key is fine). Local/OSS models give helpful hints, not Claude/GPT-4o quality.
    - Optional `REVISEMY_CAPTURE_DRIVER=hosted` + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for server-side URL/email/PDF capture — Cloud containers have no Chrome, so use the hosted driver there
    - Optional `REVISEMY_CAPTURE_DPR=2` (default) — retina URL captures via Browserless `deviceScaleFactor`
