@@ -13,7 +13,7 @@ class PageCaptureService
     }
 
     /**
-     * Website capture: one shot per configured viewport (mobile + desktop).
+     * Website capture: one shot per configured viewport (desktop + mobile).
      *
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */

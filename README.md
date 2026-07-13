@@ -12,7 +12,7 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 - **Rectangle-first review** — drag to outline a region or click for a point note; zoom with +/− and pan with Space+drag (or middle mouse).
 - **Second opinion (hints only)** — Cloud-queued, type-aware design checklist on every screenshot; optional Claude (Anthropic) or OpenAI-compatible vision when keyed (or pointed at local Ollama). Sky S-markers never override your marks — accept or dismiss them in the review UI.
 - **Review types** — `ui`, `website`, `presentation` (Slide in the UI), or `email`: each gets its own checklist and vision lens (emails get CTA/dark-mode/client checks, slides get slide-density checks, sites get above-the-fold/responsive checks).
-- **Four ways to ingest** — `images` (https URL, data URL, or base64), `capture_url` + `page_url` (mobile + desktop screenshots), `pdf` (one shot per page), or raw `html` (email at ~600px). URL capture also stores a DOM snapshot for grounding.
+- **Four ways to ingest** — `images` (https URL, data URL, or base64), `capture_url` + `page_url` (desktop + mobile screenshots), `pdf` (one shot per page), or raw `html` (email at ~600px). URL capture also stores a DOM snapshot for grounding.
 - **Before/after evidence** — agents attach an `after_image` when resolving a mark; the review page and board show a before/after crop next to the resolution note.
 - **Mark lifecycle + board** — `/r/{token}/board` groups marks Open → In progress → Resolved → Verified. Agents call `resolve_marks` as they fix code; only the human verifies or reopens.
 - **Thread comments** — reply on a mark without moving it on the canvas.

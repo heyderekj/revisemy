@@ -79,8 +79,8 @@ class McpCreateReviewTest extends TestCase
                 ->where('type', 'website')
                 ->where('page_url', 'https://example.com')
                 ->has('screenshots', 2)
-                ->where('screenshots.0.meta.viewport', 'mobile-375')
-                ->where('screenshots.1.meta.viewport', 'desktop-1280')
+                ->where('screenshots.0.meta.viewport', 'desktop-1280')
+                ->where('screenshots.1.meta.viewport', 'mobile-375')
                 ->where('screenshots.0.meta.origin', 'capture')
                 ->etc()
         );

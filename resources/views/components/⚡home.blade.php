@@ -1043,7 +1043,7 @@ new class extends Component
                             <flux:icon.computer-desktop variant="micro" class="size-[18px]" />
                         </div>
                         <h3 class="mt-3 text-sm font-semibold text-zinc-900">Capture without screenshots</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Agents can send a page URL (mobile + desktop), a PDF of slides, or raw email HTML — ReviseMy renders the shots for you.</p>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Agents can send a page URL (desktop + mobile), a PDF of slides, or raw email HTML — ReviseMy renders the shots for you.</p>
                     </article>
 
                     <article>

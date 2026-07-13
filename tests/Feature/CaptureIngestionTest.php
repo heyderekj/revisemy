@@ -57,8 +57,8 @@ class CaptureIngestionTest extends TestCase
 
         $shots = $response->json('screenshots');
         $this->assertCount(2, $shots);
-        $this->assertSame('mobile-375', $shots[0]['meta']['viewport']);
-        $this->assertSame('desktop-1280', $shots[1]['meta']['viewport']);
+        $this->assertSame('desktop-1280', $shots[0]['meta']['viewport']);
+        $this->assertSame('mobile-375', $shots[1]['meta']['viewport']);
         $this->assertSame('capture', $shots[0]['meta']['origin']);
 
         Queue::assertNothingPushed();

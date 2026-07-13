@@ -23,7 +23,7 @@ You are running a ReviseMy design checkup loop for: {$focus}
 ## The loop (do not skip steps)
 
 1. **Pick one ingest source** — `create_review` accepts exactly one. Choose before calling:
-   - **Public website** → `capture_url: true` + `page_url` (type `website`). Server renders mobile + desktop. Do not put the page URL in `images`.
+   - **Public website** → `capture_url: true` + `page_url` (type `website`). Server renders desktop + mobile. Do not put the page URL in `images`.
    - **Email HTML** → `html: "…"` (type `email`). Server renders at ~600px.
    - **Slides / PDF** → `pdf: "…"` (type `presentation`). One screenshot per page (max 5).
    - **Local or app UI** → `images: [data URL or base64]` (type `ui`). Never pass `http://localhost…` URLs to a remote server — encode as data URLs.

@@ -70,8 +70,8 @@ return [
             : null),
         'node_modules' => env('REVISEMY_CAPTURE_NODE_MODULES', base_path('node_modules')),
         'viewports' => [
-            'mobile' => [375, 812],
             'desktop' => [1280, 800],
+            'mobile' => [375, 812],
         ],
     ],
 
