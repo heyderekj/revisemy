@@ -16,7 +16,7 @@
     --color-accent-content: #e11d48;
     --color-accent-foreground: #ffffff;
     --color-ink: #18181b;
-    --color-paper: #f7f7f8;
+    --color-paper: #ffffff;
     --color-mist: #ebebef;
     --color-mark: #fb7185;
     --color-highlight: #fecdd3;
@@ -67,7 +67,7 @@
     .rm-wash {
         background:
             radial-gradient(ellipse 70% 50% at 85% 0%, rgb(251 113 133 / 0.12), transparent 55%),
-            linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
+            linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
     }
 
     .rm-hero-mark {
