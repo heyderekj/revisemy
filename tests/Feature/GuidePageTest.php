@@ -21,7 +21,8 @@ class GuidePageTest extends TestCase
             ->assertSee('Ask agent', false)
             ->assertSee('Hosts', false)
             ->assertSee('Developer → Edit Config', false)
-            ->assertSee('Checkup prompt', false);
+            ->assertSee('Open Connectors in ChatGPT', false)
+            ->assertSee('Then run a checkup', false);
     }
 
     public function test_second_opinion_page_returns_success(): void

@@ -181,7 +181,7 @@
                                 Alternatives
                             </a>
                             <span class="text-zinc-400"> — </span>
-                            <span class="text-zinc-500">Figma comments, Marker, Pastel, Lucidly, AI chat apps</span>
+                            <span class="text-zinc-500">Figma comments, Marker, Pastel, Lucidly, MarkUp, Workflow, Simple Commenter, AI chat apps</span>
                         </li>
                     </ul>
                 </section>

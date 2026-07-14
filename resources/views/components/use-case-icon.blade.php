@@ -164,6 +164,46 @@
                 <rect y="36.5312" width="12.2141" height="12.2141" rx="2.18588" transform="rotate(-90 0 36.5312)" />
             </svg>
             @break
+        @case('markup-io')
+            {{-- Monochrome MarkUp.io mark (slash cluster from markup.io logo) --}}
+            <svg
+                class="{{ $glyph }}"
+                viewBox="0 0 140.1 87.3"
+                fill="currentColor"
+                aria-hidden="true"
+                focusable="false"
+            >
+                <path d="M129.6 86.4c-5.6 0-10.2-4.6-10.2-10.2s4.6-10.2 10.2-10.2 10.2 4.6 10.2 10.2-4.5 10.2-10.2 10.2z" />
+                <path d="M121.1 62.8c-4.9 2.8-11.1 1.1-13.9-3.7l-24-42.9C80.3 11.3 82 5 86.9 2.2c4.8-2.8 11.1-1.1 13.9 3.8l24 42.9c2.8 4.8 1.1 11.1-3.7 13.9z" />
+                <path d="M5.5 85.1C.6 82.3-1 76 1.8 71.2L39.4 6c2.8-4.9 9.1-6.5 13.9-3.7 4.9 2.8 6.5 9.1 3.7 13.9L19.4 81.4C16.6 86.2 10.3 87.9 5.5 85.1z" />
+                <path d="M49.4 85.1c-4.9-2.8-6.5-9.1-3.7-13.9L83.2 6c2.8-4.9 9.1-6.5 13.9-3.7 4.9 2.8 6.5 9.1 3.7 13.9L63.3 81.4c-2.8 4.8-9.1 6.5-13.9 3.7z" />
+                <path d="M90.9 85.1c-4.9 2.8-11.1 1.1-13.9-3.7L39.4 16.2c-2.8-4.9-1.1-11.1 3.7-13.9 4.9-2.8 11.1-1.1 13.9 3.7l37.6 65.1c2.8 4.9 1.2 11.2-3.7 14z" />
+            </svg>
+            @break
+        @case('workflow-design')
+            {{-- Monochrome Workflow mark (serif W from workflow.design favicon) --}}
+            <svg
+                class="{{ $glyph }}"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+                focusable="false"
+            >
+                <path d="M3.2 6.2h3.4l1.55 8.35L12 6.2h2.9l3.85 8.35L20.3 6.2H23l-3.7 12.1h-3.55L12 9.55l-3.75 8.75H4.7L1 6.2h2.2z" />
+            </svg>
+            @break
+        @case('simple-commenter')
+            {{-- Monochrome Simple Commenter mark (speech bubble from product favicon) --}}
+            <svg
+                class="{{ $glyph }}"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+                focusable="false"
+            >
+                <path d="M5 3.75A3.75 3.75 0 0 1 8.75 0h6.5A3.75 3.75 0 0 1 19 3.75v8.5A3.75 3.75 0 0 1 15.25 16H11.1l-4.35 4.05c-.55.51-1.4.12-1.4-.62v-3.55A3.75 3.75 0 0 1 5 12.25v-8.5z" />
+            </svg>
+            @break
         @default
             <flux:icon.photo variant="micro" class="{{ $glyph }}" />
     @endswitch

@@ -213,19 +213,11 @@ new class extends Component
                             <a href="/guest-links" class="transition hover:text-zinc-900">Guest links</a>
                         </li>
                         <li>
-                            <a href="/changelog" class="transition hover:text-zinc-900">Changelog</a>
-                        </li>
-                        <li>
                             <a href="/alternatives" class="transition hover:text-zinc-900">Alternatives</a>
                         </li>
                         <li>
                             <a href="https://github.com/heyderekj/revisemy" class="transition hover:text-zinc-900" target="_blank" rel="noreferrer">
                                 GitHub ↗
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://github.com/sponsors/heyderekj" class="transition hover:text-zinc-900" target="_blank" rel="noreferrer">
-                                Sponsor ↗
                             </a>
                         </li>
                     </ul>
@@ -245,10 +237,17 @@ new class extends Component
                 <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
             </div>
             <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
+                <a href="#top" class="block" x-on:click="mobileNav = false">Home</a>
                 <a href="#how" class="block" x-on:click="mobileNav = false">How it works</a>
                 <a href="#agents" class="block" x-on:click="mobileNav = false">For agents</a>
                 <a href="#faq" class="block" x-on:click="mobileNav = false">FAQ</a>
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try with your agent</a>
+                <a href="/connectors" class="inline-flex items-center gap-2" x-on:click="mobileNav = false">
+                    Connectors
+                    <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">MCP</span>
+                </a>
+                <a href="/guest-links" class="block" x-on:click="mobileNav = false">Guest links</a>
+                <a href="/alternatives" class="block" x-on:click="mobileNav = false">Alternatives</a>
                 <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub ↗</a>
             </div>
 
@@ -551,7 +550,7 @@ new class extends Component
                                 Alternatives
                             </a>
                             <span class="text-zinc-400"> — </span>
-                            <span class="text-zinc-500">Figma comments, Marker, Pastel, Lucidly, AI chat apps</span>
+                            <span class="text-zinc-500">Figma comments, Marker, Pastel, Lucidly, MarkUp, Workflow, Simple Commenter, AI chat apps</span>
                         </li>
                     </ul>
                 </div>

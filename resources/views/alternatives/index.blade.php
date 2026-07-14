@@ -1,7 +1,7 @@
 <x-layouts.app
     title="ReviseMy alternatives — thoughtful comparisons for design feedback tools"
-    description="Compare ReviseMy to Figma comments, Marker.io, Pastel, Lucidly, and just using an AI chat app. Fair guides for when human-in-the-loop agent checkups fit — and when to keep the other tool."
-    :keywords="['ReviseMy alternatives', 'Figma comments alternative', 'Marker.io alternative', 'Pastel alternative', 'Lucidly alternative', 'AI chat app', 'MCP design review']"
+    description="Compare ReviseMy to Figma comments, Marker.io, Pastel, Lucidly, MarkUp.io, Workflow, Simple Commenter, and just using an AI chat app. Fair guides for when human-in-the-loop agent checkups fit — and when to keep the other tool."
+    :keywords="['ReviseMy alternatives', 'Figma comments alternative', 'Marker.io alternative', 'Pastel alternative', 'Lucidly alternative', 'MarkUp.io alternative', 'Workflow.design alternative', 'Simple Commenter alternative', 'AI chat app', 'MCP design review']"
     schema="page"
 >
     <div
