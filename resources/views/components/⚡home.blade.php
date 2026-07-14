@@ -2,6 +2,7 @@
 
 use App\Services\TryTokenService;
 use Illuminate\Support\Facades\RateLimiter;
+use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Component;
 
 new class extends Component
@@ -96,6 +97,25 @@ new class extends Component
         $this->setupPromptsJson = $setupPromptsJson ?: null;
         $this->checkupPromptsJson = $checkupPromptsJson ?: null;
         $this->error = null;
+
+        if (! $this->tokenExpiresAt && $this->token) {
+            $this->tokenExpiresAt = PersonalAccessToken::findToken($this->token)?->expires_at?->toIso8601String();
+        }
+
+        // Backfill sessionStorage when an older saved try setup lacked expiry.
+        if ($this->tokenExpiresAt) {
+            $this->dispatch('revisemy-try-setup-saved', payload: [
+                'token' => $this->token,
+                'tokenExpiresAt' => $this->tokenExpiresAt,
+                'mcpUrl' => $this->mcpUrl,
+                'cursorConfigJson' => $this->cursorConfigJson,
+                'claudeDesktopConfigJson' => $this->claudeDesktopConfigJson,
+                'copilotConfigJson' => $this->copilotConfigJson,
+                'claudeCodeCommand' => $this->claudeCodeCommand,
+                'setupPromptsJson' => $this->setupPromptsJson,
+                'checkupPromptsJson' => $this->checkupPromptsJson,
+            ]);
+        }
     }
 
     public function clearTryTokenSetup(): void

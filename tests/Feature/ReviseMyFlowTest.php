@@ -592,11 +592,32 @@ class ReviseMyFlowTest extends TestCase
             ->assertSet('mcpUrl', 'https://example.test/mcp')
             ->assertSet('setupPromptsJson', '{"cursor":"setup"}')
             ->assertSet('tokenExpiresAt', '2030-01-01T00:00:00+00:00')
+            ->assertDispatched('revisemy-try-setup-saved')
             ->call('clearTryTokenSetup')
             ->assertSet('token', null)
             ->assertSet('mcpUrl', null)
             ->assertSet('setupPromptsJson', null)
             ->assertSet('tokenExpiresAt', null);
+    }
+
+    public function test_home_try_token_restore_backfills_expiry_from_sanctum(): void
+    {
+        $created = app(\App\Services\TryTokenService::class)->create();
+
+        Livewire::test('home')
+            ->call(
+                'restoreTryTokenSetup',
+                $created['token'],
+                $created['mcp_url'],
+                '{}',
+                '{}',
+                '{}',
+                'claude mcp add',
+                '',
+                '',
+                '', // missing from older sessionStorage payloads
+            )
+            ->assertSet('tokenExpiresAt', $created['token_expires_at']);
     }
 
     public function test_home_try_token_failure_sets_error_instead_of_throwing(): void

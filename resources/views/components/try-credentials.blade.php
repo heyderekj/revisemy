@@ -33,24 +33,28 @@
                 >Copy</button>
             </div>
             <p x-ref="bearerToken" class="break-all font-mono text-sm text-zinc-700">{{ $token }}</p>
-        </div>
-    </div>
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 bg-zinc-50/90 px-4 py-3">
-        <div class="min-w-0 space-y-0.5">
             @if ($expires)
-                <p class="text-[13px] leading-snug text-zinc-600">
+                <p class="mt-2 text-[12px] leading-snug text-zinc-500">
                     @if ($expires->isPast())
-                        Expired {{ $expires->diffForHumans() }} — generate a new token.
+                        Expired {{ $expires->diffForHumans() }}
                     @else
                         Expires {{ $expires->diffForHumans() }}
                         <span class="text-zinc-400">· {{ $expires->timezone(config('app.timezone'))->toFormattedDateString() }}</span>
                     @endif
                 </p>
             @endif
-            <p class="text-[13px] leading-snug text-zinc-500">
-                Expired or shared by mistake? Mint a fresh try token.
-            </p>
         </div>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 bg-zinc-50/90 px-4 py-3">
+        <p class="min-w-0 text-[13px] leading-snug text-zinc-500">
+            @if ($expires?->isPast())
+                This try token has expired — generate a new one.
+            @elseif ($expires)
+                Try tokens last {{ \App\Services\TryTokenService::TOKEN_DAYS }} days. Shared by mistake? Mint a fresh one.
+            @else
+                No expiry on this token — generate a new one for a {{ \App\Services\TryTokenService::TOKEN_DAYS }}-day lifetime.
+            @endif
+        </p>
         <button
             type="button"
             class="group inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
