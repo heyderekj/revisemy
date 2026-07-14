@@ -441,6 +441,7 @@ return [
             'slug' => 'reviewers',
             'label' => 'Reviewers',
             'icon' => 'users',
+            'teaser' => 'Mark and approve on the link — no account required.',
             'title' => 'Design review for humans — mark, approve, no account required',
             'description' => 'Open a ReviseMy review link as a designer, PM, or teammate. Mark regions on screenshots, set must-fix or nit, approve or request changes — no MCP install and no account.',
             'keywords' => [
@@ -512,6 +513,7 @@ return [
             'slug' => 'designers',
             'label' => 'Designers',
             'icon' => 'paint-brush',
+            'teaser' => 'Hierarchy and craft on the pixels — your eye is the brief.',
             'title' => 'Design review for designers — mark hierarchy, approve agent UI',
             'description' => 'Review agent-built UI as a designer. Mark hierarchy, spacing, and contrast on the pixels, keep second-opinion hints in their place, and approve only when the craft holds up.',
             'keywords' => [
@@ -583,6 +585,7 @@ return [
             'slug' => 'product',
             'label' => 'Product',
             'icon' => 'clipboard-document-list',
+            'teaser' => 'Prioritize what ships without living in agent chat.',
             'title' => 'Design review for product — marks, priorities, guest links',
             'description' => 'Leave structured product feedback on agent-built UI without installing MCP. Mark must-fix vs nice-to-have, share guest links with stakeholders, and keep decisions with the review owner.',
             'keywords' => [
@@ -654,6 +657,7 @@ return [
             'slug' => 'engineers',
             'label' => 'Engineers',
             'icon' => 'command-line',
+            'teaser' => 'Ship the fix, prove it, wait for a human eye.',
             'title' => 'Design review for engineers — MCP loop, resolve marks, before/after',
             'description' => 'Connect ReviseMy over MCP, open reviews from screenshots or URLs, resolve human marks with notes and after shots, and follow next_action until approval.',
             'keywords' => [
@@ -725,6 +729,7 @@ return [
             'slug' => 'founders',
             'label' => 'Founders',
             'icon' => 'rocket-launch',
+            'teaser' => 'Agent speed with a human checkpoint.',
             'title' => 'Design review for founders — solo try-token path with a human checkpoint',
             'description' => 'Ship agent-built UI with a free try token and a human approve step. No ReviseMy account — connect MCP, open a review, mark what matters, and loop until it feels right.',
             'keywords' => [
@@ -796,6 +801,7 @@ return [
             'slug' => 'agencies',
             'label' => 'Agencies',
             'icon' => 'building-office-2',
+            'teaser' => 'Run the agent; clients mark on the link.',
             'title' => 'Design review for agencies — client guest links, agent builds, human sign-off',
             'description' => 'Run agents inside the studio while clients mark on a guest or review link. Keep suggestions non-authoritative until you accept them, and ship multi-pass approvals with before/after proof.',
             'keywords' => [

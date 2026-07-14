@@ -427,25 +427,25 @@ new class extends Component
                 </div>
 
                 <div class="mt-14 border-t border-zinc-900/8 pt-12">
-                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for every visual you ship</h2>
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for everyone in the loop</h2>
                     <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                        Same loop, different checklist — pick the artifact you’re reviewing.
+                        Humans mark and approve. Agents ship the next pass. Same loop whether you’re reviewing, designing, building, or signing off.
                     </p>
 
                     <ul class="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 min-[30rem]:grid-cols-2">
-                        @foreach (config('use-cases.pages', []) as $slug => $useCase)
+                        @foreach (config('use-cases.audiences', []) as $slug => $audience)
                             <li>
                                 <a href="{{ url('/for/'.$slug) }}" class="group flex items-start gap-3">
                                     <x-use-case-icon
-                                        :name="$useCase['icon']"
+                                        :name="$audience['icon']"
                                         class="mt-0.5 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
                                     />
                                     <span class="min-w-0">
                                         <span class="block text-sm font-semibold text-zinc-900 transition group-hover:text-rose-600">
-                                            {{ $useCase['label'] }}
+                                            {{ $audience['label'] }}
                                         </span>
                                         <span class="mt-1 block text-sm leading-relaxed text-zinc-500">
-                                            {{ $useCase['teaser'] ?? $useCase['headline'] }}
+                                            {{ $audience['teaser'] ?? $audience['headline'] }}
                                         </span>
                                     </span>
                                 </a>
@@ -453,13 +453,53 @@ new class extends Component
                         @endforeach
                     </ul>
 
-                    <p class="mt-8 text-sm text-zinc-500">
-                        Also:
-                        <a href="/for" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">audiences &amp; review types</a>,
-                        <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">connectors</a>,
-                        or
-                        <a href="/for" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">see all paths</a>.
-                    </p>
+                    <div class="mt-10">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">By review type</p>
+                        <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-3">
+                            @foreach (config('use-cases.pages', []) as $slug => $useCase)
+                                <li>
+                                    <a href="{{ url('/for/'.$slug) }}" class="group inline-flex items-center gap-2">
+                                        <x-use-case-icon
+                                            :name="$useCase['icon']"
+                                            size="sm"
+                                            class="transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
+                                        />
+                                        <span class="text-sm font-medium text-zinc-700 transition group-hover:text-rose-600">
+                                            {{ $useCase['label'] }}
+                                        </span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    <div class="mt-10">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">What agents we support</p>
+                        <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-3">
+                            @foreach ([
+                                'chatgpt' => 'ChatGPT',
+                                'claude' => 'Claude',
+                                'copilot' => 'Copilot',
+                                'cursor' => 'Cursor',
+                                'grok' => 'Grok',
+                            ] as $id => $label)
+                                <li>
+                                    <a href="{{ url('/connectors#'.$id) }}" class="group inline-flex items-center gap-2">
+                                        <span class="inline-flex size-7 items-center justify-center rounded-md bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80">
+                                            <x-host-icon :name="$id" />
+                                        </span>
+                                        <span class="text-sm font-medium text-zinc-700 transition group-hover:text-rose-600">
+                                            {{ $label }}
+                                        </span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                        <p class="mt-3 text-sm text-zinc-500">
+                            <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Setup guides</a>
+                            for each host.
+                        </p>
+                    </div>
                 </div>
             </section>
 
