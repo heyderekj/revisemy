@@ -1,8 +1,10 @@
 @php
     $hasHosts = ! empty($page['hosts']);
+    $hasSupportedAgents = ! empty($page['supported_agents']);
     $hasFeatures = ! empty($page['features']);
     $hasChecklist = ! empty($page['checklist']);
     $hasSources = ! empty($page['sources']);
+    $hasChangelog = ! empty($page['changelog']);
     $hasFaq = ! empty($page['faq']);
     $tasteSources = $hasSources ? \App\Support\TasteLenses::allTypes() : [];
     $tasteDisclaimer = \App\Support\TasteLenses::disclaimer();
@@ -62,7 +64,17 @@
 
                 @include('guides.partials.hero')
 
-                @include('guides.partials.problem-loop')
+                @if (! empty($page['product_shots']))
+                    @include('guides.partials.product-shots')
+                @endif
+
+                @unless ($hasChangelog)
+                    @include('guides.partials.problem-loop')
+                @endunless
+
+                @if ($hasSupportedAgents)
+                    @include('guides.partials.supported-agents')
+                @endif
 
                 @if ($hasHosts)
                     @include('guides.partials.hosts')
@@ -83,12 +95,20 @@
                     ])
                 @endif
 
+                @if ($hasChangelog)
+                    @include('guides.partials.changelog-entries')
+                @endif
+
                 @if ($hasFaq)
                     @include('use-cases.partials.faq')
                 @endif
             </div>
 
-            @include('use-cases.partials.cta')
+            @if ($hasChangelog)
+                @include('guides.partials.changelog-cta')
+            @else
+                @include('use-cases.partials.cta')
+            @endif
         </div>
 
         <div

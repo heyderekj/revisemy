@@ -24,11 +24,40 @@
         <priority>0.8</priority>
     </url>
     @endforeach
+    @foreach (config('hosts.pages', []) as $slug => $page)
+    <url>
+        <loc>{{ rtrim(config('app.url'), '/') }}/for/{{ $slug }}</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    @endforeach
     @foreach (config('guides.pages', []) as $slug => $page)
     <url>
         <loc>{{ rtrim(config('app.url'), '/') }}{{ $page['path'] }}</loc>
         <changefreq>monthly</changefreq>
         <priority>0.85</priority>
+    </url>
+    @endforeach
+    <url>
+        <loc>{{ rtrim(config('app.url'), '/') }}/privacy</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+    <url>
+        <loc>{{ rtrim(config('app.url'), '/') }}/terms</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+    <url>
+        <loc>{{ rtrim(config('app.url'), '/') }}/alternatives</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    @foreach (config('alternatives.pages', []) as $slug => $page)
+    <url>
+        <loc>{{ rtrim(config('app.url'), '/') }}{{ $page['path'] }}</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
     </url>
     @endforeach
 </urlset>

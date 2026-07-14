@@ -1,12 +1,3 @@
-@php
-    $hasInputs = ! empty($page['inputs']['items'] ?? null);
-    $hasChecklist = ! empty($page['checklist']);
-    $hasPrompts = ! empty($page['prompts']);
-    $hasFeatures = ! empty($page['features']);
-    $hasFaq = ! empty($page['faq']);
-    $hasRelated = ! empty($related);
-@endphp
-
 <x-layouts.app
     :title="$page['title']"
     :description="$page['description']"
@@ -52,57 +43,26 @@
                         x-transition:leave-end="opacity-0"
                     >
                         <div class="pointer-events-auto">
-                            <x-try-token-cta fathom-event="Try token use case sticky" />
+                            <x-try-token-cta fathom-event="Try token alternatives sticky" />
                         </div>
                     </div>
                 </div>
 
                 @include('use-cases.partials.header')
 
-                @include('use-cases.partials.hero')
+                @include('alternatives.partials.hero')
+                @include('alternatives.partials.intro')
+                @include('alternatives.partials.why-look')
+                @include('alternatives.partials.what-to-look-for')
+                @include('alternatives.partials.recommended')
+                @include('alternatives.partials.keep-theirs')
+                @include('alternatives.partials.verdict')
 
-                @include('guides.partials.problem-loop')
-
-                @if ($hasInputs)
-                    @include('use-cases.partials.inputs')
-                @endif
-
-                @if ($hasFeatures)
-                    @include('use-cases.partials.features')
-                @endif
-
-                @if ($hasChecklist)
-                    @include('use-cases.partials.checklist')
-                @endif
-
-                @if ($hasPrompts)
-                    @include('use-cases.partials.prompts')
-                @endif
-
-                @if ($hasFaq)
+                @if (! empty($page['faq']))
                     @include('use-cases.partials.faq')
                 @endif
 
-                @if (! empty($isHost) && ! empty($page['connector_anchor']))
-                    <section class="mt-14 rounded-lg border border-zinc-900/8 bg-white/70 px-4 py-4 sm:px-5">
-                        <p class="text-sm leading-relaxed text-zinc-600">
-                            Full paste-ready setup for {{ $page['label'] }}:
-                            <a
-                                href="{{ url('/connectors#'.$page['connector_anchor']) }}"
-                                class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
-                            >Connectors · {{ $page['label'] }}</a>
-                            ·
-                            <a
-                                href="/mcp-apps"
-                                class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
-                            >MCP Apps vs review_url</a>
-                        </p>
-                    </section>
-                @endif
-
-                @if ($hasRelated)
-                    @include('use-cases.partials.related')
-                @endif
+                @include('alternatives.partials.related')
             </div>
 
             @include('use-cases.partials.cta')
@@ -120,7 +80,7 @@
             x-transition:leave-end="translate-y-3 opacity-0"
         >
             <x-try-token-cta
-                fathom-event="Try token use case mobile"
+                fathom-event="Try token alternatives mobile"
                 class="w-full justify-center !py-3 shadow-[0_16px_40px_-12px_rgba(225,29,72,0.6)]"
             />
         </div>

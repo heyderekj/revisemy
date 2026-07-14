@@ -2,7 +2,7 @@
     <div class="flex items-center gap-3">
         @if (! empty($page['mark_icon']))
             <x-mark-type-icon :type="$page['mark_icon']" />
-        @else
+        @elseif (! empty($page['icon']))
             <x-use-case-icon :name="$page['icon']" size="lg" />
         @endif
         <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">{{ $page['label'] }}</p>

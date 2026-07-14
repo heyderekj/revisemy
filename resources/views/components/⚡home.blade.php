@@ -204,14 +204,23 @@ new class extends Component
                     <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Resources</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li>
-                            <a href="https://github.com/heyderekj/revisemy" class="transition hover:text-zinc-900" target="_blank" rel="noreferrer">
-                                GitHub ↗
-                            </a>
-                        </li>
-                        <li>
                             <a href="/connectors" class="inline-flex items-center gap-2 transition hover:text-zinc-900">
                                 Connectors
                                 <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">MCP</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/guest-links" class="transition hover:text-zinc-900">Guest links</a>
+                        </li>
+                        <li>
+                            <a href="/changelog" class="transition hover:text-zinc-900">Changelog</a>
+                        </li>
+                        <li>
+                            <a href="/alternatives" class="transition hover:text-zinc-900">Alternatives</a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/heyderekj/revisemy" class="transition hover:text-zinc-900" target="_blank" rel="noreferrer">
+                                GitHub ↗
                             </a>
                         </li>
                         <li>
@@ -223,7 +232,7 @@ new class extends Component
                 </div>
             </nav>
 
-            <p class="mt-auto pt-8 font-mono text-[11px] text-zinc-400">v1.0.0</p>
+            <p class="mt-auto pt-8 font-mono text-[11px] text-zinc-400">v{{ config('revisemy.version') }}</p>
         </aside>
 
         {{-- Main --}}
@@ -387,16 +396,22 @@ new class extends Component
 
                     <article>
                         <x-mark-type-icon type="g" />
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Guest eyes</h3>
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Guest links</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Share a private guest link when you want another set of eyes — no accounts. Your marks stay authoritative.</p>
+                        <a
+                            href="/guest-links"
+                            class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                        >Learn more</a>
                     </article>
 
                     <article>
-                        <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
-                            <flux:icon.check variant="micro" class="size-[18px]" />
-                        </div>
+                        <x-use-case-icon name="queue-list" />
                         <h3 class="mt-3 text-sm font-semibold text-zinc-900">Board to done</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Track marks from open → resolved → verified on the board. Agents can attach before/after evidence when they fix something.</p>
+                        <a
+                            href="/board"
+                            class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                        >Learn more</a>
                     </article>
 
                     <article>
@@ -409,7 +424,7 @@ new class extends Component
                 </div>
 
                 <div class="mt-8 max-w-2xl space-y-3">
-                    <p class="text-[15px] font-medium text-zinc-800">Try saying:</p>
+                    <p class="text-[15px] font-medium text-zinc-800">A few prompts to use:</p>
                     <ul class="space-y-2.5">
                         <li>
                             <x-sample-prompt text="Run a design checkup." />
@@ -452,54 +467,93 @@ new class extends Component
                             </li>
                         @endforeach
                     </ul>
+                </div>
 
-                    <div class="mt-10">
-                        <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">By review type</p>
-                        <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-3">
-                            @foreach (config('use-cases.pages', []) as $slug => $useCase)
-                                <li>
-                                    <a href="{{ url('/for/'.$slug) }}" class="group inline-flex items-center gap-2">
-                                        <x-use-case-icon
-                                            :name="$useCase['icon']"
-                                            size="sm"
-                                            class="transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
-                                        />
-                                        <span class="text-sm font-medium text-zinc-700 transition group-hover:text-rose-600">
-                                            {{ $useCase['label'] }}
-                                        </span>
-                                    </a>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
+                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">By review type</h2>
+                    <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                        Pick the artifact — each type gets its own checklist and vision lens.
+                    </p>
+                    <ul class="mt-6 flex flex-wrap gap-x-5 gap-y-3">
+                        @foreach (config('use-cases.pages', []) as $slug => $useCase)
+                            <li>
+                                <a href="{{ url('/for/'.$slug) }}" class="group inline-flex items-center gap-2">
+                                    <x-use-case-icon
+                                        :name="$useCase['icon']"
+                                        size="sm"
+                                        class="transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
+                                    />
+                                    <span class="text-sm font-medium text-zinc-700 transition group-hover:text-rose-600">
+                                        {{ $useCase['label'] }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
 
-                    <div class="mt-10">
-                        <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">What agents we support</p>
-                        <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-3">
-                            @foreach ([
-                                'chatgpt' => 'ChatGPT',
-                                'claude' => 'Claude',
-                                'copilot' => 'Copilot',
-                                'cursor' => 'Cursor',
-                                'grok' => 'Grok',
-                            ] as $id => $label)
-                                <li>
-                                    <a href="{{ url('/connectors#'.$id) }}" class="group inline-flex items-center gap-2">
-                                        <span class="inline-flex size-7 items-center justify-center rounded-md bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80">
-                                            <x-host-icon :name="$id" />
-                                        </span>
-                                        <span class="text-sm font-medium text-zinc-700 transition group-hover:text-rose-600">
-                                            {{ $label }}
-                                        </span>
-                                    </a>
-                                </li>
-                            @endforeach
-                        </ul>
-                        <p class="mt-3 text-sm text-zinc-500">
-                            <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Setup guides</a>
-                            for each host.
-                        </p>
-                    </div>
+                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Agents we support</h2>
+                    <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                        One MCP endpoint. Paste the config into the host you already use.
+                    </p>
+                    <ul class="mt-6 flex flex-wrap gap-x-5 gap-y-3">
+                        @foreach ([
+                            'chatgpt' => 'ChatGPT',
+                            'claude' => 'Claude',
+                            'copilot' => 'Copilot',
+                            'cursor' => 'Cursor',
+                            'grok' => 'Grok',
+                        ] as $id => $label)
+                            <li>
+                                <a href="{{ url('/for/'.$id) }}" class="group inline-flex items-center gap-2">
+                                    <span class="inline-flex size-7 items-center justify-center rounded-md bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80">
+                                        <x-host-icon :name="$id" />
+                                    </span>
+                                    <span class="text-sm font-medium text-zinc-700 transition group-hover:text-rose-600">
+                                        {{ $label }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Helpful guides</h2>
+                    <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                        Setup, inline review, CI gates, and fair comparisons — when you need the longer path.
+                    </p>
+                    <ul class="mt-6 space-y-3 text-[15px]">
+                        <li>
+                            <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                                Setup guides
+                            </a>
+                            <span class="text-zinc-400"> — </span>
+                            <span class="text-zinc-500">ChatGPT, Claude, Copilot, Cursor, Grok</span>
+                        </li>
+                        <li>
+                            <a href="/mcp-apps" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                                MCP Apps
+                            </a>
+                            <span class="text-zinc-400"> — </span>
+                            <span class="text-zinc-500">Inline review vs review_url</span>
+                        </li>
+                        <li>
+                            <a href="/webhooks" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                                Webhooks
+                            </a>
+                            <span class="text-zinc-400"> — </span>
+                            <span class="text-zinc-500">Gate CI on review.decided</span>
+                        </li>
+                        <li>
+                            <a href="/alternatives" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                                Alternatives
+                            </a>
+                            <span class="text-zinc-400"> — </span>
+                            <span class="text-zinc-500">Figma comments, Marker, Pastel, Lucidly, AI chat apps</span>
+                        </li>
+                    </ul>
                 </div>
             </section>
 
@@ -1095,7 +1149,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                The board is your checklist: each mark moves <span class="font-medium text-zinc-800">open → resolved → verified</span>. Request changes and your agent fixes what you marked, then uploads fresh captures for <span class="font-medium text-zinc-800">pass 2</span> (and on). Agents can attach before/after shots when they resolve a mark — you verify when it actually looks right.
+                                The board is your checklist: each mark moves <span class="font-medium text-zinc-800">open → resolved → verified</span>. Request changes and your agent fixes what you marked, then uploads fresh captures for <span class="font-medium text-zinc-800">pass 2</span> (and on). Agents can attach before/after shots when they resolve a mark — you verify when it actually looks right. See <a href="/board" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">the board</a>.
                             </p>
                         </details>
 
@@ -1107,7 +1161,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                Yep. Your review link is secret — anyone with it can mark and decide. Need a teammate or client? Use <span class="font-medium text-zinc-800">Share</span> to copy or regenerate a <span class="font-medium text-zinc-800">guest link</span> (suggestions only; your marks still run the show). Set expiry to <span class="font-medium text-zinc-800">7 days</span> (default), <span class="font-medium text-zinc-800">14 days</span>, <span class="font-medium text-zinc-800">never</span>, or a custom date.
+                                Yep. Your review link is secret — anyone with it can mark and decide. Need a teammate or client? Use <span class="font-medium text-zinc-800">Share</span> to copy or regenerate a <span class="font-medium text-zinc-800">guest link</span> (suggestions only; your marks still run the show). Set expiry to <span class="font-medium text-zinc-800">7 days</span> (default), <span class="font-medium text-zinc-800">14 days</span>, <span class="font-medium text-zinc-800">never</span>, or a custom date. See <a href="/guest-links" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">guest links</a>.
                             </p>
                         </details>
                     </div>
@@ -1178,6 +1232,11 @@ new class extends Component
                     <div class="max-w-sm space-y-3">
                         <p class="text-zinc-400">
                             Open source · Laravel + Livewire Flux · Built for Laravel Cloud
+                        </p>
+                        <p class="flex flex-wrap gap-x-4 gap-y-2">
+                            <a href="/privacy" class="transition hover:text-zinc-900">Privacy</a>
+                            <a href="/terms" class="transition hover:text-zinc-900">Terms</a>
+                            <a href="/changelog" class="transition hover:text-zinc-900">Changelog</a>
                         </p>
                         <a
                             href="https://github.com/sponsors/heyderekj"

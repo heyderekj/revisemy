@@ -441,7 +441,7 @@ return [
             'slug' => 'reviewers',
             'label' => 'Reviewers',
             'icon' => 'users',
-            'teaser' => 'Mark and approve on the link — no account required.',
+            'teaser' => 'Mark and approve on the link — no account.',
             'title' => 'Design review for humans — mark, approve, no account required',
             'description' => 'Open a ReviseMy review link as a designer, PM, or teammate. Mark regions on screenshots, set must-fix or nit, approve or request changes — no MCP install and no account.',
             'keywords' => [
@@ -513,7 +513,7 @@ return [
             'slug' => 'designers',
             'label' => 'Designers',
             'icon' => 'paint-brush',
-            'teaser' => 'Hierarchy and craft on the pixels — your eye is the brief.',
+            'teaser' => 'Hierarchy and craft on the pixels.',
             'title' => 'Design review for designers — mark hierarchy, approve agent UI',
             'description' => 'Review agent-built UI as a designer. Mark hierarchy, spacing, and contrast on the pixels, keep second-opinion hints in their place, and approve only when the craft holds up.',
             'keywords' => [

@@ -101,7 +101,7 @@
                         'name' => config('seo.author'),
                     ],
                     'isAccessibleForFree' => true,
-                    'softwareVersion' => '1.0.0',
+                    'softwareVersion' => config('revisemy.version'),
                     'downloadUrl' => config('seo.github'),
                     'installUrl' => $siteUrl.'/#setup',
                     'releaseNotes' => config('seo.github').'/releases',

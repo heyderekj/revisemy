@@ -45,6 +45,25 @@ class UseCasePageTest extends TestCase
         foreach (config('use-cases.audiences', []) as $page) {
             $response->assertSee($page['label'], false);
         }
+
+        foreach (config('hosts.pages', []) as $page) {
+            $response->assertSee($page['label'], false);
+        }
+
+        $response->assertSee('Agents', false);
+    }
+
+    public function test_host_pages_return_success(): void
+    {
+        foreach (config('hosts.pages', []) as $slug => $page) {
+            $this->get("/for/{$slug}")
+                ->assertOk()
+                ->assertSee($page['headline'], false)
+                ->assertSee($page['title'], false)
+                ->assertSee($page['label'], false)
+                ->assertSee('Connectors', false)
+                ->assertDontSee('How to get pixels in', false);
+        }
     }
 
     public function test_unknown_use_case_slug_returns_not_found(): void
@@ -59,13 +78,25 @@ class UseCasePageTest extends TestCase
         $response->assertOk()
             ->assertSee('/for</loc>', false)
             ->assertSee('/connectors', false)
-            ->assertSee('/second-opinion', false);
+            ->assertSee('/second-opinion', false)
+            ->assertSee('/board', false)
+            ->assertSee('/guest-links', false)
+            ->assertSee('/webhooks', false)
+            ->assertSee('/mcp-apps', false)
+            ->assertSee('/changelog', false)
+            ->assertSee('/privacy', false)
+            ->assertSee('/terms', false)
+            ->assertSee('/alternatives</loc>', false);
 
         foreach (array_keys(config('use-cases.pages', [])) as $slug) {
             $response->assertSee("/for/{$slug}", false);
         }
 
         foreach (array_keys(config('use-cases.audiences', [])) as $slug) {
+            $response->assertSee("/for/{$slug}", false);
+        }
+
+        foreach (array_keys(config('hosts.pages', [])) as $slug) {
             $response->assertSee("/for/{$slug}", false);
         }
     }
@@ -77,7 +108,16 @@ class UseCasePageTest extends TestCase
         $response->assertOk()
             ->assertSee('## Use cases', false)
             ->assertSee('/connectors', false)
-            ->assertSee('/second-opinion', false);
+            ->assertSee('/second-opinion', false)
+            ->assertSee('/board', false)
+            ->assertSee('/guest-links', false)
+            ->assertSee('/webhooks', false)
+            ->assertSee('/mcp-apps', false)
+            ->assertSee('/changelog', false)
+            ->assertSee('/privacy', false)
+            ->assertSee('/terms', false)
+            ->assertSee('## Alternatives', false)
+            ->assertSee('/alternatives', false);
 
         foreach (config('use-cases.pages', []) as $slug => $page) {
             $response->assertSee("/for/{$slug}", false)
@@ -85,6 +125,11 @@ class UseCasePageTest extends TestCase
         }
 
         foreach (config('use-cases.audiences', []) as $slug => $page) {
+            $response->assertSee("/for/{$slug}", false)
+                ->assertSee($page['label'], false);
+        }
+
+        foreach (config('hosts.pages', []) as $slug => $page) {
             $response->assertSee("/for/{$slug}", false)
                 ->assertSee($page['label'], false);
         }

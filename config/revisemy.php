@@ -4,6 +4,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Product version (SemVer)
+    |--------------------------------------------------------------------------
+    |
+    | Single source of truth for the public version badge (homepage, MCP app,
+    | JSON-LD, changelog). Bump with:
+    |   php artisan revisemy:bump {major|minor|patch} [--title=…] [--date=…]
+    | then fill highlights in config/changelog.php and commit.
+    |
+    */
+
+    'version' => '1.0.0',
+
+    /*
+    |--------------------------------------------------------------------------
     | Second opinion
     |--------------------------------------------------------------------------
     |

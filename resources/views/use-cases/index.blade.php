@@ -118,6 +118,40 @@
                     </section>
                 @endif
 
+                @if (! empty($hosts))
+                    <section class="mt-14">
+                        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Agents</h2>
+                        <p class="mt-2 text-sm leading-relaxed text-zinc-500">
+                            Thin host landings — full paste paths live on
+                            <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Connectors</a>.
+                        </p>
+                        <ul class="mt-6 grid grid-cols-1 gap-3 min-[30rem]:grid-cols-2">
+                            @foreach ($hosts as $entry)
+                                <li class="min-h-0">
+                                    <a
+                                        href="{{ url('/for/'.$entry['slug']) }}"
+                                        class="group flex h-full items-start gap-3 rounded-lg border border-zinc-900/8 bg-white/70 px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
+                                    >
+                                        <x-use-case-icon
+                                            :name="$entry['icon']"
+                                            size="sm"
+                                            class="mt-0.5 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
+                                        />
+                                        <span>
+                                            <span class="block text-sm font-medium text-zinc-900 transition group-hover:text-rose-600">
+                                                {{ $entry['label'] }}
+                                            </span>
+                                            <span class="mt-0.5 block text-sm leading-relaxed text-zinc-500">
+                                                {{ $entry['headline'] }}
+                                            </span>
+                                        </span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
+
                 <section class="mt-14">
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Also useful</h2>
                     <ul class="mt-6 space-y-3 text-[15px]">
@@ -129,11 +163,25 @@
                             <span class="text-zinc-500">ChatGPT, Claude, Copilot, Cursor, Grok</span>
                         </li>
                         <li>
+                            <a href="/mcp-apps" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                                MCP Apps
+                            </a>
+                            <span class="text-zinc-400"> — </span>
+                            <span class="text-zinc-500">Inline review vs review_url</span>
+                        </li>
+                        <li>
                             <a href="/second-opinion" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
                                 Second opinion
                             </a>
                             <span class="text-zinc-400"> — </span>
                             <span class="text-zinc-500">Checklist and vision hints that never override your marks</span>
+                        </li>
+                        <li>
+                            <a href="/alternatives" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                                Alternatives
+                            </a>
+                            <span class="text-zinc-400"> — </span>
+                            <span class="text-zinc-500">Figma comments, Marker, Pastel, Lucidly, AI chat apps</span>
                         </li>
                     </ul>
                 </section>

@@ -49,4 +49,82 @@ class GuidePageTest extends TestCase
             ->assertSee('UI craft', false)
             ->assertSee('Are these designers reviewing my UI?', false);
     }
+
+    public function test_board_page_returns_success(): void
+    {
+        $page = config('guides.pages.board');
+
+        $this->get('/board')
+            ->assertOk()
+            ->assertSee($page['headline'], false)
+            ->assertSee($page['title'], false)
+            ->assertSee('The problem', false)
+            ->assertSee('How ReviseMy fits', false)
+            ->assertSee('resolve_marks', false)
+            ->assertSee('How status stays honest', false)
+            ->assertSee('open', false)
+            ->assertSee('verified', false)
+            ->assertSee($page['faq'][3]['q'], false);
+    }
+
+    public function test_guest_links_page_returns_success(): void
+    {
+        $page = config('guides.pages.guest-links');
+
+        $this->get('/guest-links')
+            ->assertOk()
+            ->assertSee($page['headline'], false)
+            ->assertSee($page['title'], false)
+            ->assertSee('guest link', false)
+            ->assertSee('G#', false)
+            ->assertSee('share_token', false);
+    }
+
+    public function test_webhooks_page_returns_success(): void
+    {
+        $page = config('guides.pages.webhooks');
+
+        $this->get('/webhooks')
+            ->assertOk()
+            ->assertSee($page['headline'], false)
+            ->assertSee($page['title'], false)
+            ->assertSee('webhook_url', false)
+            ->assertSee('review.decided', false)
+            ->assertSee('X-ReviseMy-Signature', false);
+    }
+
+    public function test_mcp_apps_page_returns_success(): void
+    {
+        $page = config('guides.pages.mcp-apps');
+
+        $this->get('/mcp-apps')
+            ->assertOk()
+            ->assertSee($page['headline'], false)
+            ->assertSee($page['title'], false)
+            ->assertSee('review_url', false)
+            ->assertSee('add_mark', false)
+            ->assertSee('MCP Apps', false)
+            ->assertSee("Where it's available", false)
+            ->assertSee('Claude Desktop', false)
+            ->assertSee('Copilot', false)
+            ->assertSee('/for/claude', false)
+            ->assertSee('/for/copilot', false);
+    }
+
+    public function test_changelog_page_returns_success(): void
+    {
+        $page = config('guides.pages.changelog');
+        $version = config('revisemy.version');
+        $entry = config('changelog.entries.0');
+
+        $this->get('/changelog')
+            ->assertOk()
+            ->assertSee($page['headline'], false)
+            ->assertSee($page['title'], false)
+            ->assertSee('v'.$version, false)
+            ->assertSee('v'.$entry['version'], false)
+            ->assertSee($entry['title'], false)
+            ->assertDontSee('The problem', false)
+            ->assertDontSee('How ReviseMy fits', false);
+    }
 }

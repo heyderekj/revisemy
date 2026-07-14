@@ -170,6 +170,11 @@ For free pixel vision without a cloud API key, point `REVISEMY_OPENAI_BASE_URL` 
 - [DEPLOY.md](docs/DEPLOY.md) — Laravel Cloud deploy
 - `/llms.txt` — agent-oriented site index (on your deployed origin)
 - `/sitemap.xml` — public pages for search engines
+- `/changelog` — versioned release notes
+
+### Version bumps
+
+Product SemVer lives in `config/revisemy.php`. To cut a release: `php artisan revisemy:bump {major|minor|patch} [--title=…]` → fill highlights in `config/changelog.php` → commit (and tag if you want). The homepage badge, MCP app, and `/changelog` read that version automatically.
 
 ## License
 

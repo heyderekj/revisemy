@@ -115,17 +115,17 @@ return [
                 [
                     'icon' => 'cursor-arrow-rays',
                     'title' => 'MCP Apps vs link hosts',
-                    'body' => 'Claude Desktop, claude.ai, and Copilot can render the review inline. Cursor, Claude Code, and Grok use the review_url tab — same marks, board, and next_action.',
+                    'body' => 'Claude Desktop, claude.ai, and Copilot can render the review inline. Cursor, Claude Code, and Grok use the review_url tab — same marks, board, and next_action. Deep dive: /mcp-apps.',
                 ],
                 [
                     'icon' => 'link',
                     'title' => 'One try token, any host',
-                    'body' => 'Homepage try tokens mint a Sanctum Bearer for /mcp/revisemy and the REST API. Host packaging is install UX on top of the same Cloud-hosted endpoint.',
+                    'body' => 'Homepage try tokens mint a Sanctum Bearer for /mcp/revisemy and the REST API. Host packaging is install UX on top of the same Cloud-hosted endpoint. Thin landings: /for/chatgpt through /for/grok.',
                 ],
                 [
                     'icon' => 'arrow-path',
                     'title' => 'Webhooks for CI/CD',
-                    'body' => 'Pass webhook_url to create_review. ReviseMy POSTs a signed review.decided event when you approve or request changes — gate pipelines instead of polling.',
+                    'body' => 'Pass webhook_url to create_review. ReviseMy POSTs a signed review.decided event when you approve or request changes — gate pipelines instead of polling. Deep dive: /webhooks.',
                 ],
                 [
                     'icon' => 'code-bracket',
@@ -145,6 +145,14 @@ return [
                 [
                     'q' => 'Can any MCP client connect?',
                     'a' => 'Yes. Any client that speaks HTTP MCP can use /mcp/revisemy with Authorization: Bearer {try_token}. Host-specific tabs are shortcuts, not a closed list.',
+                ],
+                [
+                    'q' => 'Inline review vs review_url?',
+                    'a' => 'MCP Apps hosts open the review in chat; CLI and link hosts share review_url. Same loop — see /mcp-apps.',
+                ],
+                [
+                    'q' => 'How do decision webhooks work?',
+                    'a' => 'Pass webhook_url on create_review. You get a signed review.decided POST when the human decides. Details on /webhooks.',
                 ],
             ],
         ],
@@ -168,7 +176,7 @@ return [
             'headline' => 'Second opinion hints. Your marks decide.',
             'subheadline' => 'Every upload gets a free, type-aware checklist. Optional vision models can mark regions on the capture. Suggestions never override human marks or flip the review decision.',
             'features_heading' => 'How second opinion works',
-            'problem' => 'One-shot AI critique often sounds decisive — and agents treat it that way. You need optional design hints that stay labeled as suggestions while humans remain the authority on approve / request-changes.',
+            'problem' => 'Paste-into-chat critique often sounds decisive — and agents treat it that way. You need optional design hints that stay labeled as suggestions while humans remain the authority on approve / request-changes.',
             'loop' => 'On create_review, ReviseMy runs the free checklist immediately. If an Anthropic or OpenAI key is set on the server, vision can add dashed region hints after the response. Agents may also push findings via add_findings. You mark what matters; get_review returns work_packets with pins first and second_opinion as hints.',
             'loop_steps' => [
                 [
@@ -241,6 +249,370 @@ return [
                     'a' => 'No. ReviseMy distills public craft principles into checklist and vision hints. The craft chip and this page name the sources; nobody outside your loop is reviewing or endorsing your screenshots.',
                 ],
             ],
+        ],
+
+        'board' => [
+            'slug' => 'board',
+            'path' => '/board',
+            'label' => 'Board',
+            'icon' => 'queue-list',
+            'title' => 'Design review board — track marks from open to verified',
+            'description' => 'ReviseMy’s owner board tracks every mark open → in progress → resolved → verified. Agents attach before/after evidence; only humans verify. Multi-pass reviews stay scannable across shots.',
+            'keywords' => [
+                'design review board',
+                'mark status board',
+                'open resolved verified',
+                'before after evidence',
+                'multi-pass design review',
+                'AI agent design checklist',
+            ],
+            'headline' => 'Track every mark from open to verified',
+            'subheadline' => 'The owner board is your checklist across passes: agents resolve with notes and after shots; you verify when it actually looks right — then approve or open the next pass.',
+            'features_heading' => 'What the board does',
+            'checklist_heading' => 'How status stays honest',
+            'problem' => 'Marks get lost in chat threads. “Fixed?” and “looks right?” blur together. Without a shared status board, agents claim done and humans re-explain the same pixel notes on every pass.',
+            'loop' => 'You mark on the review. Agents call resolve_marks with notes and optional after images. You open /r/{token}/board to move marks through open → in progress → resolved → verified. When outstanding marks clear, approve — or request changes so the agent opens the next pass with parent_id and fresh captures.',
+            'loop_steps' => [
+                [
+                    'text' => 'Mark regions on the review with must-fix, nice to have, question, or keep.',
+                ],
+                [
+                    'command' => 'resolve_marks',
+                    'text' => 'lets the agent move a mark to in progress or resolved — with a note and optional after image.',
+                ],
+                [
+                    'text' => 'You verify (or reopen) on the board. Agents never verify for you.',
+                ],
+                [
+                    'command' => 'create_review',
+                    'text' => 'with',
+                    'after' => [
+                        ['type' => 'text', 'value' => ' '],
+                        ['type' => 'command', 'value' => 'parent_id'],
+                        ['type' => 'text', 'value' => ' opens the next pass after you request changes.'],
+                    ],
+                ],
+            ],
+            'product_shots' => [
+                'dir' => 'images/board',
+                'alt' => 'ReviseMy board — marks moving from open to resolved to verified across a review pass',
+            ],
+            'features' => [
+                [
+                    'icon' => 'queue-list',
+                    'title' => 'Four clear columns',
+                    'body' => 'Open, in progress, resolved, and verified — so “agent is working,” “agent says done,” and “human signed off” never look the same.',
+                ],
+                [
+                    'icon' => 'photo',
+                    'title' => 'Before / after on the mark',
+                    'body' => 'Agents can attach evidence when they resolve. You verify against the pixels, not a chat summary.',
+                ],
+                [
+                    'icon' => 'arrows-right-left',
+                    'title' => 'Scannable across passes',
+                    'body' => 'Marks group by pass and shot so multi-shot, multi-pass reviews stay readable instead of a flat dump.',
+                ],
+                [
+                    'icon' => 'check',
+                    'title' => 'Owner-only board',
+                    'body' => 'The board is an owner tool on the secret review token. Guests leave suggestions on the review; they do not run the board.',
+                ],
+            ],
+            'checklist' => [
+                'Open → in progress → resolved → verified is the lifecycle',
+                'Agents may set in_progress and resolved via resolve_marks — never verified',
+                'Only you verify or reopen; that gate keeps “looks right” human',
+                'Request changes when you want a new pass with fresh captures',
+                'Outstanding marks drive next_action until the board is clear enough to approve',
+            ],
+            'faq' => [
+                [
+                    'q' => 'How is the board different from the review page?',
+                    'a' => 'The review page is where you mark on the pixels and decide approve / request changes. The board (/r/{token}/board) is the status checklist across all marks and passes — better for scanning what’s left.',
+                ],
+                [
+                    'q' => 'Can guests use the board?',
+                    'a' => 'No. Guests use the guest link for suggestions on the review. The board is owner-only on the review token.',
+                ],
+                [
+                    'q' => 'What should the agent call when a mark is fixed?',
+                    'a' => 'resolve_marks with the mark id, status in_progress then resolved, a note, and optional after images. You still verify on the board.',
+                ],
+                [
+                    'q' => 'What’s a pass?',
+                    'a' => 'A pass is one capture set in the loop. Request changes and the agent opens pass 2+ with create_review + parent_id and new screenshots. The board keeps marks readable across those passes.',
+                ],
+            ],
+        ],
+
+        'guest-links' => [
+            'slug' => 'guest-links',
+            'path' => '/guest-links',
+            'label' => 'Guest links',
+            'icon' => 'link',
+            'mark_icon' => 'g',
+            'title' => 'Guest links — another set of eyes, no accounts',
+            'description' => 'Share a private guest link when you want another set of eyes — no accounts. Guests leave G# suggestions; your M# marks stay authoritative. Set expiry to 7 days, 14 days, never, or a custom date.',
+            'keywords' => [
+                'guest design review link',
+                'guest share link',
+                'client design review',
+                'no account design review',
+                'guest suggestions',
+                'review link expiry',
+            ],
+            'headline' => 'Another set of eyes — without handing over the board',
+            'subheadline' => 'Share a private guest link when you want a teammate or client on the capture — no accounts. Guests leave suggestions only; your marks stay authoritative. Expiry defaults to 7 days, or pick 14 days, never, or a custom date.',
+            'features_heading' => 'How guest links work',
+            'checklist_heading' => 'Owner vs guest at a glance',
+            'problem' => 'You want a second human on the pixels without giving them approve / request-changes power — and without creating accounts. Chat threads blur who decided what; a shared owner link lets anyone decide.',
+            'loop' => 'On the owner review (/r/{token}), open Share to copy or regenerate the guest link (/r/{share_token}). Guests leave named suggestions (G#) and can comment on marks. You accept or dismiss; only owner marks (M#) and decisions drive next_action. The board stays owner-only.',
+            'loop_steps' => [
+                [
+                    'text' => 'Open Share on the owner review and copy the guest link — or regenerate if the old one leaked.',
+                ],
+                [
+                    'text' => 'Set expiry to 7 days (default), 14 days, never, or a custom date. Expired links show a clear message.',
+                ],
+                [
+                    'text' => 'Guests leave G# suggestions and optional comments. You accept what belongs in the brief; your M# marks stay authoritative.',
+                ],
+            ],
+            'features' => [
+                [
+                    'icon' => 'link',
+                    'title' => 'Private guest link',
+                    'body' => 'A separate share_token URL — not the owner review link. No accounts for guests. Regenerating rotates the link and resets expiry to seven days.',
+                ],
+                [
+                    'icon' => 'users',
+                    'title' => 'Suggestions only (G#)',
+                    'body' => 'Guest notes are labeled G#. They never approve, request changes, or verify. Your M# marks still run the show.',
+                ],
+                [
+                    'icon' => 'queue-list',
+                    'title' => 'Board stays owner-only',
+                    'body' => 'Guests work on the review capture. Status columns and verification live on /r/{token}/board for the owner.',
+                ],
+                [
+                    'icon' => 'check',
+                    'title' => 'Expiry you control',
+                    'body' => 'Default seven days. Switch to 14 days, never, expire now, or pick a custom end date — then regenerate when access should end early.',
+                ],
+            ],
+            'checklist' => [
+                'Owner /r/{token} — mark, decide, guest links, board',
+                'Guest /r/{share_token} — suggestions and comments only',
+                'M# = authoritative marks; G# = guest; S# = second opinion',
+                'Regenerate rotates the guest token; old links stop working',
+                'Need a reviewer path? See /for/reviewers and /board',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Can a guest approve the review?',
+                    'a' => 'No. Guests leave suggestions. Only the owner link can approve, request changes, verify marks, or manage guest links.',
+                ],
+                [
+                    'q' => 'What happens when a guest link expires?',
+                    'a' => 'The guest URL shows that the link expired. Extend or clear expiry from Share on the owner review, or regenerate a fresh link.',
+                ],
+                [
+                    'q' => 'Is the owner review link different?',
+                    'a' => 'Yes. Anyone with the owner token can mark and decide — treat it like a password. Use a guest link when you want eyes without that power.',
+                ],
+            ],
+        ],
+
+        'webhooks' => [
+            'slug' => 'webhooks',
+            'path' => '/webhooks',
+            'label' => 'Webhooks',
+            'icon' => 'bolt',
+            'title' => 'Decision webhooks — gate CI on review.decided',
+            'description' => 'Pass webhook_url to create_review and ReviseMy POSTs when the human approves or requests changes. HMAC-signed review.decided events so pipelines can gate without polling get_review.',
+            'keywords' => [
+                'design review webhook',
+                'review.decided',
+                'CI design approval',
+                'MCP webhook',
+                'HMAC webhook',
+                'human in the loop CI',
+            ],
+            'headline' => 'Gate the pipeline when a human decides',
+            'subheadline' => 'Polling get_review works. For CI/CD and event-driven agents, pass an HTTPS webhook_url on create_review — ReviseMy POSTs a signed review.decided payload when you approve or request changes.',
+            'features_heading' => 'What gets delivered',
+            'checklist_heading' => 'Integration checklist',
+            'problem' => 'Agents that only poll burn cycles waiting on humans. Pipelines need a clear signal that the review was approved or sent back — without trusting an unsigned HTTP POST.',
+            'loop' => 'Pass webhook_url when calling create_review (MCP or REST). When you decide, a queued job POSTs { event: review.decided, review: … } with HMAC headers. Follow-up passes inherit the parent webhook. Verify the signature with the owner review token before acting.',
+            'loop_steps' => [
+                [
+                    'command' => 'create_review',
+                    'text' => 'with an HTTPS',
+                    'after' => [
+                        ['type' => 'text', 'value' => ' '],
+                        ['type' => 'command', 'value' => 'webhook_url'],
+                        ['type' => 'text', 'value' => ' (and your usual source).'],
+                    ],
+                ],
+                [
+                    'text' => 'You approve or request changes on the review (or inline MCP App).',
+                ],
+                [
+                    'text' => 'Your endpoint receives review.decided — check status and next_action, verify X-ReviseMy-Signature, then continue or stop the pipeline.',
+                ],
+            ],
+            'features' => [
+                [
+                    'icon' => 'bolt',
+                    'title' => 'Event: review.decided',
+                    'body' => 'Payload includes decided_at and the same agent-shaped review object get_review returns — status, next_action, work packets.',
+                ],
+                [
+                    'icon' => 'check',
+                    'title' => 'HMAC with the review token',
+                    'body' => 'Headers: X-ReviseMy-Event, X-ReviseMy-Review, X-ReviseMy-Signature: sha256=<hmac>. Key = owner token from review_url. Verify before trusting.',
+                ],
+                [
+                    'icon' => 'arrow-path',
+                    'title' => 'Queued retries',
+                    'body' => 'Delivery is queued (10s timeout, 3 attempts with backoff). Failures are logged and never block the human decision.',
+                ],
+                [
+                    'icon' => 'link',
+                    'title' => 'Inherits on parent_id passes',
+                    'body' => 'Follow-up create_review calls with parent_id keep the parent webhook so multi-pass loops stay wired.',
+                ],
+            ],
+            'checklist' => [
+                'HTTPS webhook_url on create_review (http only in local/testing)',
+                'Verify HMAC-SHA256 of the raw body with the owner review token',
+                'Branch on review.status: approved vs changes_requested',
+                'Read review.next_action for what the agent should do next',
+                'Prefer webhooks for CI gates; poll get_review when you need mid-loop progress',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Do I still need to poll get_review?',
+                    'a' => 'For mid-loop work (wait_for_human, applying marks) polling or MCP Apps still help. Use the webhook when you care about the decision moment — especially CI approve/block.',
+                ],
+                [
+                    'q' => 'What if delivery fails?',
+                    'a' => 'ReviseMy retries a few times with backoff, then logs the failure. The human decision already succeeded — your endpoint should be idempotent.',
+                ],
+                [
+                    'q' => 'Where is the deep setup?',
+                    'a' => 'See /connectors for host setup and docs/CONNECTORS.md for the full webhook contract.',
+                ],
+            ],
+        ],
+
+        'mcp-apps' => [
+            'slug' => 'mcp-apps',
+            'path' => '/mcp-apps',
+            'label' => 'MCP Apps',
+            'icon' => 'puzzle-piece',
+            'title' => 'MCP Apps — inline design review in chat',
+            'description' => 'On Claude Desktop, claude.ai, and Copilot, ReviseMy renders the review inline via MCP Apps. Cursor, Claude Code, and Grok share a review_url instead. Same loop either way.',
+            'keywords' => [
+                'MCP Apps',
+                'inline design review',
+                'Claude Desktop MCP',
+                'Copilot MCP Apps',
+                'review_url',
+                'human in the loop MCP',
+            ],
+            'headline' => 'Mark and decide without leaving the chat',
+            'subheadline' => 'Hosts that support MCP Apps render the review inline after create_review / get_review. CLI and link hosts still share review_url. The checkup loop is the same — only the surface changes.',
+            'supported_agents_heading' => "Where it's available",
+            'supported_agents_intro' => 'Hosts that can open the review inline in chat via MCP Apps.',
+            'supported_agents' => [
+                [
+                    'id' => 'claude',
+                    'label' => 'Claude Desktop',
+                ],
+                [
+                    'id' => 'copilot',
+                    'label' => 'Copilot',
+                ],
+            ],
+            'features_heading' => 'Inline vs link',
+            'checklist_heading' => 'What stays on the full review URL',
+            'problem' => 'Copying a review link out of chat breaks flow. Some hosts can host an interactive UI in a sandboxed iframe; others are CLI-only. Agents need one protocol that works for both.',
+            'loop' => 'create_review and get_review declare a ui://revisemy/review-app resource. MCP Apps hosts open it inline so you can mark, verify, and decide in chat. Cursor, Claude Code, and Grok share the review_url. Full owner workspace (comments, guest share, drag columns) stays on review_url / board_url.',
+            'loop_steps' => [
+                [
+                    'command' => 'create_review',
+                    'text' => 'returns a review; MCP Apps hosts open the inline UI.',
+                ],
+                [
+                    'text' => 'You mark regions and approve or request changes in chat — or on the review_url if the host is link-only.',
+                ],
+                [
+                    'command' => 'get_review',
+                    'text' => 'gives the agent next_action; human-only app tools never get called by agents.',
+                ],
+            ],
+            'features' => [
+                [
+                    'icon' => 'puzzle-piece',
+                    'title' => 'Inline on MCP Apps hosts',
+                    'body' => 'Claude Desktop, claude.ai, Copilot, and similar hosts render screenshot + board views in a sandboxed iframe.',
+                ],
+                [
+                    'icon' => 'link',
+                    'title' => 'review_url on CLI / link hosts',
+                    'body' => 'Cursor, Claude Code, Grok, and others share the secret link. Same marks, same next_action — open the URL in a browser.',
+                ],
+                [
+                    'icon' => 'users',
+                    'title' => 'Human-only app tools',
+                    'body' => 'add_mark, decide_review, and verify_mark power the inline UI (Visibility::App). Agents never call them — they poll get_review.',
+                ],
+                [
+                    'icon' => 'queue-list',
+                    'title' => 'Full workspace still on the web',
+                    'body' => 'Comment threads, guest link management, drag-and-drop columns, second-opinion triage, and title edit stay on review_url / board_url.',
+                ],
+            ],
+            'checklist' => [
+                'Inline: Claude Desktop / claude.ai / Copilot (when MCP Apps is enabled)',
+                'Link: Cursor, Claude Code, Grok — open review_url',
+                'Agents follow next_action; they do not call add_mark or decide_review',
+                'Use /connectors#{host} for paste-ready setup',
+                'Parity: MCP app chrome ships with the same review loop as the web board',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Does inline replace the review URL?',
+                    'a' => 'No. Inline covers the human mark / decide loop in chat. Owner tools like guest share and rich comments still live on the full review and board URLs.',
+                ],
+                [
+                    'q' => 'Can my agent call decide_review?',
+                    'a' => 'No. Those tools are human-only for the MCP App. Agents use get_review and next_action.',
+                ],
+                [
+                    'q' => 'Where do I set up each host?',
+                    'a' => 'Start at /connectors, or jump to a host landing under /for/chatgpt, /for/claude, /for/copilot, /for/cursor, or /for/grok.',
+                ],
+            ],
+        ],
+
+        'changelog' => [
+            'slug' => 'changelog',
+            'path' => '/changelog',
+            'label' => 'Changelog',
+            'title' => 'ReviseMy changelog — SemVer release notes',
+            'description' => 'Versioned release notes for ReviseMy. Semantic Versioning releases for the human-in-the-loop design checkup loop, connectors, and review board.',
+            'keywords' => [
+                'ReviseMy changelog',
+                'release notes',
+                'SemVer',
+                'design review updates',
+            ],
+            'headline' => 'What shipped',
+            'subheadline' => 'Release notes for ReviseMy — newest first.',
+            'changelog' => true,
         ],
 
     ],

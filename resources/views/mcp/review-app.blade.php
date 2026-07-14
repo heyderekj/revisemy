@@ -481,7 +481,7 @@
 
         async function connect() {
             await request('ui/initialize', {
-                appInfo: { name: 'ReviseMy review', version: '1.0.0' },
+                appInfo: { name: 'ReviseMy review', version: @json(config('revisemy.version')) },
                 appCapabilities: { availableDisplayModes: ['inline'] },
             });
             send({ jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {} });
