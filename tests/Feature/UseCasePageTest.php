@@ -19,15 +19,16 @@ class UseCasePageTest extends TestCase
         }
     }
 
-    public function test_reviewers_audience_page_returns_success(): void
+    public function test_audience_pages_return_success(): void
     {
-        $page = config('use-cases.audiences.reviewers');
-
-        $this->get('/for/reviewers')
-            ->assertOk()
-            ->assertSee($page['headline'], false)
-            ->assertSee($page['title'], false)
-            ->assertDontSee('How to get pixels in', false);
+        foreach (config('use-cases.audiences', []) as $slug => $page) {
+            $this->get("/for/{$slug}")
+                ->assertOk()
+                ->assertSee($page['headline'], false)
+                ->assertSee($page['title'], false)
+                ->assertSee($page['label'], false)
+                ->assertDontSee('How to get pixels in', false);
+        }
     }
 
     public function test_for_hub_lists_review_types_and_audiences(): void
@@ -41,7 +42,9 @@ class UseCasePageTest extends TestCase
             $response->assertSee($page['label'], false);
         }
 
-        $response->assertSee(config('use-cases.audiences.reviewers.label'), false);
+        foreach (config('use-cases.audiences', []) as $page) {
+            $response->assertSee($page['label'], false);
+        }
     }
 
     public function test_unknown_use_case_slug_returns_not_found(): void
@@ -56,10 +59,13 @@ class UseCasePageTest extends TestCase
         $response->assertOk()
             ->assertSee('/for</loc>', false)
             ->assertSee('/connectors', false)
-            ->assertSee('/second-opinion', false)
-            ->assertSee('/for/reviewers', false);
+            ->assertSee('/second-opinion', false);
 
         foreach (array_keys(config('use-cases.pages', [])) as $slug) {
+            $response->assertSee("/for/{$slug}", false);
+        }
+
+        foreach (array_keys(config('use-cases.audiences', [])) as $slug) {
             $response->assertSee("/for/{$slug}", false);
         }
     }
@@ -71,10 +77,14 @@ class UseCasePageTest extends TestCase
         $response->assertOk()
             ->assertSee('## Use cases', false)
             ->assertSee('/connectors', false)
-            ->assertSee('/second-opinion', false)
-            ->assertSee('/for/reviewers', false);
+            ->assertSee('/second-opinion', false);
 
         foreach (config('use-cases.pages', []) as $slug => $page) {
+            $response->assertSee("/for/{$slug}", false)
+                ->assertSee($page['label'], false);
+        }
+
+        foreach (config('use-cases.audiences', []) as $slug => $page) {
             $response->assertSee("/for/{$slug}", false)
                 ->assertSee($page['label'], false);
         }

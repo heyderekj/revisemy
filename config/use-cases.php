@@ -508,6 +508,362 @@ return [
             ],
         ],
 
+        'designers' => [
+            'slug' => 'designers',
+            'label' => 'Designers',
+            'icon' => 'paint-brush',
+            'title' => 'Design review for designers — mark hierarchy, approve agent UI',
+            'description' => 'Review agent-built UI as a designer. Mark hierarchy, spacing, and contrast on the pixels, keep second-opinion hints in their place, and approve only when the craft holds up.',
+            'keywords' => [
+                'designer design review',
+                'UI hierarchy feedback',
+                'agent-built UI review',
+                'visual design critique',
+                'human in the loop design',
+                'MCP design review',
+            ],
+            'headline' => 'Your eye is the brief — not the model’s claim that it looks fine.',
+            'subheadline' => 'Open the review link, mark hierarchy and spacing on the capture, and approve or request changes. Agents implement; you decide when the craft is done.',
+            'features_heading' => 'Built for design craft',
+            'checklist_heading' => 'Designer checklist',
+            'checklist_intro' => 'From opening the link to signing off on the pass.',
+            'problem' => 'Agents ship screens quickly, then declare the UI done. Chat feedback does not stick to regions, and second-opinion hints can feel louder than your craft judgment unless marks stay authoritative.',
+            'loop' => 'Open `/r/{token}` (or ask your teammate’s agent for a link). Outline must-fix hierarchy and spacing issues first, use keep where something should stay, verify resolved marks with before/after evidence, then approve — or request the next pass.',
+            'features' => [
+                [
+                    'icon' => 'cursor-arrow-rays',
+                    'title' => 'Marks on the exact pixels',
+                    'body' => 'Drag a rectangle or click a point. Intent (must-fix, nice to have, question, keep) tells the agent what to change and what not to touch.',
+                ],
+                [
+                    'icon' => 'swatch',
+                    'title' => 'Craft over autocomplete',
+                    'body' => 'Checklist and vision hints can surface ideas, but they never override your marks or flip approve / request-changes.',
+                ],
+                [
+                    'icon' => 'eye',
+                    'title' => 'Verify with proof',
+                    'body' => 'Agents can attach after shots when they resolve a mark. You verify — they never verify for you.',
+                ],
+                [
+                    'icon' => 'arrow-path',
+                    'title' => 'Multi-pass until it feels right',
+                    'body' => 'Request changes to open the next capture. Follow the board from open → resolved → verified across passes.',
+                ],
+            ],
+            'checklist' => [
+                'Open the review link — no MCP required for reviewing',
+                'Mark hierarchy and primary action first, then spacing and contrast nits',
+                'Use keep when the agent should leave something alone',
+                'Verify resolved marks (or reopen) before approving',
+                'Approve when craft holds, or request changes for pass two',
+            ],
+            'prompts' => [
+                'Run a design checkup on these screens — I will mark hierarchy and spacing.',
+                'Address my must-fix marks first, then open a new pass with after shots.',
+                'Share the review link so I can approve or request changes.',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Do I need Cursor or Claude installed?',
+                    'a' => 'Not to review. Open the secret `/r/{token}` link. MCP is for whoever connects the agent.',
+                ],
+                [
+                    'q' => 'Will second opinion override my marks?',
+                    'a' => 'No. Checklist and vision findings are suggestions. Your marks drive next_action.',
+                ],
+                [
+                    'q' => 'Can I review websites and email too?',
+                    'a' => 'Yes. Same loop — pick the review type (UI, websites, email, slides) so the checklist matches the artifact.',
+                ],
+            ],
+        ],
+
+        'product' => [
+            'slug' => 'product',
+            'label' => 'Product',
+            'icon' => 'clipboard-document-list',
+            'title' => 'Design review for product — marks, priorities, guest links',
+            'description' => 'Leave structured product feedback on agent-built UI without installing MCP. Mark must-fix vs nice-to-have, share guest links with stakeholders, and keep decisions with the review owner.',
+            'keywords' => [
+                'product manager design review',
+                'stakeholder UI feedback',
+                'guest design review link',
+                'must-fix vs nice to have',
+                'product design feedback',
+                'no account design review',
+            ],
+            'headline' => 'Prioritize what ships — without living in the agent chat.',
+            'subheadline' => 'Open the review link, mark must-fix vs nits on the capture, and invite stakeholders on a guest link. No MCP install for product or clients.',
+            'features_heading' => 'Built for product decisions',
+            'checklist_heading' => 'Product checklist',
+            'checklist_intro' => 'Turn a vague “doesn’t feel right” into work the agent can follow.',
+            'problem' => 'Product feedback in Slack and docs rarely maps to pixels. Stakeholders pile on in threads while the agent waits for a clear brief — and guest opinions can blur into decisions if roles are fuzzy.',
+            'loop' => 'Open `/r/{token}` from engineering or design. Mark must-fix items first, questions where you need clarity, and keep where scope should not change. Share a guest link for PM/client eyes; accept their suggestions only when you want them authoritative. Approve or request the next pass.',
+            'features' => [
+                [
+                    'icon' => 'queue-list',
+                    'title' => 'Intent on every mark',
+                    'body' => 'Must-fix, nice to have, question, or keep — so the agent knows priority without another meeting.',
+                ],
+                [
+                    'icon' => 'users',
+                    'title' => 'Guest links for stakeholders',
+                    'body' => 'Clients and partners leave suggestions. They stay non-authoritative until the review owner accepts them.',
+                ],
+                [
+                    'icon' => 'check',
+                    'title' => 'Owner decisions stay clear',
+                    'body' => 'Only the review owner approves, requests changes, or verifies. Product can own the link without running MCP.',
+                ],
+                [
+                    'icon' => 'arrow-path',
+                    'title' => 'Pass-based scope control',
+                    'body' => 'Request changes when the bar is not met. Track open → resolved → verified so nothing gets lost between releases.',
+                ],
+            ],
+            'checklist' => [
+                'Open the secret review link — no signup',
+                'Mark must-fix outcomes first; park nits as nice to have',
+                'Use question when requirements are unclear',
+                'Send a guest link when stakeholders need eyes (suggestions only)',
+                'Approve when the pass meets the bar, or request changes',
+            ],
+            'prompts' => [
+                'Share the review link so I can mark must-fix vs nice-to-have.',
+                'Send a guest link to the client for suggestions only.',
+                'I left product marks — address must-fix first, then open a new pass.',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Do PMs need MCP?',
+                    'a' => 'No. Reviewers and product owners only need the review link. Engineering connects the agent.',
+                ],
+                [
+                    'q' => 'What is a guest link for?',
+                    'a' => 'Stakeholders who should suggest without owning approve / request-changes. You accept suggestions into marks when ready.',
+                ],
+                [
+                    'q' => 'How do I keep scope from ballooning?',
+                    'a' => 'Use must-fix sparingly, mark keep on intentional choices, and request a new pass instead of endless chat edits.',
+                ],
+            ],
+        ],
+
+        'engineers' => [
+            'slug' => 'engineers',
+            'label' => 'Engineers',
+            'icon' => 'command-line',
+            'title' => 'Design review for engineers — MCP loop, resolve marks, before/after',
+            'description' => 'Connect ReviseMy over MCP, open reviews from screenshots or URLs, resolve human marks with notes and after shots, and follow next_action until approval.',
+            'keywords' => [
+                'engineer design review MCP',
+                'resolve_marks before after',
+                'AI agent UI feedback loop',
+                'Cursor design review',
+                'create_review get_review',
+                'human in the loop engineering',
+            ],
+            'headline' => 'Ship the fix, prove it, wait for a human eye.',
+            'subheadline' => 'Wire MCP once, open a review from your agent, implement marks, resolve with notes and optional after images, and poll get_review until next_action says stop.',
+            'features_heading' => 'Built for the agent workflow',
+            'checklist_heading' => 'Engineer checklist',
+            'checklist_intro' => 'From try token to approved pass.',
+            'problem' => 'Agents change UI in chat without a durable review artifact. Human feedback gets buried, and “fixed” claims lack before/after proof tied to specific marks.',
+            'loop' => 'Get a try token on the homepage, connect your host (Cursor, Claude, Copilot, …), call create_review with the right source, share review_url (or open inline on MCP Apps hosts). Implement pins, resolve_marks with evidence, poll get_review, and follow next_action — wait, apply marks, open another pass, or stop.',
+            'features' => [
+                [
+                    'icon' => 'puzzle-piece',
+                    'title' => 'One MCP endpoint',
+                    'body' => 'Same Bearer try token and `/mcp/revisemy` URL across hosts. Ask agent or Do it myself on the homepage for host-specific setup.',
+                ],
+                [
+                    'icon' => 'arrows-right-left',
+                    'title' => 'resolve_marks with evidence',
+                    'body' => 'Close each human pin with a note and optional after image so verification is concrete.',
+                ],
+                [
+                    'icon' => 'queue-list',
+                    'title' => 'next_action is the contract',
+                    'body' => 'get_review returns work packets and one clear next step — no guessing whether to wait or open pass two.',
+                ],
+                [
+                    'icon' => 'link',
+                    'title' => 'Link or inline review',
+                    'body' => 'CLI hosts share review_url; MCP Apps hosts can render the review inline. Same marks either way.',
+                ],
+            ],
+            'checklist' => [
+                'Mint a try token and connect MCP for your host',
+                'create_review with one source (images, capture_url, html, or pdf)',
+                'Share review_url (or open inline) and wait while humans mark',
+                'Fix pins; resolve_marks with notes / after shots',
+                'Poll get_review and follow next_action until approved',
+            ],
+            'prompts' => [
+                'Run a ReviseMy design checkup on the work I just changed.',
+                'Address my feedback — resolve each mark and attach after shots.',
+                'Open a new pass with fresh captures after I request changes.',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Where do I get the MCP config?',
+                    'a' => 'Homepage Try with your agent — Ask agent pastes a filled prompt, or Do it myself copies URL, Bearer, and host JSON.',
+                ],
+                [
+                    'q' => 'Can I review localhost UI?',
+                    'a' => 'Yes. Prefer screenshots as data URLs. Public staging can use capture_url + page_url.',
+                ],
+                [
+                    'q' => 'Who verifies marks?',
+                    'a' => 'Humans only. Agents resolve; reviewers verify or reopen.',
+                ],
+            ],
+        ],
+
+        'founders' => [
+            'slug' => 'founders',
+            'label' => 'Founders',
+            'icon' => 'rocket-launch',
+            'title' => 'Design review for founders — solo try-token path with a human checkpoint',
+            'description' => 'Ship agent-built UI with a free try token and a human approve step. No ReviseMy account — connect MCP, open a review, mark what matters, and loop until it feels right.',
+            'keywords' => [
+                'indie hacker design review',
+                'founder UI feedback',
+                'try token MCP',
+                'solo AI agent design loop',
+                'human checkpoint for AI UI',
+                'no account design review',
+            ],
+            'headline' => 'Move fast with agents — still get a human checkpoint.',
+            'subheadline' => 'Grab a free try token, paste MCP into the agent you already use, run a checkup, and mark the link yourself (or send it to a friend). Approve when it is good enough to ship.',
+            'features_heading' => 'Built for shipping solo',
+            'checklist_heading' => 'Founder checklist',
+            'checklist_intro' => 'Weekend-speed setup, durable feedback.',
+            'problem' => 'Solo builders let agents ship UI end-to-end and only notice craft issues after users do. Chat history is not a review board, and “LGTM” from the model is not a human pass.',
+            'loop' => 'Try with your agent on the homepage → connect one host → create_review → open review_url → mark must-fix items (even if you are the only reviewer) → agent fixes and resolves → you verify and approve. Repeat until next_action says stop.',
+            'features' => [
+                [
+                    'icon' => 'link',
+                    'title' => 'Free try token, no account',
+                    'body' => 'Mint a Bearer token on the homepage. Same endpoint for Cursor, Claude, Copilot, ChatGPT, or Grok.',
+                ],
+                [
+                    'icon' => 'cursor-arrow-rays',
+                    'title' => 'You can be the reviewer',
+                    'body' => 'Wear both hats: run the agent, then open the link and mark what still feels off.',
+                ],
+                [
+                    'icon' => 'users',
+                    'title' => 'Or borrow another set of eyes',
+                    'body' => 'Share the review or guest link when a designer friend can spare five minutes.',
+                ],
+                [
+                    'icon' => 'arrow-path',
+                    'title' => 'Short loops, clear stop',
+                    'body' => 'Request changes for another pass. Approve when it is shippable — structured next_action either way.',
+                ],
+            ],
+            'checklist' => [
+                'Generate a try token on the homepage',
+                'Connect one agent host (Ask agent is fastest)',
+                'Run a design checkup on what you just built',
+                'Mark must-fix issues on the review link',
+                'Approve when ready — or request changes and loop',
+            ],
+            'prompts' => [
+                'Run a design checkup on this screen — I will mark what to fix.',
+                'Address my marks and attach after shots when you resolve them.',
+                'Share a guest link so a friend can suggest without owning the review.',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Do I need a ReviseMy account?',
+                    'a' => 'No. Try tokens are enough to connect MCP and open reviews.',
+                ],
+                [
+                    'q' => 'What if I am the only human?',
+                    'a' => 'That works. Mark your own link — the point is a durable checkpoint, not a committee.',
+                ],
+                [
+                    'q' => 'How long do try tokens last?',
+                    'a' => 'Seven days. Generate a new token from the credentials card if it expires or was shared by mistake.',
+                ],
+            ],
+        ],
+
+        'agencies' => [
+            'slug' => 'agencies',
+            'label' => 'Agencies',
+            'icon' => 'building-office-2',
+            'title' => 'Design review for agencies — client guest links, agent builds, human sign-off',
+            'description' => 'Run agents inside the studio while clients mark on a guest or review link. Keep suggestions non-authoritative until you accept them, and ship multi-pass approvals with before/after proof.',
+            'keywords' => [
+                'agency design review',
+                'client guest feedback link',
+                'freelance UI review AI',
+                'client approval design loop',
+                'multi-stakeholder design review',
+                'agent builds client marks',
+            ],
+            'headline' => 'You run the agent. Clients mark on the link.',
+            'subheadline' => 'Keep MCP inside the studio. Send clients a guest link for suggestions — or an owner review link when they should approve. Multi-pass with before/after so sign-off is evidence-based.',
+            'features_heading' => 'Built for studio + client workflows',
+            'checklist_heading' => 'Agency checklist',
+            'checklist_intro' => 'Clear roles from internal build to client approval.',
+            'problem' => 'Agencies that use coding agents still collect client feedback in email and Figma threads. Clients should not need MCP, and their comments should not silently become the brief until the studio accepts them.',
+            'loop' => 'Studio connects MCP and opens create_review. Internally, designers/engineers leave authoritative marks. For clients, share a guest link (suggestions only) or the owner link when they should approve. Accept guest notes into marks when appropriate, request changes for the next pass, verify with after shots, then approve.',
+            'features' => [
+                [
+                    'icon' => 'building-office-2',
+                    'title' => 'MCP stays in the studio',
+                    'body' => 'Agents and try tokens live with the team. Clients never install Cursor or paste Bearer tokens.',
+                ],
+                [
+                    'icon' => 'users',
+                    'title' => 'Guest links for clients',
+                    'body' => 'Suggestions stay non-authoritative until the review owner accepts them into marks.',
+                ],
+                [
+                    'icon' => 'arrows-right-left',
+                    'title' => 'Before/after for approvals',
+                    'body' => 'Resolve marks with after images so client sign-off is about proof, not vibes.',
+                ],
+                [
+                    'icon' => 'check',
+                    'title' => 'Who decides stays explicit',
+                    'body' => 'Studio owns the brief unless you hand them the owner link. Guest eyes never flip approve by accident.',
+                ],
+            ],
+            'checklist' => [
+                'Connect MCP on the studio side (try token or deploy)',
+                'Open a review; leave internal must-fix marks first',
+                'Send clients a guest link for suggestions — or owner link to approve',
+                'Accept guest notes into marks only when you agree',
+                'Request changes / verify after shots until client sign-off',
+            ],
+            'prompts' => [
+                'Open a review for this client deliverable and share the link with me.',
+                'Send a guest link to the client for suggestions only.',
+                'Address studio must-fix marks, attach after shots, then we will send pass two.',
+            ],
+            'faq' => [
+                [
+                    'q' => 'Should clients get MCP access?',
+                    'a' => 'Usually no. Guest or review links are enough. Keep try tokens inside the studio.',
+                ],
+                [
+                    'q' => 'Guest link vs owner review link?',
+                    'a' => 'Guest = suggestions only. Owner link can mark authoritatively and approve / request changes — use when the client is the decision-maker.',
+                ],
+                [
+                    'q' => 'How do we show what changed?',
+                    'a' => 'Have the agent resolve_marks with after images; reviewers verify on the board before the next client send.',
+                ],
+            ],
+        ],
+
     ],
 
 ];
+

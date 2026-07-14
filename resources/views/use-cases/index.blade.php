@@ -1,7 +1,7 @@
 <x-layouts.app
-    title="What ReviseMy is built for — UI, websites, email, slides"
-    description="Human-in-the-loop design review for AI agents across UI screenshots, live websites, email HTML, and slide decks — plus a path for human reviewers who only need the link."
-    :keywords="['design review', 'UI review', 'website review', 'email review', 'slide review', 'AI agents', 'MCP']"
+    title="What ReviseMy is built for — review types and audiences"
+    description="Human-in-the-loop design review for AI agents across UI, websites, email, and slides — plus paths for reviewers, designers, product, engineers, founders, and agencies."
+    :keywords="['design review', 'UI review', 'website review', 'email review', 'slide review', 'AI agents', 'MCP', 'designers', 'product managers', 'agencies']"
     schema="page"
 >
     <div
@@ -56,7 +56,7 @@
                         Review types for agents and humans
                     </h1>
                     <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                        Pick the artifact you are checking up on — or jump to the reviewer path if you only have a link.
+                        Pick the artifact you are checking up on — or jump to a role path if you care more about who is in the loop than which file type.
                     </p>
                 </section>
 
@@ -64,10 +64,10 @@
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Review types</h2>
                     <ul class="mt-6 grid grid-cols-1 gap-3 min-[30rem]:grid-cols-2">
                         @foreach ($pages as $entry)
-                            <li>
+                            <li class="min-h-0">
                                 <a
                                     href="{{ url('/for/'.$entry['slug']) }}"
-                                    class="group flex items-start gap-3 rounded-lg border border-zinc-900/8 bg-white/70 px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
+                                    class="group flex h-full items-start gap-3 rounded-lg border border-zinc-900/8 bg-white/70 px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
                                 >
                                     <x-use-case-icon
                                         :name="$entry['icon']"
@@ -91,23 +91,23 @@
                 @if (! empty($audiences))
                     <section class="mt-14">
                         <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Audiences</h2>
-                        <ul class="mt-6 space-y-3">
+                        <ul class="mt-6 divide-y divide-zinc-900/8 border-y border-zinc-900/8">
                             @foreach ($audiences as $entry)
                                 <li>
                                     <a
                                         href="{{ url('/for/'.$entry['slug']) }}"
-                                        class="group flex items-start gap-3 rounded-lg border border-zinc-900/8 bg-white/70 px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
+                                        class="group flex items-start gap-3 py-4 transition sm:items-center"
                                     >
                                         <x-use-case-icon
                                             :name="$entry['icon']"
                                             size="sm"
-                                            class="mt-0.5 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
+                                            class="mt-0.5 shrink-0 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80 sm:mt-0"
                                         />
-                                        <span>
-                                            <span class="block text-sm font-medium text-zinc-900 transition group-hover:text-rose-600">
+                                        <span class="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                                            <span class="shrink-0 text-sm font-medium text-zinc-900 transition group-hover:text-rose-600">
                                                 {{ $entry['label'] }}
                                             </span>
-                                            <span class="mt-0.5 block text-sm leading-relaxed text-zinc-500">
+                                            <span class="text-sm leading-relaxed text-zinc-500 sm:text-right">
                                                 {{ $entry['headline'] }}
                                             </span>
                                         </span>

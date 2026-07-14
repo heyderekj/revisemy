@@ -1,7 +1,7 @@
 @props([])
 
 {{-- Expects parent Alpine scope with `mode` and `setMode(mode)`. --}}
-<div {{ $attributes->class('space-y-4') }}>
+<div {{ $attributes->class('space-y-4 pt-2') }}>
     <div class="border-b border-zinc-200/90">
         <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <p class="pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">

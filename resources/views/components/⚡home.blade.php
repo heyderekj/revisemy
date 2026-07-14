@@ -408,11 +408,23 @@ new class extends Component
                     </article>
                 </div>
 
-                <p class="mt-8 max-w-2xl text-[15px] leading-relaxed text-zinc-700">
-                    <span class="rm-note box-decoration-clone">
-                        <span class="font-medium">Try saying:</span> “Run a design checkup,” “review this URL,” or “address my feedback.” ReviseMy handles the MCP handoff inside the agent workflow you already use.
-                    </span>
-                </p>
+                <div class="mt-8 max-w-2xl space-y-3">
+                    <p class="text-[15px] font-medium text-zinc-800">Try saying:</p>
+                    <ul class="space-y-2.5">
+                        <li>
+                            <x-sample-prompt text="Run a design checkup." />
+                        </li>
+                        <li>
+                            <x-sample-prompt text="Review this URL." />
+                        </li>
+                        <li>
+                            <x-sample-prompt text="Address my feedback." />
+                        </li>
+                    </ul>
+                    <p class="text-[14px] leading-relaxed text-zinc-500">
+                        ReviseMy handles the MCP handoff inside the agent workflow you already use.
+                    </p>
+                </div>
 
                 <div class="mt-14 border-t border-zinc-900/8 pt-12">
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for every visual you ship</h2>
@@ -443,7 +455,7 @@ new class extends Component
 
                     <p class="mt-8 text-sm text-zinc-500">
                         Also:
-                        <a href="/for/reviewers" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">for reviewers</a>,
+                        <a href="/for" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">audiences &amp; review types</a>,
                         <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">connectors</a>,
                         or
                         <a href="/for" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">see all paths</a>.

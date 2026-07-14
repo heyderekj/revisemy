@@ -6,9 +6,7 @@
     <ul class="mt-6 space-y-3">
         @foreach ($page['prompts'] as $prompt)
             <li>
-                <span class="rm-note box-decoration-clone text-[15px] leading-relaxed text-zinc-700">
-                    “{{ $prompt }}”
-                </span>
+                <x-sample-prompt :text="$prompt" />
             </li>
         @endforeach
     </ul>

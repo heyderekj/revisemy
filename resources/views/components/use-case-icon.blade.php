@@ -81,6 +81,21 @@
         @case('squares-2x2')
             <flux:icon.squares-2x2 variant="micro" class="{{ $glyph }}" />
             @break
+        @case('paint-brush')
+            <flux:icon.paint-brush variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('clipboard-document-list')
+            <flux:icon.clipboard-document-list variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('command-line')
+            <flux:icon.command-line variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('rocket-launch')
+            <flux:icon.rocket-launch variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('building-office-2')
+            <flux:icon.building-office-2 variant="micro" class="{{ $glyph }}" />
+            @break
         @default
             <flux:icon.photo variant="micro" class="{{ $glyph }}" />
     @endswitch
