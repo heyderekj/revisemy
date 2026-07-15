@@ -121,4 +121,4 @@ Research references (public craft sources + implementer skills):
 - [ui-craft](https://github.com/educlopez/ui-craft)
 - [OmniParser](https://github.com/microsoft/OmniParser) / [UIPE](https://github.com/dirkknibbe/uipe) / [Playwright MCP](https://github.com/microsoft/playwright-mcp)
 
-Agent-side motion polish (not second-opinion lenses — captures are stills): [animations.dev](https://animations.dev/) / [emilkowalski/skills](https://github.com/emilkowalski/skills), [WWDC: Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/)
+Agent-side motion polish (not second-opinion lenses — captures are stills): [animations.dev](https://animations.dev/) / [emilkowalski/skills](https://github.com/emilkowalski/skills) (including `find-animation-opportunities` for implement-time sweeps), [WWDC: Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/)

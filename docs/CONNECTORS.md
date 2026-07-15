@@ -80,7 +80,7 @@ Add a small `SKILL.md` that teaches agents *when* to call ReviseMy:
 
 The skill should not reimplement tools — it only points at the MCP server.
 
-For **taste while implementing** (animation easing, press feedback, depth), pair with [emilkowalski/skills](https://github.com/emilkowalski/skills) (`npx skills@latest add emilkowalski/skills`). Those skills guide the coding agent; ReviseMy second opinion stays hints only, discloses craft lenses via the review chip / `taste` payload, and never overrides human marks.
+For **taste while implementing** (animation easing, press feedback, depth), pair with [emilkowalski/skills](https://github.com/emilkowalski/skills) (`npx skills@latest add emilkowalski/skills`). Those skills guide the coding agent; ReviseMy second opinion stays hints only, discloses craft lenses via the review chip / `taste` payload, and never overrides human marks. After human marks are fixed (or on a polish pass), run `find-animation-opportunities` against the codebase — not as a second-opinion lens (captures are stills).
 
 ## Design rule
 
