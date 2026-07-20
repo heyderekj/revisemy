@@ -20,10 +20,12 @@ class BrowsershotCaptureDriver implements CaptureDriver
 
     public function captureUrl(string $url, array $viewports): array
     {
+        // Viewport only — matches hosted driver; avoids giant full-page PNGs.
         return $this->capture(
             fn () => Browsershot::url($url),
             $viewports,
             ['origin' => 'capture', 'page_url' => $url],
+            fullPage: false,
         );
     }
 
@@ -33,6 +35,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
             fn () => Browsershot::html($html),
             $viewports,
             ['origin' => 'html'],
+            fullPage: true,
         );
     }
 
@@ -68,7 +71,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(callable $factory, array $viewports, array $baseMeta): array
+    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage = false): array
     {
         if (! $this->enabled()) {
             throw ValidationException::withMessages([
@@ -82,8 +85,11 @@ class BrowsershotCaptureDriver implements CaptureDriver
             $shot = $factory()
                 ->windowSize($width, $height)
                 ->deviceScaleFactor(max(1, (int) config('revisemy.capture.device_scale_factor', 2)))
-                ->fullPage()
                 ->timeout((int) config('revisemy.capture.timeout', 30));
+
+            if ($fullPage) {
+                $shot->fullPage();
+            }
 
             if ($nodeModules = config('revisemy.capture.node_modules')) {
                 $shot->setNodeModulePath($nodeModules);

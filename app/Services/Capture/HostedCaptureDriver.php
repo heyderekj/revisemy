@@ -20,12 +20,14 @@ class HostedCaptureDriver implements CaptureDriver
 
     public function captureUrl(string $url, array $viewports): array
     {
-        return $this->capture(['url' => $url], $viewports, ['origin' => 'capture', 'page_url' => $url]);
+        // Viewport only — long marketing pages as fullPage PNGs at 2× DPR
+        // routinely OOM Cloud's 256MB PHP (see customer.io ~17kpx captures).
+        return $this->capture(['url' => $url], $viewports, ['origin' => 'capture', 'page_url' => $url], fullPage: false);
     }
 
     public function captureHtml(string $html, array $viewports): array
     {
-        return $this->capture(['html' => $html], $viewports, ['origin' => 'html']);
+        return $this->capture(['html' => $html], $viewports, ['origin' => 'html'], fullPage: true);
     }
 
     public function captureDom(string $url): ?string
@@ -54,7 +56,7 @@ class HostedCaptureDriver implements CaptureDriver
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(array $source, array $viewports, array $baseMeta): array
+    protected function capture(array $source, array $viewports, array $baseMeta, bool $fullPage = false): array
     {
         $endpoint = $this->authenticatedUrl((string) config('revisemy.capture.endpoint'));
         $shots = [];
@@ -68,7 +70,7 @@ class HostedCaptureDriver implements CaptureDriver
                             'height' => $height,
                             'deviceScaleFactor' => max(1, (int) config('revisemy.capture.device_scale_factor', 2)),
                         ],
-                        'options' => ['type' => 'png', 'fullPage' => true],
+                        'options' => ['type' => 'png', 'fullPage' => $fullPage],
                     ]);
             } catch (\Throwable $e) {
                 Log::warning('Hosted capture request failed', [

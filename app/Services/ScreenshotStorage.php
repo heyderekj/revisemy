@@ -96,6 +96,13 @@ class ScreenshotStorage
      */
     public function makeThumbnail(string $binary): ?string
     {
+        // Skip GD decode for huge captures — a 2× full-page marketing PNG can
+        // exceed Cloud's 256MB limit inside imagecreatefromstring.
+        $info = @getimagesizefromstring($binary);
+        if (is_array($info) && (($info[0] ?? 0) * ($info[1] ?? 0)) > 4_000_000) {
+            return null;
+        }
+
         $source = @imagecreatefromstring($binary);
 
         if ($source === false) {
