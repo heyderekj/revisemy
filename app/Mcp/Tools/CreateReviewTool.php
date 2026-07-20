@@ -87,11 +87,11 @@ class CreateReviewTool extends Tool
                 ->max(5)
                 ->description('Local or app UI: 1–5 screenshots as data URLs or base64. For public websites use capture_url instead. Provide exactly one source: images, capture_url, pdf, or html.'),
             'capture_url' => $schema->boolean()
-                ->description('Capture page_url server-side (desktop + mobile viewports; type defaults to website). Requires REVISEMY_CAPTURE_DRIVER. If capture is unavailable, fall back to images with data URLs for local UI.'),
+                ->description('Capture page_url server-side (desktop + mobile viewports; type defaults to website). Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images (desktop+mobile data URLs) — do not keep retrying capture_url.'),
             'pdf' => $schema->string()
                 ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
             'html' => $schema->string()
-                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email). Requires REVISEMY_CAPTURE_DRIVER. If capture is unavailable, fall back to images with data URLs.'),
+                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email). Requires REVISEMY_CAPTURE_DRIVER. On [capture_not_configured] or [capture_provider_failed], fall back to images with data URLs.'),
         ];
     }
 }

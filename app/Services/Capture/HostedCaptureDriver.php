@@ -60,19 +60,30 @@ class HostedCaptureDriver implements CaptureDriver
         $shots = [];
 
         foreach ($viewports as [$width, $height, $label]) {
-            $response = Http::timeout((int) config('revisemy.capture.timeout', 30))
-                ->post($endpoint, $source + [
-                    'viewport' => [
-                        'width' => $width,
-                        'height' => $height,
-                        'deviceScaleFactor' => max(1, (int) config('revisemy.capture.device_scale_factor', 2)),
-                    ],
-                    'options' => ['type' => 'png', 'fullPage' => true],
+            try {
+                $response = Http::timeout((int) config('revisemy.capture.timeout', 30))
+                    ->post($endpoint, $source + [
+                        'viewport' => [
+                            'width' => $width,
+                            'height' => $height,
+                            'deviceScaleFactor' => max(1, (int) config('revisemy.capture.device_scale_factor', 2)),
+                        ],
+                        'options' => ['type' => 'png', 'fullPage' => true],
+                    ]);
+            } catch (\Throwable $e) {
+                Log::warning('Hosted capture request failed', [
+                    'label' => $label,
+                    'error' => $e->getMessage(),
                 ]);
+
+                throw ValidationException::withMessages([
+                    'capture' => "[capture_provider_failed] Capture timed out or could not reach the screenshot provider at {$label}. Raise REVISEMY_CAPTURE_TIMEOUT, check the Browserless endpoint/key, or fall back to create_review with images as data URLs.",
+                ]);
+            }
 
             if (! $response->successful() || $response->body() === '') {
                 throw ValidationException::withMessages([
-                    'capture' => "Could not capture at {$label} ({$response->status()}).",
+                    'capture' => "[capture_provider_failed] Could not capture at {$label} (HTTP {$response->status()}). Check Browserless token/quota/endpoint, or fall back to create_review with images as data URLs.",
                 ]);
             }
 

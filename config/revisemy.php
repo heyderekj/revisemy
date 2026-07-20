@@ -72,7 +72,9 @@ return [
     */
 
     'capture' => [
-        'driver' => env('REVISEMY_CAPTURE_DRIVER'),
+        // Empty string must be null — Cloud UI sometimes stores blank vars,
+        // and match() would otherwise treat "" as an unknown (disabled) driver.
+        'driver' => env('REVISEMY_CAPTURE_DRIVER') ?: null,
         'endpoint' => env('REVISEMY_CAPTURE_ENDPOINT'),
         // Browserless /content-compatible endpoint: POST {url} in, rendered
         // HTML out. Optional — enables DOM snapshots as hidden AI context.

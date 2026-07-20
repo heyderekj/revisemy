@@ -177,7 +177,22 @@ class McpCreateReviewTest extends TestCase
             'title' => 'Capture off',
             'page_url' => 'https://example.com',
             'capture_url' => true,
-        ])->assertHasErrors();
+        ])->assertHasErrors(['capture_not_configured']);
+    }
+
+    public function test_create_review_capture_reports_provider_failure(): void
+    {
+        $user = $this->setUpUser();
+
+        Http::fake([
+            'capture.test/*' => Http::response('nope', 502),
+        ]);
+
+        ReviseMyServer::actingAs($user)->tool(CreateReviewTool::class, [
+            'title' => 'Provider down',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertHasErrors(['capture_provider_failed']);
     }
 
     public function test_create_review_url_capture_stores_dom_snapshot(): void

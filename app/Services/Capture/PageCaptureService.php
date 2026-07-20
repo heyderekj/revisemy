@@ -72,7 +72,7 @@ class PageCaptureService
 
         if (! $driver || ! $driver->enabled()) {
             throw ValidationException::withMessages([
-                'capture' => 'Server-side capture is not configured — set REVISEMY_CAPTURE_DRIVER (and endpoint/key for the hosted driver). For local/dev UI, upload screenshots as data URLs in images instead.',
+                'capture' => '[capture_not_configured] Server-side capture is off. Set REVISEMY_CAPTURE_DRIVER=hosted plus REVISEMY_CAPTURE_ENDPOINT/KEY (Browserless) on Cloud, or browsershot locally. Fallback: call create_review with images as desktop+mobile data URLs instead of capture_url.',
             ]);
         }
 

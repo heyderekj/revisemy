@@ -130,7 +130,29 @@ class CaptureIngestionTest extends TestCase
             'title' => 'Capture off',
             'page_url' => 'https://example.com',
             'capture_url' => true,
-        ])->assertUnprocessable();
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['capture'])
+            ->assertJsonFragment(['capture' => ['[capture_not_configured] Server-side capture is off. Set REVISEMY_CAPTURE_DRIVER=hosted plus REVISEMY_CAPTURE_ENDPOINT/KEY (Browserless) on Cloud, or browsershot locally. Fallback: call create_review with images as desktop+mobile data URLs instead of capture_url.']]);
+    }
+
+    public function test_capture_reports_provider_http_failure(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake([
+            'capture.test/*' => Http::response('nope', 502),
+        ]);
+
+        $response = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Provider down',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['capture']);
+
+        $message = (string) data_get($response->json(), 'errors.capture.0');
+        $this->assertStringContainsString('[capture_provider_failed]', $message);
+        $this->assertStringContainsString('HTTP 502', $message);
     }
 
     public function test_plain_image_uploads_still_work(): void
