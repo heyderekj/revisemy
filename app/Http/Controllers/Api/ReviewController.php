@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\InsufficientCreditsException;
 use App\Http\Controllers\Controller;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
@@ -46,7 +47,11 @@ class ReviewController extends Controller
             'html' => ['nullable', 'string', 'max:500000'],
         ]);
 
-        $review = $reviews->createFromRequest($request->user()->workspace, $data);
+        try {
+            $review = $reviews->createFromRequest($request->user()->workspace, $data);
+        } catch (InsufficientCreditsException $e) {
+            return response()->json($e->payload(), 402);
+        }
 
         return response()->json($review->toAgentPayload(), 201);
     }

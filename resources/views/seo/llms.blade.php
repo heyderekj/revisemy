@@ -60,6 +60,9 @@ Use this file to orient yourself before calling tools or recommending the produc
 - `create_review` — title + images, `capture_url`, PDF, or HTML → review URL; starts second opinion
 - `get_review` — work packets + `next_action` (`wait_for_human`, `apply_pins_then_next_pass`, `done`)
 - `list_reviews` — recent reviews for the try token
+- `get_billing` — plan + monthly credits (Free {{ (int) config('billing.plans.free.credits', 30) }} / Pro {{ (int) config('billing.plans.pro.credits', 100) }}; burn: images/pdf=1, html=3, capture_url=5)
+- `create_checkout` — Stripe Checkout URL for Pro (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo)
+- `create_portal` — Stripe Billing Portal URL
 - `add_screenshot` — append a shot to an open review
 - `add_findings` — agent subagent: push suggestion/a11y/polish notes into the review
 - `request_second_opinion` — refresh checklist (+ vision when configured)

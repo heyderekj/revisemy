@@ -9,8 +9,8 @@ use Illuminate\Support\Str;
 
 class TryTokenService
 {
-    /** Align try-token lifetime with default review expiry. */
-    public const TOKEN_DAYS = 7;
+    /** Free-plan API token lifetime (days). Pro extends on upgrade. */
+    public const TOKEN_DAYS = 30;
 
     /**
      * @return array{
@@ -31,9 +31,15 @@ class TryTokenService
     public function create(): array
     {
         return DB::transaction(function (): array {
+            $tokenDays = (int) config('billing.plans.free.token_days', self::TOKEN_DAYS);
+
             $workspace = Workspace::query()->create([
                 'name' => 'Try workspace',
+                'plan' => Workspace::PLAN_FREE,
             ]);
+
+            app(CreditsService::class)->grantPeriod($workspace);
+            $workspace->refresh();
 
             $user = User::query()->create([
                 'workspace_id' => $workspace->id,
@@ -42,7 +48,7 @@ class TryTokenService
                 'password' => Str::password(32),
             ]);
 
-            $expiresAt = now()->addDays(self::TOKEN_DAYS);
+            $expiresAt = now()->addDays($tokenDays);
             $plainTextToken = $user->createToken('revisemy-try', ['*'], $expiresAt)->plainTextToken;
             $mcpUrl = url('/mcp/revisemy');
             $authHeader = 'Bearer '.$plainTextToken;

@@ -28,6 +28,8 @@ Repo: https://github.com/heyderekj/revisemy
    - Optional (required for `capture_url`): `REVISEMY_CAPTURE_DRIVER=hosted` (must be the literal string `hosted`, not blank) + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for URL/email capture on Cloud
    - Optional: `REVISEMY_CAPTURE_CONTENT_ENDPOINT` for DOM snapshots; `REVISEMY_CAPTURE_TIMEOUT=60` for heavy marketing pages
    - Optional: `REVISEMY_CAPTURE_DPR=2` (default) — retina captures via Browserless `deviceScaleFactor`
+   - Optional (hosted billing): `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO` (Pro $9/mo price id). Cashier webhook path: `/stripe/webhook`. Free workspaces get 30 credits/mo; Pro 100. Same full capture quality on both — credits meter usage only. Agents call `create_checkout` for Stripe Checkout.
+   - Keep Serverless Postgres **scale-to-zero** (e.g. 10-minute idle) and Flex scale-to-zero for cost; bump migrate wake wait if deploys hit “still waking up”.
 5. Build commands should include `npm ci && npm run build` (Cloud default for Node apps) and `composer install`. Cloud injects database credentials while building Laravel's cached configuration; raw `DB_*` variables may not be available later in the Commands shell.
 6. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
 7. Visit the `*.laravel.cloud` homepage → **Get a try token** → paste MCP config into any project.

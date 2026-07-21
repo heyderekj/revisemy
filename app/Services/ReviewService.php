@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\ReviewDecided;
+use App\Exceptions\InsufficientCreditsException;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
@@ -11,6 +12,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ReviewService
 {
@@ -19,6 +21,7 @@ class ReviewService
         protected SecondOpinionService $opinions,
         protected PageCaptureService $capture,
         protected DocumentIngestionService $documents,
+        protected CreditsService $credits,
     ) {}
 
     /**
@@ -26,9 +29,12 @@ class ReviewService
      * source was provided: uploaded images, a server-side page capture
      * (capture_url + page_url), a PDF (presentation), or raw HTML (email).
      * Exactly one source is required; type is inferred from the source when
-     * not explicit.
+     * not explicit. Debits workspace credits before capture; refunds if
+     * ingest fails after the debit.
      *
      * @param  array<string, mixed>  $data
+     *
+     * @throws InsufficientCreditsException
      */
     public function createFromRequest(Workspace $workspace, array $data): Review
     {
@@ -46,41 +52,50 @@ class ReviewService
             ]);
         }
 
+        $pageUrl = trim((string) ($data['page_url'] ?? ''));
+
+        if (isset($sources['capture_url']) && ($pageUrl === '' || ! filter_var($pageUrl, FILTER_VALIDATE_URL))) {
+            throw ValidationException::withMessages([
+                'page_url' => 'capture_url needs a valid page_url to render.',
+            ]);
+        }
+
+        $cost = $this->credits->costForSources($sources);
+        $this->credits->debit($workspace, $cost);
+
         $type = $data['type'] ?? null;
         $domHtml = null;
 
-        if (isset($sources['capture_url'])) {
-            $pageUrl = trim((string) ($data['page_url'] ?? ''));
-
-            if ($pageUrl === '' || ! filter_var($pageUrl, FILTER_VALIDATE_URL)) {
-                throw ValidationException::withMessages([
-                    'page_url' => 'capture_url needs a valid page_url to render.',
-                ]);
+        try {
+            if (isset($sources['capture_url'])) {
+                $images = $this->capture->captureUrl($pageUrl);
+                $domHtml = $this->capture->captureDom($pageUrl);
+                $type ??= Review::TYPE_WEBSITE;
+            } elseif (isset($sources['pdf'])) {
+                $images = $this->documents->pdfToImages((string) $data['pdf']);
+                $type ??= Review::TYPE_PRESENTATION;
+            } elseif (isset($sources['html'])) {
+                $images = $this->capture->captureHtml((string) $data['html']);
+                $domHtml = (string) $data['html'];
+                $type ??= Review::TYPE_EMAIL;
             }
 
-            $images = $this->capture->captureUrl($pageUrl);
-            $domHtml = $this->capture->captureDom($pageUrl);
-            $type ??= Review::TYPE_WEBSITE;
-        } elseif (isset($sources['pdf'])) {
-            $images = $this->documents->pdfToImages((string) $data['pdf']);
-            $type ??= Review::TYPE_PRESENTATION;
-        } elseif (isset($sources['html'])) {
-            $images = $this->capture->captureHtml((string) $data['html']);
-            $domHtml = (string) $data['html'];
-            $type ??= Review::TYPE_EMAIL;
-        }
+            return $this->create(
+                $workspace,
+                $data['title'],
+                $data['context'] ?? null,
+                $images,
+                $data['page_url'] ?? null,
+                $data['parent_id'] ?? null,
+                $type,
+                $domHtml,
+                $data['webhook_url'] ?? null,
+            );
+        } catch (Throwable $e) {
+            $this->credits->refund($workspace, $cost);
 
-        return $this->create(
-            $workspace,
-            $data['title'],
-            $data['context'] ?? null,
-            $images,
-            $data['page_url'] ?? null,
-            $data['parent_id'] ?? null,
-            $type,
-            $domHtml,
-            $data['webhook_url'] ?? null,
-        );
+            throw $e;
+        }
     }
 
     /**
@@ -145,6 +160,8 @@ class ReviewService
             $webhookUrl ??= $parent->webhook_url;
         }
 
+        $retentionDays = $workspace->reviewRetentionDays();
+
         $review = $workspace->reviews()->create([
             'parent_id' => $parent?->id,
             'title' => $title,
@@ -153,6 +170,7 @@ class ReviewService
             'page_url' => $pageUrl,
             'webhook_url' => $webhookUrl,
             'pass' => $pass,
+            'expires_at' => now()->addDays($retentionDays),
         ]);
 
         if ($domHtml !== null && trim($domHtml) !== '') {
@@ -160,7 +178,7 @@ class ReviewService
                 $path = 'reviews/'.$review->public_id.'/dom.html';
                 Storage::disk(ScreenshotStorage::diskName())->put($path, substr($domHtml, 0, 2 * 1024 * 1024));
                 $review->update(['dom_path' => $path]);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('DOM snapshot persist failed', ['review' => $review->public_id, 'error' => $e->getMessage()]);
             }
         }

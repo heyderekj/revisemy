@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Exceptions\InsufficientCreditsException;
 use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Mcp\Resources\ReviewApp;
 use App\Services\ReviewService;
@@ -50,6 +51,9 @@ class CreateReviewTool extends Tool
 
         try {
             $review = $this->reviews->createFromRequest($workspace, $data);
+        } catch (InsufficientCreditsException $e) {
+            return Response::make(Response::error($e->getMessage()))
+                ->withStructuredContent($e->payload());
         } catch (ValidationException $e) {
             return Response::error(collect($e->errors())->flatten()->first() ?? 'Could not create the review.');
         }
@@ -85,9 +89,9 @@ class CreateReviewTool extends Tool
                 ->items($schema->string()->description('Screenshot as https image URL, data URL, or base64 — not a page URL'))
                 ->min(1)
                 ->max(5)
-                ->description('Local or app UI: 1–5 screenshots as data URLs or base64. For public websites use capture_url instead. Provide exactly one source: images, capture_url, pdf, or html.'),
+                ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs 1 credit). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
             'capture_url' => $schema->boolean()
-                ->description('Capture page_url server-side (desktop + mobile viewports; type defaults to website). Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images (desktop+mobile data URLs) — do not keep retrying capture_url.'),
+                ->description('Capture page_url server-side (desktop + mobile; costs 5 credits). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call create_checkout.'),
             'pdf' => $schema->string()
                 ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
             'html' => $schema->string()

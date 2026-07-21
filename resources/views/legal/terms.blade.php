@@ -34,9 +34,9 @@
                     </section>
 
                     <section>
-                        <h2 class="text-lg font-semibold tracking-tight text-zinc-900">Try tokens and reviews</h2>
+                        <h2 class="text-lg font-semibold tracking-tight text-zinc-900">Try tokens, credits, and reviews</h2>
                         <p class="mt-3">
-                            Homepage try tokens create a workspace so agents can call MCP and REST. Reviews, captures, and marks you create are associated with that workspace. Rate limits, retention, and expiry may apply (including guest-link and review lifetimes described in product docs).
+                            Homepage try tokens create a Free workspace so agents can call MCP and REST. Each workspace receives a monthly credit grant (Free and Pro use the same full capture quality; Pro adds a larger grant via Stripe Checkout). Creating a review spends credits by source (images/PDF, email HTML, or URL capture). Rate limits, retention, and expiry may apply (including guest-link and review lifetimes described in product docs). Unused credits do not roll over.
                         </p>
                     </section>
 

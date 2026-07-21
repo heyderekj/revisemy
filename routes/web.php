@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AlternativeController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ScreenshotController;
@@ -33,6 +34,10 @@ Route::get('/changelog', [GuideController::class, 'show'])
 
 Route::get('/privacy', [LegalController::class, 'privacy']);
 Route::get('/terms', [LegalController::class, 'terms']);
+
+Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
+Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+Route::get('/billing/portal-return', [BillingController::class, 'portalReturn'])->name('billing.portal-return');
 
 Route::get('/alternatives', [AlternativeController::class, 'index']);
 Route::get('/alternatives/{slug}', [AlternativeController::class, 'show'])

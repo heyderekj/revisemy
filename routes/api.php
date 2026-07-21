@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\TryTokenController;
 use Illuminate\Support\Facades\Route;
@@ -7,6 +8,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/try-token', [TryTokenController::class, 'store']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/billing', [BillingController::class, 'show']);
+    Route::post('/billing/checkout', [BillingController::class, 'checkout']);
+    Route::post('/billing/portal', [BillingController::class, 'portal']);
+
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::post('/reviews', [ReviewController::class, 'store']);
     Route::get('/reviews/{publicId}', [ReviewController::class, 'show']);
