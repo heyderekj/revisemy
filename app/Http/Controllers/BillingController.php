@@ -45,9 +45,19 @@ class BillingController extends Controller
             $workspace = $workspace->fresh();
         }
 
+        $manageUrl = null;
+        if ($workspace) {
+            try {
+                $manageUrl = $billing->createPortalUrl($workspace);
+            } catch (\Throwable) {
+                $manageUrl = null;
+            }
+        }
+
         return view('billing.success', [
             'workspace' => $workspace,
             'email' => $workspace?->billing_email,
+            'manageUrl' => $manageUrl,
         ]);
     }
 

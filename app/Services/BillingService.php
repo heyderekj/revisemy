@@ -225,10 +225,13 @@ class BillingService
     {
         $subscription = $workspace->subscription('default');
 
-        if ($subscription && ! $subscription->canceled()) {
-            $subscription->cancel();
+        if (! $subscription || $subscription->canceled()) {
+            throw new RuntimeException(
+                '[not_subscribed] No active Plus subscription to cancel. Call get_billing to check plan, or create_portal if they need Paddle receipts.',
+            );
         }
 
+        $subscription->cancel();
         $this->syncSubscriptionState($workspace->fresh() ?? $workspace);
     }
 

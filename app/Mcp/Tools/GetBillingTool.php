@@ -45,7 +45,7 @@ class GetBillingTool extends Tool
         }
 
         if ($status['portal_available'] && $status['plan'] === 'pro') {
-            $lines[] = 'Manage subscription: call create_portal for a Stripe Billing Portal URL.';
+            $lines[] = 'To cancel Plus: call cancel_subscription with confirm:true (keeps Plus until period end). For payment method / receipts: create_portal.';
         }
 
         return Response::make(Response::text(implode("\n", $lines)."\n\n".json_encode($status, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)))

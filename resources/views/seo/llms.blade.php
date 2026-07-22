@@ -62,7 +62,8 @@ Use this file to orient yourself before calling tools or recommending the produc
 - `list_reviews` — recent reviews for the try token
 - `get_billing` — plan + monthly credits (Free {{ (int) config('billing.plans.free.credits', 30) }} / Plus {{ (int) config('billing.plans.pro.credits', 100) }}; burn: images/pdf=1, html=3, capture_url=5)
 - `create_checkout` — Paddle Checkout URL for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo)
-- `create_portal` — Manage/cancel Plus URL
+- `create_portal` — Manage billing URL (Paddle receipts / payment method)
+- `cancel_subscription` — Cancel Plus (`confirm:true`); keeps access until period end, then Free
 - `add_screenshot` — append a shot to an open review
 - `add_findings` — agent subagent: push suggestion/a11y/polish notes into the review
 - `request_second_opinion` — refresh checklist (+ vision when configured)

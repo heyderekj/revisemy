@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Exceptions\InsufficientCreditsException;
 use App\Mcp\Servers\ReviseMyServer;
+use App\Mcp\Tools\CancelSubscriptionTool;
 use App\Mcp\Tools\CreateCheckoutTool;
 use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\GetBillingTool;
@@ -246,5 +247,26 @@ class BillingCreditsTest extends TestCase
         $this->get('/upgrade?_ptxn=txn_test')
             ->assertOk()
             ->assertSee('Complete payment securely below', false);
+    }
+
+    public function test_cancel_subscription_requires_confirm(): void
+    {
+        $result = app(TryTokenService::class)->create();
+
+        ReviseMyServer::actingAs($result['user'])->tool(CancelSubscriptionTool::class, [])
+            ->assertHasErrors();
+
+        ReviseMyServer::actingAs($result['user'])->tool(CancelSubscriptionTool::class, [
+            'confirm' => false,
+        ])->assertHasErrors();
+    }
+
+    public function test_cancel_subscription_errors_when_not_on_plus(): void
+    {
+        $result = app(TryTokenService::class)->create();
+
+        ReviseMyServer::actingAs($result['user'])->tool(CancelSubscriptionTool::class, [
+            'confirm' => true,
+        ])->assertHasErrors();
     }
 }
