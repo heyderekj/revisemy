@@ -8,7 +8,6 @@
 ])
 
 @php
-    $burn = config('billing.costs', []);
     $freeCredits = (int) config('billing.plans.free.credits', 30);
     $freeRetention = (int) config('billing.plans.free.review_retention_days', 7);
     $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);
@@ -43,22 +42,7 @@
                     Credit costs per review source are listed below.
                 </p>
 
-                <dl class="mt-8 space-y-3 text-[14px]">
-                    @foreach ([
-                        ['icon' => 'photo', 'label' => 'Images / PDF', 'value' => ((int) ($burn['images'] ?? 1)).' credit'],
-                        ['icon' => 'envelope', 'label' => 'Email HTML', 'value' => ((int) ($burn['html'] ?? 3)).' credits'],
-                        ['icon' => 'globe-alt', 'label' => 'URL capture', 'value' => ((int) ($burn['capture_url'] ?? 5)).' credits'],
-                        ['icon' => 'calendar-days', 'label' => 'Review retention', 'value' => $plusRetention.' days'],
-                    ] as $row)
-                        <div class="flex items-center justify-between gap-4">
-                            <dt class="flex min-w-0 items-center gap-2.5 text-zinc-600">
-                                <x-use-case-icon :name="$row['icon']" size="sm" />
-                                <span>{{ $row['label'] }}</span>
-                            </dt>
-                            <dd class="shrink-0 font-medium tabular-nums text-zinc-900">{{ $row['value'] }}</dd>
-                        </div>
-                    @endforeach
-                </dl>
+                <x-billing.credit-costs :show-label="false" class="mt-8" />
 
                 <div class="mt-8 flex flex-wrap items-center gap-3">
                     <flux:button

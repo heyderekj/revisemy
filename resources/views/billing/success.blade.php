@@ -4,7 +4,7 @@
     robots="noindex, nofollow"
     schema="page"
 >
-    <x-page-frame>
+    <x-page-frame :footer="false">
         <x-home-section first>
             <header>
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
@@ -28,13 +28,13 @@
                     <code class="bg-zinc-100 px-1.5 py-0.5 text-sm text-zinc-800">get_billing</code>
                     to confirm credits.
                 </p>
-                <a
-                    href="/"
-                    class="mt-10 inline-flex text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
-                >
-                    Back to homepage
-                </a>
             </article>
         </x-home-section>
+
+        <div class="relative border-t border-zinc-200 px-[var(--rm-pad)] py-12">
+            <x-cross-mark left="0" top="0" />
+            <x-cross-mark left="100%" top="0" />
+            <x-billing.credit-costs class="max-w-sm" />
+        </div>
     </x-page-frame>
 </x-layouts.app>
