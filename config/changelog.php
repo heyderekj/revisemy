@@ -15,6 +15,23 @@ return [
     'entries' => [
 
         [
+            'version' => '1.1.1',
+            'date' => '2026-07-22',
+            'title' => 'Capture scroll and second-opinion marks',
+            'highlights' => [
+                'Tall captures scroll on the web review page and in the MCP inline app',
+                'Vision region marks accept width/height aliases and 0–100% units so S# overlays show reliably',
+                'MCP second-opinion list under the capture with stable S# indexing',
+                'Axis-aware wheel routing so zoomed captures do not block page scroll',
+            ],
+            'links' => [
+                ['label' => 'Changelog', 'href' => '/changelog'],
+                ['label' => 'MCP Apps', 'href' => '/mcp-apps'],
+                ['label' => 'Second opinion', 'href' => '/second-opinion'],
+            ],
+        ],
+
+        [
             'version' => '1.1.0',
             'date' => '2026-07-21',
             'title' => 'Yellow mark and framed marketing',
