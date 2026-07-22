@@ -130,7 +130,7 @@ class CreditsService
     }
 
     /**
-     * Activate Pro entitlements and refresh the credit period grant.
+     * Activate Plus entitlements and refresh the credit period grant.
      */
     public function activatePro(Workspace $workspace, ?string $billingEmail = null): Workspace
     {

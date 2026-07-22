@@ -50,7 +50,7 @@
             @if ($expires?->isPast())
                 This try token has expired — generate a new one.
             @elseif ($expires)
-                Free includes {{ (int) config('billing.plans.free.credits', 30) }} credits/mo (full quality). Tokens last {{ \App\Services\TryTokenService::TOKEN_DAYS }} days — Pro upgrades via your agent’s create_checkout (Paddle). Shared by mistake? Mint a fresh one.
+                Free includes {{ (int) config('billing.plans.free.credits', 30) }} credits/mo (full quality). Tokens last {{ \App\Services\TryTokenService::TOKEN_DAYS }} days — Plus upgrades via your agent’s create_checkout (Paddle). Shared by mistake? Mint a fresh one.
             @else
                 No expiry on this token — generate a new one for a {{ \App\Services\TryTokenService::TOKEN_DAYS }}-day lifetime.
             @endif

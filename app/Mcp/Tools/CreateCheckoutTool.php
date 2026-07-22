@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use RuntimeException;
 
 #[Name('create_checkout')]
-#[Description('Start Paddle Checkout for Pro ($9/mo, 100 credits, full quality). Returns checkout_url — open it for the human (Paddle collects email + payment). After they pay, continue with create_review. Prefer this when create_review returns [insufficient_credits].')]
+#[Description('Start Paddle Checkout for Plus ($9/mo, 100 credits, full quality). Returns checkout_url — open it for the human (Paddle collects email + payment). After they pay, continue with create_review. Prefer this when create_review returns [insufficient_credits].')]
 class CreateCheckoutTool extends Tool
 {
     use ResolvesWorkspace;
@@ -45,7 +45,7 @@ class CreateCheckoutTool extends Tool
         ];
 
         return Response::make(Response::text(
-            "Open this Paddle Checkout link for the human to upgrade to Pro:\n{$url}\n\n".
+            "Open this Paddle Checkout link for the human to upgrade to Plus:\n{$url}\n\n".
             "After they finish, call create_review again (or get_billing to confirm credits).\n\n".
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         ))->withStructuredContent($payload);

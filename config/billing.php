@@ -7,8 +7,9 @@ return [
     | Plans & monthly credit grants
     |--------------------------------------------------------------------------
     |
-    | Free and Pro get the same capture quality. Only the monthly credit
-    | allowance (and retention / token lifetime) differs.
+    | Free and Plus get the same capture quality. Only the monthly credit
+    | allowance (and retention / token lifetime) differs. Internal plan key
+    | stays `pro` for DB compatibility; display name is Plus.
     |
     */
 
@@ -20,7 +21,7 @@ return [
             'token_days' => (int) env('REVISEMY_FREE_TOKEN_DAYS', 30),
         ],
         'pro' => [
-            'name' => 'Pro',
+            'name' => 'Plus',
             'credits' => (int) env('REVISEMY_PRO_CREDITS', 100),
             'review_retention_days' => (int) env('REVISEMY_PRO_RETENTION_DAYS', 90),
             'token_days' => (int) env('REVISEMY_PRO_TOKEN_DAYS', 365),

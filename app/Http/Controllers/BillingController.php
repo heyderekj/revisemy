@@ -93,7 +93,7 @@ class BillingController extends Controller
 
         return redirect()
             ->route('billing.manage', ['workspace' => $model->public_id])
-            ->with('status', 'Pro cancellation scheduled. You’ll keep access until the period ends.');
+            ->with('status', 'Plus cancellation scheduled. You’ll keep access until the period ends.');
     }
 
     public function portalReturn(): View

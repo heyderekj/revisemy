@@ -196,7 +196,7 @@ class BillingCreditsTest extends TestCase
 
         $this->get($url)
             ->assertOk()
-            ->assertSee('Upgrade to Pro', false)
+            ->assertSee('The Plus Plan', false)
             ->assertSee('paddle-checkout', false)
             ->assertSee('displayMode', false)
             ->assertDontSee('Open checkout', false);
@@ -239,7 +239,7 @@ class BillingCreditsTest extends TestCase
 
         $this->get('/upgrade')
             ->assertOk()
-            ->assertSee('Upgrade to Pro', false)
+            ->assertSee('The Plus Plan', false)
             ->assertSee('paddle-checkout', false)
             ->assertSee('cdn.paddle.com/paddle/v2/paddle.js', false);
 

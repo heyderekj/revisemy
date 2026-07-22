@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('get_billing')]
-#[Description('Show this workspace plan, credits remaining this month, and the burn table (images/pdf=1, html=3, capture_url=5). When credits are low or zero, call create_checkout and open checkout_url (Paddle) for the human. Full capture quality on Free and Pro — only the monthly credit grant differs.')]
+#[Description('Show this workspace plan, credits remaining this month, and the burn table (images/pdf=1, html=3, capture_url=5). When credits are low or zero, call create_checkout and open checkout_url (Paddle) for the human. Full capture quality on Free and Plus — only the monthly credit grant differs.')]
 class GetBillingTool extends Tool
 {
     use ResolvesWorkspace;
@@ -39,9 +39,9 @@ class GetBillingTool extends Tool
         ];
 
         if ($status['credits_remaining'] <= 0) {
-            $lines[] = 'Credits exhausted — call create_checkout and open checkout_url for the human to upgrade to Pro ($'.$status['pro_price_usd'].'/mo, '.$status['pro_credits'].' credits).';
+            $lines[] = 'Credits exhausted — call create_checkout and open checkout_url for the human to upgrade to Plus ($'.$status['pro_price_usd'].'/mo, '.$status['pro_credits'].' credits).';
         } elseif ($status['checkout_available']) {
-            $lines[] = 'Upgrade anytime with create_checkout (Pro $'.$status['pro_price_usd'].'/mo → '.$status['pro_credits'].' credits, same full quality).';
+            $lines[] = 'Upgrade anytime with create_checkout (Plus $'.$status['pro_price_usd'].'/mo → '.$status['pro_credits'].' credits, same full quality).';
         }
 
         if ($status['portal_available'] && $status['plan'] === 'pro') {

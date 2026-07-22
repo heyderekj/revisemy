@@ -54,7 +54,7 @@ class BillingService
 
         if ($workspace->normalizedPlan() === Workspace::PLAN_PRO && $workspace->subscribed('default')) {
             throw new RuntimeException(
-                '[already_subscribed] This workspace is already on Pro. Call create_portal to manage billing.',
+                '[already_subscribed] This workspace is already on Plus. Call create_portal to manage billing.',
             );
         }
 
@@ -104,7 +104,7 @@ class BillingService
     }
 
     /**
-     * Signed URL to manage / cancel Pro.
+     * Signed URL to manage / cancel Plus.
      *
      * @throws RuntimeException
      */
@@ -199,7 +199,7 @@ class BillingService
             if ($workspace->normalizedPlan() !== Workspace::PLAN_PRO) {
                 $this->credits->activatePro($workspace, $workspace->billing_email);
                 $this->extendApiTokens($workspace);
-                Log::info('Workspace upgraded to Pro', ['workspace' => $workspace->public_id]);
+                Log::info('Workspace upgraded to Plus', ['workspace' => $workspace->public_id]);
             }
 
             return;

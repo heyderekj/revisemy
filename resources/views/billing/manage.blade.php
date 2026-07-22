@@ -1,6 +1,6 @@
 <x-layouts.app
     title="Manage billing — ReviseMy"
-    description="Manage your ReviseMy Pro subscription."
+    description="Manage your ReviseMy Plus subscription."
     robots="noindex, nofollow"
     schema="page"
 >
@@ -32,7 +32,7 @@
                 @if ($subscribed)
                     <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
                         Receipts and payment method updates come from Paddle (merchant of record).
-                        Cancel below to stop renewal — you keep Pro until the current period ends.
+                        Cancel below to stop renewal — you keep Plus until the current period ends.
                     </p>
                     <form
                         method="post"
@@ -44,7 +44,7 @@
                             type="submit"
                             class="inline-flex border border-zinc-300 bg-canvas px-4 py-2.5 text-sm font-medium text-zinc-800 transition hover:bg-surface-hover"
                         >
-                            Cancel Pro
+                            Cancel Plus
                         </button>
                     </form>
                 @else

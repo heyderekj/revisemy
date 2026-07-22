@@ -97,6 +97,9 @@
         @case('clipboard-document-list')
             <flux:icon.clipboard-document-list variant="micro" class="{{ $glyph }}" />
             @break
+        @case('calendar-days')
+            <flux:icon.calendar-days variant="micro" class="{{ $glyph }}" />
+            @break
         @case('command-line')
             <flux:icon.command-line variant="micro" class="{{ $glyph }}" />
             @break

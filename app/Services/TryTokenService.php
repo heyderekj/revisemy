@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class TryTokenService
 {
-    /** Free-plan API token lifetime (days). Pro extends on upgrade. */
+    /** Free-plan API token lifetime (days). Plus extends on upgrade. */
     public const TOKEN_DAYS = 30;
 
     /**

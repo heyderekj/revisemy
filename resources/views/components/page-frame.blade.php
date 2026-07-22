@@ -4,6 +4,8 @@
     'wide' => false,
     /** Extra-wide frame for split checkout (left summary / right payment). */
     'checkout' => false,
+    /** Site footer under the rails. Checkout/upgrade omit it. */
+    'footer' => true,
 ])
 
 <div {{ $attributes->class('rm-wash relative min-h-screen') }}>
@@ -19,7 +21,9 @@
 
             {{ $slot }}
 
-            <x-site-footer />
+            @if ($footer)
+                <x-site-footer />
+            @endif
         </div>
     </div>
 </div>
