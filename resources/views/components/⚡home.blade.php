@@ -1,7 +1,7 @@
 <?php
 
+use App\Services\TryTokenGate;
 use App\Services\TryTokenService;
-use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Component;
 
@@ -27,26 +27,29 @@ new class extends Component
 
     public ?string $error = null;
 
-    public function getTryToken(TryTokenService $tryTokens): void
+    public function getTryToken(TryTokenService $tryTokens, TryTokenGate $gate): void
     {
         $this->error = null;
 
-        $key = 'try-token-web:'.request()->ip();
-
         try {
-            if (RateLimiter::tooManyAttempts($key, 10)) {
-                $this->error = 'Slow down — try again in a minute.';
+            $gate->assertCanMint(request());
+            $result = $tryTokens->create();
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === TryTokenGate::MESSAGE) {
+                $this->error = $e->getMessage();
 
                 return;
             }
 
-            RateLimiter::hit($key, 60);
+            report($e);
 
-            $result = $tryTokens->create();
+            $this->error = 'Could not start a try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.';
+
+            return;
         } catch (\Throwable $e) {
             report($e);
 
-            $this->error = 'Could not start a free try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.';
+            $this->error = 'Could not start a try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.';
 
             return;
         }
@@ -1061,7 +1064,7 @@ new class extends Component
 
             {{-- Pricing --}}
             @php
-                $freeCredits = (int) config('billing.plans.free.credits', 30);
+                $freeCredits = (int) config('billing.plans.free.credits', 20);
                 $plusCredits = (int) config('billing.plans.pro.credits', 100);
                 $freeRetention = (int) config('billing.plans.free.review_retention_days', 7);
                 $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);

@@ -3,27 +3,27 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\TryTokenGate;
 use App\Services\TryTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
+use RuntimeException;
 
 class TryTokenController extends Controller
 {
-    public function store(Request $request, TryTokenService $tryTokens): JsonResponse
+    public function store(Request $request, TryTokenService $tryTokens, TryTokenGate $gate): JsonResponse
     {
         try {
-            $key = 'try-token:'.$request->ip();
-
-            if (RateLimiter::tooManyAttempts($key, 10)) {
+            $gate->assertCanMint($request);
+            $result = $tryTokens->create();
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() === TryTokenGate::MESSAGE) {
                 return response()->json([
-                    'message' => 'Slow down — try again in a minute.',
+                    'message' => $e->getMessage(),
                 ], 429);
             }
 
-            RateLimiter::hit($key, 60);
-
-            $result = $tryTokens->create();
+            throw $e;
         } catch (\Throwable $e) {
             report($e);
 

@@ -8,7 +8,7 @@
 ])
 
 @php
-    $freeCredits = (int) config('billing.plans.free.credits', 30);
+    $freeCredits = (int) config('billing.plans.free.credits', 20);
 @endphp
 
 <div {{ $attributes->class('rm-bleed relative mt-8 border-y border-zinc-200 sm:mt-10') }}>

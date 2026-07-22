@@ -16,7 +16,7 @@ return [
     'plans' => [
         'free' => [
             'name' => 'Try',
-            'credits' => (int) env('REVISEMY_FREE_CREDITS', 30),
+            'credits' => (int) env('REVISEMY_FREE_CREDITS', 20),
             'renews' => false,
             'review_retention_days' => (int) env('REVISEMY_FREE_RETENTION_DAYS', 7),
             'token_days' => (int) env('REVISEMY_FREE_TOKEN_DAYS', 14),
@@ -30,6 +30,20 @@ return [
             'price_usd' => 9,
             'paddle_price' => env('PADDLE_PRICE_PRO'),
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Try-token mint limits (shared API + homepage Livewire)
+    |--------------------------------------------------------------------------
+    |
+    | Caps new workspaces per client IP so Try packs cannot be farmed forever.
+    |
+    */
+
+    'try_token' => [
+        'per_hour' => (int) env('REVISEMY_TRY_TOKEN_PER_HOUR', 3),
+        'per_day' => (int) env('REVISEMY_TRY_TOKEN_PER_DAY', 3),
     ],
 
     /*

@@ -36,7 +36,7 @@ class BillingCreditsTest extends TestCase
         $workspace = $result['workspace']->fresh();
 
         $this->assertSame(Workspace::PLAN_FREE, $workspace->plan);
-        $this->assertSame(30, $workspace->credits_balance);
+        $this->assertSame(20, $workspace->credits_balance);
         $this->assertNotNull($workspace->credits_period_start);
     }
 
@@ -55,7 +55,7 @@ class BillingCreditsTest extends TestCase
             'images' => [$this->tinyPngDataUrl()],
         ])->assertHasNoErrors();
 
-        $this->assertSame(29, $workspace->fresh()->credits_balance);
+        $this->assertSame(19, $workspace->fresh()->credits_balance);
     }
 
     public function test_insufficient_credits_blocks_create_review(): void
@@ -105,8 +105,8 @@ class BillingCreditsTest extends TestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->where('plan', 'free')
                 ->where('plan_name', 'Try')
-                ->where('credits_remaining', 30)
-                ->where('credits_grant', 30)
+                ->where('credits_remaining', 20)
+                ->where('credits_grant', 20)
                 ->where('credits_renew', false)
                 ->where('credits_period_ends_at', null)
                 ->where('burn_table.capture_url', 5)
@@ -169,7 +169,7 @@ class BillingCreditsTest extends TestCase
             '--token-days' => 7,
         ])->assertSuccessful();
 
-        $this->assertSame(40, (int) $workspace->fresh()->credits_balance);
+        $this->assertSame(30, (int) $workspace->fresh()->credits_balance);
         $this->assertTrue($token->fresh()->expires_at->equalTo($originalExpiry->addDays(7)));
     }
 
@@ -184,7 +184,7 @@ class BillingCreditsTest extends TestCase
             '--pack' => true,
         ])->assertSuccessful();
 
-        $this->assertSame(32, (int) $workspace->fresh()->credits_balance);
+        $this->assertSame(22, (int) $workspace->fresh()->credits_balance);
     }
 
     public function test_create_checkout_errors_when_paddle_not_configured(): void
@@ -238,7 +238,7 @@ class BillingCreditsTest extends TestCase
 
         $this->assertFalse($status['paddle_configured']);
         $this->assertFalse($status['checkout_available']);
-        $this->assertSame(30, $status['credits_remaining']);
+        $this->assertSame(20, $status['credits_remaining']);
     }
 
     public function test_create_checkout_returns_signed_paddle_page_url_when_configured(): void
@@ -305,7 +305,7 @@ class BillingCreditsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('plan', 'free')
             ->assertJsonPath('plan_name', 'Try')
-            ->assertJsonPath('credits_grant', 30)
+            ->assertJsonPath('credits_grant', 20)
             ->assertJsonPath('credits_renew', false)
             ->assertJsonPath('credits_period_ends_at', null);
     }

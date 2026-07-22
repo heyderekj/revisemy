@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="REVISEMY_TRY_TOKEN_PER_HOUR" value="1000"/>
+        <env name="REVISEMY_TRY_TOKEN_PER_DAY" value="1000"/>
     </php>
 </phpunit>

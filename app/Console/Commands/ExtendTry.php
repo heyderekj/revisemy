@@ -29,7 +29,7 @@ class ExtendTry extends Command
         }
 
         $addCredits = $this->option('pack')
-            ? (int) config('billing.plans.free.credits', 30)
+            ? (int) config('billing.plans.free.credits', 20)
             : (int) ($this->option('credits') ?: 0);
 
         $tokenDays = $this->option('pack')
