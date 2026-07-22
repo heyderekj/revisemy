@@ -327,7 +327,7 @@ new class extends Component
                          middle rule so crosshairs sit on the hairline (not geometric 50%,
                          which drifts when the rows are different heights). --}}
                     <div class="grid grid-cols-1 gap-px bg-[var(--color-border)] min-[30rem]:grid-cols-2 lg:grid-cols-3 lg:grid-rows-[auto_1px_auto] lg:gap-y-0">
-                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-1">
+                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-1">
                             <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
                                 <flux:icon.photo variant="micro" class="size-[18px]" />
                             </div>
@@ -335,7 +335,7 @@ new class extends Component
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Ask your agent to open a review from screenshots, a page URL (desktop + mobile), PDF slides, or email HTML — each type gets its own checklist and vision lens.</p>
                         </article>
 
-                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-1">
+                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-1">
                             <x-mark-type-icon type="s" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Optional hints can land first — checklist immediately, optional Claude or OpenAI vision when a key is set. Useful suggestions, never decisions.</p>
@@ -345,7 +345,7 @@ new class extends Component
                             >Learn more</a>
                         </article>
 
-                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-1">
+                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-1">
                             <x-mark-type-icon type="m" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Precise marks</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Open the review link, point or outline the exact area, set must-fix / nice to have / question / keep, and keep a threaded comment on each mark.</p>
@@ -361,7 +361,7 @@ new class extends Component
                             <x-cross-mark left="100%" top="50%" />
                         </div>
 
-                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-3">
+                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-3">
                             <x-mark-type-icon type="g" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Guest links</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Share a private guest link when you want another set of eyes — no accounts. Your marks stay authoritative.</p>
@@ -371,7 +371,7 @@ new class extends Component
                             >Learn more</a>
                         </article>
 
-                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-3">
+                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-3">
                             <x-use-case-icon name="queue-list" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Board to done</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Track marks from open → resolved → verified on the board. Agents can attach before/after evidence when they fix something.</p>
@@ -381,7 +381,7 @@ new class extends Component
                             >Learn more</a>
                         </article>
 
-                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-3">
+                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-3">
                             <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
                                 <flux:icon.arrow-path variant="micro" class="size-[18px]" />
                             </div>

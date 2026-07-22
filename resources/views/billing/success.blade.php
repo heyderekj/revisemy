@@ -34,7 +34,7 @@
         <div class="relative border-t border-zinc-200 px-[var(--rm-pad)] py-12">
             <x-cross-mark left="0" top="0" />
             <x-cross-mark left="100%" top="0" />
-            <x-billing.credit-costs class="max-w-sm" />
+            <x-billing.credit-costs compare tone="confirm" :show-label="false" class="max-w-md" />
         </div>
     </x-page-frame>
 </x-layouts.app>

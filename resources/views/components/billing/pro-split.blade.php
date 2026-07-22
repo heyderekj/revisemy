@@ -9,8 +9,6 @@
 
 @php
     $freeCredits = (int) config('billing.plans.free.credits', 30);
-    $freeRetention = (int) config('billing.plans.free.review_retention_days', 7);
-    $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);
 @endphp
 
 <div {{ $attributes->class('rm-bleed relative mt-8 border-y border-zinc-200 sm:mt-10') }}>
@@ -36,13 +34,12 @@
                     <span class="text-zinc-400">(Free is {{ $freeCredits }})</span>.
                     Same full capture quality — you just get more room for reviews.
                 </p>
-                <p class="mt-3 text-[14px] leading-relaxed text-pretty text-zinc-500">
-                    Credits reset monthly (no rollover). Reviews stick around
-                    {{ $plusRetention }} days instead of {{ $freeRetention }}.
-                    Credit costs per review source are listed below.
-                </p>
 
-                <x-billing.credit-costs :show-label="false" class="mt-8" />
+                <x-billing.credit-costs compare class="mt-8" :show-label="false" />
+
+                <p class="mt-4 text-[14px] leading-relaxed text-pretty text-zinc-500">
+                    Credits reset monthly (no rollover).
+                </p>
 
                 <div class="mt-8 flex flex-wrap items-center gap-3">
                     <flux:button

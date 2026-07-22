@@ -1,6 +1,8 @@
 @props([
     'name',
     'size' => 'md',
+    /** Icon only — no zinc shell / ring. */
+    'bare' => false,
 ])
 
 @php
@@ -10,16 +12,20 @@
         default => 'size-9 rounded-lg',
     };
     $glyph = match ($size) {
-        'sm' => 'size-3.5',
+        'sm' => $bare ? 'size-4' : 'size-3.5',
         'lg' => 'size-5',
         default => 'size-[18px]',
     };
 @endphp
 
-<div {{ $attributes->class([
-    'inline-flex shrink-0 items-center justify-center bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200',
-    $shell,
-]) }}>
+@if ($bare)
+    <span {{ $attributes->class('inline-flex shrink-0 text-zinc-500') }}>
+@else
+    <div {{ $attributes->class([
+        'inline-flex shrink-0 items-center justify-center bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200',
+        $shell,
+    ]) }}>
+@endif
     @switch($name)
         @case('device-phone-mobile')
             <flux:icon.device-phone-mobile variant="micro" class="{{ $glyph }}" />
@@ -111,6 +117,9 @@
             @break
         @case('sparkles')
             <flux:icon.sparkles variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('ticket')
+            <flux:icon.ticket variant="micro" class="{{ $glyph }}" />
             @break
         @case('figma')
             {{-- Monochrome Figma mark (Simple Icons) --}}
@@ -210,4 +219,8 @@
         @default
             <flux:icon.photo variant="micro" class="{{ $glyph }}" />
     @endswitch
-</div>
+@if ($bare)
+    </span>
+@else
+    </div>
+@endif
