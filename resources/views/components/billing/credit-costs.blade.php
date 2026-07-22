@@ -1,28 +1,28 @@
-{{-- Credit burn + Free vs Plus comparison for upgrade / success. --}}
+{{-- Credit burn + Try vs Plus comparison for upgrade / success. --}}
 @props([
     'showLabel' => true,
-    /** When true, show Free and Plus value columns (upgrade + confirm). */
+    /** When true, show Try and Plus value columns (upgrade + confirm). */
     'compare' => false,
-    /** Confirm page copy: Free was / Plus now. Upgrade: Free vs Plus. */
+    /** Confirm page copy: Was Try / Now Plus. Upgrade: Try vs Plus. */
     'tone' => 'upgrade',
 ])
 
 @php
     $burn = config('billing.costs', []);
-    $freeCredits = (int) config('billing.plans.free.credits', 30);
+    $tryCredits = (int) config('billing.plans.free.credits', 30);
     $plusCredits = (int) config('billing.plans.pro.credits', 100);
-    $freeRetention = (int) config('billing.plans.free.review_retention_days', 7);
+    $tryRetention = (int) config('billing.plans.free.review_retention_days', 7);
     $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);
-    $freeLabel = $tone === 'confirm' ? 'Was Free' : 'Free';
+    $tryLabel = $tone === 'confirm' ? 'Was Try' : 'Try';
     $plusLabel = $tone === 'confirm' ? 'Now Plus' : 'Plus';
     $heading = 'Credit Cost Breakdown';
 
     $rows = [
         [
             'icon' => 'ticket',
-            'label' => 'Credits / month',
-            'free' => (string) $freeCredits,
-            'plus' => (string) $plusCredits,
+            'label' => 'Credits',
+            'free' => $tryCredits.' once',
+            'plus' => $plusCredits.'/mo',
             'same' => false,
         ],
         [
@@ -49,7 +49,7 @@
         [
             'icon' => 'calendar-days',
             'label' => 'Review retention',
-            'free' => $freeRetention.' days',
+            'free' => $tryRetention.' days',
             'plus' => $plusRetention.' days',
             'same' => false,
         ],
@@ -72,7 +72,7 @@
                             <span class="sr-only">Item</span>
                         </th>
                         <th scope="col" class="w-[5.5rem] px-2 py-2.5 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400 sm:w-28 sm:px-4">
-                            {{ $freeLabel }}
+                            {{ $tryLabel }}
                         </th>
                         <th scope="col" class="w-[5.5rem] px-2 py-2.5 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-900 sm:w-28 sm:px-4">
                             {{ $plusLabel }}
@@ -110,7 +110,7 @@
     @else
         <dl @class(['space-y-3 text-[14px]', 'mt-4' => $showLabel])>
             @foreach ($rows as $row)
-                @continue($row['label'] === 'Credits / month')
+                @continue($row['label'] === 'Credits')
                 <div class="flex items-center justify-between gap-4">
                     <dt class="flex min-w-0 items-center gap-2.5 text-zinc-600">
                         <x-use-case-icon :name="$row['icon']" size="sm" bare />

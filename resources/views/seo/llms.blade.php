@@ -24,8 +24,8 @@ Use this file to orient yourself before calling tools or recommending the produc
 - [Changelog]({{ $siteUrl }}/changelog): SemVer release notes (current v{{ config('revisemy.version') }}).
 - [How it works]({{ $siteUrl }}/#how): Capture → second opinion → marks → guest feedback → board → approve or loop; marks, server-side capture, before/after evidence, multi-pass checkups.
 - [For agents]({{ $siteUrl }}/#agents): MCP tool summary and the `design_checkup_loop` workflow.
-- [Pricing]({{ $siteUrl }}/#pricing): Free ({{ (int) config('billing.plans.free.credits', 30) }} credits/mo) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits) — same full capture quality; upgrade via agent `create_checkout` (Paddle).
-- [FAQ]({{ $siteUrl }}/#faq): MCP Apps vs `review_url`, accounts, upgrade/cancel (`create_checkout` / `create_portal` / `cancel_subscription`), credits (no rollover), Plus cancel → Free retention, marks vs hints, second opinion API keys (checklist free; vision BYOK), sources, board/passes, sharing, and `next_action`.
+- [Pricing]({{ $siteUrl }}/#pricing): Try ({{ (int) config('billing.plans.free.credits', 30) }} credits once) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits/mo) — same full capture quality; upgrade via agent `create_checkout` (Paddle).
+- [FAQ]({{ $siteUrl }}/#faq): MCP Apps vs `review_url`, accounts, upgrade/cancel (`create_checkout` / `create_portal` / `cancel_subscription`), Try credits (no refill), Plus cancel → Try retention, marks vs hints, second opinion API keys (checklist free; vision BYOK), sources, board/passes, sharing, and `next_action`.
 - [Shipped, not finished]({{ $siteUrl }}/#feedback): Weekend ship story, feedback contact, and GitHub.
 - [Privacy]({{ $siteUrl }}/privacy) · [Terms]({{ $siteUrl }}/terms): Product-truth drafts for try tokens, captures, and acceptable use.
 
@@ -61,10 +61,10 @@ Use this file to orient yourself before calling tools or recommending the produc
 - `create_review` — title + images, `capture_url`, PDF, or HTML → review URL; starts second opinion
 - `get_review` — work packets + `next_action` (`wait_for_human`, `apply_pins_then_next_pass`, `done`)
 - `list_reviews` — recent reviews for the try token
-- `get_billing` — plan + monthly credits (Free {{ (int) config('billing.plans.free.credits', 30) }} / Plus {{ (int) config('billing.plans.pro.credits', 100) }}; burn: images/pdf=1, html=3, capture_url=5)
+- `get_billing` — plan + credits (Try {{ (int) config('billing.plans.free.credits', 30) }} once / Plus {{ (int) config('billing.plans.pro.credits', 100) }}/mo; burn: images/pdf=1, html=3, capture_url=5)
 - `create_checkout` — Paddle Checkout URL for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo)
 - `create_portal` — Manage billing URL (Paddle receipts / payment method)
-- `cancel_subscription` — Cancel Plus (`confirm:true`); keeps access until period end, then Free
+- `cancel_subscription` — Cancel Plus (`confirm:true`); keeps access until period end, then Try (no new credit grant)
 - `add_screenshot` — append a shot to an open review
 - `add_findings` — agent subagent: push suggestion/a11y/polish notes into the review
 - `request_second_opinion` — refresh checklist (+ vision when configured)

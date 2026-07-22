@@ -104,11 +104,87 @@ class BillingCreditsTest extends TestCase
             ->assertHasNoErrors()
             ->assertStructuredContent(fn ($json) => $json
                 ->where('plan', 'free')
+                ->where('plan_name', 'Try')
                 ->where('credits_remaining', 30)
                 ->where('credits_grant', 30)
+                ->where('credits_renew', false)
+                ->where('credits_period_ends_at', null)
                 ->where('burn_table.capture_url', 5)
                 ->etc()
             );
+    }
+
+    public function test_try_does_not_refill_after_a_month(): void
+    {
+        $workspace = app(TryTokenService::class)->create()['workspace'];
+        $workspace->forceFill([
+            'credits_balance' => 5,
+            'credits_period_start' => now()->subMonths(2),
+        ])->save();
+
+        $fresh = app(CreditsService::class)->ensurePeriod($workspace->fresh());
+
+        $this->assertSame(5, (int) $fresh->credits_balance);
+        $this->assertTrue($fresh->credits_period_start->lte(now()->subMonth()));
+    }
+
+    public function test_plus_refills_after_a_month(): void
+    {
+        $workspace = app(TryTokenService::class)->create()['workspace'];
+        app(CreditsService::class)->activatePro($workspace, 'plus@example.com');
+        $workspace->refresh()->forceFill([
+            'credits_balance' => 3,
+            'credits_period_start' => now()->subMonths(2),
+        ])->save();
+
+        $fresh = app(CreditsService::class)->ensurePeriod($workspace->fresh());
+
+        $this->assertSame(100, (int) $fresh->credits_balance);
+        $this->assertTrue($fresh->credits_period_start->greaterThan(now()->subDay()));
+    }
+
+    public function test_activate_free_does_not_grant_new_try_pack(): void
+    {
+        $workspace = app(TryTokenService::class)->create()['workspace'];
+        app(CreditsService::class)->activatePro($workspace, 'plus@example.com');
+        $workspace->refresh()->forceFill(['credits_balance' => 12])->save();
+
+        $downgraded = app(CreditsService::class)->activateFree($workspace->fresh());
+
+        $this->assertSame(Workspace::PLAN_FREE, $downgraded->plan);
+        $this->assertSame(12, (int) $downgraded->credits_balance);
+        $this->assertFalse(app(CreditsService::class)->planRenews($downgraded));
+    }
+
+    public function test_extend_try_command_adds_credits_and_extends_tokens(): void
+    {
+        $result = app(TryTokenService::class)->create();
+        $workspace = $result['workspace'];
+        $token = $result['user']->tokens()->first();
+        $originalExpiry = $token->expires_at->copy();
+
+        $this->artisan('revisemy:extend-try', [
+            'workspace' => $workspace->public_id,
+            '--credits' => 10,
+            '--token-days' => 7,
+        ])->assertSuccessful();
+
+        $this->assertSame(40, (int) $workspace->fresh()->credits_balance);
+        $this->assertTrue($token->fresh()->expires_at->equalTo($originalExpiry->addDays(7)));
+    }
+
+    public function test_extend_try_pack_grants_full_try_credits(): void
+    {
+        $result = app(TryTokenService::class)->create();
+        $workspace = $result['workspace'];
+        $workspace->forceFill(['credits_balance' => 2])->save();
+
+        $this->artisan('revisemy:extend-try', [
+            'workspace' => $workspace->public_id,
+            '--pack' => true,
+        ])->assertSuccessful();
+
+        $this->assertSame(32, (int) $workspace->fresh()->credits_balance);
     }
 
     public function test_create_checkout_errors_when_paddle_not_configured(): void
@@ -228,7 +304,10 @@ class BillingCreditsTest extends TestCase
             ->getJson('/api/billing')
             ->assertOk()
             ->assertJsonPath('plan', 'free')
-            ->assertJsonPath('credits_grant', 30);
+            ->assertJsonPath('plan_name', 'Try')
+            ->assertJsonPath('credits_grant', 30)
+            ->assertJsonPath('credits_renew', false)
+            ->assertJsonPath('credits_period_ends_at', null);
     }
 
     public function test_upgrade_page_is_paddle_default_payment_link(): void

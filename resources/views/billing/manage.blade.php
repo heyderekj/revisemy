@@ -49,9 +49,9 @@
                     </form>
                 @else
                     <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                        You’re on Free. Ask your agent to call
+                        You’re on Try. Ask your agent to call
                         <code class="bg-zinc-100 px-1.5 py-0.5 text-sm text-zinc-800">create_checkout</code>
-                        to upgrade.
+                        for Plus when you’re ready to keep going.
                     </p>
                 @endif
 

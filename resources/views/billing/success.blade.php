@@ -30,7 +30,7 @@
                 </p>
                 @if ($manageUrl)
                     <p class="mt-4 text-[14px] leading-relaxed text-pretty text-zinc-500">
-                        Need to cancel or switch back to Free later?
+                        Need to cancel Plus later?
                         <a
                             href="{{ $manageUrl }}"
                             class="font-medium text-zinc-800 underline decoration-zinc-300 underline-offset-2 transition hover:text-zinc-950 hover:decoration-zinc-500"

@@ -207,7 +207,7 @@ class BillingService
 
         if ($workspace->normalizedPlan() === Workspace::PLAN_PRO) {
             $this->credits->activateFree($workspace);
-            Log::info('Workspace downgraded to Free', ['workspace' => $workspace->public_id]);
+            Log::info('Workspace downgraded to Try', ['workspace' => $workspace->public_id]);
         }
     }
 
@@ -235,11 +235,36 @@ class BillingService
         $this->syncSubscriptionState($workspace->fresh() ?? $workspace);
     }
 
+    /**
+     * Push all workspace API tokens to a new absolute expiry (Plus upgrade).
+     */
     protected function extendApiTokens(Workspace $workspace): void
     {
         $days = (int) config('billing.plans.pro.token_days', 365);
-        $expires = now()->addDays($days);
+        $this->setApiTokenExpiry($workspace, now()->addDays($days));
+    }
 
+    /**
+     * Extend each token from max(now, current expiry) by $days (support / try top-up).
+     */
+    public function extendApiTokensByDays(Workspace $workspace, int $days): void
+    {
+        if ($days <= 0) {
+            return;
+        }
+
+        $workspace->users()->each(function (User $user) use ($days): void {
+            $user->tokens()->each(function ($token) use ($days): void {
+                $base = $token->expires_at && $token->expires_at->isFuture()
+                    ? $token->expires_at
+                    : now();
+                $token->forceFill(['expires_at' => $base->copy()->addDays($days)])->save();
+            });
+        });
+    }
+
+    protected function setApiTokenExpiry(Workspace $workspace, $expires): void
+    {
         $workspace->users()->each(function (User $user) use ($expires): void {
             $user->tokens()->update(['expires_at' => $expires]);
         });

@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use RuntimeException;
 
 #[Name('cancel_subscription')]
-#[Description('Cancel Plus for this workspace (stops renewal; keeps Plus until the current period ends, then Free). Requires confirm:true after the human asks to cancel. For payment-method or receipt changes, use create_portal instead (Paddle).')]
+#[Description('Cancel Plus for this workspace (stops renewal; keeps Plus until the current period ends, then Try with leftover credits only — no new grant). Requires confirm:true after the human asks to cancel. For payment-method or receipt changes, use create_portal instead (Paddle).')]
 class CancelSubscriptionTool extends Tool
 {
     use ResolvesWorkspace;
@@ -31,7 +31,7 @@ class CancelSubscriptionTool extends Tool
 
         if (! $request->boolean('confirm')) {
             return Response::error(
-                '[confirm_required] Set confirm:true only after the human explicitly asks to cancel Plus. They keep access until the period ends, then drop to Free.'
+                '[confirm_required] Set confirm:true only after the human explicitly asks to cancel Plus. They keep access until the period ends, then Try with no new credit grant.'
             );
         }
 
@@ -48,12 +48,12 @@ class CancelSubscriptionTool extends Tool
             'plan_name' => $status['plan_name'],
             'credits_remaining' => $status['credits_remaining'],
             'next_action' => 'tell_human',
-            'hint' => 'Plus cancellation is scheduled. They keep Plus until the current period ends, then Free. Payment method changes still go through create_portal / Paddle.',
+            'hint' => 'Plus cancellation is scheduled. They keep Plus until the current period ends, then Try (no monthly refill). Payment method changes still go through create_portal / Paddle.',
         ];
 
         return Response::make(Response::text(
             "Plus cancellation scheduled for this workspace.\n".
-            "They keep Plus until the current billing period ends, then return to Free.\n\n".
+            "They keep Plus until the current billing period ends, then return to Try (no new credit grant).\n\n".
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         ))->withStructuredContent($payload);
     }

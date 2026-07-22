@@ -36,7 +36,10 @@ class CreditsService
         return array_map('intval', config('billing.costs', []));
     }
 
-    public function monthlyGrant(Workspace $workspace): int
+    /**
+     * Plan credit pack size (Try one-time grant or Plus monthly grant).
+     */
+    public function planGrant(Workspace $workspace): int
     {
         $plan = $workspace->normalizedPlan();
 
@@ -44,7 +47,22 @@ class CreditsService
     }
 
     /**
-     * Ensure the period is current and the workspace has a grant. Idempotent.
+     * @deprecated Use planGrant()
+     */
+    public function monthlyGrant(Workspace $workspace): int
+    {
+        return $this->planGrant($workspace);
+    }
+
+    public function planRenews(Workspace $workspace): bool
+    {
+        $plan = $workspace->normalizedPlan();
+
+        return (bool) config("billing.plans.{$plan}.renews", $plan === Workspace::PLAN_PRO);
+    }
+
+    /**
+     * Ensure the workspace has an initial grant; refill only if the plan renews.
      */
     public function ensurePeriod(Workspace $workspace): Workspace
     {
@@ -54,7 +72,7 @@ class CreditsService
             return $this->grantPeriod($workspace);
         }
 
-        if ($workspace->credits_period_start->lte(now()->subMonth())) {
+        if ($this->planRenews($workspace) && $workspace->credits_period_start->lte(now()->subMonth())) {
             return $this->grantPeriod($workspace);
         }
 
@@ -63,12 +81,30 @@ class CreditsService
 
     public function grantPeriod(Workspace $workspace): Workspace
     {
-        $grant = $this->monthlyGrant($workspace);
+        $grant = $this->planGrant($workspace);
 
         $workspace->forceFill([
             'credits_balance' => $grant,
             'credits_period_start' => now(),
         ])->save();
+
+        return $workspace->fresh() ?? $workspace;
+    }
+
+    /**
+     * Support top-up (does not enable monthly renewal).
+     */
+    public function addCredits(Workspace $workspace, int $amount): Workspace
+    {
+        if ($amount <= 0) {
+            return $workspace;
+        }
+
+        if ($workspace->credits_period_start === null) {
+            $workspace->forceFill(['credits_period_start' => now()])->save();
+        }
+
+        Workspace::query()->whereKey($workspace->id)->increment('credits_balance', $amount);
 
         return $workspace->fresh() ?? $workspace;
     }
@@ -92,8 +128,7 @@ class CreditsService
     }
 
     /**
-     * Debit credits after a successful affordability check. Returns false if
-     * the balance raced below the cost (should not happen under row lock).
+     * Debit credits after a successful affordability check.
      *
      * @throws InsufficientCreditsException
      */
@@ -143,13 +178,13 @@ class CreditsService
     }
 
     /**
-     * Downgrade to Free and start a new Free credit period.
+     * Downgrade to Try — no new credit grant (leftover balance kept; never refills).
      */
     public function activateFree(Workspace $workspace): Workspace
     {
         $workspace->forceFill(['plan' => Workspace::PLAN_FREE])->save();
 
-        return $this->grantPeriod($workspace->fresh() ?? $workspace);
+        return $workspace->fresh() ?? $workspace;
     }
 
     /**
@@ -159,17 +194,19 @@ class CreditsService
     {
         $workspace = $this->ensurePeriod($workspace);
         $plan = $workspace->normalizedPlan();
-        $grant = $this->monthlyGrant($workspace);
+        $grant = $this->planGrant($workspace);
+        $renews = $this->planRenews($workspace);
         $periodStart = $workspace->credits_period_start ?? now();
-        $periodEnds = $periodStart->copy()->addMonth();
+        $periodEnds = $renews ? $periodStart->copy()->addMonth() : null;
 
         return [
             'plan' => $plan,
             'plan_name' => config("billing.plans.{$plan}.name", $plan),
             'credits_remaining' => (int) $workspace->credits_balance,
             'credits_grant' => $grant,
+            'credits_renew' => $renews,
             'credits_period_start' => $periodStart->toIso8601String(),
-            'credits_period_ends_at' => $periodEnds->toIso8601String(),
+            'credits_period_ends_at' => $periodEnds?->toIso8601String(),
             'burn_table' => $this->burnTable(),
             'review_retention_days' => $workspace->reviewRetentionDays(),
             'pro_price_usd' => (int) config('billing.plans.pro.price_usd', 9),

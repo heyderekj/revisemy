@@ -9,8 +9,8 @@ use Illuminate\Support\Str;
 
 class TryTokenService
 {
-    /** Free-plan API token lifetime (days). Plus extends on upgrade. */
-    public const TOKEN_DAYS = 30;
+    /** Try-plan API token lifetime fallback (days). Plus extends on upgrade. */
+    public const TOKEN_DAYS = 14;
 
     /**
      * @return array{

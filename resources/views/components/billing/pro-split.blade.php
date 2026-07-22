@@ -31,14 +31,14 @@
                 <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
                     <span class="font-semibold text-zinc-900">${{ $priceUsd }}/mo</span>
                     for {{ $credits }} credits each month
-                    <span class="text-zinc-400">(Free is {{ $freeCredits }})</span>.
-                    Same full capture quality — you just get more room for reviews.
+                    <span class="text-zinc-400">(Try is {{ $freeCredits }} once)</span>.
+                    Same full capture quality — keep using ReviseMy after your try.
                 </p>
 
                 <x-billing.credit-costs compare class="mt-8" :show-label="false" />
 
                 <p class="mt-4 text-[14px] leading-relaxed text-pretty text-zinc-500">
-                    Credits reset monthly (no rollover).
+                    Plus credits reset monthly (no rollover). Try is a one-time pack.
                 </p>
 
                 <div class="mt-8 flex flex-wrap items-center gap-3">

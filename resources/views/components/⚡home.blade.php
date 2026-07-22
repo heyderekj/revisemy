@@ -1070,14 +1070,14 @@ new class extends Component
             <x-home-section id="pricing" flush-bottom>
                 <x-section-eyebrow number="04" label="Pricing" />
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
-                    Start free. Add credits in chat.
+                    Try it free. Keep it with Plus.
                 </h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                    Start with a free try token — no ReviseMy account. Same capture quality on both plans;
-                    Plus just gives you more credits and longer review retention. When you need more room,
-                    your agent opens Paddle Checkout via
+                    Start with a try token — no ReviseMy account. Same capture quality on Try and Plus;
+                    Try is a one-time credit pack so you can feel the loop. When you like it, your agent
+                    opens Paddle Checkout via
                     <code class="bg-zinc-100 px-1 py-0.5 text-[13px] text-zinc-800">create_checkout</code>
-                    — all, again, without leaving your chat.
+                    — still without leaving your chat.
                 </p>
 
                 <div class="rm-bleed relative mt-10 border-t border-zinc-200">
@@ -1087,12 +1087,12 @@ new class extends Component
 
                     <div class="grid grid-cols-1 gap-px bg-[var(--color-border)] min-[30rem]:grid-cols-2">
                         <article class="bg-[var(--color-canvas)] p-7 sm:p-8">
-                            <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Free</p>
+                            <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Try</p>
                             <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
                                 $0
                             </p>
                             <p class="mt-2 text-[15px] leading-relaxed text-pretty text-zinc-600">
-                                {{ $freeCredits }} credits each month.<br>
+                                {{ $freeCredits }} credits once — no monthly refill.<br>
                                 Reviews stick around {{ $freeRetention }}&nbsp;days.
                             </p>
                             <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
@@ -1127,7 +1127,7 @@ new class extends Component
                                 </p>
                                 <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
                                     <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Same full capture quality</li>
-                                    <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> More room for URL checkups</li>
+                                    <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Keep using after your try</li>
                                     <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Cancel anytime via your agent</li>
                                 </ul>
                                 <div class="mt-8">
@@ -1140,7 +1140,7 @@ new class extends Component
                                         Upgrade via your agent
                                     </flux:button>
                                     <p class="mt-3 max-w-xs text-[13px] leading-relaxed text-zinc-500">
-                                        After you try Free, ask your agent for
+                                        After you try it, ask your agent for
                                         <code class="bg-zinc-100 px-1 py-0.5 text-[12px] text-zinc-800">create_checkout</code>
                                         and open the Paddle link.
                                     </p>
@@ -1154,13 +1154,13 @@ new class extends Component
                     <div class="space-y-1">
                         <flux:heading size="lg">Credit costs</flux:heading>
                         <flux:text class="text-[14px] !text-zinc-500">
-                            Free vs Plus. Burn is the same on both plans.
+                            Try vs Plus. Burn is the same; only the pack size differs.
                         </flux:text>
                     </div>
                     <div class="mt-5">
                         <x-billing.credit-costs compare :show-label="false" />
                         <p class="mt-4 text-[14px] leading-relaxed text-zinc-500">
-                            Credits reset monthly (no rollover).
+                            Plus credits reset monthly (no rollover). Try is one-time.
                         </p>
                     </div>
                 </flux:modal>
@@ -1198,7 +1198,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                Nope. Grab a free try token in <a href="#setup" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Try with your agent</a> — no ReviseMy account. See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a> for Free vs Plus (same full quality; Plus is more credits via your agent’s <code class="font-mono text-[13px]">create_checkout</code>).
+                                Nope. Grab a try token in <a href="#setup" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Try with your agent</a> — no ReviseMy account. See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a> for Try vs Plus (same full quality; Try is one-time credits, Plus is monthly via your agent’s <code class="font-mono text-[13px]">create_checkout</code>).
                             </p>
                         </details>
 
@@ -1210,7 +1210,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                Ask your agent for <code class="font-mono text-[13px]">create_checkout</code> — it opens a Paddle link for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo). For card or receipts, use <code class="font-mono text-[13px]">create_portal</code>. To leave Plus, <code class="font-mono text-[13px]">cancel_subscription</code> with <code class="font-mono text-[13px]">confirm:true</code> — you keep Plus until the period ends, then drop back to Free. See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a>.
+                                Ask your agent for <code class="font-mono text-[13px]">create_checkout</code> — it opens a Paddle link for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo). For card or receipts, use <code class="font-mono text-[13px]">create_portal</code>. To leave Plus, <code class="font-mono text-[13px]">cancel_subscription</code> with <code class="font-mono text-[13px]">confirm:true</code> — you keep Plus until the period ends, then Try with leftover credits only (no new grant). See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a>.
                             </p>
                         </details>
 
@@ -1222,7 +1222,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                New checkups pause until your monthly reset — unused credits don’t roll over. Burn is the same on Free and Plus (images/PDF&nbsp;=&nbsp;1, HTML&nbsp;=&nbsp;3, live URL&nbsp;=&nbsp;5); Plus just gives you more room. Your agent can check the balance with <code class="font-mono text-[13px]">get_billing</code>, or open <code class="font-mono text-[13px]">create_checkout</code> when you want Plus.
+                                On Try, new checkups pause until you upgrade — there’s no monthly refill. On Plus, unused credits don’t roll over; you get a fresh grant next month. Burn is the same (images/PDF&nbsp;=&nbsp;1, HTML&nbsp;=&nbsp;3, live URL&nbsp;=&nbsp;5). Your agent can check with <code class="font-mono text-[13px]">get_billing</code>, or open <code class="font-mono text-[13px]">create_checkout</code> for Plus.
                             </p>
                         </details>
 
@@ -1234,7 +1234,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                You keep Plus access through the end of the billing period. After that you’re on Free — review retention drops from {{ (int) config('billing.plans.pro.review_retention_days', 90) }} days to {{ (int) config('billing.plans.free.review_retention_days', 7) }}. Older reviews may age out once they’re past Free’s window, so finish or export anything you still need before the period ends.
+                                You keep Plus access through the end of the billing period. After that you’re on Try — no new credit grant, and review retention drops from {{ (int) config('billing.plans.pro.review_retention_days', 90) }} days to {{ (int) config('billing.plans.free.review_retention_days', 7) }}. Older reviews may age out once they’re past Try’s window, so finish or export anything you still need before the period ends.
                             </p>
                         </details>
 

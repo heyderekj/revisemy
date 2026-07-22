@@ -21,7 +21,7 @@ class InsufficientCreditsException extends Exception
     public function defaultMessage(): string
     {
         return sprintf(
-            '[insufficient_credits] Need %d credit%s; %d remaining this period. Call get_billing, then create_checkout so the human can open Paddle Checkout for Plus ($9/mo, 100 credits).',
+            '[insufficient_credits] Need %d credit%s; %d remaining. Call get_billing, then create_checkout so the human can open Paddle Checkout for Plus ($9/mo, 100 credits/mo).',
             $this->required,
             $this->required === 1 ? '' : 's',
             $this->remaining,
