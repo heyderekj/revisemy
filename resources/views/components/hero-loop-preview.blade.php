@@ -50,7 +50,7 @@
                 <div class="rm-hero-loop-review rm-hero-loop-review-delay overflow-hidden bg-white ring-1 ring-zinc-200">
                     <div class="flex items-center justify-between gap-2 border-b border-zinc-200/80 bg-zinc-50/90 px-2.5 py-2">
                         <div class="flex min-w-0 items-center gap-2">
-                            <img src="/images/app-icon.png" alt="" width="20" height="20" class="size-5 shrink-0" decoding="async">
+                            <img src="{{ \App\Support\BrandAssets::appIconUrl() }}" alt="" width="20" height="20" class="size-5 shrink-0" decoding="async">
                             <span class="text-[13px] font-semibold tracking-tight text-zinc-900">Review</span>
                             <span class="bg-white px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-zinc-600 ring-1 ring-zinc-200">Pass 1</span>
                         </div>

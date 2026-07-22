@@ -6,6 +6,7 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Mcp\Resources\ReviewApp;
 use App\Services\ReviewService;
+use App\Support\BrandAssets;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
@@ -60,12 +61,14 @@ class CreateReviewTool extends Tool
 
         $payload = $review->toAgentPayload();
         $passLabel = $payload['pass'] > 1 ? " (pass {$payload['pass']})" : '';
+        $mark = BrandAssets::appIconUrl();
 
         return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
             "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
-            "Open this link:\n{$payload['review_url']}\n\n".
+            // Embed the yellow mark so hosts that cache domain favicons still show the current brand.
+            "Open this link:\n[![ReviseMy]({$mark})]({$payload['review_url']}) {$payload['review_url']}\n\n".
             "Then poll get_review with id `{$payload['id']}`.\n\n".
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         ))->withStructuredContent($payload);

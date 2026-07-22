@@ -26,7 +26,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('ReviseMy')]
-#[Version('1.7.0')]
+#[Version('1.7.1')]
 #[Icon(BrandAssets::APP_ICON, mimeType: 'image/png', sizes: ['256x256'])]
 #[Icon(BrandAssets::FAVICON_32, mimeType: 'image/png', sizes: ['32x32'])]
 #[Icon(BrandAssets::APPLE_TOUCH, mimeType: 'image/png', sizes: ['180x180'])]

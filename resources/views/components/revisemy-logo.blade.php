@@ -16,7 +16,7 @@
 @if ($variant === 'wordmark')
     <span {{ $attributes->class('inline-flex items-center gap-2.5') }}>
         <img
-            src="/images/app-icon.png"
+            src="{{ \App\Support\BrandAssets::appIconUrl() }}"
             alt=""
             width="{{ $px }}"
             height="{{ $px }}"
@@ -27,7 +27,7 @@
     </span>
 @else
     <img
-        src="/images/app-icon.png"
+        src="{{ \App\Support\BrandAssets::appIconUrl() }}"
         alt="ReviseMy"
         width="{{ $px }}"
         height="{{ $px }}"

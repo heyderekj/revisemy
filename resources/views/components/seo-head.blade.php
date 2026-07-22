@@ -77,7 +77,7 @@
                     'url' => $siteUrl.'/',
                     'logo' => [
                         '@type' => 'ImageObject',
-                        'url' => url('/images/app-icon.png'),
+                        'url' => \App\Support\BrandAssets::appIconUrl(),
                     ],
                     'sameAs' => config('seo.same_as', []),
                 ],

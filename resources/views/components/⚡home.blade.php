@@ -255,7 +255,7 @@ new class extends Component
                 <a href="/" class="inline-flex min-w-0 shrink items-center hover:opacity-90" aria-label="ReviseMy home">
                     <span class="inline-flex items-center">
                         <img
-                            src="/images/app-icon.png"
+                            src="{{ \App\Support\BrandAssets::appIconUrl() }}"
                             alt=""
                             width="40"
                             height="40"
