@@ -1172,7 +1172,7 @@ new class extends Component
                     <x-section-eyebrow number="05" label="FAQ" />
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">FAQ</h2>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                        Short answers on hosts, links, marks, passes, and sharing.
+                        Short answers on hosts, links, marks, passes, billing, and sharing.
                     </p>
 
                     <div class="mt-8 divide-y divide-zinc-200 border-t border-zinc-200">
@@ -1199,6 +1199,42 @@ new class extends Component
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
                                 Nope. Grab a free try token in <a href="#setup" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Try with your agent</a> — no ReviseMy account. See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a> for Free vs Plus (same full quality; Plus is more credits via your agent’s <code class="font-mono text-[13px]">create_checkout</code>).
+                            </p>
+                        </details>
+
+                        <details id="faq-upgrade-cancel" class="group scroll-mt-24 py-4">
+                            <summary class="cursor-pointer list-none text-[15px] font-medium text-zinc-900 marker:content-none [&::-webkit-details-marker]:hidden">
+                                <span class="flex items-start justify-between gap-4">
+                                    <span>How do I upgrade or cancel?</span>
+                                    <span class="mt-0.5 shrink-0 text-zinc-400 transition group-open:rotate-180" aria-hidden="true">▾</span>
+                                </span>
+                            </summary>
+                            <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
+                                Ask your agent for <code class="font-mono text-[13px]">create_checkout</code> — it opens a Paddle link for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo). For card or receipts, use <code class="font-mono text-[13px]">create_portal</code>. To leave Plus, <code class="font-mono text-[13px]">cancel_subscription</code> with <code class="font-mono text-[13px]">confirm:true</code> — you keep Plus until the period ends, then drop back to Free. See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a>.
+                            </p>
+                        </details>
+
+                        <details id="faq-credits" class="group scroll-mt-24 py-4">
+                            <summary class="cursor-pointer list-none text-[15px] font-medium text-zinc-900 marker:content-none [&::-webkit-details-marker]:hidden">
+                                <span class="flex items-start justify-between gap-4">
+                                    <span>What happens when I run out of credits?</span>
+                                    <span class="mt-0.5 shrink-0 text-zinc-400 transition group-open:rotate-180" aria-hidden="true">▾</span>
+                                </span>
+                            </summary>
+                            <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
+                                New checkups pause until your monthly reset — unused credits don’t roll over. Burn is the same on Free and Plus (images/PDF&nbsp;=&nbsp;1, HTML&nbsp;=&nbsp;3, live URL&nbsp;=&nbsp;5); Plus just gives you more room. Your agent can check the balance with <code class="font-mono text-[13px]">get_billing</code>, or open <code class="font-mono text-[13px]">create_checkout</code> when you want Plus.
+                            </p>
+                        </details>
+
+                        <details id="faq-cancel-reviews" class="group scroll-mt-24 py-4">
+                            <summary class="cursor-pointer list-none text-[15px] font-medium text-zinc-900 marker:content-none [&::-webkit-details-marker]:hidden">
+                                <span class="flex items-start justify-between gap-4">
+                                    <span>If I cancel Plus, what happens to my reviews?</span>
+                                    <span class="mt-0.5 shrink-0 text-zinc-400 transition group-open:rotate-180" aria-hidden="true">▾</span>
+                                </span>
+                            </summary>
+                            <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
+                                You keep Plus access through the end of the billing period. After that you’re on Free — review retention drops from {{ (int) config('billing.plans.pro.review_retention_days', 90) }} days to {{ (int) config('billing.plans.free.review_retention_days', 7) }}. Older reviews may age out once they’re past Free’s window, so finish or export anything you still need before the period ends.
                             </p>
                         </details>
 
