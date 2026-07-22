@@ -44,7 +44,7 @@
 
                 <x-slot:paymentFooter>
                     @unless ($hasTransaction)
-                        <p class="text-center text-[13px] leading-relaxed text-zinc-500" id="rm-upgrade-idle">
+                        <p class="text-balance text-center text-[13px] leading-relaxed text-zinc-500" id="rm-upgrade-idle">
                             No checkout loaded yet. Use the signed upgrade link from your agent to pay for a workspace.
                         </p>
                     @endunless

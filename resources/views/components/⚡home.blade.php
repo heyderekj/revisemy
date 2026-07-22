@@ -142,7 +142,7 @@ new class extends Component
         mobileNav: false,
         pastHero: false,
         atSetup: false,
-        get showMobileCta() { return this.pastHero && ! this.atSetup },
+        get showHeaderTry() { return this.pastHero && ! this.atSetup },
         openFaqFromHash() {
             const hash = window.location.hash;
             if (! hash.startsWith('#faq-')) return;
@@ -166,10 +166,21 @@ new class extends Component
                     { rootMargin: '0px 0px -20% 0px' }
                 ).observe(setup);
             }
+        },
+        initMobileNav() {
+            this.$watch('mobileNav', (open) => {
+                document.documentElement.classList.toggle('overflow-hidden', open);
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.mobileNav) {
+                    this.mobileNav = false;
+                }
+            });
         }
     }"
     x-init="
         initStickyCta();
+        initMobileNav();
         openFaqFromHash();
         window.addEventListener('hashchange', () => openFaqFromHash());
     "
@@ -235,32 +246,40 @@ new class extends Component
 
         {{-- Main --}}
         <main id="top" class="min-w-0 flex-1 lg:pt-10 [--rm-pad:1.25rem] sm:[--rm-pad:2rem] lg:[--rm-pad:3rem]">
-            {{-- Mobile top bar --}}
-            <div class="flex items-center justify-between px-[var(--rm-pad)] pt-6 lg:hidden">
-                <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+            {{-- Mobile top bar: logo | try + two-line menu (aligned) --}}
+            <div class="sticky top-0 z-40 flex items-center justify-between gap-3 bg-canvas/85 px-[var(--rm-pad)] py-3 backdrop-blur-md lg:hidden">
+                <a href="/" class="inline-flex min-w-0 shrink items-center hover:opacity-90" aria-label="ReviseMy home">
                     <x-revisemy-logo variant="wordmark" size="lg" />
                 </a>
-                <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
-            </div>
-            <div x-show="mobileNav" x-cloak class="space-y-2 px-[var(--rm-pad)] pt-6 text-sm text-zinc-600 lg:hidden">
-                <a href="#top" class="block" x-on:click="mobileNav = false">Home</a>
-                <a href="#how" class="block" x-on:click="mobileNav = false">How it works</a>
-                <a href="#agents" class="block" x-on:click="mobileNav = false">For agents</a>
-                <a href="#pricing" class="block" x-on:click="mobileNav = false">Pricing</a>
-                <a href="#faq" class="block" x-on:click="mobileNav = false">FAQ</a>
-                <a href="#setup" class="block" x-on:click="mobileNav = false">Try with your agent</a>
-                <a href="/connectors" class="inline-flex items-center gap-2" x-on:click="mobileNav = false">
-                    Connectors
-                    <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-contrast">MCP</span>
-                </a>
-                <a href="/guest-links" class="block" x-on:click="mobileNav = false">Guest links</a>
-                <a href="/alternatives" class="block" x-on:click="mobileNav = false">Alternatives</a>
-                <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub ↗</a>
+                <div class="flex shrink-0 items-center gap-2">
+                    <div x-show="showHeaderTry" x-cloak>
+                        <x-try-token-button fathom-event="Try token header" />
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex size-9 items-center justify-center rounded-md text-zinc-800 transition hover:bg-zinc-100 active:scale-[0.97]"
+                        x-on:click="mobileNav = ! mobileNav"
+                        x-bind:aria-expanded="mobileNav.toString()"
+                        x-bind:aria-label="mobileNav ? 'Close menu' : 'Open menu'"
+                        aria-controls="rm-mobile-nav"
+                    >
+                        <span class="relative flex h-[14px] w-[18px] flex-col justify-between" aria-hidden="true">
+                            <span
+                                class="block h-[1.5px] w-full origin-center rounded-full bg-current transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                                x-bind:class="mobileNav && 'translate-y-[6.25px] rotate-45'"
+                            ></span>
+                            <span
+                                class="block h-[1.5px] w-full origin-center rounded-full bg-current transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                                x-bind:class="mobileNav && '-translate-y-[6.25px] -rotate-45'"
+                            ></span>
+                        </span>
+                    </button>
+                </div>
             </div>
 
-            {{-- Sticky try CTA: top-10 matches aside pt-10 so it lines up with the app icon. --}}
+            {{-- Sticky try CTA (desktop only): top-10 matches aside pt-10. --}}
             <div class="relative">
-                <div class="pointer-events-none sticky top-10 z-30 hidden h-0 sm:block">
+                <div class="pointer-events-none sticky top-10 z-30 hidden h-0 lg:block">
                     <div class="flex justify-end px-[var(--rm-pad)]">
                         <div class="pointer-events-auto">
                             <x-try-token-button fathom-event="Try token sidebar" />
@@ -288,9 +307,9 @@ new class extends Component
                             </span>
                         </span>
                     </h1>
-                    {{-- Mobile: inline button as before. Desktop: invisible spacer keeps hero layout while the sticky one floats. --}}
-                    <x-try-token-button id="rm-hero-cta" fathom-event="Try token hero" class="self-start sm:hidden" />
-                    <div class="invisible hidden pointer-events-none self-start sm:block" aria-hidden="true">
+                    {{-- Mobile: hero CTA while in view. Header picks it up once this scrolls away. --}}
+                    <x-try-token-button id="rm-hero-cta" fathom-event="Try token hero" class="self-start lg:hidden" />
+                    <div class="invisible hidden pointer-events-none self-start lg:block" aria-hidden="true">
                         <x-try-token-button fathom-event="Try token setup" />
                     </div>
                 </div>
@@ -1358,18 +1377,94 @@ new class extends Component
         </div>
     </div>
 
-    {{-- Mobile sticky try CTA: appears after the hero button scrolls away, hides at the setup section --}}
-    <div
-        class="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden"
-        x-show="showMobileCta"
-        x-cloak
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="translate-y-3 opacity-0"
-        x-transition:enter-end="translate-y-0 opacity-100"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="translate-y-0 opacity-100"
-        x-transition:leave-end="translate-y-3 opacity-0"
-    >
-        <x-try-token-button fathom-event="Try token mobile" class="w-full justify-center" />
+    {{-- Mobile nav drawer --}}
+    <div class="lg:hidden" x-cloak>
+        <div
+            class="fixed inset-0 z-50 bg-zinc-900/25 backdrop-blur-[2px]"
+            x-show="mobileNav"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            x-on:click="mobileNav = false"
+            aria-hidden="true"
+        ></div>
+        <aside
+            id="rm-mobile-nav"
+            class="fixed inset-y-0 right-0 z-50 flex w-[min(100%,20rem)] flex-col border-l border-zinc-200 bg-zinc-50/95 shadow-xl backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site menu"
+            x-show="mobileNav"
+            x-transition:enter="transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            x-transition:enter-start="translate-x-full"
+            x-transition:enter-end="translate-x-0"
+            x-transition:leave="transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            x-transition:leave-start="translate-x-0"
+            x-transition:leave-end="translate-x-full"
+        >
+            <div class="flex items-center justify-between gap-3 border-b border-zinc-200 px-5 py-3">
+                <a href="/" class="inline-flex items-center hover:opacity-90" aria-label="ReviseMy home" x-on:click="mobileNav = false">
+                    <x-revisemy-logo variant="wordmark" size="lg" />
+                </a>
+                <button
+                    type="button"
+                    class="inline-flex size-9 items-center justify-center rounded-md text-zinc-800 transition hover:bg-zinc-100 active:scale-[0.97]"
+                    x-on:click="mobileNav = false"
+                    aria-label="Close menu"
+                >
+                    <span class="relative flex h-[14px] w-[18px]" aria-hidden="true">
+                        <span class="absolute left-0 top-[6.25px] block h-[1.5px] w-full rotate-45 rounded-full bg-current"></span>
+                        <span class="absolute left-0 top-[6.25px] block h-[1.5px] w-full -rotate-45 rounded-full bg-current"></span>
+                    </span>
+                </button>
+            </div>
+
+            <nav class="flex flex-1 flex-col gap-8 overflow-y-auto px-5 py-8 text-[14px]">
+                <div>
+                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Overview</p>
+                    <ul class="space-y-2.5 text-zinc-600">
+                        <li><a href="#top" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Home</a></li>
+                        <li><a href="#how" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">How it works</a></li>
+                        <li><a href="#agents" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">For agents</a></li>
+                        <li><a href="#pricing" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Pricing</a></li>
+                        <li><a href="#faq" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">FAQ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Tools</p>
+                    <ul class="space-y-2.5 text-zinc-600">
+                        <li><a href="#setup" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Try with your agent</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Resources</p>
+                    <ul class="space-y-2.5 text-zinc-600">
+                        <li>
+                            <a href="/connectors" class="inline-flex items-center gap-2 py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">
+                                Connectors
+                                <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-contrast">MCP</span>
+                            </a>
+                        </li>
+                        <li><a href="/guest-links" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Guest links</a></li>
+                        <li><a href="/alternatives" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Alternatives</a></li>
+                        <li>
+                            <a href="https://github.com/heyderekj/revisemy" class="block py-0.5 transition hover:text-zinc-900" target="_blank" rel="noreferrer" x-on:click="mobileNav = false">
+                                GitHub ↗
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div class="mt-auto space-y-4 border-t border-zinc-200 px-5 py-5">
+                <x-try-token-button fathom-event="Try token drawer" class="w-full justify-center sm:hidden" />
+                <p class="font-mono text-[11px] text-zinc-400">v{{ config('revisemy.version') }}</p>
+            </div>
+        </aside>
     </div>
+
+    {{-- Mobile sticky try CTA removed: sticky header shows Try once #rm-hero-cta leaves view. --}}
 </div>
