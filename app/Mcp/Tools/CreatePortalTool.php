@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use RuntimeException;
 
 #[Name('create_portal')]
-#[Description('Open the Stripe Billing Portal so the human can update payment method or cancel Pro. Returns portal_url.')]
+#[Description('Open the billing manage page so the human can cancel Pro (receipts/payment updates via Paddle). Returns portal_url.')]
 class CreatePortalTool extends Tool
 {
     use ResolvesWorkspace;
@@ -42,7 +42,7 @@ class CreatePortalTool extends Tool
         ];
 
         return Response::make(Response::text(
-            "Open the Stripe Billing Portal for the human:\n{$url}\n\n".
+            "Open this billing page for the human to manage or cancel Pro:\n{$url}\n\n".
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         ))->withStructuredContent($payload);
     }

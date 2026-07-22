@@ -1070,7 +1070,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                Nope. Grab a free try token in <a href="#setup" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Try with your agent</a> ({{ (int) config('billing.plans.free.credits', 30) }} credits/mo, full capture quality). Paste the MCP config and go — no ReviseMy account. Need more? Your agent can open Stripe Checkout for Pro (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo).
+                                Nope. Grab a free try token in <a href="#setup" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Try with your agent</a> ({{ (int) config('billing.plans.free.credits', 30) }} credits/mo, full capture quality). Paste the MCP config and go — no ReviseMy account. Need more? Your agent can open Paddle Checkout for Pro (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo).
                             </p>
                         </details>
 

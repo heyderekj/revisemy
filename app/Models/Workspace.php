@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
-use Laravel\Cashier\Billable;
+use Laravel\Paddle\Billable;
 
 class Workspace extends Model
 {
@@ -29,7 +29,6 @@ class Workspace extends Model
         return [
             'credits_balance' => 'integer',
             'credits_period_start' => 'datetime',
-            'trial_ends_at' => 'datetime',
         ];
     }
 
@@ -66,26 +65,13 @@ class Workspace extends Model
         );
     }
 
-    /**
-     * Cashier looks for email on the billable model — we store it after Checkout.
-     */
-    public function stripeEmail(): ?string
-    {
-        return $this->billing_email;
-    }
-
-    public function stripeName(): ?string
+    public function paddleName(): ?string
     {
         return $this->name ?: 'ReviseMy workspace';
     }
 
-    /**
-     * @return array<string, string>
-     */
-    public function stripeMetadata(): array
+    public function paddleEmail(): ?string
     {
-        return [
-            'workspace_public_id' => (string) $this->public_id,
-        ];
+        return $this->billing_email;
     }
 }

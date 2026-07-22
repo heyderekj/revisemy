@@ -25,7 +25,7 @@ return [
             'review_retention_days' => (int) env('REVISEMY_PRO_RETENTION_DAYS', 90),
             'token_days' => (int) env('REVISEMY_PRO_TOKEN_DAYS', 365),
             'price_usd' => 9,
-            'stripe_price' => env('STRIPE_PRICE_PRO'),
+            'paddle_price' => env('PADDLE_PRICE_PRO'),
         ],
     ],
 

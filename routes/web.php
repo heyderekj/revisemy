@@ -38,6 +38,15 @@ Route::get('/terms', [LegalController::class, 'terms']);
 Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
 Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
 Route::get('/billing/portal-return', [BillingController::class, 'portalReturn'])->name('billing.portal-return');
+Route::get('/billing/checkout/{workspace}', [BillingController::class, 'checkout'])
+    ->middleware('signed')
+    ->name('billing.checkout');
+Route::get('/billing/manage/{workspace}', [BillingController::class, 'manage'])
+    ->middleware('signed')
+    ->name('billing.manage');
+Route::post('/billing/manage/{workspace}/cancel', [BillingController::class, 'cancelSubscription'])
+    ->middleware('signed')
+    ->name('billing.cancel-subscription');
 
 Route::get('/alternatives', [AlternativeController::class, 'index']);
 Route::get('/alternatives/{slug}', [AlternativeController::class, 'show'])

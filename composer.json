@@ -13,7 +13,7 @@
     "license": "proprietary",
     "require": {
         "php": "^8.3",
-        "laravel/cashier": "^16.6",
+        "laravel/cashier-paddle": "*",
         "laravel/framework": "^13.8",
         "laravel/mcp": "^0.8.2",
         "laravel/reverb": "^1.10",

@@ -1,56 +1,53 @@
 <?php
 
-use Laravel\Cashier\Console\WebhookCommand;
-use Laravel\Cashier\Invoices\DompdfInvoiceRenderer;
-
-// use Laravel\Cashier\Invoices\LaravelPdfInvoiceRenderer;
-
 return [
 
     /*
     |--------------------------------------------------------------------------
-    | Stripe Keys
+    | Paddle Keys
     |--------------------------------------------------------------------------
     |
-    | The Stripe publishable key and secret key give you access to Stripe's
-    | API. The "publishable" key is typically used when interacting with
-    | Stripe.js while the "secret" key accesses private API endpoints.
+    | The Paddle seller ID and API key will allow your application to call
+    | the Paddle API. The seller key is typically used when interacting
+    | with Paddle.js, while the "API" key accesses private endpoints.
     |
     */
 
-    'key' => env('STRIPE_KEY'),
+    'seller_id' => env('PADDLE_SELLER_ID'),
 
-    'secret' => env('STRIPE_SECRET'),
+    'client_side_token' => env('PADDLE_CLIENT_SIDE_TOKEN'),
+
+    'api_key' => env('PADDLE_AUTH_CODE') ?? env('PADDLE_API_KEY'),
+
+    'retain_key' => env('PADDLE_RETAIN_KEY'),
+
+    'webhook_secret' => env('PADDLE_WEBHOOK_SECRET'),
 
     /*
     |--------------------------------------------------------------------------
     | Cashier Path
     |--------------------------------------------------------------------------
     |
-    | This is the base URI path where Cashier's views, such as the payment
-    | verification screen, will be available from. You're free to tweak
-    | this path according to your preferences and application design.
+    | This is the base URI path where Cashier's views, such as the webhook
+    | route, will be available. You're free to tweak this path based on
+    | the needs of your particular application or design preferences.
     |
     */
 
-    'path' => env('CASHIER_PATH', 'stripe'),
+    'path' => env('CASHIER_PATH', 'paddle'),
 
     /*
     |--------------------------------------------------------------------------
-    | Stripe Webhooks
+    | Cashier Webhook
     |--------------------------------------------------------------------------
     |
-    | Your Stripe webhook secret is used to prevent unauthorized requests to
-    | your Stripe webhook handling controllers. The tolerance setting will
-    | check the drift between the current time and the signed request's.
+    | This is the base URI where webhooks from Paddle will be sent. The URL
+    | built into Cashier Paddle is used by default; however, you can add
+    | a custom URL when required for any application testing purposes.
     |
     */
 
-    'webhook' => [
-        'secret' => env('STRIPE_WEBHOOK_SECRET'),
-        'tolerance' => env('STRIPE_WEBHOOK_TOLERANCE', 300),
-        'events' => WebhookCommand::DEFAULT_EVENTS,
-    ],
+    'webhook' => env('CASHIER_WEBHOOK'),
 
     /*
     |--------------------------------------------------------------------------
@@ -59,11 +56,11 @@ return [
     |
     | This is the default currency that will be used when generating charges
     | from your application. Of course, you are welcome to use any of the
-    | various world currencies that are currently supported via Stripe.
+    | various world currencies that are currently supported via Paddle.
     |
     */
 
-    'currency' => env('CASHIER_CURRENCY', 'usd'),
+    'currency' => env('CASHIER_CURRENCY', 'USD'),
 
     /*
     |--------------------------------------------------------------------------
@@ -80,51 +77,14 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Payment Confirmation Notification
+    | Paddle Sandbox
     |--------------------------------------------------------------------------
     |
-    | If this setting is enabled, Cashier will automatically notify customers
-    | whose payments require additional verification. You should listen to
-    | Stripe's webhooks in order for this feature to function correctly.
+    | This option allows you to toggle between the Paddle live environment
+    | and its sandboxed environment.
     |
     */
 
-    'payment_notification' => env('CASHIER_PAYMENT_NOTIFICATION'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Invoice Settings
-    |--------------------------------------------------------------------------
-    |
-    | The following options determine how Cashier invoices are converted from
-    | HTML into PDFs. You're free to change the options based on the needs
-    | of your application or your preferences regarding invoice styling.
-    |
-    */
-
-    'invoices' => [
-        // Supported: DompdfInvoiceRenderer::class, LaravelPdfInvoiceRenderer::class
-        'renderer' => env('CASHIER_INVOICE_RENDERER', DompdfInvoiceRenderer::class),
-
-        'options' => [
-            // Supported: 'letter', 'legal', 'A4'
-            'paper' => env('CASHIER_PAPER', 'letter'),
-
-            'remote_enabled' => env('CASHIER_REMOTE_ENABLED', false),
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Stripe Logger
-    |--------------------------------------------------------------------------
-    |
-    | This setting defines which logging channel will be used by the Stripe
-    | library to write log messages. You are free to specify any of your
-    | logging channels listed inside the "logging" configuration file.
-    |
-    */
-
-    'logger' => env('CASHIER_LOGGER'),
+    'sandbox' => env('PADDLE_SANDBOX', false),
 
 ];

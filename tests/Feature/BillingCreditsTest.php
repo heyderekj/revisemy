@@ -110,11 +110,12 @@ class BillingCreditsTest extends TestCase
             );
     }
 
-    public function test_create_checkout_errors_when_stripe_not_configured(): void
+    public function test_create_checkout_errors_when_paddle_not_configured(): void
     {
         config([
-            'cashier.secret' => null,
-            'billing.plans.pro.stripe_price' => null,
+            'cashier.api_key' => null,
+            'cashier.client_side_token' => null,
+            'billing.plans.pro.paddle_price' => null,
         ]);
 
         $result = app(TryTokenService::class)->create();
@@ -147,19 +148,39 @@ class BillingCreditsTest extends TestCase
         app(CreditsService::class)->assertAffordable($workspace->fresh(), 5);
     }
 
-    public function test_billing_status_marks_checkout_unavailable_without_stripe(): void
+    public function test_billing_status_marks_checkout_unavailable_without_paddle(): void
     {
         config([
-            'cashier.secret' => null,
-            'billing.plans.pro.stripe_price' => null,
+            'cashier.api_key' => null,
+            'cashier.client_side_token' => null,
+            'billing.plans.pro.paddle_price' => null,
         ]);
 
         $workspace = app(TryTokenService::class)->create()['workspace'];
         $status = app(BillingService::class)->status($workspace);
 
-        $this->assertFalse($status['stripe_configured']);
+        $this->assertFalse($status['paddle_configured']);
         $this->assertFalse($status['checkout_available']);
         $this->assertSame(30, $status['credits_remaining']);
+    }
+
+    public function test_create_checkout_returns_signed_paddle_page_url_when_configured(): void
+    {
+        config([
+            'cashier.api_key' => 'pdl_test',
+            'cashier.client_side_token' => 'test_token',
+            'billing.plans.pro.paddle_price' => 'pri_test',
+        ]);
+
+        $result = app(TryTokenService::class)->create();
+
+        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, [])
+            ->assertHasNoErrors()
+            ->assertStructuredContent(fn ($json) => $json
+                ->whereType('checkout_url', 'string')
+                ->where('plan', 'pro')
+                ->etc()
+            );
     }
 
     public function test_api_billing_endpoint(): void

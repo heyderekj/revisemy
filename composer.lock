@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "08a19442def747139286b080b75763e7",
+    "content-hash": "a8719d7c6e5dca4e814893b40834b31e",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1386,66 +1386,57 @@
             "time": "2026-07-08T16:19:22+00:00"
         },
         {
-            "name": "laravel/cashier",
-            "version": "v16.6.0",
+            "name": "laravel/cashier-paddle",
+            "version": "v2.8.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/laravel/cashier-stripe.git",
-                "reference": "2212c7e3227fa30596bb0ab3a3e0a908ebed80b5"
+                "url": "https://github.com/laravel/cashier-paddle.git",
+                "reference": "5bc8b16a94cc3359e874a6025b762e1345cf46cf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/cashier-stripe/zipball/2212c7e3227fa30596bb0ab3a3e0a908ebed80b5",
-                "reference": "2212c7e3227fa30596bb0ab3a3e0a908ebed80b5",
+                "url": "https://api.github.com/repos/laravel/cashier-paddle/zipball/5bc8b16a94cc3359e874a6025b762e1345cf46cf",
+                "reference": "5bc8b16a94cc3359e874a6025b762e1345cf46cf",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+                "ext-openssl": "*",
+                "guzzlehttp/guzzle": "^7.4.5",
                 "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
                 "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
                 "illuminate/http": "^10.0|^11.0|^12.0|^13.0",
-                "illuminate/log": "^10.0|^11.0|^12.0|^13.0",
-                "illuminate/notifications": "^10.0|^11.0|^12.0|^13.0",
-                "illuminate/pagination": "^10.0|^11.0|^12.0|^13.0",
                 "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
                 "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
                 "illuminate/view": "^10.0|^11.0|^12.0|^13.0",
-                "moneyphp/money": "^4.0",
-                "nesbot/carbon": "^2.0|^3.0",
+                "moneyphp/money": "^3.2|^4.0",
+                "nesbot/carbon": "^2.67|^3.0",
                 "php": "^8.1",
-                "stripe/stripe-php": "^17.3.0",
-                "symfony/console": "^6.0|^7.0|^8.0",
-                "symfony/http-kernel": "^6.0|^7.0|^8.0",
-                "symfony/polyfill-intl-icu": "^1.22.1",
-                "symfony/polyfill-php84": "^1.32"
+                "spatie/url": "^1.3.5|^2.0",
+                "symfony/http-kernel": "^6.2|^7.0|^8.0",
+                "symfony/polyfill-intl-icu": "^1.22.1"
             },
             "require-dev": {
-                "dompdf/dompdf": "^2.0|^3.0",
                 "orchestra/testbench": "^8.36|^9.15|^10.8|^11.0",
-                "phpstan/phpstan": "^1.10",
-                "spatie/laravel-ray": "^1.40"
+                "phpstan/phpstan": "^1.10"
             },
             "suggest": {
-                "dompdf/dompdf": "Required when generating and downloading invoice PDF's using Dompdf (^2.0|^3.0).",
-                "ext-intl": "Allows for more locales besides the default \"en\" when formatting money values.",
-                "spatie/laravel-pdf": "Required when generating and downloading invoice PDF's using Cashier's LaravelPdfInvoiceRenderer."
+                "ext-intl": "Allows for more locales besides the default \"en\" when formatting money values."
             },
             "type": "library",
             "extra": {
                 "laravel": {
                     "providers": [
-                        "Laravel\\Cashier\\CashierServiceProvider"
+                        "Laravel\\Paddle\\CashierServiceProvider"
                     ]
                 },
                 "branch-alias": {
-                    "dev-master": "16.x-dev"
+                    "dev-master": "2.x-dev"
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "Laravel\\Cashier\\": "src/",
-                    "Laravel\\Cashier\\Database\\Factories\\": "database/factories/"
+                    "Laravel\\Paddle\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1462,17 +1453,17 @@
                     "email": "dries@laravel.com"
                 }
             ],
-            "description": "Laravel Cashier provides an expressive, fluent interface to Stripe's subscription billing services.",
+            "description": "Cashier Paddle provides an expressive, fluent interface to Paddle's subscription billing services.",
             "keywords": [
                 "billing",
                 "laravel",
-                "stripe"
+                "paddle"
             ],
             "support": {
-                "issues": "https://github.com/laravel/cashier/issues",
-                "source": "https://github.com/laravel/cashier"
+                "issues": "https://github.com/laravel/cashier-paddle/issues",
+                "source": "https://github.com/laravel/cashier-paddle"
             },
-            "time": "2026-06-23T19:53:52+00:00"
+            "time": "2026-04-01T15:55:32+00:00"
         },
         {
             "name": "laravel/framework",
@@ -5007,6 +4998,57 @@
             "time": "2026-05-26T13:13:33+00:00"
         },
         {
+            "name": "spatie/macroable",
+            "version": "2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/macroable.git",
+                "reference": "2967f69810ba4df158391665c0850010b9d1507c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/macroable/zipball/2967f69810ba4df158391665c0850010b9d1507c",
+                "reference": "2967f69810ba4df158391665c0850010b9d1507c",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "pestphp/pest": "^4",
+                "phpunit/phpunit": "^12"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\Macroable\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Freek Van der Herten",
+                    "email": "freek@spatie.be",
+                    "homepage": "https://spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A trait to dynamically add methods to a class",
+            "homepage": "https://github.com/spatie/macroable",
+            "keywords": [
+                "macroable",
+                "spatie"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/macroable/issues",
+                "source": "https://github.com/spatie/macroable/tree/2.1.0"
+            },
+            "time": "2026-01-30T17:13:34+00:00"
+        },
+        {
             "name": "spatie/temporary-directory",
             "version": "2.4.0",
             "source": {
@@ -5068,39 +5110,31 @@
             "time": "2026-06-22T07:55:44+00:00"
         },
         {
-            "name": "stripe/stripe-php",
-            "version": "v17.6.0",
+            "name": "spatie/url",
+            "version": "2.4.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/stripe/stripe-php.git",
-                "reference": "a6219df5df1324a0d3f1da25fb5e4b8a3307ea16"
+                "url": "https://github.com/spatie/url.git",
+                "reference": "93a51db743cdec22b081c64593e193887c9cd395"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/a6219df5df1324a0d3f1da25fb5e4b8a3307ea16",
-                "reference": "a6219df5df1324a0d3f1da25fb5e4b8a3307ea16",
+                "url": "https://api.github.com/repos/spatie/url/zipball/93a51db743cdec22b081c64593e193887c9cd395",
+                "reference": "93a51db743cdec22b081c64593e193887c9cd395",
                 "shasum": ""
             },
             "require": {
-                "ext-curl": "*",
-                "ext-json": "*",
-                "ext-mbstring": "*",
-                "php": ">=5.6.0"
+                "php": "^8.0",
+                "psr/http-message": "^1.0 || ^2.0",
+                "spatie/macroable": "^1.0 || ^2.0"
             },
             "require-dev": {
-                "friendsofphp/php-cs-fixer": "3.72.0",
-                "phpstan/phpstan": "^1.2",
-                "phpunit/phpunit": "^5.7 || ^9.0"
+                "pestphp/pest": "^1.21"
             },
             "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "2.0-dev"
-                }
-            },
             "autoload": {
                 "psr-4": {
-                    "Stripe\\": "lib/"
+                    "Spatie\\Url\\": "src"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -5109,22 +5143,33 @@
             ],
             "authors": [
                 {
-                    "name": "Stripe and contributors",
-                    "homepage": "https://github.com/stripe/stripe-php/contributors"
+                    "name": "Sebastian De Deyne",
+                    "email": "sebastian@spatie.be",
+                    "homepage": "https://spatie.be",
+                    "role": "Developer"
                 }
             ],
-            "description": "Stripe PHP Library",
-            "homepage": "https://stripe.com/",
+            "description": "Parse, build and manipulate URL's",
+            "homepage": "https://github.com/spatie/url",
             "keywords": [
-                "api",
-                "payment processing",
-                "stripe"
+                "spatie",
+                "url"
             ],
             "support": {
-                "issues": "https://github.com/stripe/stripe-php/issues",
-                "source": "https://github.com/stripe/stripe-php/tree/v17.6.0"
+                "issues": "https://github.com/spatie/url/issues",
+                "source": "https://github.com/spatie/url/tree/2.4.0"
             },
-            "time": "2025-08-27T19:32:42+00:00"
+            "funding": [
+                {
+                    "url": "https://spatie.be/open-source/support-us",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2024-03-08T11:35:19+00:00"
         },
         {
             "name": "symfony/clock",

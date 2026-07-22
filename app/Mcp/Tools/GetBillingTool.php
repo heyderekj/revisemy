@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('get_billing')]
-#[Description('Show this workspace plan, credits remaining this month, and the burn table (images/pdf=1, html=3, capture_url=5). When credits are low or zero, call create_checkout and open checkout_url for the human. Full capture quality on Free and Pro — only the monthly credit grant differs.')]
+#[Description('Show this workspace plan, credits remaining this month, and the burn table (images/pdf=1, html=3, capture_url=5). When credits are low or zero, call create_checkout and open checkout_url (Paddle) for the human. Full capture quality on Free and Pro — only the monthly credit grant differs.')]
 class GetBillingTool extends Tool
 {
     use ResolvesWorkspace;
