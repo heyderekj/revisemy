@@ -24,45 +24,56 @@
     <x-cross-mark left="50%" top="100%" visibility="hidden lg:block" />
 
     <div class="grid grid-cols-1 lg:grid-cols-2 lg:gap-px lg:bg-[var(--color-border)]">
-        <article class="rm-pad bg-[var(--color-canvas)] py-8 sm:py-10 lg:sticky lg:top-8 lg:self-start lg:py-12">
-            <x-section-eyebrow label="Upgrade" />
-            <h1 class="text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-[1.08] tracking-tight text-zinc-900">
-                The {{ config('billing.plans.pro.name', 'Plus') }} Plan
-            </h1>
-            <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                <span class="font-semibold text-zinc-900">${{ $priceUsd }}/mo</span>
-                for {{ $credits }} credits each month
-                <span class="text-zinc-400">(Free is {{ $freeCredits }})</span>.
-                Same full capture quality — you just get more room for reviews.
-            </p>
-            <p class="mt-3 text-[14px] leading-relaxed text-pretty text-zinc-500">
-                Credits reset monthly (no rollover). Reviews stick around
-                {{ $plusRetention }} days instead of {{ $freeRetention }}.
-                Credit costs per review source are listed below.
-            </p>
+        <article class="relative overflow-hidden bg-[var(--color-canvas)] py-8 sm:py-10 lg:sticky lg:top-8 lg:self-start lg:py-12">
+            <div class="rm-plus-grid" aria-hidden="true"></div>
+            <div class="rm-pad relative z-10">
+                <x-section-eyebrow label="Upgrade" />
+                <h1 class="text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-[1.08] tracking-tight text-zinc-900">
+                    The {{ config('billing.plans.pro.name', 'Plus') }} Plan
+                </h1>
+                <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
+                    <span class="font-semibold text-zinc-900">${{ $priceUsd }}/mo</span>
+                    for {{ $credits }} credits each month
+                    <span class="text-zinc-400">(Free is {{ $freeCredits }})</span>.
+                    Same full capture quality — you just get more room for reviews.
+                </p>
+                <p class="mt-3 text-[14px] leading-relaxed text-pretty text-zinc-500">
+                    Credits reset monthly (no rollover). Reviews stick around
+                    {{ $plusRetention }} days instead of {{ $freeRetention }}.
+                    Credit costs per review source are listed below.
+                </p>
 
-            <dl class="mt-8 space-y-3 text-[14px]">
-                @foreach ([
-                    ['icon' => 'photo', 'label' => 'Images / PDF', 'value' => ((int) ($burn['images'] ?? 1)).' credit'],
-                    ['icon' => 'envelope', 'label' => 'Email HTML', 'value' => ((int) ($burn['html'] ?? 3)).' credits'],
-                    ['icon' => 'globe-alt', 'label' => 'URL capture', 'value' => ((int) ($burn['capture_url'] ?? 5)).' credits'],
-                    ['icon' => 'calendar-days', 'label' => 'Review retention', 'value' => $plusRetention.' days'],
-                ] as $row)
-                    <div class="flex items-center justify-between gap-4">
-                        <dt class="flex min-w-0 items-center gap-2.5 text-zinc-600">
-                            <x-use-case-icon :name="$row['icon']" size="sm" />
-                            <span>{{ $row['label'] }}</span>
-                        </dt>
-                        <dd class="shrink-0 font-medium tabular-nums text-zinc-900">{{ $row['value'] }}</dd>
-                    </div>
-                @endforeach
-            </dl>
+                <dl class="mt-8 space-y-3 text-[14px]">
+                    @foreach ([
+                        ['icon' => 'photo', 'label' => 'Images / PDF', 'value' => ((int) ($burn['images'] ?? 1)).' credit'],
+                        ['icon' => 'envelope', 'label' => 'Email HTML', 'value' => ((int) ($burn['html'] ?? 3)).' credits'],
+                        ['icon' => 'globe-alt', 'label' => 'URL capture', 'value' => ((int) ($burn['capture_url'] ?? 5)).' credits'],
+                        ['icon' => 'calendar-days', 'label' => 'Review retention', 'value' => $plusRetention.' days'],
+                    ] as $row)
+                        <div class="flex items-center justify-between gap-4">
+                            <dt class="flex min-w-0 items-center gap-2.5 text-zinc-600">
+                                <x-use-case-icon :name="$row['icon']" size="sm" />
+                                <span>{{ $row['label'] }}</span>
+                            </dt>
+                            <dd class="shrink-0 font-medium tabular-nums text-zinc-900">{{ $row['value'] }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
 
-            @isset($actions)
-                <div class="mt-8">
-                    {{ $actions }}
+                <div class="mt-8 flex flex-wrap items-center gap-3">
+                    <flux:button
+                        variant="primary"
+                        size="sm"
+                        href="#rm-payment"
+                        class="lg:hidden"
+                    >
+                        Pay Here
+                    </flux:button>
+                    @isset($actions)
+                        {{ $actions }}
+                    @endisset
                 </div>
-            @endisset
+            </div>
         </article>
 
         {{-- Mobile stack: real mid rule so crosshairs sit on the hairline --}}
@@ -74,7 +85,7 @@
             <x-cross-mark left="100%" top="50%" />
         </div>
 
-        <article class="bg-[var(--color-canvas)] pt-8 sm:pt-10 lg:pt-12 pb-8 sm:pb-10 lg:pb-12">
+        <article id="rm-payment" class="scroll-mt-8 bg-[var(--color-canvas)] pt-8 sm:pt-10 lg:pt-12 pb-8 sm:pb-10 lg:pb-12">
             <div class="rm-pad">
                 <x-section-eyebrow label="Payment" />
                 @isset($paymentIntro)
