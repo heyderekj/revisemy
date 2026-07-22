@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\NormalizedArea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -284,25 +285,23 @@ class Annotation extends Model
      */
     public function region(): ?array
     {
-        $area = $this->area;
+        $normalized = NormalizedArea::from($this->area);
 
-        if (! is_array($area)) {
+        if ($normalized !== null) {
+            return $normalized;
+        }
+
+        // Fall back to pin x/y when area keys are incomplete but still rectangular.
+        if (! is_array($this->area)) {
             return null;
         }
 
-        $w = (float) ($area['w'] ?? 0);
-        $h = (float) ($area['h'] ?? 0);
-
-        if ($w < 0.01 || $h < 0.01) {
-            return null;
-        }
-
-        return [
-            'x' => (float) ($area['x'] ?? $this->x),
-            'y' => (float) ($area['y'] ?? $this->y),
-            'w' => $w,
-            'h' => $h,
-        ];
+        return NormalizedArea::from([
+            'x' => $this->area['x'] ?? $this->x,
+            'y' => $this->area['y'] ?? $this->y,
+            'w' => $this->area['w'] ?? $this->area['width'] ?? 0,
+            'h' => $this->area['h'] ?? $this->area['height'] ?? 0,
+        ]);
     }
 
     public function screenshot(): BelongsTo

@@ -78,6 +78,29 @@ class McpAppTest extends TestCase
         }
     }
 
+    public function test_server_and_review_app_advertise_the_yellow_mark(): void
+    {
+        $transport = \Mockery::mock(\Laravel\Mcp\Server\Contracts\Transport::class);
+        $serverIcons = array_map(
+            fn ($icon) => $icon->toArray(),
+            (new ReviseMyServer($transport))->resolvedIcons(),
+        );
+        $this->assertNotEmpty($serverIcons);
+        $this->assertTrue(
+            collect($serverIcons)->contains(fn (array $icon) => str_contains($icon['src'], '/images/app-icon.png')),
+            'ReviseMyServer should advertise images/app-icon.png in serverInfo.icons',
+        );
+
+        $resourceIcons = array_map(
+            fn ($icon) => $icon->toArray(),
+            app(ReviewApp::class)->resolvedIcons(),
+        );
+        $this->assertTrue(
+            collect($resourceIcons)->contains(fn (array $icon) => str_contains($icon['src'], '/images/app-icon.png')),
+            'ReviewApp should advertise images/app-icon.png',
+        );
+    }
+
     public function test_resource_serves_the_app_html(): void
     {
         $resource = new ReviewApp;
@@ -94,7 +117,20 @@ class McpAppTest extends TestCase
 
         ReviseMyServer::resource(ReviewApp::class)
             ->assertOk()
-            ->assertSee(['reviewApp', 'mcpBridge', 'add_mark', 'focus_preview', 'View comments', 'boardPins']);
+            ->assertSee([
+                'reviewApp',
+                'mcpBridge',
+                'add_mark',
+                'focus_preview',
+                'View comments',
+                'boardPins',
+                'regionFindings',
+                'numberedRegionFindings',
+                'allFindings',
+                'Second opinion',
+                'max-h-[min(70dvh,36rem)]',
+                'touch-pan-y',
+            ]);
     }
 
     public function test_add_mark_creates_a_human_mark_and_returns_fresh_payload(): void

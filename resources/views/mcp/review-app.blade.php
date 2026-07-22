@@ -159,40 +159,38 @@
                         </template>
                     </div>
 
-                    <template x-if="activeShot()">
-                        <div class="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
-                            <img class="block w-full" :src="activeShot().url" :alt="payload.title" draggable="false">
-                            <div class="absolute inset-0 cursor-crosshair touch-none" x-ref="overlay"
+                    <div class="relative max-h-[min(70dvh,36rem)] overflow-auto overscroll-contain rounded-xl border border-zinc-200 bg-zinc-50"
+                        x-show="activeShot()">
+                        <div class="relative w-full" x-show="activeShot()">
+                            <img class="block w-full" :src="activeShot()?.url" :alt="payload.title" draggable="false">
+                            <div class="absolute inset-0 cursor-crosshair touch-pan-y" x-ref="overlay"
                                 @pointerdown="startDraw($event)" @pointermove="moveDraw($event)"
-                                @pointerup="endDraw($event)" @pointerleave="cancelDraw()">
+                                @pointerup="endDraw($event)" @pointercancel="cancelDraw()" @pointerleave="cancelDraw()">
 
                                 {{-- human marks: rose region + rose M# badge (review page classes) --}}
-                                <template x-for="pin in activeShot().pins" :key="'p'+pin.id">
+                                <template x-for="pin in (activeShot()?.pins || [])" :key="'p'+pin.id">
                                     <div>
-                                        <template x-if="pin.area">
-                                            <div class="pointer-events-none absolute rounded-md border-2 border-rose-500/80 bg-rose-500/10"
-                                                :class="{ 'opacity-50': isSettled(pin) }" :style="rectStyle(pin.area)"></div>
-                                        </template>
+                                        <div class="pointer-events-none absolute rounded-md border-2 border-rose-500/80 bg-rose-500/10"
+                                            x-show="pin.area"
+                                            :class="{ 'opacity-50': isSettled(pin) }" :style="pin.area ? rectStyle(pin.area) : ''"></div>
                                         <button type="button"
-                                            class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow-lg ring-2 ring-white transition"
+                                            class="pointer-events-auto absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow-lg ring-2 ring-white transition"
                                             :class="markerBg(pin.severity) + (isSettled(pin) ? ' opacity-60' : '') + (activePin && activePin.id === pin.id ? ' ring-zinc-900' : '')"
                                             :style="pinStyle(pin)" x-text="'M' + pin.number"
                                             @pointerdown.stop @pointerup.stop @click.stop="showPin(pin)"></button>
                                     </div>
                                 </template>
 
-                                {{-- second-opinion hints: dashed sky region + corner S# badge (vision only) --}}
-                                <template x-for="(f, fi) in activeShot().second_opinion" :key="'s'+fi">
-                                    <template x-if="f.area && f.area.w >= 0.01 && f.area.h >= 0.01">
-                                        <div class="absolute" :style="rectStyle(f.area)">
-                                            <div class="pointer-events-none absolute inset-0 rounded-md border border-dashed border-sky-400/80 bg-sky-400/10"></div>
-                                            <button type="button"
-                                                class="absolute -left-2 -top-2 z-[6] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
-                                                :class="activeFinding && activeFinding.key === 's'+fi ? 'ring-2 ring-sky-300' : ''"
-                                                x-text="'S' + (fi + 1)"
-                                                @pointerdown.stop @pointerup.stop @click.stop="showFinding(f, fi)"></button>
-                                        </div>
-                                    </template>
+                                {{-- second-opinion region hints (numbered list shared with findings strip) --}}
+                                <template x-for="item in numberedRegionFindings()" :key="item.key">
+                                    <div class="pointer-events-none absolute z-[5]" :style="rectStyle(item.finding.area)">
+                                        <div class="pointer-events-none absolute inset-0 rounded-md border border-dashed border-sky-400/80 bg-sky-400/10"></div>
+                                        <button type="button"
+                                            class="pointer-events-auto absolute -left-2 -top-2 z-[6] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
+                                            :class="activeFinding && activeFinding.key === item.key ? 'ring-2 ring-sky-300' : ''"
+                                            x-text="'S' + item.number"
+                                            @pointerdown.stop @pointerup.stop @click.stop="showFinding(item.finding)"></button>
+                                    </div>
                                 </template>
 
                                 {{-- draft rectangle / pending composer pin (rose dashed, like the page) --}}
@@ -200,11 +198,38 @@
                                     x-show="draft.drawing && draft.w > 0.01" :style="draftRectStyle()"></div>
                                 <div class="pointer-events-none absolute z-[18] rounded-md border-2 border-dashed border-rose-500 bg-rose-500/15"
                                     x-show="composer.open && composer.area" :style="composer.area ? rectStyle(composer.area) : ''"></div>
-                                <div class="absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-xs font-semibold text-ink shadow-lg ring-2 ring-white"
+                                <div class="pointer-events-none absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-xs font-semibold text-ink shadow-lg ring-2 ring-white"
                                     x-show="composer.open && !composer.area" :style="pinStyle(composer)">+</div>
                             </div>
                         </div>
-                    </template>
+                    </div>
+
+                    <p class="mt-2 text-xs text-sky-700" x-show="activeShot() && activeShot().second_opinion_status === 'queued'">
+                        Generating second-opinion hints…
+                    </p>
+
+                    {{-- Second-opinion findings list (region + text hints) --}}
+                    <div class="mt-3 flex flex-col gap-2" x-show="allFindings().length">
+                        <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-400">Second opinion</p>
+                        <template x-for="f in allFindings()" :key="findingKey(f)">
+                            <button type="button"
+                                class="rounded-xl border border-sky-100 bg-white p-3 text-left shadow-sm transition hover:border-sky-300"
+                                :class="activeFinding && activeFinding.key === findingKey(f) ? 'border-sky-400 ring-1 ring-sky-300' : ''"
+                                @click="showFinding(f)">
+                                <div class="mb-1 flex flex-wrap items-center gap-2">
+                                    <span class="flex h-6 min-w-6 items-center justify-center rounded-full border border-dashed border-sky-500 bg-white px-1 text-[10px] font-semibold text-sky-700"
+                                        x-show="hasRegion(f)"
+                                        x-text="'S' + regionNumber(f)"></span>
+                                    <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500"
+                                        x-show="! hasRegion(f)">Text hint</span>
+                                    <span class="text-xs text-zinc-500" x-text="severityLabel(f.severity)"></span>
+                                    <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800"
+                                        x-text="findingSourceLabel(f)"></span>
+                                </div>
+                                <p class="text-sm leading-relaxed text-zinc-700" x-text="f.body"></p>
+                            </button>
+                        </template>
+                    </div>
 
                     {{-- Mark detail (focus crop + parity with board mark sheet) --}}
                     <div class="mt-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]" x-show="activePin" x-cloak>
@@ -768,6 +793,49 @@
             isSettled(pin) { return pin.status === 'resolved' || pin.status === 'verified'; },
             canManagePin(pin) { return pin && pin.severity !== 'keep' && pin.status !== 'open'; },
 
+            hasRegion(f) {
+                const a = f && f.area;
+                return !!(a && Number(a.w) >= 0.01 && Number(a.h) >= 0.01);
+            },
+            allFindings() {
+                const shot = this.activeShot();
+                return shot && Array.isArray(shot.second_opinion) ? shot.second_opinion : [];
+            },
+            regionFindings() {
+                return this.allFindings().filter((f) => this.hasRegion(f));
+            },
+            findingStableId(f) {
+                if (! f) return '';
+                if (f.id != null) return String(f.id);
+                const a = f.area || {};
+                return [f.body || '', a.x, a.y, a.w, a.h, f.source || ''].join('|');
+            },
+            numberedRegionFindings() {
+                return this.regionFindings().map((finding, i) => ({
+                    finding,
+                    number: i + 1,
+                    key: 's' + this.findingStableId(finding),
+                }));
+            },
+            regionNumber(f) {
+                const id = this.findingStableId(f);
+                const idx = this.regionFindings().findIndex((r) => this.findingStableId(r) === id);
+                return idx >= 0 ? idx + 1 : 0;
+            },
+            findingKey(f) {
+                if (this.hasRegion(f)) {
+                    return 's' + this.findingStableId(f);
+                }
+                return 't' + this.findingStableId(f);
+            },
+            findingSourceLabel(f) {
+                const s = (f && f.source) || 'checklist';
+                if (s === 'openai' || s === 'anthropic') return 'Vision';
+                if (s === 'agent') return 'Agent';
+                if (s === 'guest') return f.author || 'Guest';
+                return 'Checklist';
+            },
+
             countChips() {
                 const l = this.payload.loop;
                 return [
@@ -819,11 +887,15 @@
                 this.activePin = this.activePin && this.activePin.id === pin.id ? null : pin;
             },
 
-            showFinding(finding, index) {
+            showFinding(finding) {
                 this.activePin = null;
-                const key = 's' + index;
+                const key = this.findingKey(finding);
+                const number = this.regionNumber(finding);
                 this.activeFinding = this.activeFinding && this.activeFinding.key === key ? null : {
-                    key, label: 'S' + (index + 1), severity: finding.severity, body: finding.body,
+                    key,
+                    label: number > 0 ? 'S' + number : 'Hint',
+                    severity: finding.severity,
+                    body: finding.body,
                 };
             },
 
@@ -848,8 +920,17 @@
             setActive(i) { this.activeIndex = i; this.closeComposer(); this.closeDetail(); },
             activeShot() { return this.payload ? this.payload.screenshots[this.activeIndex] : null; },
 
-            pinStyle(p) { return `left:${p.x * 100}%; top:${p.y * 100}%;`; },
-            rectStyle(a) { return `left:${a.x * 100}%; top:${a.y * 100}%; width:${a.w * 100}%; height:${a.h * 100}%;`; },
+            pinStyle(p) {
+                if (! p || ! Number.isFinite(Number(p.x)) || ! Number.isFinite(Number(p.y))) return '';
+                return `left:${p.x * 100}%; top:${p.y * 100}%;`;
+            },
+            rectStyle(a) {
+                if (! a || ! Number.isFinite(Number(a.x)) || ! Number.isFinite(Number(a.y))
+                    || ! Number.isFinite(Number(a.w)) || ! Number.isFinite(Number(a.h))) {
+                    return '';
+                }
+                return `left:${a.x * 100}%; top:${a.y * 100}%; width:${a.w * 100}%; height:${a.h * 100}%;`;
+            },
             draftRectStyle() {
                 const d = this.draft;
                 const x = Math.min(d.x0, d.x), y = Math.min(d.y0, d.y);
@@ -857,7 +938,10 @@
             },
 
             norm(e) {
-                const r = this.$refs.overlay.getBoundingClientRect();
+                const el = this.$refs.overlay;
+                if (! el) return null;
+                const r = el.getBoundingClientRect();
+                if (r.width < 1 || r.height < 1) return null;
                 return {
                     x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
                     y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
@@ -866,27 +950,32 @@
 
             startDraw(e) {
                 if (!this.isPending) return;
+                // Touch scrolls the capture viewport; draw with mouse/pen only.
+                if (e.pointerType === 'touch') return;
+                if (e.button != null && e.button !== 0) return;
                 const p = this.norm(e);
+                if (! p) return;
                 this.draft = { drawing: true, x0: p.x, y0: p.y, x: p.x, y: p.y, w: 0, h: 0 };
             },
             moveDraw(e) {
                 if (!this.draft.drawing) return;
                 const p = this.norm(e);
+                if (! p) return;
                 this.draft.x = p.x; this.draft.y = p.y;
                 this.draft.w = Math.abs(p.x - this.draft.x0);
                 this.draft.h = Math.abs(p.y - this.draft.y0);
             },
             endDraw(e) {
                 if (!this.draft.drawing) return;
-                const p = this.norm(e);
+                this.draft.drawing = false;
+                const p = this.norm(e) || { x: this.draft.x, y: this.draft.y };
                 const w = Math.abs(p.x - this.draft.x0), h = Math.abs(p.y - this.draft.y0);
-                if (w >= 0.02 && h >= 0.02) {
+                if (w >= 0.01 && h >= 0.01) {
                     const x = Math.min(p.x, this.draft.x0), y = Math.min(p.y, this.draft.y0);
                     this.openComposer(x + w / 2, y + h / 2, { x, y, w, h });
                 } else {
                     this.openComposer(p.x, p.y, null);
                 }
-                this.draft.drawing = false;
             },
             cancelDraw() { this.draft.drawing = false; },
 

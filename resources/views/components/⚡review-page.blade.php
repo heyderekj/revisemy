@@ -449,28 +449,20 @@ new class extends Component
         }
 
         $screenshot = $finding->screenshot;
-        $area = is_array($finding->area) ? $finding->area : null;
-        $hasRegion = is_array($area)
-            && (float) ($area['w'] ?? 0) >= 0.01
-            && (float) ($area['h'] ?? 0) >= 0.01;
+        $area = $finding->region();
 
         $x = $finding->x !== null
             ? (float) $finding->x
-            : ($hasRegion ? (float) $area['x'] + ((float) $area['w'] / 2) : 0.5);
+            : ($area ? (float) $area['x'] + ((float) $area['w'] / 2) : 0.5);
         $y = $finding->y !== null
             ? (float) $finding->y
-            : ($hasRegion ? (float) $area['y'] + ((float) $area['h'] / 2) : 0.5);
+            : ($area ? (float) $area['y'] + ((float) $area['h'] / 2) : 0.5);
 
         $pin = app(MarkLifecycleService::class)->createMark(
             $screenshot,
             (float) $x,
             (float) $y,
-            $hasRegion ? [
-                'x' => (float) $area['x'],
-                'y' => (float) $area['y'],
-                'w' => (float) $area['w'],
-                'h' => (float) $area['h'],
-            ] : null,
+            $area,
             $finding->pinSeverity(),
             $finding->body,
         );
@@ -1072,7 +1064,7 @@ new class extends Component
         "
     >
         @php($suggestionNumbers = $review->suggestionDisplayNumbers())
-        <section class="min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto pt-4 sm:space-y-4 sm:pt-5 md:max-h-none md:min-h-0 md:overflow-y-auto md:pt-6">
+        <section class="min-h-0 min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto overscroll-contain pt-4 sm:space-y-4 sm:pt-5 md:max-h-none md:overflow-hidden md:pt-6">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
                 <div class="grid gap-1.5 py-3 sm:grid-cols-[9.5rem_1fr] sm:gap-4 sm:py-4">
                     <flux:heading size="sm" class="sm:pt-0.5">What to look at</flux:heading>
@@ -1259,13 +1251,30 @@ new class extends Component
 
                             return 'width: ' + w + 'px';
                         },
-                        viewportCanScroll() {
+                        viewportCanScrollX() {
                             const vp = this.$refs.viewport;
-                            if (! vp) return false;
-
-                            return vp.scrollHeight > vp.clientHeight + 1 || vp.scrollWidth > vp.clientWidth + 1;
+                            return !!(vp && vp.scrollWidth > vp.clientWidth + 1);
+                        },
+                        viewportCanScrollY() {
+                            const vp = this.$refs.viewport;
+                            return !!(vp && vp.scrollHeight > vp.clientHeight + 1);
+                        },
+                        viewportCanScroll() {
+                            return this.viewportCanScrollX() || this.viewportCanScrollY();
                         },
                         canPan() {
+                            return this.viewportCanScroll();
+                        },
+                        wheelAxisCanScroll(e) {
+                            const absX = Math.abs(e.deltaX);
+                            const absY = Math.abs(e.deltaY);
+                            if (absX > absY) {
+                                return this.viewportCanScrollX();
+                            }
+                            if (absY > 0) {
+                                return this.viewportCanScrollY();
+                            }
+
                             return this.viewportCanScroll();
                         },
                         zoomIn() {
@@ -1328,7 +1337,10 @@ new class extends Component
                             return null;
                         },
                         onWheel(e) {
-                            if (this.viewportCanScroll()) {
+                            // Prefer scrolling the capture when that axis can scroll;
+                            // otherwise let (or forward) the wheel to the page/column.
+                            if (this.wheelAxisCanScroll(e)) {
+                                e.stopPropagation();
                                 return;
                             }
 
@@ -1445,7 +1457,7 @@ new class extends Component
 
                     <div
                         x-ref="viewport"
-                        class="flex max-h-[min(52svh,420px)] items-start justify-center overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] lg:max-h-[min(70svh,560px)]"
+                        class="relative max-h-[min(52svh,420px)] overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] lg:max-h-[min(70svh,560px)]"
                         x-bind:class="{
                             'cursor-grab': canPan() && spaceHeld && !panning,
                             'cursor-grabbing': panning
@@ -1457,7 +1469,7 @@ new class extends Component
                     >
                         <div
                             x-ref="canvas"
-                            class="relative max-w-full shrink-0 grow-0 select-none self-start"
+                            class="relative mx-auto max-w-full select-none"
                             x-bind:style="canvasStyle()"
                             @if ($review->isOpenForFeedback())
                                 x-bind:class="(zoom > 1 ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair' : '')"
@@ -1480,16 +1492,10 @@ new class extends Component
 
                             @php($openFindings = $shot->findings->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
                             @php($guestFindings = $shot->findings->filter(fn ($f) => $f->isOpen() && $f->isGuest())->values())
-                            @php($textOnlyGuest = $guestFindings->filter(function ($f) {
-                                $area = is_array($f->area) ? $f->area : null;
-                                $hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01;
-
-                                return ! $hasRegion && ($f->x === null || $f->y === null);
-                            })->values())
+                            @php($textOnlyGuest = $guestFindings->filter(fn ($f) => ! $f->hasRegion() && ($f->x === null || $f->y === null))->values())
                             @foreach ($openFindings as $findingIndex => $finding)
-                                @php($area = is_array($finding->area) ? $finding->area : null)
-                                @php($hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01)
-                                @if ($hasRegion)
+                                @php($area = $finding->region())
+                                @if ($area)
                                     @php($badgePosition = ($area['y'] ?? 0) < 0.07 ? '-left-2 -bottom-2' : (($area['x'] ?? 0) < 0.07 ? '-right-2 -top-2' : '-left-2 -top-2'))
                                     <div
                                         data-finding
@@ -1516,9 +1522,8 @@ new class extends Component
                             @endforeach
 
                             @foreach ($guestFindings as $guestIndex => $finding)
-                                @php($area = is_array($finding->area) ? $finding->area : null)
-                                @php($hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01)
-                                @if ($hasRegion)
+                                @php($area = $finding->region())
+                                @if ($area)
                                     @php($badgePosition = ($area['y'] ?? 0) < 0.07 ? '-left-2 -bottom-2' : (($area['x'] ?? 0) < 0.07 ? '-right-2 -top-2' : '-left-2 -top-2'))
                                     <div
                                         data-finding
@@ -1704,23 +1709,12 @@ new class extends Component
         </section>
 
         @php($stripMarks = $shot?->annotations ?? collect())
-        @php($stripSecondOpinion = ($shot?->findings ?? collect())->filter(function ($f) {
-            if (! $f->isOpen() || $f->isGuest()) {
-                return false;
-            }
-            $area = is_array($f->area) ? $f->area : null;
-
-            return $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01;
-        })->values())
-        @php($stripGuest = ($shot?->findings ?? collect())->filter(function ($f) {
-            if (! $f->isOpen() || ! $f->isGuest()) {
-                return false;
-            }
-            $area = is_array($f->area) ? $f->area : null;
-            $hasRegion = $area && (float) ($area['w'] ?? 0) >= 0.01 && (float) ($area['h'] ?? 0) >= 0.01;
-
-            return $hasRegion || ($f->x !== null && $f->y !== null);
-        })->values())
+        @php($stripSecondOpinion = ($shot?->findings ?? collect())->filter(
+            fn ($f) => $f->isOpen() && ! $f->isGuest() && $f->hasRegion()
+        )->values())
+        @php($stripGuest = ($shot?->findings ?? collect())->filter(
+            fn ($f) => $f->isOpen() && $f->isGuest() && ($f->hasRegion() || ($f->x !== null && $f->y !== null))
+        )->values())
 
         @if ($shot && ($stripMarks->isNotEmpty() || $stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
             <div class="shrink-0 overflow-x-auto overscroll-x-contain border-y border-zinc-200/80 bg-zinc-50/90 px-3 py-2 [scrollbar-width:none] md:hidden sm:px-4 [&::-webkit-scrollbar]:hidden">
@@ -2343,8 +2337,7 @@ new class extends Component
                     @else
                         <ul class="space-y-3">
                             @foreach ($visibleFindings as $finding)
-                                @php($findingArea = is_array($finding->area) ? $finding->area : null)
-                                @php($findingHasRegion = $findingArea && (float) ($findingArea['w'] ?? 0) >= 0.01 && (float) ($findingArea['h'] ?? 0) >= 0.01)
+                                @php($findingHasRegion = $finding->hasRegion())
                                 <li
                                     id="fb-finding-{{ $finding->id }}"
                                     class="cursor-pointer rounded-xl border bg-white/80 p-3 transition"

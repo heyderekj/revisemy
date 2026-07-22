@@ -4,6 +4,7 @@ namespace App\Services\Vision;
 
 use App\Models\Finding;
 use App\Models\Screenshot;
+use App\Support\NormalizedArea;
 use Illuminate\Support\Facades\Storage;
 
 abstract class BaseVisionProvider implements VisionProvider
@@ -65,20 +66,7 @@ abstract class BaseVisionProvider implements VisionProvider
      */
     protected function normalizeArea(mixed $area): ?array
     {
-        if (! is_array($area)) {
-            return null;
-        }
-
-        $x = max(0, min(1, (float) ($area['x'] ?? 0)));
-        $y = max(0, min(1, (float) ($area['y'] ?? 0)));
-        $w = max(0, min(1 - $x, (float) ($area['w'] ?? 0)));
-        $h = max(0, min(1 - $y, (float) ($area['h'] ?? 0)));
-
-        if ($w < 0.02 || $h < 0.02) {
-            return null;
-        }
-
-        return ['x' => $x, 'y' => $y, 'w' => $w, 'h' => $h];
+        return NormalizedArea::from($area);
     }
 
     /**

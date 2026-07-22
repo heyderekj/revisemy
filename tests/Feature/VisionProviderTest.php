@@ -87,6 +87,35 @@ class VisionProviderTest extends TestCase
         });
     }
 
+    public function test_vision_area_accepts_width_height_aliases_and_percent_units(): void
+    {
+        config([
+            'revisemy.vision.provider' => 'anthropic',
+            'revisemy.anthropic.api_key' => 'test-key',
+            'revisemy.openai.api_key' => null,
+        ]);
+
+        Http::fake([
+            'api.anthropic.com/*' => Http::response($this->anthropicResponse([
+                ['severity' => 'a11y', 'body' => 'Width/height aliases.', 'area' => ['x' => 0.1, 'y' => 0.2, 'width' => 0.3, 'height' => 0.15]],
+                ['severity' => 'polish', 'body' => 'Percent units.', 'area' => ['x' => 10, 'y' => 20, 'w' => 30, 'h' => 15]],
+            ])),
+        ]);
+
+        $screenshot = $this->makeScreenshot();
+        app(SecondOpinionService::class)->generate($screenshot);
+
+        $vision = $screenshot->fresh('findings')->findings->where('source', Finding::SOURCE_ANTHROPIC)->values();
+
+        $this->assertCount(2, $vision);
+        $this->assertEqualsWithDelta(0.3, $vision[0]->area['w'], 0.001);
+        $this->assertEqualsWithDelta(0.15, $vision[0]->area['h'], 0.001);
+        $this->assertEqualsWithDelta(0.1, $vision[1]->area['x'], 0.001);
+        $this->assertEqualsWithDelta(0.2, $vision[1]->area['y'], 0.001);
+        $this->assertEqualsWithDelta(0.3, $vision[1]->area['w'], 0.001);
+        $this->assertEqualsWithDelta(0.15, $vision[1]->area['h'], 0.001);
+    }
+
     public function test_regenerating_replaces_anthropic_findings_without_duplicates(): void
     {
         config([

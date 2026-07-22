@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\NormalizedArea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -115,16 +116,30 @@ class Finding extends Model
     }
 
     /**
+     * @return array{x: float, y: float, w: float, h: float}|null
+     */
+    public function region(): ?array
+    {
+        return NormalizedArea::from($this->area);
+    }
+
+    public function hasRegion(): bool
+    {
+        return $this->region() !== null;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toAgentArray(): array
     {
         return [
+            'id' => $this->id,
             'source' => $this->source,
             'author' => $this->author,
             'severity' => $this->severity,
             'body' => $this->body,
-            'area' => $this->area,
+            'area' => $this->region(),
             'related_pin' => $this->related_pin,
             'status' => $this->status ?? self::STATUS_OPEN,
         ];
