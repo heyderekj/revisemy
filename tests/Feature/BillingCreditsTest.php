@@ -229,4 +229,22 @@ class BillingCreditsTest extends TestCase
             ->assertJsonPath('plan', 'free')
             ->assertJsonPath('credits_grant', 30);
     }
+
+    public function test_upgrade_page_is_paddle_default_payment_link(): void
+    {
+        config([
+            'cashier.client_side_token' => 'test_token',
+            'cashier.sandbox' => true,
+        ]);
+
+        $this->get('/upgrade')
+            ->assertOk()
+            ->assertSee('Upgrade to Pro', false)
+            ->assertSee('paddle-checkout', false)
+            ->assertSee('cdn.paddle.com/paddle/v2/paddle.js', false);
+
+        $this->get('/upgrade?_ptxn=txn_test')
+            ->assertOk()
+            ->assertSee('Complete payment securely below', false);
+    }
 }

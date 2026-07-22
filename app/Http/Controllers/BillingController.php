@@ -56,6 +56,18 @@ class BillingController extends Controller
         return view('billing.cancel');
     }
 
+    /**
+     * Default Paddle payment-link page (Checkout settings → Default payment link).
+     * Opens inline checkout when Paddle appends ?_ptxn=.
+     */
+    public function upgrade(): View
+    {
+        return view('billing.upgrade', [
+            'priceUsd' => (int) config('billing.plans.pro.price_usd', 9),
+            'credits' => (int) config('billing.plans.pro.credits', 100),
+        ]);
+    }
+
     public function manage(Request $request, string $workspace, BillingService $billing): View
     {
         $model = Workspace::query()->where('public_id', $workspace)->firstOrFail();
