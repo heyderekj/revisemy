@@ -81,11 +81,20 @@ class BrowsershotCaptureDriver implements CaptureDriver
 
         $shots = [];
 
+        $timeout = (int) config('revisemy.capture.timeout', 30);
+        $waitMs = (int) config('revisemy.capture.wait_ms', 2500);
+        $waitUntil = (string) config('revisemy.capture.wait_until', 'networkidle2');
+        // networkidle0 = strict; networkidle2 = non-strict (default).
+        $networkIdleStrict = $waitUntil === 'networkidle0';
+        $chromeTimeout = $timeout + (int) ceil($waitMs / 1000) + 5;
+
         foreach ($viewports as [$width, $height, $label]) {
             $shot = $factory()
                 ->windowSize($width, $height)
                 ->deviceScaleFactor(max(1, (int) config('revisemy.capture.device_scale_factor', 2)))
-                ->timeout((int) config('revisemy.capture.timeout', 30));
+                ->timeout($chromeTimeout)
+                ->waitUntilNetworkIdle($networkIdleStrict)
+                ->delay($waitMs);
 
             if ($fullPage) {
                 $shot->fullPage();

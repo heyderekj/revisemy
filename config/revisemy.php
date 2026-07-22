@@ -81,6 +81,10 @@ return [
         'content_endpoint' => env('REVISEMY_CAPTURE_CONTENT_ENDPOINT'),
         'api_key' => env('REVISEMY_CAPTURE_KEY'),
         'timeout' => (int) env('REVISEMY_CAPTURE_TIMEOUT', 30),
+        // Post-load settle before screenshot (CSS stagger / fade-ins).
+        'wait_ms' => max(0, (int) env('REVISEMY_CAPTURE_WAIT_MS', 2500)),
+        // Puppeteer/Browserless navigation waitUntil (networkidle2 recommended).
+        'wait_until' => env('REVISEMY_CAPTURE_WAIT_UNTIL', 'networkidle2'),
         'chrome_path' => env('REVISEMY_CAPTURE_CHROME_PATH', PHP_OS_FAMILY === 'Darwin'
             ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
             : null),

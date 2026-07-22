@@ -27,6 +27,7 @@ Repo: https://github.com/heyderekj/revisemy
    - Optional: `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` — vision second opinion with regions on the capture (checklist alone is sidebar text only). No queue worker required.
    - Optional (required for `capture_url`): `REVISEMY_CAPTURE_DRIVER=hosted` (must be the literal string `hosted`, not blank) + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for URL/email capture on Cloud
    - Optional: `REVISEMY_CAPTURE_CONTENT_ENDPOINT` for DOM snapshots; `REVISEMY_CAPTURE_TIMEOUT=60` for heavy marketing pages
+   - Optional: `REVISEMY_CAPTURE_WAIT_MS=2500` (default) — post-load settle so CSS stagger/fade-ins finish before screenshot; `REVISEMY_CAPTURE_WAIT_UNTIL=networkidle2`
    - Optional: `REVISEMY_CAPTURE_DPR=2` (default) — retina captures via Browserless `deviceScaleFactor`
    - Optional (hosted billing): `PADDLE_CLIENT_SIDE_TOKEN`, `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`, `PADDLE_PRICE_PRO` (`pri_…` for Plus $9/mo), `PADDLE_SANDBOX=true` until go-live. Cashier webhook: `/paddle/webhook` (enable subscription + transaction notifications in Paddle). Set Paddle **Default payment link** to `https://revisemy.com/upgrade` (sandbox + live). Try = 30 credits once (no monthly refill); Plus = 100/mo. Agents call `create_checkout` → human opens signed `/billing/checkout/{workspace}`.
    - Support top-up a try workspace: `php artisan revisemy:extend-try {workspace_public_id} --credits=30` (or `--pack` for a full Try pack + token bump).

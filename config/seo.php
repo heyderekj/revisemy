@@ -62,6 +62,9 @@ return [
     // Bump when public/images/og.png changes so social crawlers fetch the new card.
     'og_image_version' => '6',
 
+    // Bump when favicons / app-icon change so browsers and Cursor refetch (keep in sync with BrandAssets::CACHE_BUST).
+    'favicon_version' => \App\Support\BrandAssets::CACHE_BUST,
+
     'og_image_width' => 1200,
 
     'og_image_height' => 630,

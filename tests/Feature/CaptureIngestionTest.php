@@ -67,8 +67,11 @@ class CaptureIngestionTest extends TestCase
         Http::assertSent(function ($request) {
             $body = $request->data();
             $viewport = $body['viewport'] ?? [];
+            $goto = $body['gotoOptions'] ?? [];
 
-            return ($viewport['deviceScaleFactor'] ?? null) === 2;
+            return ($viewport['deviceScaleFactor'] ?? null) === 2
+                && ($body['waitForTimeout'] ?? null) === (int) config('revisemy.capture.wait_ms', 2500)
+                && ($goto['waitUntil'] ?? null) === (string) config('revisemy.capture.wait_until', 'networkidle2');
         });
     }
 

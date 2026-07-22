@@ -26,10 +26,10 @@
         :schema="$schema"
     />
 
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
-    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+    <link rel="icon" href="{{ \App\Support\Seo::faviconUrl('/favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::faviconUrl('/images/apple-touch-icon.png') }}">
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=caveat:500,600,700|instrument-sans:400,500,600,700|newsreader:400,500,600" rel="stylesheet" />

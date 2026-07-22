@@ -59,11 +59,16 @@ class HostedCaptureDriver implements CaptureDriver
     protected function capture(array $source, array $viewports, array $baseMeta, bool $fullPage = false): array
     {
         $endpoint = $this->authenticatedUrl((string) config('revisemy.capture.endpoint'));
+        $timeout = (int) config('revisemy.capture.timeout', 30);
+        $waitMs = (int) config('revisemy.capture.wait_ms', 2500);
+        $waitUntil = (string) config('revisemy.capture.wait_until', 'networkidle2');
+        // Outer HTTP budget must cover navigation + settle delay.
+        $httpTimeout = $timeout + (int) ceil($waitMs / 1000) + 5;
         $shots = [];
 
         foreach ($viewports as [$width, $height, $label]) {
             try {
-                $response = Http::timeout((int) config('revisemy.capture.timeout', 30))
+                $response = Http::timeout($httpTimeout)
                     ->post($endpoint, $source + [
                         'viewport' => [
                             'width' => $width,
@@ -71,6 +76,11 @@ class HostedCaptureDriver implements CaptureDriver
                             'deviceScaleFactor' => max(1, (int) config('revisemy.capture.device_scale_factor', 2)),
                         ],
                         'options' => ['type' => 'png', 'fullPage' => $fullPage],
+                        'gotoOptions' => [
+                            'waitUntil' => $waitUntil,
+                            'timeout' => $timeout * 1000,
+                        ],
+                        'waitForTimeout' => $waitMs,
                     ]);
             } catch (\Throwable $e) {
                 Log::warning('Hosted capture request failed', [
