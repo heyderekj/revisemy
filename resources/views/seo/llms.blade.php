@@ -24,6 +24,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 - [Changelog]({{ $siteUrl }}/changelog): SemVer release notes (current v{{ config('revisemy.version') }}).
 - [How it works]({{ $siteUrl }}/#how): Capture → second opinion → marks → guest feedback → board → approve or loop; marks, server-side capture, before/after evidence, multi-pass checkups.
 - [For agents]({{ $siteUrl }}/#agents): MCP tool summary and the `design_checkup_loop` workflow.
+- [Pricing]({{ $siteUrl }}/#pricing): Free ({{ (int) config('billing.plans.free.credits', 30) }} credits/mo) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits) — same full capture quality; upgrade via agent `create_checkout` (Paddle).
 - [FAQ]({{ $siteUrl }}/#faq): MCP Apps vs `review_url`, accounts, marks vs hints, second opinion API keys (checklist free; vision BYOK), sources, board/passes, sharing, and `next_action`.
 - [Shipped, not finished]({{ $siteUrl }}/#feedback): Weekend ship story, feedback contact, and GitHub.
 - [Privacy]({{ $siteUrl }}/privacy) · [Terms]({{ $siteUrl }}/terms): Product-truth drafts for try tokens, captures, and acceptable use.

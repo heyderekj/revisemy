@@ -196,6 +196,7 @@ new class extends Component
                         <li><a href="#top" class="transition hover:text-zinc-900">Home</a></li>
                         <li><a href="#how" class="transition hover:text-zinc-900">How it works</a></li>
                         <li><a href="#agents" class="transition hover:text-zinc-900">For agents</a></li>
+                        <li><a href="#pricing" class="transition hover:text-zinc-900">Pricing</a></li>
                         <li><a href="#faq" class="transition hover:text-zinc-900">FAQ</a></li>
                     </ul>
                 </div>
@@ -245,6 +246,7 @@ new class extends Component
                 <a href="#top" class="block" x-on:click="mobileNav = false">Home</a>
                 <a href="#how" class="block" x-on:click="mobileNav = false">How it works</a>
                 <a href="#agents" class="block" x-on:click="mobileNav = false">For agents</a>
+                <a href="#pricing" class="block" x-on:click="mobileNav = false">Pricing</a>
                 <a href="#faq" class="block" x-on:click="mobileNav = false">FAQ</a>
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try with your agent</a>
                 <a href="/connectors" class="inline-flex items-center gap-2" x-on:click="mobileNav = false">
@@ -1038,10 +1040,114 @@ new class extends Component
                 @endif
             </x-home-section>
 
+            {{-- Pricing --}}
+            @php
+                $freeCredits = (int) config('billing.plans.free.credits', 30);
+                $plusCredits = (int) config('billing.plans.pro.credits', 100);
+                $freeRetention = (int) config('billing.plans.free.review_retention_days', 7);
+                $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);
+                $plusPrice = (int) config('billing.plans.pro.price_usd', 9);
+            @endphp
+            <x-home-section id="pricing" flush-bottom>
+                <x-section-eyebrow number="04" label="Pricing" />
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
+                    Start free. Add credits in chat.
+                </h2>
+                <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                    Start with a free try token — no ReviseMy account. Same capture quality on both plans;
+                    Plus just gives you more credits and longer review retention. When you need more room,
+                    your agent opens Paddle Checkout via
+                    <code class="bg-zinc-100 px-1 py-0.5 text-[13px] text-zinc-800">create_checkout</code>
+                    — all, again, without leaving your chat.
+                </p>
+
+                <div class="rm-bleed relative mt-10 border-t border-zinc-200">
+                    <x-cross-mark left="0" top="0" />
+                    <x-cross-mark left="100%" top="0" />
+                    <x-cross-mark left="50%" top="0" visibility="hidden min-[30rem]:block" />
+
+                    <div class="grid grid-cols-1 gap-px bg-[var(--color-border)] min-[30rem]:grid-cols-2">
+                        <article class="bg-[var(--color-canvas)] p-7 sm:p-8">
+                            <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Free</p>
+                            <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
+                                $0
+                            </p>
+                            <p class="mt-2 text-[15px] leading-relaxed text-pretty text-zinc-600">
+                                {{ $freeCredits }} credits each month.<br>
+                                Reviews stick around {{ $freeRetention }}&nbsp;days.
+                            </p>
+                            <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
+                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Same full capture quality</li>
+                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> MCP try token, no account</li>
+                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Agent-driven checkup loop</li>
+                            </ul>
+                            <div class="mt-8 flex flex-wrap items-center gap-3">
+                                <x-try-token-button fathom-event="Try token pricing free" />
+                                <flux:modal.trigger name="credit-cost-breakdown">
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        class="!border !border-zinc-200 !bg-white hover:!border-zinc-300 hover:!bg-zinc-50"
+                                    >
+                                        Credit costs
+                                    </flux:button>
+                                </flux:modal.trigger>
+                            </div>
+                        </article>
+
+                        <article class="bg-[var(--color-canvas)] p-7 sm:p-8">
+                            <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Plus</p>
+                            <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
+                                ${{ $plusPrice }}<span class="text-lg font-medium text-zinc-500">/mo</span>
+                            </p>
+                            <p class="mt-2 text-[15px] leading-relaxed text-pretty text-zinc-600">
+                                {{ $plusCredits }} credits each month.<br>
+                                Reviews stick around {{ $plusRetention }}&nbsp;days.
+                            </p>
+                            <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
+                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Same full capture quality</li>
+                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> More room for URL checkups</li>
+                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Cancel anytime via your agent</li>
+                            </ul>
+                            <div class="mt-8">
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    href="#setup"
+                                    class="!border !border-zinc-200 !bg-white hover:!border-zinc-300 hover:!bg-zinc-50"
+                                >
+                                    Upgrade via your agent
+                                </flux:button>
+                                <p class="mt-3 max-w-xs text-[13px] leading-relaxed text-zinc-500">
+                                    After you try Free, ask your agent for
+                                    <code class="bg-zinc-100 px-1 py-0.5 text-[12px] text-zinc-800">create_checkout</code>
+                                    and open the Paddle link.
+                                </p>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <flux:modal name="credit-cost-breakdown" class="max-w-md">
+                    <div class="space-y-1">
+                        <flux:heading size="lg">Credit costs</flux:heading>
+                        <flux:text class="text-[14px] !text-zinc-500">
+                            Free vs Plus. Burn is the same on both plans.
+                        </flux:text>
+                    </div>
+                    <div class="mt-5">
+                        <x-billing.credit-costs compare :show-label="false" />
+                        <p class="mt-4 text-[14px] leading-relaxed text-zinc-500">
+                            Credits reset monthly (no rollover).
+                        </p>
+                    </div>
+                </flux:modal>
+            </x-home-section>
+
             {{-- FAQ --}}
             <x-home-section id="faq">
                 <div class="max-w-xl">
-                    <x-section-eyebrow number="04" label="FAQ" />
+                    <x-section-eyebrow number="05" label="FAQ" />
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">FAQ</h2>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
                         Short answers on hosts, links, marks, passes, and sharing.
@@ -1070,7 +1176,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                Nope. Grab a free try token in <a href="#setup" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Try with your agent</a> ({{ (int) config('billing.plans.free.credits', 30) }} credits/mo, full capture quality). Paste the MCP config and go — no ReviseMy account. Need more? Your agent can open Paddle Checkout for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo).
+                                Nope. Grab a free try token in <a href="#setup" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Try with your agent</a> — no ReviseMy account. See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a> for Free vs Plus (same full quality; Plus is more credits via your agent’s <code class="font-mono text-[13px]">create_checkout</code>).
                             </p>
                         </details>
 
@@ -1152,7 +1258,7 @@ new class extends Component
             {{-- Closing: maker + why + contact --}}
             <x-home-section id="feedback">
                 <div class="max-w-xl">
-                    <x-section-eyebrow number="05" label="Maker" />
+                    <x-section-eyebrow number="06" label="Maker" />
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Why I made ReviseMy</h2>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
                         I’m
