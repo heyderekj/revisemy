@@ -29,7 +29,7 @@
         <div class="relative">
             @include('use-cases.partials.sticky-cta', ['fathomEvent' => 'Try token alternatives hub sticky'])
 
-            <x-home-section first>
+            <x-home-section first flush-bottom>
                 @include('use-cases.partials.header')
                 <div class="rm-fade-up mt-10 sm:mt-12">
                     <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Alternatives</p>
@@ -42,31 +42,30 @@
                 </div>
             </x-home-section>
 
-            <x-home-section>
-                <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
-                    @foreach ($pages as $entry)
-                        <li>
+            <x-home-section joined flush-bottom class="!pt-0">
+                <div class="rm-bleed relative mt-10 border-t border-zinc-200 sm:mt-12">
+                    <x-cross-mark left="50%" top="0%" visibility="hidden min-[30rem]:block" />
+
+                    <div class="grid grid-cols-1 gap-px bg-[var(--color-border)] min-[30rem]:grid-cols-2">
+                        @foreach ($pages as $entry)
                             <a
                                 href="{{ url('/alternatives/'.$entry['slug']) }}"
-                                class="group flex items-start gap-3 py-4 transition"
+                                class="group rm-pad block bg-[var(--color-canvas)] py-7 transition hover:bg-zinc-50/80"
                             >
                                 <x-use-case-icon
                                     :name="$entry['icon']"
-                                    size="sm"
-                                    class="mt-0.5 shrink-0 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
+                                    class="transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
                                 />
-                                <span class="min-w-0">
-                                    <span class="block text-sm font-medium text-zinc-900 transition group-hover:text-rose-600">
-                                        {{ $entry['label'] }}
-                                    </span>
-                                    <span class="mt-0.5 block text-sm leading-relaxed text-zinc-500">
-                                        {{ $entry['teaser'] }}
-                                    </span>
-                                </span>
+                                <h3 class="mt-3 text-sm font-semibold text-zinc-900 transition group-hover:text-rose-600">
+                                    {{ $entry['label'] }}
+                                </h3>
+                                <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">
+                                    {{ $entry['teaser'] }}
+                                </p>
                             </a>
-                        </li>
-                    @endforeach
-                </ul>
+                        @endforeach
+                    </div>
+                </div>
             </x-home-section>
 
             <x-home-section>

@@ -16,6 +16,10 @@ class BumpVersionCommandTest extends TestCase
         $this->assertNotFalse($versionBefore);
         $this->assertNotFalse($changelogBefore);
 
+        preg_match("/'version'\\s*=>\\s*'(\\d+)\\.(\\d+)\\.(\\d+)'/", $versionBefore, $matches);
+        $this->assertNotEmpty($matches, 'Could not parse current SemVer from config/revisemy.php');
+        $expected = $matches[1].'.'.$matches[2].'.'.((int) $matches[3] + 1);
+
         try {
             $this->artisan('revisemy:bump', [
                 'part' => 'patch',
@@ -26,8 +30,8 @@ class BumpVersionCommandTest extends TestCase
             $versionAfter = file_get_contents($versionPath);
             $changelogAfter = file_get_contents($changelogPath);
 
-            $this->assertStringContainsString("'version' => '1.0.1'", $versionAfter);
-            $this->assertStringContainsString("'version' => '1.0.1'", $changelogAfter);
+            $this->assertStringContainsString("'version' => '{$expected}'", $versionAfter);
+            $this->assertStringContainsString("'version' => '{$expected}'", $changelogAfter);
             $this->assertStringContainsString("'title' => 'Test patch'", $changelogAfter);
             $this->assertStringContainsString("'date' => '2026-07-14'", $changelogAfter);
         } finally {
