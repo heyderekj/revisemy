@@ -1,4 +1,4 @@
-<section class="mt-16 scroll-mt-8 sm:mt-20">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">How to get pixels in</h2>
     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
         {{ $page['inputs']['intro'] }}
@@ -23,4 +23,4 @@
             </article>
         @endforeach
     </div>
-</section>
+</x-home-section>

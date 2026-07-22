@@ -1,4 +1,4 @@
-<section class="rm-fade-up mt-10 sm:mt-12">
+<div class="rm-fade-up mt-10 sm:mt-12">
     <div class="flex items-center gap-3">
         <x-use-case-icon :name="$page['icon']" size="lg" />
         <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Built for {{ $page['label'] }}</p>
@@ -9,4 +9,4 @@
     <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
         {{ $page['subheadline'] }}
     </p>
-</section>
+</div>

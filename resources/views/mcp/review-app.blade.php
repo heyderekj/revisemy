@@ -13,12 +13,66 @@
      add_mark / decide_review / verify_mark. --}}
 {!! $libraryScripts !!}
 <link rel="stylesheet" href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600">
+<script>
+    // Mirrors the @theme block in resources/css/app.css. This surface loads the
+    // Tailwind v3 Play CDN and never sees app.css, so the design tokens have to be
+    // restated here — keep the two in sync. `borderRadius.full` is left alone via
+    // `extend` so pills and avatars survive the hard-corner pass.
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    none: '0px', sm: '0px', DEFAULT: '0px', md: '0px',
+                    lg: '0px', xl: '0px', '2xl': '0px', '3xl': '0px', full: '0px',
+                },
+                colors: {
+                    accent: {
+                        DEFAULT: '#ffc53d', hover: '#ffba18',
+                        contrast: '#21201c',
+                    },
+                    ink: '#21201c',
+                    guest: '#82827c',
+                    // zinc -> Radix sand
+                    zinc: {
+                        50: '#f9f9f8', 100: '#f1f0ef', 200: '#dad9d6', 300: '#cfceca',
+                        400: '#8d8d86', 500: '#6b6b65', 600: '#63635e', 700: '#4a4943',
+                        800: '#33322d', 900: '#21201c', 950: '#141310',
+                    },
+                    // rose -> yellow fills at the light end, ink at the dark end
+                    rose: {
+                        50: '#fffbe8', 100: '#fff7c2', 200: '#ffee9c', 300: '#fbe577',
+                        400: '#ffd166', 500: '#ffc53d', 600: '#21201c', 700: '#33322d',
+                        800: '#21201c', 900: '#141310', 950: '#141310',
+                    },
+                    amber: {
+                        50: '#fefbe9', 100: '#fff7c2', 200: '#ffee9c', 300: '#fbe577',
+                        400: '#e9c162', 500: '#ffc53d', 600: '#ffba18', 700: '#4a4943',
+                        800: '#33322d', 900: '#21201c',
+                    },
+                    // emerald -> Radix jade
+                    emerald: {
+                        50: '#f4fbf7', 100: '#e6f7ed', 200: '#c3e9d7', 300: '#8bceb6',
+                        400: '#56ba9f', 500: '#29a383', 600: '#26997b', 700: '#208368',
+                        800: '#1d6a54', 900: '#1d3b31',
+                    },
+                    // red -> Radix tomato
+                    red: {
+                        50: '#fff8f7', 100: '#feebe7', 200: '#ffdcd3', 300: '#fdbdaf',
+                        400: '#ec8e7b', 500: '#e54d2e', 600: '#dd4425', 700: '#d13415',
+                        800: '#a32b12', 900: '#5c271f',
+                    },
+                },
+            },
+        },
+    };
+</script>
 <style>
     body { font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, sans-serif; }
     [x-cloak] { display: none !important; }
+    ::selection { background: #ffee9c; color: #21201c; }
 </style>
 
-<div class="bg-white text-zinc-900" x-data="reviewApp()" x-init="init()" x-cloak>
+<div class="bg-[#fdfdfc] text-zinc-900" x-data="reviewApp()" x-init="init()" x-cloak>
     <div class="mx-auto max-w-5xl px-4 py-4 sm:px-6">
         <template x-if="!payload">
             <p class="text-sm text-zinc-500">Loading review…</p>
@@ -119,7 +173,7 @@
                                                 :class="{ 'opacity-50': isSettled(pin) }" :style="rectStyle(pin.area)"></div>
                                         </template>
                                         <button type="button"
-                                            class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow-lg ring-2 ring-white transition"
+                                            class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow-lg ring-2 ring-white transition"
                                             :class="markerBg(pin.severity) + (isSettled(pin) ? ' opacity-60' : '') + (activePin && activePin.id === pin.id ? ' ring-zinc-900' : '')"
                                             :style="pinStyle(pin)" x-text="'M' + pin.number"
                                             @pointerdown.stop @pointerup.stop @click.stop="showPin(pin)"></button>
@@ -145,7 +199,7 @@
                                     x-show="draft.drawing && draft.w > 0.01" :style="draftRectStyle()"></div>
                                 <div class="pointer-events-none absolute z-[18] rounded-md border-2 border-dashed border-rose-500 bg-rose-500/15"
                                     x-show="composer.open && composer.area" :style="composer.area ? rectStyle(composer.area) : ''"></div>
-                                <div class="absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white shadow-lg ring-2 ring-white"
+                                <div class="absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-xs font-semibold text-ink shadow-lg ring-2 ring-white"
                                     x-show="composer.open && !composer.area" :style="pinStyle(composer)">+</div>
                             </div>
                         </div>
@@ -155,7 +209,7 @@
                     <div class="mt-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]" x-show="activePin" x-cloak>
                         <div class="flex items-start justify-between gap-3 border-b border-zinc-100 px-3 py-3 sm:px-4">
                             <div class="flex min-w-0 flex-wrap items-center gap-2">
-                                <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white"
+                                <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold"
                                     :class="markerBg(activePin ? activePin.severity : '')"
                                     x-text="activePin && ('M' + activePin.number)"></span>
                                 <span class="text-xs text-zinc-500" x-text="activePin && severityLabel(activePin.severity)"></span>
@@ -179,7 +233,7 @@
                                             :style="rectStyle(activePin.focus_preview.overlay)"></div>
                                     </template>
                                     <template x-if="activePin.focus_preview.point">
-                                        <span class="pointer-events-none absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow ring-2 ring-white"
+                                        <span class="pointer-events-none absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow ring-2 ring-white"
                                             :class="markerBg(activePin.severity)"
                                             :style="pinStyle(activePin.focus_preview.point)"
                                             x-text="'M' + activePin.number"></span>
@@ -224,7 +278,7 @@
                                     </div>
                                 </template>
                                 <div class="ml-auto flex flex-wrap gap-2" x-show="activePin && (activePin.status === 'resolved' || activePin.status === 'verified')">
-                                    <button type="button" class="inline-flex h-8 items-center rounded-md bg-rose-600 px-3 text-xs font-medium text-white transition hover:bg-rose-700 disabled:opacity-50"
+                                    <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
                                         x-show="activePin && activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')">Verify</button>
                                     <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80 disabled:opacity-50"
                                         :disabled="busy" @click="verifyMark(activePin, 'reopen')">Reopen</button>
@@ -264,7 +318,7 @@
                         <textarea x-model="composer.body" rows="3" placeholder="What should change here?"
                             class="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30"></textarea>
                         <div class="mt-2 flex flex-wrap items-center gap-2">
-                            <button type="button" class="inline-flex h-8 items-center rounded-md bg-rose-600 px-3 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-50"
+                            <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
                                 :disabled="busy || !composer.body.trim()" @click="saveMark()">Add mark</button>
                             <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/80"
                                 @click="closeComposer()">Cancel</button>
@@ -279,7 +333,7 @@
                                 :class="activePin && activePin.id === pin.id ? 'border-zinc-400 ring-1 ring-zinc-300' : ''"
                                 @click="showPin(pin)">
                                 <div class="mb-1 flex flex-wrap items-center gap-2">
-                                    <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white"
+                                    <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
                                         :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
                                     <span class="text-xs text-zinc-500" x-text="severityLabel(pin.severity)"></span>
                                     <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="statusBadge(pin.status)" x-text="statusLabel(pin.status)"></span>
@@ -331,7 +385,7 @@
                                         :class="activePin && activePin.id === pin.id ? 'border-zinc-400 ring-1 ring-zinc-300' : ''"
                                         @click="showPin(pin)">
                                         <div class="mb-1 flex flex-wrap items-center gap-2">
-                                            <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white"
+                                            <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
                                                 :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
                                             <span class="text-xs text-zinc-500" x-text="severityLabel(pin.severity)"></span>
                                             <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="statusBadge(pin.status)" x-text="statusLabel(pin.status)"></span>
@@ -356,7 +410,7 @@
                         <div class="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]">
                             <div class="flex items-start justify-between gap-3 border-b border-zinc-100 px-3 py-3 sm:px-4">
                                 <div class="flex min-w-0 flex-wrap items-center gap-2">
-                                    <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white"
+                                    <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold"
                                         :class="markerBg(activePin.severity)" x-text="'M' + activePin.number"></span>
                                     <span class="text-xs text-zinc-500" x-text="severityLabel(activePin.severity)"></span>
                                     <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="statusBadge(activePin.status)" x-text="statusLabel(activePin.status)"></span>
@@ -373,7 +427,7 @@
                                                 :style="rectStyle(activePin.focus_preview.overlay)"></div>
                                         </template>
                                         <template x-if="activePin.focus_preview.point">
-                                            <span class="pointer-events-none absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow ring-2 ring-white"
+                                            <span class="pointer-events-none absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow ring-2 ring-white"
                                                 :class="markerBg(activePin.severity)"
                                                 :style="pinStyle(activePin.focus_preview.point)"
                                                 x-text="'M' + activePin.number"></span>
@@ -398,7 +452,7 @@
                                         </div>
                                     </template>
                                     <div class="ml-auto flex flex-wrap gap-2" x-show="activePin.status === 'resolved' || activePin.status === 'verified'">
-                                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-rose-600 px-3 text-xs font-medium text-white transition hover:bg-rose-700 disabled:opacity-50"
+                                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
                                             x-show="activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')">Verify</button>
                                         <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80 disabled:opacity-50"
                                             :disabled="busy" @click="verifyMark(activePin, 'reopen')">Reopen</button>
@@ -414,7 +468,7 @@
                     <input type="text" x-model="decisionNote" placeholder="Optional note for the agent…"
                         class="h-8 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30">
                     <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-rose-600 px-3 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-50"
+                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
                             :disabled="busy" @click="decide('approved')">Approve</button>
                         <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-sm font-medium text-zinc-800 transition hover:bg-zinc-200/80 disabled:opacity-50"
                             :disabled="busy" @click="decide('changes_requested')">Request changes</button>
@@ -501,8 +555,8 @@
         // Keep in sync with Annotation::markerClass(), severityLabels(), statusBadgeClass(),
         // statusLabels(), and boardColumnMeta().
         const MARKER_BG = {
-            'must-fix': 'bg-rose-600', 'nit': 'bg-rose-600', 'question': 'bg-rose-600', 'keep': 'bg-rose-600',
-            'wording': 'bg-rose-600', 'spacing': 'bg-rose-600', 'size': 'bg-rose-600', 'color': 'bg-rose-600', 'alignment': 'bg-rose-600',
+            'must-fix': 'bg-accent text-ink', 'nit': 'bg-accent text-ink', 'question': 'bg-accent text-ink', 'keep': 'bg-accent text-ink',
+            'wording': 'bg-accent text-ink', 'spacing': 'bg-accent text-ink', 'size': 'bg-accent text-ink', 'color': 'bg-accent text-ink', 'alignment': 'bg-accent text-ink',
         };
         const SEVERITY_LABELS = {
             'must-fix': 'Must fix', 'nit': 'Nice to have', 'question': 'Question', 'keep': 'Keep this',
@@ -565,7 +619,7 @@
 
             get isPending() { return this.payload && this.payload.status === 'pending'; },
 
-            markerBg(severity) { return MARKER_BG[severity] || 'bg-rose-600'; },
+            markerBg(severity) { return MARKER_BG[severity] || 'bg-accent text-ink'; },
             severityLabel(severity) { return SEVERITY_LABELS[severity] || severity; },
             statusBadge(status) { return STATUS_BADGE[status] || 'bg-zinc-100 text-zinc-600'; },
             statusLabel(status) { return STATUS_LABELS[status] || status; },

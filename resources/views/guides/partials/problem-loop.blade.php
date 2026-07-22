@@ -1,5 +1,5 @@
 {{-- Two-column problem + How ReviseMy fits. Supports loop_steps (numbered) or loop (prose). --}}
-<section class="mt-14 scroll-mt-8 sm:mt-16">
+<x-home-section>
     <div class="grid gap-10 sm:grid-cols-2 sm:gap-8 sm:items-start">
         <div>
             <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">The problem</h2>
@@ -56,4 +56,4 @@
             @endif
         </div>
     </div>
-</section>
+</x-home-section>

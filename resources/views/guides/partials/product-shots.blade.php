@@ -1,10 +1,11 @@
-{{-- Optional desktop/mobile product shots. Set product_shots.dir + alt on the guide page. --}}
+{{-- Optional product shot: stylized UI (product_shots.stylized) or desktop/mobile images (dir). --}}
 @php
     $shots = $page['product_shots'] ?? null;
+    $stylized = is_array($shots) ? ($shots['stylized'] ?? null) : null;
     $desktop = ['url' => null, 'width' => null, 'height' => null];
     $mobile = ['url' => null, 'width' => null, 'height' => null];
 
-    if (is_array($shots) && ! empty($shots['dir'])) {
+    if (is_array($shots) && ! $stylized && ! empty($shots['dir'])) {
         $relDir = trim($shots['dir'], '/');
         $absDir = public_path($relDir);
         $pick = function (string $stem) use ($absDir, $relDir): array {
@@ -29,9 +30,13 @@
     }
 @endphp
 
-@if ($desktop['url'] || $mobile['url'])
-    <div class="rm-fade-up mt-10 sm:mt-12">
-        <div class="overflow-hidden rounded-xl border border-zinc-900/10 bg-zinc-100 shadow-[0_18px_50px_-28px_rgba(24,24,27,0.45)]">
+@if ($stylized === 'board')
+    <div class="rm-bleed rm-fade-up mt-8 sm:mt-10">
+        <x-board-preview />
+    </div>
+@elseif ($desktop['url'] || $mobile['url'])
+    <div class="rm-fade-up mt-8 sm:mt-10">
+        <div class="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
             <picture>
                 @if ($desktop['url'])
                     <source

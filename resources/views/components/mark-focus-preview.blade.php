@@ -25,7 +25,7 @@
             ></div>
         @elseif ($point)
             <span
-                class="pointer-events-none absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow ring-2 ring-white {{ $mark->markerClass() }}"
+                class="pointer-events-none absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow ring-2 ring-white {{ $mark->markerClass() }}"
                 style="left: {{ $point['x'] * 100 }}%; top: {{ $point['y'] * 100 }}%;"
             >M{{ $mark->number }}</span>
         @endif

@@ -221,10 +221,14 @@ class Annotation extends Model
 
     /**
      * Tailwind classes for the numbered mark marker.
+     *
+     * Your own marks carry the accent yellow, which is why the ink foreground ships
+     * with the fill — white on yellow is unreadable. Guest marks are styled gray at
+     * the call site so the two never compete.
      */
     public function markerClass(): string
     {
-        return 'bg-rose-600';
+        return 'bg-accent text-ink';
     }
 
     /**
@@ -232,7 +236,7 @@ class Annotation extends Model
      */
     public static function accentClass(string $severity): string
     {
-        return 'accent-rose-600';
+        return 'accent-[#ffc53d]';
     }
 
     protected $fillable = [

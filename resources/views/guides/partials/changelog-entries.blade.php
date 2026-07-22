@@ -1,4 +1,4 @@
-<section class="mt-14">
+<x-home-section>
     <div class="flex items-baseline justify-between gap-4">
         <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Releases</h2>
         <p class="font-mono text-[11px] text-zinc-400">v{{ config('revisemy.version') }}</p>
@@ -6,7 +6,7 @@
 
     <ol class="mt-8 space-y-10">
         @foreach (config('changelog.entries', []) as $entry)
-            <li class="border-t border-zinc-900/8 pt-8 first:border-t-0 first:pt-0">
+            <li class="border-t border-zinc-200 pt-8 first:border-t-0 first:pt-0">
                 <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <h3 class="font-mono text-base font-semibold text-zinc-900">
                         v{{ $entry['version'] }}
@@ -44,4 +44,4 @@
             </li>
         @endforeach
     </ol>
-</section>
+</x-home-section>

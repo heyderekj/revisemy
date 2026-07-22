@@ -29,7 +29,7 @@
     }
 @endphp
 
-<section class="rm-fade-up mt-10 sm:mt-12">
+<div class="rm-fade-up mt-10 sm:mt-12">
     <div class="flex items-center gap-3">
         <x-use-case-icon :name="$page['icon']" size="lg" />
         <div>
@@ -43,4 +43,4 @@
     <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
         {!! $subheadlineHtml !!}
     </p>
-</section>
+</div>

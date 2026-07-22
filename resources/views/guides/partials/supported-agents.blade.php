@@ -1,4 +1,4 @@
-<section class="mt-14 scroll-mt-8 sm:mt-16">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
         {{ $page['supported_agents_heading'] ?? "Where it's available" }}
     </h2>
@@ -26,4 +26,4 @@
         <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">setup guides</a>
         for every host.
     </p>
-</section>
+</x-home-section>

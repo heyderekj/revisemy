@@ -1,4 +1,4 @@
-<section class="mt-14 scroll-mt-8 sm:mt-16">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
         Why people look for a {{ $page['competitor'] }} alternative
     </h2>
@@ -7,4 +7,4 @@
             <li>{{ $item }}</li>
         @endforeach
     </ul>
-</section>
+</x-home-section>

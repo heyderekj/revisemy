@@ -178,4 +178,4 @@ Product SemVer lives in `config/revisemy.php`. To cut a release: `php artisan re
 
 ## License
 
-MIT
+[O'Saasy License](https://osaasy.dev/) — see [`LICENSE`](LICENSE). Use, fork, and contribute freely; hosted SaaS rights are reserved for the copyright holder.

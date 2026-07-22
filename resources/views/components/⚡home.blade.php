@@ -136,7 +136,7 @@ new class extends Component
 };
 ?>
 
-<div
+    <div
     class="rm-wash relative min-h-screen"
     x-data="{
         mobileNav: false,
@@ -175,13 +175,18 @@ new class extends Component
     "
     x-on:scroll-to-setup.window="$nextTick(() => document.getElementById('setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
 >
-    <div class="rm-grid pointer-events-none absolute inset-0"></div>
+    {{-- Inset the framed column from the viewport so rails + crosshairs stay
+         visible on small screens (and the top rule isn't flush with the edge). --}}
+    <div class="relative z-10 mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 sm:pt-12 lg:px-8 lg:pt-16">
+        <div class="rm-rails relative flex min-h-screen border-t border-zinc-200 bg-canvas/60">
+            <x-cross-mark left="0" top="0" />
+            <x-cross-mark left="220px" top="0" visibility="hidden lg:block" />
+            <x-cross-mark left="100%" top="0" />
 
-    <div class="relative z-10 mx-auto flex min-h-screen max-w-[1200px]">
         {{-- Agentation-style sidebar --}}
-        <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-900/8 px-6 pb-8 pt-10 lg:flex lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:self-start lg:overflow-y-auto">
-            <a href="/" class="mt-[0.55rem] inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                <x-revisemy-logo class="!h-auto !w-[128px]" />
+        <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-200 bg-zinc-50/90 px-6 pb-8 pt-10 backdrop-blur lg:flex lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:self-start lg:overflow-y-auto">
+            <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
+                <x-revisemy-logo variant="wordmark" size="lg" />
             </a>
 
             <nav class="mt-12 flex flex-1 flex-col gap-8 text-[14px]">
@@ -206,7 +211,7 @@ new class extends Component
                         <li>
                             <a href="/connectors" class="inline-flex items-center gap-2 transition hover:text-zinc-900">
                                 Connectors
-                                <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">MCP</span>
+                                <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-contrast">MCP</span>
                             </a>
                         </li>
                         <li>
@@ -228,15 +233,15 @@ new class extends Component
         </aside>
 
         {{-- Main --}}
-        <main id="top" class="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10">
+        <main id="top" class="min-w-0 flex-1 lg:pt-10 [--rm-pad:1.25rem] sm:[--rm-pad:2rem] lg:[--rm-pad:3rem]">
             {{-- Mobile top bar --}}
-            <div class="mb-8 flex items-center justify-between lg:hidden">
+            <div class="flex items-center justify-between px-[var(--rm-pad)] pt-6 lg:hidden">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                    <x-revisemy-logo class="!h-auto !w-[128px]" />
+                    <x-revisemy-logo variant="wordmark" size="lg" />
                 </a>
                 <button type="button" class="text-sm text-zinc-600" x-on:click="mobileNav = !mobileNav">Menu</button>
             </div>
-            <div x-show="mobileNav" x-cloak class="mb-8 space-y-2 text-sm text-zinc-600 lg:hidden">
+            <div x-show="mobileNav" x-cloak class="space-y-2 px-[var(--rm-pad)] pt-6 text-sm text-zinc-600 lg:hidden">
                 <a href="#top" class="block" x-on:click="mobileNav = false">Home</a>
                 <a href="#how" class="block" x-on:click="mobileNav = false">How it works</a>
                 <a href="#agents" class="block" x-on:click="mobileNav = false">For agents</a>
@@ -244,25 +249,25 @@ new class extends Component
                 <a href="#setup" class="block" x-on:click="mobileNav = false">Try with your agent</a>
                 <a href="/connectors" class="inline-flex items-center gap-2" x-on:click="mobileNav = false">
                     Connectors
-                    <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">MCP</span>
+                    <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-contrast">MCP</span>
                 </a>
                 <a href="/guest-links" class="block" x-on:click="mobileNav = false">Guest links</a>
                 <a href="/alternatives" class="block" x-on:click="mobileNav = false">Alternatives</a>
                 <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="block">GitHub ↗</a>
             </div>
 
-            {{-- Sticky try CTA (desktop only) until the setup section, where another try button lives --}}
+            {{-- Sticky try CTA: top-10 matches aside pt-10 so it lines up with the app icon. --}}
             <div class="relative">
-                <div class="pointer-events-none sticky top-5 z-30 hidden h-0 sm:block lg:top-6">
-                    <div class="flex justify-end sm:pt-2">
+                <div class="pointer-events-none sticky top-10 z-30 hidden h-0 sm:block">
+                    <div class="flex justify-end px-[var(--rm-pad)]">
                         <div class="pointer-events-auto">
                             <x-try-token-button fathom-event="Try token sidebar" />
                         </div>
                     </div>
                 </div>
 
-            {{-- Hero --}}
-            <section class="rm-fade-up">
+            {{-- Hero — bottom padding tightened so it reads with How it works below --}}
+            <x-home-section first class="rm-fade-up !pb-8 sm:!pb-10">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <h1 class="max-w-xl text-[clamp(2.4rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900">
                         <span class="rm-hero-mark">
@@ -283,164 +288,110 @@ new class extends Component
                     </h1>
                     {{-- Mobile: inline button as before. Desktop: invisible spacer keeps hero layout while the sticky one floats. --}}
                     <x-try-token-button id="rm-hero-cta" fathom-event="Try token hero" class="self-start sm:hidden" />
-                    <div class="invisible hidden pointer-events-none self-start sm:mt-2 sm:block" aria-hidden="true">
+                    <div class="invisible hidden pointer-events-none self-start sm:block" aria-hidden="true">
                         <x-try-token-button fathom-event="Try token setup" />
                     </div>
                 </div>
 
                 <p class="rm-fade-up-delay mt-5 w-full max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                    Human-in-the-loop design review for agents. Capture UI, websites, slides, or email from a screenshot, URL, PDF, or HTML; mark what matters; track fixes on the board; and send clear next steps back over MCP on
-                    <a
-                        href="https://laravel.com/cloud"
-                        target="_blank"
-                        rel="noreferrer"
-                        class="mx-0.5 inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2 py-0.5 align-middle text-[13px] font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950"
-                    >
-                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M7.5 18.5h9a4.5 4.5 0 0 0 .6-8.97A5.5 5.5 0 0 0 6.2 7.8 4 4 0 0 0 7.5 18.5Z" fill="#F53003" fill-opacity="0.14" stroke="#F53003" stroke-width="1.5" stroke-linejoin="round"/>
-                            <path d="M9 14.5h6" stroke="#F53003" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                        Laravel Cloud
-                        <svg class="h-3 w-3 text-zinc-400" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                            <path d="M3.5 8.5 8.5 3.5M4.5 3.5h4v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </a>
+                    ReviseMy is human-in-the-loop design review for agents. Drop in a screenshot, URL, PDF, or email HTML, mark what matters, and send clear next steps back over MCP — without leaving your AI chat.
                 </p>
 
                 @if ($error)
                     <p class="mt-3 text-sm text-rose-600">{{ $error }}</p>
                 @endif
 
-                {{-- Product shot: drop HQ files in public/images/hero/{desktop,mobile}.{png|webp|jpg} --}}
-                @php
-                    $heroDir = public_path('images/hero');
-                    $heroPick = function (string $stem) use ($heroDir): array {
-                        foreach (['png', 'webp', 'jpg', 'jpeg'] as $ext) {
-                            $path = "{$heroDir}/{$stem}.{$ext}";
-                            if (! is_file($path)) {
-                                continue;
-                            }
-                            $size = @getimagesize($path) ?: [null, null];
+                <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
+                    <x-hero-loop-preview />
+                </div>
+            </x-home-section>
 
-                            return [
-                                'url' => asset("images/hero/{$stem}.{$ext}"),
-                                'width' => $size[0],
-                                'height' => $size[1],
-                            ];
-                        }
-
-                        return ['url' => null, 'width' => null, 'height' => null];
-                    };
-                    $heroDesktop = $heroPick('desktop');
-                    $heroMobile = $heroPick('mobile');
-                @endphp
-                @if ($heroDesktop['url'] || $heroMobile['url'])
-                    <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
-                        <div class="overflow-hidden rounded-xl border border-zinc-900/10 bg-zinc-100 shadow-[0_18px_50px_-28px_rgba(24,24,27,0.45)]">
-                            <picture>
-                                @if ($heroDesktop['url'])
-                                    <source
-                                        media="(min-width: 640px)"
-                                        srcset="{{ $heroDesktop['url'] }}"
-                                        @if ($heroDesktop['width']) width="{{ $heroDesktop['width'] }}" @endif
-                                        @if ($heroDesktop['height']) height="{{ $heroDesktop['height'] }}" @endif
-                                    >
-                                @endif
-                                <img
-                                    src="{{ $heroMobile['url'] ?? $heroDesktop['url'] }}"
-                                    @if (($heroMobile['width'] ?? $heroDesktop['width'])) width="{{ $heroMobile['width'] ?? $heroDesktop['width'] }}" @endif
-                                    @if (($heroMobile['height'] ?? $heroDesktop['height'])) height="{{ $heroMobile['height'] ?? $heroDesktop['height'] }}" @endif
-                                    alt="ReviseMy review — mark feedback on a capture, then approve or request changes"
-                                    class="block h-auto w-full"
-                                    decoding="async"
-                                    fetchpriority="high"
-                                >
-                            </picture>
-                        </div>
-                    </div>
-                @endif
-            </section>
-
-            {{-- How it works: one loop in icon blocks --}}
-            <section id="how" class="mt-20 scroll-mt-8 sm:mt-24">
+            {{-- How it works: joined to hero (no top rule) --}}
+            <x-home-section id="how" joined>
+                <x-section-eyebrow number="01" label="How it works" />
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">One feedback loop for anything visual</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                     From capture to approval, ReviseMy keeps reviews, marks, guest feedback, and lifecycle together — so nothing gets lost between passes.
                 </p>
 
-                <div class="mt-8 grid grid-cols-1 gap-x-8 gap-y-9 min-[30rem]:grid-cols-2 lg:grid-cols-3">
-                    <article>
-                        <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
-                            <flux:icon.photo variant="micro" class="size-[18px]" />
+                <div class="rm-bleed relative mt-10 border-y border-zinc-200">
+                    {{-- Top / bottom column intersections (on the outer border-y). --}}
+                    <x-cross-mark left="33.3333%" top="0%" visibility="hidden lg:block" />
+                    <x-cross-mark left="66.6667%" top="0%" visibility="hidden lg:block" />
+                    <x-cross-mark left="33.3333%" top="100%" visibility="hidden lg:block" />
+                    <x-cross-mark left="66.6667%" top="100%" visibility="hidden lg:block" />
+                    {{-- 2-col midpoint (sm–md only). --}}
+                    <x-cross-mark left="50%" top="50%" visibility="hidden min-[30rem]:block lg:hidden" />
+
+                    {{-- Below lg: one gap grid. At lg: two content rows + a real 1px
+                         middle rule so crosshairs sit on the hairline (not geometric 50%,
+                         which drifts when the rows are different heights). --}}
+                    <div class="grid grid-cols-1 gap-px bg-[var(--color-border)] min-[30rem]:grid-cols-2 lg:grid-cols-3 lg:grid-rows-[auto_1px_auto] lg:gap-y-0">
+                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-1">
+                            <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
+                                <flux:icon.photo variant="micro" class="size-[18px]" />
+                            </div>
+                            <h3 class="mt-3 text-sm font-semibold text-zinc-900">Capture anything visual</h3>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Ask your agent to open a review from screenshots, a page URL (desktop + mobile), PDF slides, or email HTML — each type gets its own checklist and vision lens.</p>
+                        </article>
+
+                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-1">
+                            <x-mark-type-icon type="s" />
+                            <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Optional hints can land first — checklist immediately, optional Claude or OpenAI vision when a key is set. Useful suggestions, never decisions.</p>
+                            <a
+                                href="/second-opinion"
+                                class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                            >Learn more</a>
+                        </article>
+
+                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-1">
+                            <x-mark-type-icon type="m" />
+                            <h3 class="mt-3 text-sm font-semibold text-zinc-900">Precise marks</h3>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Open the review link, point or outline the exact area, set must-fix / nice to have / question / keep, and keep a threaded comment on each mark.</p>
+                        </article>
+
+                        <div
+                            class="relative col-span-full hidden h-px bg-[var(--color-border)] lg:block lg:row-start-2"
+                            aria-hidden="true"
+                        >
+                            <x-cross-mark left="0" top="50%" />
+                            <x-cross-mark left="33.3333%" top="50%" />
+                            <x-cross-mark left="66.6667%" top="50%" />
+                            <x-cross-mark left="100%" top="50%" />
                         </div>
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Capture anything visual</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Ask your agent to open a review from screenshots, a page URL (desktop + mobile), PDF slides, or email HTML — each type gets its own checklist and vision lens.</p>
-                    </article>
 
-                    <article>
-                        <x-mark-type-icon type="s" />
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Optional hints can land first — checklist immediately, optional Claude or OpenAI vision when a key is set. Useful suggestions, never decisions.</p>
-                        <a
-                            href="/second-opinion"
-                            class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
-                        >Learn more</a>
-                    </article>
+                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-3">
+                            <x-mark-type-icon type="g" />
+                            <h3 class="mt-3 text-sm font-semibold text-zinc-900">Guest links</h3>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Share a private guest link when you want another set of eyes — no accounts. Your marks stay authoritative.</p>
+                            <a
+                                href="/guest-links"
+                                class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                            >Learn more</a>
+                        </article>
 
-                    <article>
-                        <x-mark-type-icon type="m" />
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Precise marks</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Open the review link, point or outline the exact area, set must-fix / nice to have / question / keep, and keep a threaded comment on each mark.</p>
-                    </article>
+                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-3">
+                            <x-use-case-icon name="queue-list" />
+                            <h3 class="mt-3 text-sm font-semibold text-zinc-900">Board to done</h3>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Track marks from open → resolved → verified on the board. Agents can attach before/after evidence when they fix something.</p>
+                            <a
+                                href="/board"
+                                class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                            >Learn more</a>
+                        </article>
 
-                    <article>
-                        <x-mark-type-icon type="g" />
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Guest links</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Share a private guest link when you want another set of eyes — no accounts. Your marks stay authoritative.</p>
-                        <a
-                            href="/guest-links"
-                            class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
-                        >Learn more</a>
-                    </article>
-
-                    <article>
-                        <x-use-case-icon name="queue-list" />
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Board to done</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Track marks from open → resolved → verified on the board. Agents can attach before/after evidence when they fix something.</p>
-                        <a
-                            href="/board"
-                            class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
-                        >Learn more</a>
-                    </article>
-
-                    <article>
-                        <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
-                            <flux:icon.arrow-path variant="micro" class="size-[18px]" />
-                        </div>
-                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Approve and loop</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or request changes. Structured next steps return over MCP — repeat until it feels right.</p>
-                    </article>
+                        <article class="rm-pad bg-[var(--color-canvas)] py-7 lg:row-start-3">
+                            <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
+                                <flux:icon.arrow-path variant="micro" class="size-[18px]" />
+                            </div>
+                            <h3 class="mt-3 text-sm font-semibold text-zinc-900">Approve and loop</h3>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or request changes. Structured next steps return over MCP — repeat until it feels right.</p>
+                        </article>
+                    </div>
                 </div>
 
-                <div class="mt-8 max-w-2xl space-y-3">
-                    <p class="text-[15px] font-medium text-zinc-800">A few prompts to use:</p>
-                    <ul class="space-y-2.5">
-                        <li>
-                            <x-sample-prompt text="Run a design checkup." />
-                        </li>
-                        <li>
-                            <x-sample-prompt text="Review this URL." />
-                        </li>
-                        <li>
-                            <x-sample-prompt text="Address my feedback." />
-                        </li>
-                    </ul>
-                    <p class="text-[14px] leading-relaxed text-zinc-500">
-                        ReviseMy handles the MCP handoff inside the agent workflow you already use.
-                    </p>
-                </div>
-
-                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                <div class="mt-14">
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for everyone in the loop</h2>
                     <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                         Humans mark and approve. Agents ship the next pass. Same loop whether you’re reviewing, designing, building, or signing off.
@@ -468,7 +419,7 @@ new class extends Component
                     </ul>
                 </div>
 
-                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                <div class="mt-14 border-t border-zinc-200 pt-12">
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">By review type</h2>
                     <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                         Pick the artifact — each type gets its own checklist and vision lens.
@@ -491,7 +442,36 @@ new class extends Component
                     </ul>
                 </div>
 
-                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                <div id="prompts" class="mt-14 scroll-mt-8 border-t border-zinc-200 pt-12">
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Example prompts</h2>
+                    <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                        Paste one into your agent — each review takes exactly one source, then the same mark → fix → approve loop.
+                    </p>
+                    <ul class="mt-6 space-y-4">
+                        <li class="flex flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-4">
+                            <span class="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400 sm:w-28">Screenshots</span>
+                            <x-sample-prompt text="Run a design checkup on these UI screenshots." />
+                        </li>
+                        <li class="flex flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-4">
+                            <span class="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400 sm:w-28">Live URL</span>
+                            <x-sample-prompt text="Review this URL — capture desktop and mobile and share the review link." />
+                        </li>
+                        <li class="flex flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-4">
+                            <span class="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400 sm:w-28">PDF / slides</span>
+                            <x-sample-prompt text="Review this pitch deck PDF — one screenshot per slide." />
+                        </li>
+                        <li class="flex flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-4">
+                            <span class="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400 sm:w-28">Email HTML</span>
+                            <x-sample-prompt text="Review this email HTML before we send — share the review link." />
+                        </li>
+                        <li class="flex flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-4">
+                            <span class="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400 sm:w-28">Method</span>
+                            <x-sample-prompt text="Address my feedback and attach after shots when you resolve each mark." />
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mt-14 border-t border-zinc-200 pt-12">
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Agents we support</h2>
                     <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                         One MCP endpoint. Paste the config into the host you already use.
@@ -518,7 +498,7 @@ new class extends Component
                     </ul>
                 </div>
 
-                <div class="mt-14 border-t border-zinc-900/8 pt-12">
+                <div class="mt-14 border-t border-zinc-200 pt-12">
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Helpful guides</h2>
                     <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                         Setup, inline review, CI gates, and fair comparisons — when you need the longer path.
@@ -554,10 +534,11 @@ new class extends Component
                         </li>
                     </ul>
                 </div>
-            </section>
+            </x-home-section>
 
             {{-- How agents use it --}}
-            <section id="agents" class="mt-16 scroll-mt-8 sm:mt-20">
+            <x-home-section id="agents">
+                <x-section-eyebrow number="02" label="For agents" />
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">The technical handoff</h2>
                 <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                     <code class="font-mono text-[13px] text-rose-600">create_review</code> accepts images, a capture URL, PDF, or HTML. When you finish,
@@ -571,13 +552,12 @@ new class extends Component
                     <li>Requesting changes links a follow-up pass via <code class="font-mono text-[13px] text-rose-600">create_review</code> + <code class="font-mono text-[13px]">parent_id</code></li>
                     <li>The MCP prompt <code class="font-mono text-[13px]">design_checkup_loop</code> can guide the full cycle</li>
                 </ul>
-            </section>
+            </x-home-section>
             </div>
 
             {{-- Setup --}}
-            <section
+            <x-home-section
                 id="setup"
-                class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16"
                 x-data
                 x-on:revisemy-try-setup-saved.window="sessionStorage.setItem('revisemy_try_setup', JSON.stringify($event.detail.payload))"
                 x-on:revisemy-try-setup-cleared.window="sessionStorage.removeItem('revisemy_try_setup')"
@@ -603,6 +583,7 @@ new class extends Component
                     }
                 "
             >
+                <x-section-eyebrow number="03" label="Setup" />
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Try it with your agent</h2>
                 <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
                     Choose the app you already use. Try free — no account required — and connect ChatGPT, Claude, Copilot, Cursor, or Grok.
@@ -1055,17 +1036,18 @@ new class extends Component
                         </div>
                     </div>
                 @endif
-            </section>
+            </x-home-section>
 
             {{-- FAQ --}}
-            <section id="faq" class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16">
+            <x-home-section id="faq">
                 <div class="max-w-xl">
+                    <x-section-eyebrow number="04" label="FAQ" />
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">FAQ</h2>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
                         Short answers on hosts, links, marks, passes, and sharing.
                     </p>
 
-                    <div class="mt-8 divide-y divide-zinc-900/8 border-t border-zinc-900/8">
+                    <div class="mt-8 divide-y divide-zinc-200 border-t border-zinc-200">
                         <details class="group py-4">
                             <summary class="cursor-pointer list-none text-[15px] font-medium text-zinc-900 marker:content-none [&::-webkit-details-marker]:hidden">
                                 <span class="flex items-start justify-between gap-4">
@@ -1165,96 +1147,86 @@ new class extends Component
                         </details>
                     </div>
                 </div>
-            </section>
+            </x-home-section>
 
-            {{-- Closing: origin + feedback --}}
-            <section id="feedback" class="mt-16 scroll-mt-8 border-t border-zinc-900/8 pt-14 sm:mt-20 sm:pt-16">
+            {{-- Closing: maker + why + contact --}}
+            <x-home-section id="feedback">
                 <div class="max-w-xl">
-                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Shipped, not finished</h2>
+                    <x-section-eyebrow number="05" label="Maker" />
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Why I made ReviseMy</h2>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                        ReviseMy sat as a
+                        I’m
+                        <a
+                            href="https://heyderekj.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
+                        >Derek</a>
+                        — I love giving design feedback. Not to be a dick, but to be a Derek. Agents are getting fast at shipping UI; what’s still missing is a clear place for a human to mark what matters and send the next pass back without leaving the chat.
+                    </p>
+                    <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
+                        ReviseMy started as a
                         <a
                             href="https://heyderekj.com/projects/revisemy/"
                             target="_blank"
                             rel="noreferrer"
                             class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
-                        >side project on the back burner</a>
-                        since September 2024 — an idea and a Figma file, because I love giving design feedback. Not to be a dick, but to be a Derek. Then
+                        >side project</a>
+                        in 2024 — an idea and a Figma file — then
                         <a
                             href="https://x.com/taylorotwell/status/2075667366646858222"
                             target="_blank"
                             rel="noreferrer"
                             class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
-                        >Taylor Otwell’s Laravel Cloud weekend challenge</a>
-                        was the nudge to ship an MCP on Laravel.
-                    </p>
-                    <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                        Built in a weekend on the side — it passes tests, and of course it can still be improved. Curious what you think; any feedback is welcome.
-                    </p>
-                    <p class="rm-note mt-6 inline text-[15px] leading-relaxed text-zinc-700">
-                        “Best side project shipped on Laravel Cloud this weekend… reply with a laravel.cloud URL.”
+                        >Taylor’s Laravel Cloud weekend challenge</a>
+                        was the nudge to ship it as an MCP on Laravel. Built in a weekend on the side; it works, it passes tests, and there’s plenty left to improve.
                         <a
-                            href="https://x.com/heyderekj/status/2075675582973501792"
+                            href="https://github.com/sponsors/heyderekj"
                             target="_blank"
                             rel="noreferrer"
-                            class="ml-1 font-medium text-rose-600 transition hover:text-rose-500"
-                        >GAME ON. ↗</a>
+                            class="ml-1.5 inline-flex translate-y-[-1px] items-center gap-1 border border-rose-200/80 bg-rose-50 px-2 py-0.5 text-[12px] font-medium text-zinc-700 transition hover:border-rose-300 hover:bg-rose-100 hover:text-rose-700"
+                        >
+                            <svg class="size-3 text-rose-500" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                <path d="M8 14.25c-.2 0-.4-.06-.57-.18C5.6 12.7 2 9.72 2 6.4 2 4.3 3.6 2.75 5.7 2.75c1.1 0 2.1.5 2.8 1.35A3.8 3.8 0 0 1 11.3 2.75C13.4 2.75 15 4.3 15 6.4c0 3.32-3.6 6.3-5.43 7.67A.9.9 0 0 1 8 14.25Z"/>
+                            </svg>
+                            Sponsor on GitHub
+                        </a>
+                    </p>
+                    <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
+                        Source is on
+                        <a
+                            href="https://github.com/heyderekj/revisemy"
+                            target="_blank"
+                            rel="noreferrer"
+                            class="font-medium text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
+                        >GitHub</a>
+                        under the
+                        <a
+                            href="https://osaasy.dev/"
+                            target="_blank"
+                            rel="noreferrer"
+                            class="font-medium text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
+                        >O’Saasy License</a>
+                        — use it, fork it, file issues, send PRs.
                     </p>
                     <p class="mt-6 text-[15px] leading-relaxed text-zinc-600">
-                        Email me at
+                        Say hi anytime —
                         <a
                             href="mailto:derekj@hey.com"
                             class="font-medium text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
                         >derekj@hey.com</a>
-                        or DM me on X at
+                        or
                         <a
                             href="https://x.com/heyderekj"
                             target="_blank"
                             rel="noreferrer"
                             class="font-medium text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
-                        >x.com/heyderekj</a>.
+                        >@heyderekj on X.com</a>.
                     </p>
-                    <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                        Open source on GitHub — code, issues, and PRs welcome.
-                        <a
-                            href="https://github.com/heyderekj/revisemy"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="ml-1 font-medium text-zinc-700 underline decoration-zinc-300 underline-offset-2 transition hover:text-rose-600 hover:decoration-rose-300"
-                        >View on GitHub ↗</a>
-                    </p>
-                </div>
-            </section>
 
-            <footer class="mt-20 border-t border-zinc-900/8 py-10 text-sm text-zinc-500">
-                <div class="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="max-w-sm space-y-3">
-                        <p class="text-zinc-400">
-                            Open source · Laravel + Livewire Flux · Built for Laravel Cloud
-                        </p>
-                        <p class="flex flex-wrap gap-x-4 gap-y-2">
-                            <a href="/privacy" class="transition hover:text-zinc-900">Privacy</a>
-                            <a href="/terms" class="transition hover:text-zinc-900">Terms</a>
-                            <a href="/changelog" class="transition hover:text-zinc-900">Changelog</a>
-                        </p>
-                        <a
-                            href="https://github.com/sponsors/heyderekj"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="inline-flex items-center gap-2 font-medium text-zinc-700 transition hover:text-rose-600"
-                        >
-                            <span class="inline-flex size-5 items-center justify-center rounded-full bg-rose-50 text-rose-500" aria-hidden="true">
-                                <svg class="size-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                    <path d="M8 14.25c-.2 0-.4-.06-.57-.18C5.6 12.7 2 9.72 2 6.4 2 4.3 3.6 2.75 5.7 2.75c1.1 0 2.1.5 2.8 1.35A3.8 3.8 0 0 1 11.3 2.75C13.4 2.75 15 4.3 15 6.4c0 3.32-3.6 6.3-5.43 7.67A.9.9 0 0 1 8 14.25Z"/>
-                                </svg>
-                            </span>
-                            Sponsor on GitHub
-                        </a>
-                    </div>
-
-                    <div>
+                    <div class="mt-8">
                         <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Also by Derek</p>
-                        <ul class="flex flex-wrap gap-x-5 gap-y-2 text-zinc-600 sm:justify-end">
+                        <ul class="flex flex-wrap gap-x-5 gap-y-2 text-[15px] text-zinc-600">
                             <li>
                                 <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
                                     Harvous ↗
@@ -1273,8 +1245,11 @@ new class extends Component
                         </ul>
                     </div>
                 </div>
-            </footer>
+            </x-home-section>
+
+            <x-site-footer />
         </main>
+        </div>
     </div>
 
     {{-- Mobile sticky try CTA: appears after the hero button scrolls away, hides at the setup section --}}
@@ -1289,6 +1264,6 @@ new class extends Component
         x-transition:leave-start="translate-y-0 opacity-100"
         x-transition:leave-end="translate-y-3 opacity-0"
     >
-        <x-try-token-button fathom-event="Try token mobile" class="w-full justify-center !py-3 shadow-[0_16px_40px_-12px_rgba(225,29,72,0.6)]" />
+        <x-try-token-button fathom-event="Try token mobile" class="w-full justify-center" />
     </div>
 </div>

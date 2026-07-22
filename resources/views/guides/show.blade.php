@@ -16,8 +16,7 @@
     :keywords="$page['keywords']"
     schema="page"
 >
-    <div
-        class="rm-wash relative min-h-screen"
+    <x-page-frame
         x-data="{
             pastHero: false,
             atCta: false,
@@ -39,70 +38,56 @@
         }"
         x-init="initStickyCta()"
     >
-        <div class="rm-grid pointer-events-none absolute inset-0"></div>
+        <div class="relative">
+            @include('use-cases.partials.sticky-cta', ['fathomEvent' => 'Try token guide sticky'])
 
-        <div class="relative z-10 mx-auto max-w-[720px] px-5 pb-20 pt-8 sm:px-8 sm:pb-24 sm:pt-10">
-            <div class="relative">
-                <div class="pointer-events-none sticky top-8 z-30 hidden h-0 sm:block">
-                    <div
-                        class="flex justify-end"
-                        x-show="! atCta"
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-100"
-                        x-transition:leave="transition ease-in duration-100"
-                        x-transition:leave-start="opacity-100"
-                        x-transition:leave-end="opacity-0"
-                    >
-                        <div class="pointer-events-auto">
-                            <x-try-token-cta fathom-event="Try token guide sticky" />
-                        </div>
-                    </div>
-                </div>
-
+            @php
+                $productShots = $page['product_shots'] ?? null;
+                $hasProductShotUi = is_array($productShots)
+                    && (($productShots['stylized'] ?? null) === 'board' || ! empty($productShots['dir']));
+            @endphp
+            <x-home-section first :flush-bottom="$hasProductShotUi">
                 @include('use-cases.partials.header')
-
                 @include('guides.partials.hero')
-
-                @if (! empty($page['product_shots']))
+                @if ($hasProductShotUi)
                     @include('guides.partials.product-shots')
                 @endif
+            </x-home-section>
 
-                @unless ($hasChangelog)
-                    @include('guides.partials.problem-loop')
-                @endunless
+            @unless ($hasChangelog)
+                @include('guides.partials.problem-loop')
+            @endunless
 
-                @if ($hasSupportedAgents)
-                    @include('guides.partials.supported-agents')
-                @endif
+            @if ($hasSupportedAgents)
+                @include('guides.partials.supported-agents')
+            @endif
 
-                @if ($hasHosts)
-                    @include('guides.partials.hosts')
-                @endif
+            @if ($hasHosts)
+                @include('guides.partials.hosts')
+            @endif
 
-                @if ($hasFeatures)
-                    @include('use-cases.partials.features')
-                @endif
+            @if ($hasFeatures)
+                @include('use-cases.partials.features')
+            @endif
 
-                @if ($hasChecklist)
-                    @include('guides.partials.checklist')
-                @endif
+            @if ($hasChecklist)
+                @include('guides.partials.checklist')
+            @endif
 
-                @if ($hasSources)
-                    @include('guides.partials.sources', [
-                        'sources' => $tasteSources,
-                        'disclaimer' => $tasteDisclaimer,
-                    ])
-                @endif
+            @if ($hasSources)
+                @include('guides.partials.sources', [
+                    'sources' => $tasteSources,
+                    'disclaimer' => $tasteDisclaimer,
+                ])
+            @endif
 
-                @if ($hasChangelog)
-                    @include('guides.partials.changelog-entries')
-                @endif
+            @if ($hasChangelog)
+                @include('guides.partials.changelog-entries')
+            @endif
 
-                @if ($hasFaq)
-                    @include('use-cases.partials.faq')
-                @endif
-            </div>
+            @if ($hasFaq)
+                @include('use-cases.partials.faq')
+            @endif
 
             @if ($hasChangelog)
                 @include('guides.partials.changelog-cta')
@@ -124,8 +109,8 @@
         >
             <x-try-token-cta
                 fathom-event="Try token guide mobile"
-                class="w-full justify-center !py-3 shadow-[0_16px_40px_-12px_rgba(225,29,72,0.6)]"
+                class="w-full justify-center"
             />
         </div>
-    </div>
+    </x-page-frame>
 </x-layouts.app>

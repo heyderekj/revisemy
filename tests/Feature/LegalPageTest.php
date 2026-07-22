@@ -20,7 +20,7 @@ class LegalPageTest extends TestCase
         $this->get('/terms')
             ->assertOk()
             ->assertSee('Terms', false)
-            ->assertSee('MIT License', false)
+            ->assertSee('O’Saasy License', false)
             ->assertSee('as is', false);
     }
 }

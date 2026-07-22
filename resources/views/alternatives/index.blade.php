@@ -4,8 +4,7 @@
     :keywords="['ReviseMy alternatives', 'Figma comments alternative', 'Marker.io alternative', 'Pastel alternative', 'Lucidly alternative', 'MarkUp.io alternative', 'Workflow.design alternative', 'Simple Commenter alternative', 'AI chat app', 'MCP design review']"
     schema="page"
 >
-    <div
-        class="rm-wash relative min-h-screen"
+    <x-page-frame
         x-data="{
             pastHero: false,
             atCta: false,
@@ -27,30 +26,12 @@
         }"
         x-init="initStickyCta()"
     >
-        <div class="rm-grid pointer-events-none absolute inset-0"></div>
+        <div class="relative">
+            @include('use-cases.partials.sticky-cta', ['fathomEvent' => 'Try token alternatives hub sticky'])
 
-        <div class="relative z-10 mx-auto max-w-[720px] px-5 pb-20 pt-8 sm:px-8 sm:pb-24 sm:pt-10">
-            <div class="relative">
-                <div class="pointer-events-none sticky top-8 z-30 hidden h-0 sm:block">
-                    <div
-                        class="flex justify-end"
-                        x-show="! atCta"
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-100"
-                        x-transition:leave="transition ease-in duration-100"
-                        x-transition:leave-start="opacity-100"
-                        x-transition:leave-end="opacity-0"
-                    >
-                        <div class="pointer-events-auto">
-                            <x-try-token-cta fathom-event="Try token alternatives hub sticky" />
-                        </div>
-                    </div>
-                </div>
-
+            <x-home-section first>
                 @include('use-cases.partials.header')
-
-                <section class="rm-fade-up mt-10 sm:mt-12">
+                <div class="rm-fade-up mt-10 sm:mt-12">
                     <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Alternatives</p>
                     <h1 class="mt-3 max-w-xl text-[clamp(2rem,5vw,2.75rem)] font-semibold leading-[1.08] tracking-tight text-zinc-900">
                         Thoughtful comparisons, not dunk contests
@@ -58,62 +39,62 @@
                     <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
                         ReviseMy is a human-in-the-loop design checkup for AI agents. These guides explain when that loop fits — and when Figma comments, website annotation tools, or just an AI chat app are the better choice.
                     </p>
-                </section>
+                </div>
+            </x-home-section>
 
-                <section class="mt-12">
-                    <ul class="divide-y divide-zinc-900/8 border-y border-zinc-900/8">
-                        @foreach ($pages as $entry)
-                            <li>
-                                <a
-                                    href="{{ url('/alternatives/'.$entry['slug']) }}"
-                                    class="group flex items-start gap-3 py-4 transition"
-                                >
-                                    <x-use-case-icon
-                                        :name="$entry['icon']"
-                                        size="sm"
-                                        class="mt-0.5 shrink-0 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
-                                    />
-                                    <span class="min-w-0">
-                                        <span class="block text-sm font-medium text-zinc-900 transition group-hover:text-rose-600">
-                                            {{ $entry['label'] }}
-                                        </span>
-                                        <span class="mt-0.5 block text-sm leading-relaxed text-zinc-500">
-                                            {{ $entry['teaser'] }}
-                                        </span>
+            <x-home-section>
+                <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+                    @foreach ($pages as $entry)
+                        <li>
+                            <a
+                                href="{{ url('/alternatives/'.$entry['slug']) }}"
+                                class="group flex items-start gap-3 py-4 transition"
+                            >
+                                <x-use-case-icon
+                                    :name="$entry['icon']"
+                                    size="sm"
+                                    class="mt-0.5 shrink-0 transition group-hover:bg-rose-50 group-hover:text-rose-600 group-hover:ring-rose-200/80"
+                                />
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-medium text-zinc-900 transition group-hover:text-rose-600">
+                                        {{ $entry['label'] }}
                                     </span>
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
-                </section>
+                                    <span class="mt-0.5 block text-sm leading-relaxed text-zinc-500">
+                                        {{ $entry['teaser'] }}
+                                    </span>
+                                </span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </x-home-section>
 
-                <section class="mt-14">
-                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Also useful</h2>
-                    <ul class="mt-6 space-y-3 text-[15px]">
-                        <li>
-                            <a href="/board" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
-                                Board
-                            </a>
-                            <span class="text-zinc-400"> — </span>
-                            <span class="text-zinc-500">Mark lifecycle open → verified</span>
-                        </li>
-                        <li>
-                            <a href="/second-opinion" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
-                                Second opinion
-                            </a>
-                            <span class="text-zinc-400"> — </span>
-                            <span class="text-zinc-500">Checklist and vision hints that never override your marks</span>
-                        </li>
-                        <li>
-                            <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
-                                Connectors
-                            </a>
-                            <span class="text-zinc-400"> — </span>
-                            <span class="text-zinc-500">ChatGPT, Claude, Copilot, Cursor, Grok</span>
-                        </li>
-                    </ul>
-                </section>
-            </div>
+            <x-home-section>
+                <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Also useful</h2>
+                <ul class="mt-6 space-y-3 text-[15px]">
+                    <li>
+                        <a href="/board" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                            Board
+                        </a>
+                        <span class="text-zinc-400"> — </span>
+                        <span class="text-zinc-500">Mark lifecycle open → verified</span>
+                    </li>
+                    <li>
+                        <a href="/second-opinion" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                            Second opinion
+                        </a>
+                        <span class="text-zinc-400"> — </span>
+                        <span class="text-zinc-500">Checklist and vision hints that never override your marks</span>
+                    </li>
+                    <li>
+                        <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">
+                            Connectors
+                        </a>
+                        <span class="text-zinc-400"> — </span>
+                        <span class="text-zinc-500">ChatGPT, Claude, Copilot, Cursor, Grok</span>
+                    </li>
+                </ul>
+            </x-home-section>
 
             @include('use-cases.partials.cta')
         </div>
@@ -131,8 +112,8 @@
         >
             <x-try-token-cta
                 fathom-event="Try token alternatives hub mobile"
-                class="w-full justify-center !py-3 shadow-[0_16px_40px_-12px_rgba(225,29,72,0.6)]"
+                class="w-full justify-center"
             />
         </div>
-    </div>
+    </x-page-frame>
 </x-layouts.app>

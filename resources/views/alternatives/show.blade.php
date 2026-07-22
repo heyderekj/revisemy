@@ -4,8 +4,7 @@
     :keywords="$page['keywords']"
     schema="page"
 >
-    <div
-        class="rm-wash relative min-h-screen"
+    <x-page-frame
         x-data="{
             pastHero: false,
             atCta: false,
@@ -27,44 +26,26 @@
         }"
         x-init="initStickyCta()"
     >
-        <div class="rm-grid pointer-events-none absolute inset-0"></div>
+        <div class="relative">
+            @include('use-cases.partials.sticky-cta', ['fathomEvent' => 'Try token alternatives sticky'])
 
-        <div class="relative z-10 mx-auto max-w-[720px] px-5 pb-20 pt-8 sm:px-8 sm:pb-24 sm:pt-10">
-            <div class="relative">
-                <div class="pointer-events-none sticky top-8 z-30 hidden h-0 sm:block">
-                    <div
-                        class="flex justify-end"
-                        x-show="! atCta"
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-100"
-                        x-transition:leave="transition ease-in duration-100"
-                        x-transition:leave-start="opacity-100"
-                        x-transition:leave-end="opacity-0"
-                    >
-                        <div class="pointer-events-auto">
-                            <x-try-token-cta fathom-event="Try token alternatives sticky" />
-                        </div>
-                    </div>
-                </div>
-
+            <x-home-section first>
                 @include('use-cases.partials.header')
-
                 @include('alternatives.partials.hero')
-                @include('alternatives.partials.intro')
-                @include('alternatives.partials.why-look')
-                @include('alternatives.partials.what-to-look-for')
-                @include('alternatives.partials.recommended')
-                @include('alternatives.partials.keep-theirs')
-                @include('alternatives.partials.verdict')
+            </x-home-section>
 
-                @if (! empty($page['faq']))
-                    @include('use-cases.partials.faq')
-                @endif
+            @include('alternatives.partials.intro')
+            @include('alternatives.partials.why-look')
+            @include('alternatives.partials.what-to-look-for')
+            @include('alternatives.partials.recommended')
+            @include('alternatives.partials.keep-theirs')
+            @include('alternatives.partials.verdict')
 
-                @include('alternatives.partials.related')
-            </div>
+            @if (! empty($page['faq']))
+                @include('use-cases.partials.faq')
+            @endif
 
+            @include('alternatives.partials.related')
             @include('use-cases.partials.cta')
         </div>
 
@@ -81,8 +62,8 @@
         >
             <x-try-token-cta
                 fathom-event="Try token alternatives mobile"
-                class="w-full justify-center !py-3 shadow-[0_16px_40px_-12px_rgba(225,29,72,0.6)]"
+                class="w-full justify-center"
             />
         </div>
-    </div>
+    </x-page-frame>
 </x-layouts.app>

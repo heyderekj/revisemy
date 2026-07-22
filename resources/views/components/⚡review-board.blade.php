@@ -433,7 +433,7 @@ new class extends Component
                                     class="cursor-pointer rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition hover:border-zinc-300 hover:shadow-md active:cursor-grabbing"
                                 >
                                     <div class="mb-1 flex flex-wrap items-center gap-2">
-                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white {{ $mark->markerClass() }}">M{{ $mark->number }}</span>
+                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $mark->markerClass() }}">M{{ $mark->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $mark->label() }}</span>
                                         <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $mark->statusBadgeClass() }}">{{ $mark->statusLabel() }}</span>
                                         @if ($mark->comments->isNotEmpty())
@@ -515,7 +515,7 @@ new class extends Component
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white {{ $selectedMark->markerClass() }}">M{{ $selectedMark->number }}</span>
+                                <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold {{ $selectedMark->markerClass() }}">M{{ $selectedMark->number }}</span>
                                 <span class="text-xs text-zinc-500">{{ $selectedMark->label() }}</span>
                                 <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $selectedMark->statusBadgeClass() }}">{{ $selectedMark->statusLabel() }}</span>
                             </div>
@@ -643,7 +643,7 @@ new class extends Component
                                 placeholder="Add context, a question, or a note…"
                             />
                             <flux:error name="commentBody" />
-                            <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="!h-8 w-full !bg-zinc-900 hover:!bg-zinc-800">
+                            <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="!h-8 w-full">
                                 Comment
                             </flux:button>
                         </div>

@@ -1,5 +1,5 @@
-<section class="mt-10 sm:mt-12">
+<x-home-section>
     <p class="text-[15px] leading-relaxed text-pretty text-zinc-600">
         {{ $page['intro'] }}
     </p>
-</section>
+</x-home-section>

@@ -10,7 +10,7 @@
         "livewire",
         "human-in-the-loop"
     ],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.3",
         "laravel/cashier": "^16.6",

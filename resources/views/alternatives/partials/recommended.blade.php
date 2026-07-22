@@ -1,4 +1,4 @@
-<section class="mt-14 scroll-mt-8 sm:mt-16">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Recommended options</h2>
     <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
         These are not interchangeable replacements. Each option solves a different version of the problem people usually mean when they search.
@@ -6,7 +6,7 @@
 
     <div class="mt-8 space-y-6">
         @foreach ($page['recommended'] as $option)
-            <article class="rounded-xl border border-zinc-900/8 bg-white/70 px-4 py-4 sm:px-5 sm:py-5">
+            <article class="rounded-xl border border-zinc-200 bg-white/70 px-4 py-4 sm:px-5 sm:py-5">
                 <div class="flex flex-wrap items-center gap-2">
                     @if (! empty($option['badge']))
                         <span class="rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700 ring-1 ring-rose-100">
@@ -34,4 +34,4 @@
             </article>
         @endforeach
     </div>
-</section>
+</x-home-section>

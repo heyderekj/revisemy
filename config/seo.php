@@ -30,7 +30,7 @@ return [
 
     'twitter' => '@heyderekj',
 
-    'theme_color' => '#e11d48',
+    'theme_color' => '#ffc53d',
 
     'github' => 'https://github.com/heyderekj/revisemy',
 
@@ -60,7 +60,7 @@ return [
     'og_image' => '/images/og.png',
 
     // Bump when public/images/og.png changes so social crawlers fetch the new card.
-    'og_image_version' => '4',
+    'og_image_version' => '5',
 
     'og_image_width' => 1200,
 

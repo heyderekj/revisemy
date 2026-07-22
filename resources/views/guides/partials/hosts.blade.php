@@ -1,4 +1,4 @@
-<section class="mt-16 scroll-mt-8 sm:mt-20">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Hosts</h2>
     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
         Same MCP endpoint and Bearer try token for every host — only the install UI changes. Generate a free try token on the
@@ -112,4 +112,4 @@
         </a>
         on the homepage — then come back here if you need the host overview.
     </p>
-</section>
+</x-home-section>

@@ -1,4 +1,4 @@
-<section class="mt-16 scroll-mt-8 sm:mt-20" id="craft-sources">
+<x-home-section id="craft-sources">
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Where the craft lenses come from</h2>
     <p class="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-600">
         {{ $page['sources_intro'] ?? 'Type-aware second opinion draws on published craft principles. Hints are ReviseMy distillations — not quotes, reviews, or endorsements from the people behind these works.' }}
@@ -59,4 +59,4 @@
         {{ $disclaimer }}
         On a review, open the craft chip next to Second opinion for the lenses that apply to that type.
     </p>
-</section>
+</x-home-section>

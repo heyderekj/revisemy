@@ -1,4 +1,4 @@
-<section class="rm-fade-up mt-10 sm:mt-12">
+<div class="rm-fade-up mt-10 sm:mt-12">
     <div class="flex items-center gap-3">
         @if (! empty($page['mark_icon']))
             <x-mark-type-icon :type="$page['mark_icon']" />
@@ -13,4 +13,4 @@
     <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
         {{ $page['subheadline'] }}
     </p>
-</section>
+</div>

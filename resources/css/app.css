@@ -12,15 +12,146 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Newsreader', ui-serif, Georgia, serif;
     --font-mark: 'Caveat', ui-rounded, cursive;
-    --color-accent: #e11d48;
-    --color-accent-content: #e11d48;
-    --color-accent-foreground: #ffffff;
-    --color-ink: #18181b;
-    --color-paper: #ffffff;
-    --color-mist: #ebebef;
-    --color-mark: #fb7185;
-    --color-highlight: #fecdd3;
-    --color-selection: rgb(254 240 138 / 0.55);
+
+    /* Hard corners on every surface. `rounded-full` is hardcoded by Tailwind to
+       calc(infinity * 1px) and is NOT driven by this scale, so pill CTAs, avatars,
+       and drag handles survive while every other rounded-* utility goes square. */
+    --radius: 0px;
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --radius-2xl: 0px;
+    --radius-3xl: 0px;
+    --radius-4xl: 0px;
+
+    /* ---- Semantic roles (preferred API for new work) ---- */
+    --color-canvas: #fdfdfc;
+    --color-surface: #f9f9f8;
+    --color-surface-hover: #f1f0ef;
+    --color-border: #dad9d6;
+    --color-border-strong: #bcbbb5;
+    --color-grid: #20100010;
+    --color-ink: #21201c;
+    --color-muted: #63635e;
+    --color-soft: #6b6b65;
+    --color-faint: #8d8d86;
+
+    /* Yellow is the only accent, and it is reserved for fills — CTAs, marks,
+       highlights. There is deliberately no dark-amber "accent text" step: amber-11
+       reads brown, so accent-colored text is just ink and the yellow does the
+       signalling. Anything sitting on a yellow fill uses ink. */
+    --color-accent: #ffc53d;
+    --color-accent-hover: #ffba18;
+    --color-accent-contrast: #21201c;
+
+    /* Flux reads these three by contract to color its own primitives. */
+    --color-accent-content: #21201c;
+    --color-accent-foreground: #21201c;
+
+    --color-paper: #fdfdfc;
+    --color-mist: #e9e8e6;
+    --color-mark: #ffc53d;
+    /* Highlight + selection are a lighter shade of the primary yellow, not a
+       separate paler yellow — one accent hue, two lightnesses. */
+    --color-highlight: #ffe5a8;
+    --color-selection: #ffe5a8;
+
+    /* Guest marks read as neutral so they never compete with your own yellow ones. */
+    --color-guest: #82827c;
+    --color-guest-soft: #e9e8e6;
+    --color-guest-ink: #4a4943;
+
+    /* ---- Scale shim ----
+       Overriding a built-in scale in @theme retargets every existing utility that
+       uses it, so ~1,400 palette classes across the views flip without touching a
+       single Blade file. Mapped by perceptual lightness (Radix runs 1-12, Tailwind
+       50-950), not by number. */
+
+    /* zinc + gray -> Radix sand */
+    --color-zinc-50: #f9f9f8;
+    --color-zinc-100: #f1f0ef;
+    --color-zinc-200: #dad9d6;
+    --color-zinc-300: #cfceca;
+    --color-zinc-400: #8d8d86;
+    /* sand-10 (#82827c) would read lighter than zinc-500 did and drops muted text
+       on a tinted surface below 4.5:1 — nudged darker to hold contrast. */
+    --color-zinc-500: #6b6b65;
+    --color-zinc-600: #63635e;
+    --color-zinc-700: #4a4943;
+    --color-zinc-800: #33322d;
+    --color-zinc-900: #21201c;
+    --color-zinc-950: #141310;
+
+    --color-gray-50: #f9f9f8;
+    --color-gray-100: #f1f0ef;
+    --color-gray-200: #dad9d6;
+    --color-gray-300: #cfceca;
+    --color-gray-400: #8d8d86;
+    --color-gray-500: #82827c;
+    --color-gray-600: #63635e;
+    --color-gray-700: #4a4943;
+    --color-gray-800: #33322d;
+    --color-gray-900: #21201c;
+    --color-gray-950: #141310;
+
+    /* rose -> yellow fills at the light end, ink at the dark end. The 500 step is
+       the accent fill; 600+ are the text steps, and those go to ink rather than a
+       dark amber so no brown enters the palette. Yellow signals through fills
+       only — the same discipline the reference site uses. */
+    --color-rose-50: #fffbe8;
+    --color-rose-100: #fff7c2;
+    --color-rose-200: #ffee9c;
+    --color-rose-300: #fbe577;
+    --color-rose-400: #ffd166;
+    --color-rose-500: #ffc53d;
+    --color-rose-600: #21201c;
+    --color-rose-700: #33322d;
+    --color-rose-800: #21201c;
+    --color-rose-900: #141310;
+    --color-rose-950: #141310;
+
+    /* amber -> Radix amber */
+    --color-amber-50: #fefbe9;
+    --color-amber-100: #fff7c2;
+    --color-amber-200: #ffee9c;
+    --color-amber-300: #fbe577;
+    --color-amber-400: #e9c162;
+    --color-amber-500: #ffc53d;
+    --color-amber-600: #ffba18;
+    /* Text on a yellow tint goes to ink, not a dark amber — the dark end of the
+       amber ramp reads brown, which is out of the palette. */
+    --color-amber-700: #4a4943;
+    --color-amber-800: #33322d;
+    --color-amber-900: #21201c;
+
+    /* sky is left at stock Tailwind — this is the blue the second-opinion panel and
+       the hero mark already used, and it stays the "not yours / suggested" signal. */
+
+    /* emerald -> Radix jade */
+    --color-emerald-50: #f4fbf7;
+    --color-emerald-100: #e6f7ed;
+    --color-emerald-200: #c3e9d7;
+    --color-emerald-300: #8bceb6;
+    --color-emerald-400: #56ba9f;
+    --color-emerald-500: #29a383;
+    --color-emerald-600: #26997b;
+    --color-emerald-700: #208368;
+    --color-emerald-800: #1d6a54;
+    --color-emerald-900: #1d3b31;
+
+    /* red -> Radix tomato (Flux danger variants) */
+    --color-red-50: #fff8f7;
+    --color-red-100: #feebe7;
+    --color-red-200: #ffdcd3;
+    --color-red-300: #fdbdaf;
+    --color-red-400: #ec8e7b;
+    --color-red-500: #e54d2e;
+    --color-red-600: #dd4425;
+    --color-red-700: #d13415;
+    --color-red-800: #a32b12;
+    --color-red-900: #5c271f;
 }
 
 @layer base {
@@ -42,12 +173,19 @@
     [data-flux-control]:focus,
     [data-flux-control]:focus-visible {
         outline: none;
-        border-color: rgb(228 228 231);
-        box-shadow: 0 0 0 3px rgb(24 24 27 / 0.06);
+        border-color: var(--color-border-strong);
+        box-shadow: 0 0 0 3px rgb(255 197 61 / 0.35);
     }
 }
 
 @layer utilities {
+    /* `rounded-full` is hardcoded by Tailwind to calc(infinity * 1px) rather than
+       reading the radius scale, so zeroing --radius-* alone leaves ~90 pills behind.
+       Everything is square: buttons, badges, marks, avatars, handles. */
+    .rounded-full {
+        border-radius: 0;
+    }
+
     .font-display {
         font-family: var(--font-display);
     }
@@ -56,24 +194,46 @@
         font-family: var(--font-mark);
     }
 
-    .rm-grid {
-        background-image:
-            linear-gradient(to right, rgb(24 24 27 / 0.04) 1px, transparent 1px),
-            linear-gradient(to bottom, rgb(24 24 27 / 0.04) 1px, transparent 1px);
-        background-size: 40px 40px;
-        mask-image: radial-gradient(ellipse 85% 75% at 55% 15%, black 15%, transparent 78%);
+    .rm-wash {
+        background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-surface) 100%);
     }
 
-    .rm-wash {
-        background:
-            radial-gradient(ellipse 70% 50% at 85% 0%, rgb(251 113 133 / 0.12), transparent 55%),
-            linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+    /* Hairline rails framing the centered content column. */
+    .rm-rails {
+        border-left: 1px solid var(--color-border);
+        border-right: 1px solid var(--color-border);
+    }
+
+    /* Break an element out to the edges of the padded content column so structural
+       rules and grid dividers reach the rails. --rm-pad is set on the content
+       column and mirrors its horizontal padding. */
+    .rm-bleed {
+        margin-left: calc(var(--rm-pad, 0px) * -1);
+        margin-right: calc(var(--rm-pad, 0px) * -1);
+    }
+
+    /* Re-pads content inside a bled element so text lines back up with the column. */
+    .rm-pad {
+        padding-left: var(--rm-pad, 0px);
+        padding-right: var(--rm-pad, 0px);
+    }
+
+    /* Grid whose cells are divided by single hairlines: the parent shows through a
+       1px gap so adjacent cells never double their borders. Children must be opaque
+       and carry their own padding (use rm-pad or p-*). */
+    .rm-split {
+        display: grid;
+        gap: 1px;
+        background: var(--color-border);
+    }
+
+    .rm-split > * {
+        background: var(--color-canvas);
     }
 
     .rm-hero-mark {
         position: relative;
         display: inline-block;
-        border-radius: 0.375rem;
         background: rgb(56 189 248 / 0.1);
         padding: 0.02em 0.22em 0.06em;
         box-decoration-break: clone;
@@ -99,8 +259,8 @@
         y: 1px;
         width: calc(100% - 2px);
         height: calc(100% - 2px);
-        rx: 5px;
-        ry: 5px;
+        rx: 0;
+        ry: 0;
     }
 
     .rm-agent-cycle {
@@ -140,6 +300,48 @@
         animation: rm-fade-up 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
     }
 
+    .rm-hero-loop-bubble {
+        animation: rm-hero-loop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+    }
+
+    .rm-hero-loop-bubble-delay {
+        animation-delay: 0.5s;
+    }
+
+    /* Review panel enters after agent chat bubbles settle (~1.05s). */
+    .rm-hero-loop-review {
+        animation: rm-hero-loop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.95s both;
+    }
+
+    .rm-hero-loop-review-delay {
+        animation-delay: 1.1s;
+    }
+
+    .rm-hero-loop-review-delay-2 {
+        animation-delay: 1.7s;
+    }
+
+    .rm-hero-loop-review-delay-3 {
+        animation-delay: 1.85s;
+    }
+
+    .rm-hero-loop-review-delay-4 {
+        animation-delay: 2s;
+    }
+
+    .rm-hero-loop-mark {
+        animation: rm-hero-mark-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 1.35s both;
+    }
+
+    .rm-hero-loop-mark-delay {
+        animation-delay: 1.55s;
+    }
+
+    .rm-board-preview-col {
+        animation: rm-hero-loop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: calc(0.12s + (var(--i, 0) * 0.08s));
+    }
+
     .rm-note-composer {
         animation: rm-note-sheet 280ms cubic-bezier(0.32, 0.72, 0, 1) both;
     }
@@ -159,6 +361,28 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes rm-hero-loop-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes rm-hero-mark-pop {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.72);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
     }
 }
 
@@ -209,6 +433,10 @@
     .rm-fade-up,
     .rm-fade-up-delay,
     .rm-fade-up-delay-2,
+    .rm-hero-loop-bubble,
+    .rm-hero-loop-review,
+    .rm-hero-loop-mark,
+    .rm-board-preview-col,
     .rm-note-composer,
     .rm-agent-cycle-item {
         animation: none !important;
@@ -228,15 +456,15 @@
 html ::selection,
 body ::selection,
 *::selection {
-    background: #fef08a;
-    background-color: #fef08a;
-    color: #3f3f46;
+    background: #ffe5a8;
+    background-color: #ffe5a8;
+    color: #21201c;
 }
 
 html ::-moz-selection,
 body ::-moz-selection,
 *::-moz-selection {
-    background: #fef08a;
-    background-color: #fef08a;
-    color: #3f3f46;
+    background: #ffe5a8;
+    background-color: #ffe5a8;
+    color: #21201c;
 }

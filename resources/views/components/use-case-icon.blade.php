@@ -73,7 +73,7 @@
             <flux:icon.check variant="micro" class="{{ $glyph }}" />
             @break
         @case('queue-list')
-            <flux:icon.queue-list variant="micro" class="{{ $glyph }}" />
+            <flux:icon.queue-list variant="micro" class="{{ $glyph }} rotate-90" />
             @break
         @case('puzzle-piece')
             <flux:icon.puzzle-piece variant="micro" class="{{ $glyph }}" />

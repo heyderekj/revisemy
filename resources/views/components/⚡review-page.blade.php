@@ -855,7 +855,7 @@ new class extends Component
                             Guest link expired
                         </span>
                     @else
-                        <span class="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                        <span class="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-[11px] font-medium text-zinc-800">
                             Guest
                         </span>
                     @endif
@@ -1015,7 +1015,7 @@ new class extends Component
                                             x-on:click="pick(cell.iso)"
                                             class="flex size-full items-center justify-center rounded-full text-sm transition disabled:cursor-not-allowed disabled:opacity-30"
                                             x-bind:class="cell && cell.iso === selected
-                                                ? 'bg-rose-500 font-semibold text-white shadow-sm'
+                                                ? 'bg-rose-500 font-semibold text-accent-contrast shadow-sm'
                                                 : (cell && cell.iso === today
                                                     ? 'font-semibold text-rose-600 ring-1 ring-inset ring-rose-200 hover:bg-rose-50'
                                                     : 'text-zinc-700 hover:bg-zinc-100')"
@@ -1042,9 +1042,9 @@ new class extends Component
                     </div>
                     <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-zinc-100 hover:!bg-zinc-200/80">Board</flux:button>
                     @if ($review->isOpenForFeedback())
-                        <div class="hidden items-center gap-2 lg:flex">
+                        <div class="hidden items-center gap-2 md:flex">
                             <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="!bg-zinc-100 hover:!bg-zinc-200/80">Changes</flux:button>
-                            <flux:button size="sm" variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes." class="!bg-rose-600 hover:!bg-rose-700">Approve</flux:button>
+                            <flux:button size="sm" variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes.">Approve</flux:button>
                         </div>
                     @endif
                 </div>
@@ -1063,7 +1063,7 @@ new class extends Component
         </div>
     @else
     <div
-        class="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 sm:px-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-x-6 xl:overflow-hidden"
+        class="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 sm:px-6 md:grid md:grid-cols-[minmax(0,1fr)_18rem] md:gap-x-5 md:overflow-hidden lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-6"
         x-data
         x-init="
             if (! Alpine.store('rmFocus')) {
@@ -1072,9 +1072,9 @@ new class extends Component
         "
     >
         @php($suggestionNumbers = $review->suggestionDisplayNumbers())
-        <section class="min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto pt-4 sm:space-y-4 sm:pt-5 xl:max-h-none xl:min-h-0 xl:overflow-y-auto xl:pt-6">
+        <section class="min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto pt-4 sm:space-y-4 sm:pt-5 md:max-h-none md:min-h-0 md:overflow-y-auto md:pt-6">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
-                <div class="grid gap-1.5 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
+                <div class="grid gap-1.5 py-3 sm:grid-cols-[9.5rem_1fr] sm:gap-4 sm:py-4">
                     <flux:heading size="sm" class="sm:pt-0.5">What to look at</flux:heading>
 
                     <div class="flex items-start gap-2">
@@ -1190,12 +1190,12 @@ new class extends Component
                 </div>
             @endif
 
-            <div class="min-w-0 flex-1 space-y-3 sm:space-y-4">
+            <div class="min-w-0 flex-1">
 
             @if ($shot)
                 <div
                     wire:key="shot-viewer-{{ $activeScreenshotIndex }}"
-                    class="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm"
+                    class="min-w-0"
                     x-data="{
                         zoom: 1,
                         zoomMin: 1,
@@ -1414,29 +1414,34 @@ new class extends Component
                     x-on:keydown.window="onKeyDown($event)"
                     x-on:keyup.window="onKeyUp($event)"
                 >
-                    <div data-zoom-controls class="absolute left-2 top-2 z-30 flex items-center gap-0.5 rounded-lg border border-zinc-200/80 bg-white/95 p-0.5 shadow-sm backdrop-blur">
-                        <button
-                            type="button"
-                            class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
-                            x-on:click="zoomOut()"
-                            x-bind:disabled="zoom <= zoomMin"
-                            aria-label="Zoom out"
-                        >−</button>
-                        <button
-                            type="button"
-                            class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-[10px] text-zinc-500 transition hover:bg-zinc-100"
-                            x-on:click="resetZoom()"
-                            x-text="Math.round(zoom * 100) + '%'"
-                            aria-label="Reset zoom"
-                        ></button>
-                        <button
-                            type="button"
-                            class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
-                            x-on:click="zoomIn()"
-                            x-bind:disabled="zoom >= zoomMax"
-                            aria-label="Zoom in"
-                        >+</button>
-                    </div>
+                    <div @class([
+                        'relative overflow-hidden border border-zinc-200 bg-zinc-100',
+                        'rounded-t-2xl' => $review->isOpenForFeedback(),
+                        'rounded-2xl' => ! $review->isOpenForFeedback(),
+                    ])>
+                        <div data-zoom-controls class="absolute right-2 top-2 z-30 flex items-center gap-0.5 rounded-lg border border-zinc-200/80 bg-white/95 p-0.5 shadow-sm backdrop-blur">
+                            <button
+                                type="button"
+                                class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
+                                x-on:click="zoomOut()"
+                                x-bind:disabled="zoom <= zoomMin"
+                                aria-label="Zoom out"
+                            >−</button>
+                            <button
+                                type="button"
+                                class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-[10px] text-zinc-500 transition hover:bg-zinc-100"
+                                x-on:click="resetZoom()"
+                                x-text="Math.round(zoom * 100) + '%'"
+                                aria-label="Reset zoom"
+                            ></button>
+                            <button
+                                type="button"
+                                class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
+                                x-on:click="zoomIn()"
+                                x-bind:disabled="zoom >= zoomMax"
+                                aria-label="Zoom in"
+                            >+</button>
+                        </div>
 
                     <div
                         x-ref="viewport"
@@ -1522,16 +1527,16 @@ new class extends Component
                                         x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                     >
                                         <div
-                                            class="pointer-events-none absolute inset-0 rounded-md border border-dashed border-amber-400/80 bg-amber-400/10 transition"
+                                            class="pointer-events-none absolute inset-0 rounded-md border border-dashed border-zinc-400/80 bg-zinc-400/10 transition"
                                             title="{{ $finding->body }}"
-                                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-amber-500 bg-amber-400/20 ring-2 ring-amber-400/40' : ''"
+                                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-zinc-500 bg-zinc-400/20 ring-2 ring-zinc-400/40' : ''"
                                         ></div>
                                         <button
                                             type="button"
-                                            class="absolute {{ $badgePosition }} z-[8] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-amber-500 bg-white px-0.5 text-[10px] font-semibold text-amber-700 shadow-sm transition"
+                                            class="absolute {{ $badgePosition }} z-[8] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
                                             title="{{ $finding->body }}"
                                             x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
-                                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
+                                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"
                                         >
                                             G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}
                                         </button>
@@ -1540,12 +1545,12 @@ new class extends Component
                                     <button
                                         type="button"
                                         data-finding
-                                        class="absolute z-[7] flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-amber-500 bg-white px-0.5 text-[10px] font-semibold text-amber-700 shadow-sm transition"
+                                        class="absolute z-[7] flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
                                         style="left: {{ $finding->x * 100 }}%; top: {{ $finding->y * 100 }}%;"
                                         title="{{ $finding->body }}"
                                         x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                         x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
-                                        x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
+                                        x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"
                                     >
                                         G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}
                                     </button>
@@ -1561,7 +1566,7 @@ new class extends Component
                                         <button
                                             type="button"
                                             data-finding
-                                            class="pointer-events-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-amber-500 bg-white px-0.5 text-[10px] font-semibold text-amber-700 shadow-sm transition"
+                                            class="pointer-events-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
                                             title="{{ $finding->body }}"
                                             x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                             x-on:click.stop="
@@ -1569,7 +1574,7 @@ new class extends Component
                                                 $store.rmFocus.mark = null;
                                                 document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                                             "
-                                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
+                                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"
                                         >
                                             G{{ $suggestionNumbers['g'][$finding->id] ?? ($loop->iteration) }}
                                         </button>
@@ -1599,7 +1604,7 @@ new class extends Component
                                             x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'ring-2 ring-rose-400 ring-offset-1' : ''"
                                         ></div>
                                         <span
-                                            class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white shadow-sm ring-2 ring-white transition {{ $annotation->markerClass() }}"
+                                            class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-[10px] font-semibold shadow-sm ring-2 ring-white transition {{ $annotation->markerClass() }}"
                                             x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110' : ''"
                                         >
                                             M{{ $annotation->number }}
@@ -1609,7 +1614,7 @@ new class extends Component
                                     <button
                                         type="button"
                                         data-pin
-                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
+                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
                                         style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
                                         title="{{ $annotation->body }}"
                                         x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110 ring-4 ring-rose-300' : ''"
@@ -1621,7 +1626,7 @@ new class extends Component
 
                             <template x-if="draft && draft.w > 0 && draft.h > 0">
                                 <div
-                                    class="pointer-events-none absolute z-[15] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-amber-500 bg-amber-400/15' : 'border-rose-500 bg-rose-500/15' }}"
+                                    class="pointer-events-none absolute z-[15] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-zinc-400 bg-zinc-400/15' : 'border-rose-500 bg-rose-500/15' }}"
                                     x-bind:style="'left:' + (draft.x * 100) + '%;top:' + (draft.y * 100) + '%;width:' + (draft.w * 100) + '%;height:' + (draft.h * 100) + '%'"
                                 ></div>
                             </template>
@@ -1630,18 +1635,18 @@ new class extends Component
                                 @if ($pendingW !== null && $pendingH !== null && $pendingW >= 0.01 && $pendingH >= 0.01)
                                     <div
                                         data-pending-mark
-                                        class="pointer-events-none absolute z-[18] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-amber-500 bg-amber-400/15' : 'border-rose-500 bg-rose-500/15' }}"
+                                        class="pointer-events-none absolute z-[18] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-zinc-400 bg-zinc-400/15' : 'border-rose-500 bg-rose-500/15' }}"
                                         style="left: {{ ($pendingX - $pendingW / 2) * 100 }}%; top: {{ ($pendingY - $pendingH / 2) * 100 }}%; width: {{ $pendingW * 100 }}%; height: {{ $pendingH * 100 }}%;"
                                     ></div>
                                 @else
                                     <div
                                         data-pending-mark
-                                        class="pointer-events-none absolute z-[18] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full {{ $mode === 'guest' ? 'bg-amber-500' : 'bg-rose-500' }}"
+                                        class="pointer-events-none absolute z-[18] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full {{ $mode === 'guest' ? 'bg-zinc-500' : 'bg-rose-500' }}"
                                         style="left: {{ $pendingX * 100 }}%; top: {{ $pendingY * 100 }}%;"
                                     ></div>
                                 @endif
                                 <div
-                                    class="absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-semibold shadow-lg ring-2 ring-white {{ $mode === 'guest' ? 'border-2 border-dashed border-amber-500 bg-white text-amber-700' : 'bg-rose-500 text-white' }}"
+                                    class="absolute z-20 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-semibold shadow-lg ring-2 ring-white {{ $mode === 'guest' ? 'border-2 border-dashed border-zinc-400 bg-white text-zinc-700' : 'bg-rose-500 text-accent-contrast' }}"
                                     style="left: {{ $pendingX * 100 }}%; top: {{ $pendingY * 100 }}%;"
                                 >
                                     {{ $mode === 'guest' ? 'G' : '+' }}
@@ -1649,40 +1654,47 @@ new class extends Component
                             @endif
                         </div>
                     </div>
-                </div>
+                    </div>
 
                 @if ($review->isOpenForFeedback())
-                    <div class="rounded-xl border border-zinc-200/80 bg-zinc-50/90 px-3 py-2.5 sm:px-4">
-                        <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[11px] text-zinc-600 sm:gap-x-4 sm:text-xs">
-                            <span class="inline-flex items-center gap-2">
-                                <span class="relative h-4 w-7 shrink-0 rounded border-2 border-rose-500/80 bg-rose-500/10" aria-hidden="true">
-                                    <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-semibold text-white ring-2 ring-white">M</span>
+                    <div class="rounded-b-2xl border-x border-b border-zinc-200/80 bg-zinc-50/90 px-3 py-2.5 sm:px-4 sm:py-3">
+                        <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-zinc-600 sm:gap-x-6 sm:text-xs">
+                            <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 sm:gap-x-4">
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="relative h-4 w-7 shrink-0 rounded border-2 border-rose-500/80 bg-rose-500/10" aria-hidden="true">
+                                        <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-semibold text-accent-contrast ring-2 ring-white">M</span>
+                                    </span>
+                                    Your marks
                                 </span>
-                                Your marks
-                            </span>
+                                @if ($mode === 'owner')
+                                <span class="h-3 w-px shrink-0 bg-zinc-300" aria-hidden="true"></span>
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-sky-400/80 bg-sky-400/10" aria-hidden="true">
+                                        <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-sky-500 bg-white text-[8px] font-semibold text-sky-700 ring-2 ring-white">S</span>
+                                    </span>
+                                    Second opinion
+                                </span>
+                                @endif
+                                <span class="h-3 w-px shrink-0 bg-zinc-300" aria-hidden="true"></span>
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-zinc-400/80 bg-zinc-400/10" aria-hidden="true">
+                                        <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-zinc-500 bg-white text-[8px] font-semibold text-zinc-700 ring-2 ring-white">G</span>
+                                    </span>
+                                    Guest
+                                </span>
+                            </div>
+
                             <span class="hidden h-3 w-px shrink-0 bg-zinc-300 sm:block" aria-hidden="true"></span>
-                            @if ($mode === 'owner')
-                            <span class="inline-flex items-center gap-2">
-                                <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-sky-400/80 bg-sky-400/10" aria-hidden="true">
-                                    <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-sky-500 bg-white text-[8px] font-semibold text-sky-700 ring-2 ring-white">S</span>
-                                </span>
-                                Second opinion
-                            </span>
-                            <span class="hidden h-3 w-px shrink-0 bg-zinc-300 sm:block" aria-hidden="true"></span>
-                            @endif
-                            <span class="inline-flex items-center gap-2">
-                                <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-amber-400/80 bg-amber-400/10" aria-hidden="true">
-                                    <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-amber-500 bg-white text-[8px] font-semibold text-amber-700 ring-2 ring-white">G</span>
-                                </span>
-                                Guest
-                            </span>
-                            <span class="hidden h-3 w-px shrink-0 bg-zinc-300 md:block" aria-hidden="true"></span>
-                            <span class="w-full text-center text-zinc-500 sm:w-auto">{{ $mode === 'guest' ? 'Drag to suggest · click for point' : 'Drag to mark · click for point' }}</span>
-                            <span class="hidden h-3 w-px shrink-0 bg-zinc-300 md:block" aria-hidden="true"></span>
-                            <span class="hidden text-zinc-500 sm:inline">+/− zoom · Space+drag to pan</span>
+
+                            <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-zinc-500">
+                                <span>{{ $mode === 'guest' ? 'Drag to suggest · click for point' : 'Drag to mark · click for point' }}</span>
+                                <span class="hidden h-3 w-px shrink-0 bg-zinc-300 sm:block" aria-hidden="true"></span>
+                                <span>Space+drag to pan</span>
+                            </div>
                         </div>
                     </div>
                 @endif
+                </div>
             @else
                 <flux:callout variant="warning">No screenshots on this review yet.</flux:callout>
             @endif
@@ -1711,72 +1723,102 @@ new class extends Component
         })->values())
 
         @if ($shot && ($stripMarks->isNotEmpty() || $stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
-            <div class="shrink-0 overflow-x-auto overscroll-x-contain border-y border-zinc-200 bg-white/95 px-3 py-2 [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
-                <div class="flex w-max items-center gap-1.5">
-                    @foreach ($stripMarks as $pin)
-                        <button
-                            type="button"
-                            class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white shadow-sm ring-2 ring-white transition {{ $pin->markerClass() }}"
-                            x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'scale-110 ring-rose-300' : ''"
-                            x-on:click="
-                                $store.rmFocus.mark = $store.rmFocus.mark === {{ $pin->id }} ? null : {{ $pin->id }};
-                                $store.rmFocus.finding = null;
-                                document.getElementById('fb-mark-{{ $pin->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            "
-                            aria-label="Jump to mark M{{ $pin->number }}"
-                        >
-                            M{{ $pin->number }}
-                        </button>
-                    @endforeach
+            <div class="shrink-0 overflow-x-auto overscroll-x-contain border-y border-zinc-200/80 bg-zinc-50/90 px-3 py-2 [scrollbar-width:none] md:hidden sm:px-4 [&::-webkit-scrollbar]:hidden">
+                <div class="flex w-max items-center gap-x-3 gap-y-2 text-[11px] text-zinc-600">
+                    @if ($stripMarks->isNotEmpty())
+                        <div class="inline-flex items-center gap-2">
+                            <span class="relative h-4 w-7 shrink-0 rounded border-2 border-rose-500/80 bg-rose-500/10" aria-hidden="true">
+                                <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-semibold text-accent-contrast ring-2 ring-white">M</span>
+                            </span>
+                            <span class="sr-only">Your marks</span>
+                            <div class="flex items-center gap-1">
+                                @foreach ($stripMarks as $pin)
+                                    <button
+                                        type="button"
+                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center bg-accent px-1 text-[10px] font-semibold text-ink ring-1 ring-zinc-200/80 transition hover:ring-zinc-300"
+                                        x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'ring-2 ring-rose-400' : ''"
+                                        x-on:click="
+                                            $store.rmFocus.mark = $store.rmFocus.mark === {{ $pin->id }} ? null : {{ $pin->id }};
+                                            $store.rmFocus.finding = null;
+                                            document.getElementById('fb-mark-{{ $pin->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                        "
+                                        aria-label="Jump to mark M{{ $pin->number }}"
+                                    >
+                                        M{{ $pin->number }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     @if ($stripMarks->isNotEmpty() && ($stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
-                        <span class="h-4 w-px shrink-0 bg-zinc-200" aria-hidden="true"></span>
+                        <span class="h-3 w-px shrink-0 bg-zinc-300" aria-hidden="true"></span>
                     @endif
 
-                    @foreach ($stripSecondOpinion as $finding)
-                        <button
-                            type="button"
-                            class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-1.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
-                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
-                            x-on:click="
-                                $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
-                                $store.rmFocus.mark = null;
-                                @if ($secondOpinionSourceTab !== 'all' && (
-                                    ($secondOpinionSourceTab === 'checklist' && ! $finding->isChecklistSource())
-                                    || ($secondOpinionSourceTab === 'vision' && ! $finding->isVisionSource())
-                                ))
-                                    $wire.setSecondOpinionSourceTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-                                @elseif ($secondOpinionTab !== 'all' && $secondOpinionTab !== $finding->severity)
-                                    $wire.setSecondOpinionTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-                                @else
-                                    document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                @endif
-                            "
-                            aria-label="Jump to second opinion S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}"
-                        >
-                            S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}
-                        </button>
-                    @endforeach
+                    @if ($stripSecondOpinion->isNotEmpty())
+                        <div class="inline-flex items-center gap-2">
+                            <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-sky-400/80 bg-sky-400/10" aria-hidden="true">
+                                <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-sky-500 bg-white text-[8px] font-semibold text-sky-700 ring-2 ring-white">S</span>
+                            </span>
+                            <span class="sr-only">Second opinion</span>
+                            <div class="flex items-center gap-1">
+                                @foreach ($stripSecondOpinion as $finding)
+                                    <button
+                                        type="button"
+                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-sky-500 bg-white px-1 text-[10px] font-semibold text-sky-700 transition hover:bg-sky-50"
+                                        x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
+                                        x-on:click="
+                                            $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
+                                            $store.rmFocus.mark = null;
+                                            @if ($secondOpinionSourceTab !== 'all' && (
+                                                ($secondOpinionSourceTab === 'checklist' && ! $finding->isChecklistSource())
+                                                || ($secondOpinionSourceTab === 'vision' && ! $finding->isVisionSource())
+                                            ))
+                                                $wire.setSecondOpinionSourceTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+                                            @elseif ($secondOpinionTab !== 'all' && $secondOpinionTab !== $finding->severity)
+                                                $wire.setSecondOpinionTab('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+                                            @else
+                                                document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                            @endif
+                                        "
+                                        aria-label="Jump to second opinion S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}"
+                                    >
+                                        S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     @if ($stripSecondOpinion->isNotEmpty() && $stripGuest->isNotEmpty())
-                        <span class="h-4 w-px shrink-0 bg-zinc-200" aria-hidden="true"></span>
+                        <span class="h-3 w-px shrink-0 bg-zinc-300" aria-hidden="true"></span>
                     @endif
 
-                    @foreach ($stripGuest as $finding)
-                        <button
-                            type="button"
-                            class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-amber-500 bg-white px-1.5 text-[10px] font-semibold text-amber-700 shadow-sm transition"
-                            x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-amber-600 bg-amber-50 ring-2 ring-amber-300' : ''"
-                            x-on:click="
-                                $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
-                                $store.rmFocus.mark = null;
-                                document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            "
-                            aria-label="Jump to guest suggestion G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}"
-                        >
-                            G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}
-                        </button>
-                    @endforeach
+                    @if ($stripGuest->isNotEmpty())
+                        <div class="inline-flex items-center gap-2">
+                            <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-zinc-400/80 bg-zinc-400/10" aria-hidden="true">
+                                <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-zinc-500 bg-white text-[8px] font-semibold text-zinc-700 ring-2 ring-white">G</span>
+                            </span>
+                            <span class="sr-only">Guest</span>
+                            <div class="flex items-center gap-1">
+                                @foreach ($stripGuest as $finding)
+                                    <button
+                                        type="button"
+                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-zinc-500 bg-white px-1 text-[10px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                                        x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"
+                                        x-on:click="
+                                            $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
+                                            $store.rmFocus.mark = null;
+                                            document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                        "
+                                        aria-label="Jump to guest suggestion G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}"
+                                    >
+                                        G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         @endif
@@ -1890,7 +1932,7 @@ new class extends Component
                             @if ($mode === 'guest')
                                 <flux:button variant="primary" icon="chat-bubble-left-ellipsis" wire:click="savePin" class="w-full !bg-yellow-400 !text-zinc-900 hover:!bg-yellow-300 sm:w-auto">Suggest</flux:button>
                             @else
-                                <flux:button variant="primary" icon="check" wire:click="savePin" class="w-full !bg-rose-600 sm:w-auto">Save mark</flux:button>
+                                <flux:button variant="primary" icon="check" wire:click="savePin" class="w-full sm:w-auto">Save mark</flux:button>
                             @endif
                             <flux:button variant="ghost" icon="x-mark" wire:click="cancelPin" class="w-full sm:w-auto">Cancel</flux:button>
                         </div>
@@ -1899,7 +1941,9 @@ new class extends Component
             </div>
         @endif
 
-        <aside class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t border-zinc-200 px-0.5 pt-4 pb-28 [scroll-padding-top:1rem] sm:pt-5 xl:min-h-0 xl:border-t-0 xl:overflow-y-auto xl:pt-6 xl:pb-6 xl:[scroll-padding-top:1.5rem] lg:pb-6">
+        <aside class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t border-zinc-200 px-0.5 pt-4 pb-28 [scroll-padding-top:1rem] sm:pt-5 md:min-h-0 md:border-l md:border-t-0 md:border-zinc-200 md:overflow-y-auto md:pb-6 md:pl-5 md:pt-6 md:[scroll-padding-top:1.5rem] lg:pl-6">
+            <x-cross-mark left="0" top="0" visibility="hidden md:block" />
+            <x-cross-mark left="0" top="100%" visibility="hidden md:block" />
             @php($pins = $shot?->annotations ?? collect())
             @php($secondOpinionFindings = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && ! $f->isGuest())->values())
             @php($guestSuggestions = ($shot?->findings ?? collect())->filter(fn ($f) => $f->isOpen() && $f->isGuest())->values())
@@ -1908,7 +1952,7 @@ new class extends Component
                 ? $parent->screenshots->flatMap->annotations->sortBy('number')->values()
                 : collect())
             <div
-                class="space-y-4 pb-4 xl:pb-6"
+                class="space-y-4 pb-4 md:pb-6"
                 x-data="{
                     panels: { marks: true, previous: false, second: false, guest: false },
                     init() {
@@ -1928,7 +1972,7 @@ new class extends Component
                     }
                 }"
             >
-            <div class="rounded-2xl border border-zinc-200 bg-white shadow-sm" data-panel="marks">
+            <div class="border border-zinc-200 bg-white" data-panel="marks">
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
@@ -1956,7 +2000,7 @@ new class extends Component
                             >
                                 <div class="mb-1 flex items-center justify-between gap-2">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
+                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $pin->label() }}</span>
                                         <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $pin->statusBadgeClass() }}">{{ $pin->statusLabel() }}</span>
                                     </div>
@@ -2007,7 +2051,7 @@ new class extends Component
                                                 <flux:textarea wire:model="markCommentBody" rows="2" placeholder="Add a comment…" />
                                                 <flux:error name="markCommentBody" />
                                                 <div class="flex gap-2">
-                                                    <flux:button size="sm" variant="primary" wire:click="addMarkComment({{ $pin->id }})" class="!bg-zinc-900 hover:!bg-zinc-800">Post</flux:button>
+                                                    <flux:button size="sm" variant="primary" wire:click="addMarkComment({{ $pin->id }})">Post</flux:button>
                                                     <flux:button size="sm" variant="ghost" wire:click="cancelMarkComment">Cancel</flux:button>
                                                 </div>
                                             </div>
@@ -2066,7 +2110,7 @@ new class extends Component
                             @foreach ($previousMarks as $pin)
                                 <li class="rounded-xl border border-zinc-100 p-3">
                                     <div class="mb-1 flex flex-wrap items-center gap-2">
-                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
+                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $pin->label() }}</span>
                                         <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $pin->statusBadgeClass() }}">{{ $pin->statusLabel() }}</span>
                                     </div>
@@ -2113,7 +2157,7 @@ new class extends Component
 
             @if ($mode === 'owner')
             @php($taste = \App\Support\TasteLenses::forType($review->type))
-            <div class="rounded-2xl border border-sky-200/80 bg-sky-50/50 shadow-sm" data-panel="second">
+            <div class="border border-sky-200/80 bg-sky-50/50" data-panel="second">
                 <div class="flex items-center gap-1.5 px-3 py-3 sm:px-4">
                     <button
                         type="button"
@@ -2352,7 +2396,7 @@ new class extends Component
             </div>
             @endif
 
-            <div class="rounded-2xl border border-amber-200/80 bg-amber-50/50 shadow-sm" data-panel="guest">
+            <div class="border border-zinc-200 bg-zinc-50/60" data-panel="guest">
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
@@ -2360,11 +2404,11 @@ new class extends Component
                     x-bind:aria-expanded="panels.guest.toString()"
                 >
                     <flux:heading size="sm" class="min-w-0 flex-1">Guest feedback</flux:heading>
-                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-amber-800">{{ $guestSuggestions->count() }}</span>
-                    <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-amber-700/60 transition" x-bind:class="panels.guest && 'rotate-180'" />
+                    <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-800">{{ $guestSuggestions->count() }}</span>
+                    <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-zinc-700/60 transition" x-bind:class="panels.guest && 'rotate-180'" />
                 </button>
 
-                <div class="border-t border-amber-200/60 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.guest" x-cloak>
+                <div class="border-t border-zinc-200/60 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.guest" x-cloak>
                 <p class="mb-3 text-xs leading-snug text-zinc-500">
                     {{ $mode === 'owner' ? 'Teammate suggestions — accept to make them your marks' : 'Suggestions from you and other guests' }}
                 </p>
@@ -2382,14 +2426,14 @@ new class extends Component
                                 x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                 x-on:click="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                 x-bind:class="$store.rmFocus?.finding === {{ $finding->id }}
-                                    ? 'border-amber-400 ring-2 ring-amber-300/60'
-                                    : 'border-amber-100'"
+                                    ? 'border-zinc-400 ring-2 ring-zinc-300/60'
+                                    : 'border-zinc-100'"
                             >
                                 <div class="mb-1 flex items-start gap-2">
                                     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-amber-500 text-[10px] font-semibold text-amber-700">G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}</span>
+                                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-zinc-500 text-[10px] font-semibold text-zinc-700">G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}</span>
                                         <span class="text-xs text-zinc-500">{{ \App\Models\Annotation::allSeverityLabels()[$finding->severity] ?? $finding->severity }}</span>
-                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">{{ $finding->sourceLabel() }}</span>
+                                        <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-800">{{ $finding->sourceLabel() }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
                                         <div class="flex shrink-0 items-center gap-1" x-on:click.stop>
@@ -2398,7 +2442,7 @@ new class extends Component
                                                 wire:click="acceptFinding({{ $finding->id }})"
                                                 title="Accept as mark"
                                                 aria-label="Accept as mark"
-                                                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-amber-600 text-white transition hover:bg-amber-500"
+                                                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-600 text-white transition hover:bg-zinc-500"
                                             >
                                                 <flux:icon.check variant="micro" class="size-3.5" />
                                             </button>
@@ -2424,9 +2468,9 @@ new class extends Component
             </div>
 
             @if ($this->showDecisionNote() || $this->showDecisionCallout() || $this->showStatusCallout())
-                <div class="mt-auto space-y-3 border-t border-zinc-200 pt-4 pb-4 xl:pb-6">
+                <div class="mt-auto space-y-3 border-t border-zinc-200 pt-4 pb-4 md:pb-6">
                     @if ($this->showDecisionNote())
-                        <div class="hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 lg:block">
+                        <div class="hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 md:block">
                             <flux:heading size="sm" class="mb-3">Overall note (optional)</flux:heading>
                             <flux:textarea wire:model="decisionNote" rows="2" placeholder="Anything else before you approve or request changes?" />
                         </div>
@@ -2453,11 +2497,11 @@ new class extends Component
     </div>
 
     @if ($this->isOwner() && $review->isOpenForFeedback())
-        <div class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 p-3 shadow-[0_-8px_30px_-12px_rgba(24,24,27,0.25)] backdrop-blur lg:hidden">
+        <div class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 p-3 shadow-[0_-8px_30px_-12px_rgba(24,24,27,0.25)] backdrop-blur md:hidden">
             <flux:textarea wire:model="decisionNote" rows="2" placeholder="Overall note (optional)…" class="mb-2" />
             <div class="flex gap-2">
                 <flux:button variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="min-w-0 flex-1 !bg-zinc-100 hover:!bg-zinc-200/80">Changes</flux:button>
-                <flux:button variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes." class="min-w-0 flex-1 !bg-rose-600 hover:!bg-rose-700">Approve</flux:button>
+                <flux:button variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes." class="min-w-0 flex-1">Approve</flux:button>
             </div>
         </div>
     @endif

@@ -1,4 +1,4 @@
-<section class="mt-16 scroll-mt-8 sm:mt-20">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
         {{ $page['features_heading'] ?? ('Features for '.strtolower($page['label']).(! empty($page['review_type']) ? ' review' : '')) }}
     </h2>
@@ -11,4 +11,4 @@
             </article>
         @endforeach
     </div>
-</section>
+</x-home-section>

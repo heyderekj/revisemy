@@ -318,7 +318,7 @@ return [
                 ],
             ],
             'product_shots' => [
-                'dir' => 'images/board',
+                'stylized' => 'board',
                 'alt' => 'ReviseMy board — marks moving from open to resolved to verified across a review pass',
             ],
             'features' => [

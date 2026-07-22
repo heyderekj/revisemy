@@ -1,28 +1,37 @@
 @props([
-    'variant' => 'wordmark',
+    // icon: app mark only. wordmark: mark + ReviseMy (use on pages without a sidebar brand).
+    'variant' => 'icon',
     'size' => 'md',
 ])
 
 @php
-    [$classes, $src, $width, $height] = match ($variant) {
-        'mark' => match ($size) {
-            'lg' => ['h-8 w-8', '/images/app-icon.png', 32, 32],
-            'sm' => ['h-4 w-4', '/images/app-icon.png', 16, 16],
-            default => ['h-6 w-6', '/images/app-icon.png', 24, 24],
-        },
-        default => match ($size) {
-            'lg' => ['h-10 w-auto', '/images/logo.svg', 272, 60],
-            'sm' => ['h-6 w-auto', '/images/logo.svg', 272, 60],
-            default => ['h-8 w-auto', '/images/logo.svg', 272, 60],
-        },
+    // App icon is the brand mark everywhere — square yellow squircle.
+    [$classes, $px, $text] = match ($size) {
+        'lg' => ['h-10 w-10', 40, 'text-lg'],
+        'sm' => ['h-7 w-7', 28, 'text-sm'],
+        default => ['h-8 w-8', 32, 'text-base'],
     };
 @endphp
 
-<img
-    src="{{ $src }}"
-    alt="ReviseMy"
-    width="{{ $width }}"
-    height="{{ $height }}"
-    {{ $attributes->class(["block shrink-0 $classes"]) }}
-    decoding="async"
-/>
+@if ($variant === 'wordmark')
+    <span {{ $attributes->class('inline-flex items-center gap-2.5') }}>
+        <img
+            src="/images/app-icon.png"
+            alt=""
+            width="{{ $px }}"
+            height="{{ $px }}"
+            class="block shrink-0 {{ $classes }}"
+            decoding="async"
+        />
+        <span class="{{ $text }} font-semibold tracking-tight text-zinc-900">ReviseMy</span>
+    </span>
+@else
+    <img
+        src="/images/app-icon.png"
+        alt="ReviseMy"
+        width="{{ $px }}"
+        height="{{ $px }}"
+        {{ $attributes->class(["block shrink-0 $classes"]) }}
+        decoding="async"
+    />
+@endif

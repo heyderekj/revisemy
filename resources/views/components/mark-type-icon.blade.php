@@ -9,7 +9,7 @@ $styles = [
     'm' => [
         'wrap' => 'bg-rose-50 ring-rose-100',
         'box' => 'rounded border-2 border-rose-500/80 bg-rose-500/10',
-        'badge' => 'rounded-full bg-rose-500 font-semibold text-white',
+        'badge' => 'rounded-full bg-rose-500 font-semibold text-accent-contrast',
         'label' => 'M',
     ],
     's' => [
@@ -19,9 +19,9 @@ $styles = [
         'label' => 'S',
     ],
     'g' => [
-        'wrap' => 'bg-amber-50 ring-amber-100',
-        'box' => 'rounded border border-dashed border-amber-400/80 bg-amber-400/10',
-        'badge' => 'rounded-full border border-dashed border-amber-500 bg-white font-semibold text-amber-700',
+        'wrap' => 'bg-zinc-50 ring-zinc-200',
+        'box' => 'rounded border border-dashed border-zinc-400/80 bg-zinc-400/10',
+        'badge' => 'rounded-full border border-dashed border-zinc-400 bg-white font-semibold text-zinc-700',
         'label' => 'G',
     ],
 ];

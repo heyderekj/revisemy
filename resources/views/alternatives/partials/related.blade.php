@@ -1,8 +1,8 @@
-<section class="mt-14 scroll-mt-8 sm:mt-16">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Keep exploring</h2>
 
     @if (! empty($related))
-        <ul class="mt-6 divide-y divide-zinc-900/8 border-y border-zinc-900/8">
+        <ul class="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
             @foreach ($related as $entry)
                 <li>
                     <a
@@ -50,4 +50,4 @@
             <span class="text-zinc-500">ChatGPT, Claude, Copilot, Cursor, Grok</span>
         </li>
     </ul>
-</section>
+</x-home-section>

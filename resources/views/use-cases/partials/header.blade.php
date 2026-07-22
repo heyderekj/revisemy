@@ -1,6 +1,6 @@
-<header class="flex items-center justify-between gap-4 border-b border-zinc-900/8 pb-6">
+<header class="flex items-center justify-between gap-4">
     <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-        <x-revisemy-logo class="!h-auto !w-[128px]" />
+        <x-revisemy-logo variant="wordmark" size="lg" />
     </a>
     {{-- Mobile: real button in the header. Desktop: spacer so the sticky CTA aligns with the logo. --}}
     <x-try-token-cta

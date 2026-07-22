@@ -1,4 +1,4 @@
-<section class="mt-16 scroll-mt-8 sm:mt-20">
+<x-home-section>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Sample prompts</h2>
     <p class="mt-4 max-w-xl text-[15px] leading-relaxed text-zinc-600">
         Try saying these to your agent after connecting MCP from the homepage.
@@ -10,4 +10,4 @@
             </li>
         @endforeach
     </ul>
-</section>
+</x-home-section>
