@@ -20,12 +20,13 @@ class BrowsershotCaptureDriver implements CaptureDriver
 
     public function captureUrl(string $url, array $viewports): array
     {
-        // Viewport only — matches hosted driver; avoids giant full-page PNGs.
+        // Full-page at DPR 1 — matches hosted driver; avoids Cloud OOM on tall pages.
         return $this->capture(
             fn () => Browsershot::url($url),
             $viewports,
             ['origin' => 'capture', 'page_url' => $url],
-            fullPage: false,
+            fullPage: (bool) config('revisemy.capture.url_full_page', true),
+            deviceScaleFactor: max(1, (int) config('revisemy.capture.url_device_scale_factor', 1)),
         );
     }
 
@@ -71,7 +72,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage = false): array
+    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage = false, ?int $deviceScaleFactor = null): array
     {
         if (! $this->enabled()) {
             throw ValidationException::withMessages([
@@ -87,11 +88,12 @@ class BrowsershotCaptureDriver implements CaptureDriver
         // networkidle0 = strict; networkidle2 = non-strict (default).
         $networkIdleStrict = $waitUntil === 'networkidle0';
         $chromeTimeout = $timeout + (int) ceil($waitMs / 1000) + 5;
+        $dpr = $deviceScaleFactor ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
 
         foreach ($viewports as [$width, $height, $label]) {
             $shot = $factory()
                 ->windowSize($width, $height)
-                ->deviceScaleFactor(max(1, (int) config('revisemy.capture.device_scale_factor', 2)))
+                ->deviceScaleFactor($dpr)
                 ->timeout($chromeTimeout)
                 ->waitUntilNetworkIdle($networkIdleStrict)
                 ->delay($waitMs);

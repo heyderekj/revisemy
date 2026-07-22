@@ -68,8 +68,10 @@ class CaptureIngestionTest extends TestCase
             $body = $request->data();
             $viewport = $body['viewport'] ?? [];
             $goto = $body['gotoOptions'] ?? [];
+            $options = $body['options'] ?? [];
 
-            return ($viewport['deviceScaleFactor'] ?? null) === 2
+            return ($viewport['deviceScaleFactor'] ?? null) === 1
+                && ($options['fullPage'] ?? null) === true
                 && ($body['waitForTimeout'] ?? null) === (int) config('revisemy.capture.wait_ms', 2500)
                 && ($goto['waitUntil'] ?? null) === (string) config('revisemy.capture.wait_until', 'networkidle2');
         });

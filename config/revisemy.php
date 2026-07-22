@@ -94,7 +94,11 @@ return [
             'mobile' => [375, 812],
         ],
         // Retina captures: 2× device pixels (Browserless deviceScaleFactor / Browsershot DPR).
+        // Used for HTML/email (short pages). URL full-page uses url_device_scale_factor.
         'device_scale_factor' => max(1, (int) env('REVISEMY_CAPTURE_DPR', 2)),
+        // Full scroll height for website URL capture. DPR 1 avoids Cloud OOM on tall pages.
+        'url_full_page' => filter_var(env('REVISEMY_CAPTURE_URL_FULL_PAGE', true), FILTER_VALIDATE_BOOL),
+        'url_device_scale_factor' => max(1, (int) env('REVISEMY_CAPTURE_URL_DPR', 1)),
     ],
 
     /*

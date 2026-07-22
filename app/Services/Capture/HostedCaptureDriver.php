@@ -20,9 +20,14 @@ class HostedCaptureDriver implements CaptureDriver
 
     public function captureUrl(string $url, array $viewports): array
     {
-        // Viewport only — long marketing pages as fullPage PNGs at 2× DPR
-        // routinely OOM Cloud's 256MB PHP (see customer.io ~17kpx captures).
-        return $this->capture(['url' => $url], $viewports, ['origin' => 'capture', 'page_url' => $url], fullPage: false);
+        // Full-page at DPR 1 — tall 2× PNGs routinely OOM Cloud's 256MB PHP.
+        return $this->capture(
+            ['url' => $url],
+            $viewports,
+            ['origin' => 'capture', 'page_url' => $url],
+            fullPage: (bool) config('revisemy.capture.url_full_page', true),
+            deviceScaleFactor: max(1, (int) config('revisemy.capture.url_device_scale_factor', 1)),
+        );
     }
 
     public function captureHtml(string $html, array $viewports): array
@@ -56,7 +61,7 @@ class HostedCaptureDriver implements CaptureDriver
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(array $source, array $viewports, array $baseMeta, bool $fullPage = false): array
+    protected function capture(array $source, array $viewports, array $baseMeta, bool $fullPage = false, ?int $deviceScaleFactor = null): array
     {
         $endpoint = $this->authenticatedUrl((string) config('revisemy.capture.endpoint'));
         $timeout = (int) config('revisemy.capture.timeout', 30);
@@ -64,6 +69,7 @@ class HostedCaptureDriver implements CaptureDriver
         $waitUntil = (string) config('revisemy.capture.wait_until', 'networkidle2');
         // Outer HTTP budget must cover navigation + settle delay.
         $httpTimeout = $timeout + (int) ceil($waitMs / 1000) + 5;
+        $dpr = $deviceScaleFactor ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
         $shots = [];
 
         foreach ($viewports as [$width, $height, $label]) {
@@ -73,7 +79,7 @@ class HostedCaptureDriver implements CaptureDriver
                         'viewport' => [
                             'width' => $width,
                             'height' => $height,
-                            'deviceScaleFactor' => max(1, (int) config('revisemy.capture.device_scale_factor', 2)),
+                            'deviceScaleFactor' => $dpr,
                         ],
                         'options' => ['type' => 'png', 'fullPage' => $fullPage],
                         'gotoOptions' => [
