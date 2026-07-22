@@ -5,6 +5,7 @@ namespace App\Mcp\Resources;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\AppResource;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Icon;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Attributes\Uri;
@@ -22,6 +23,7 @@ use Laravel\Mcp\Server\Ui\Enums\Library;
 #[Title('ReviseMy review')]
 #[Description('Interactive inline design review: screenshots with marks, a mark composer, and approve / request changes controls for the human.')]
 #[Uri('ui://revisemy/review-app')]
+#[Icon('images/app-icon.png', mimeType: 'image/png', sizes: ['256x256'])]
 class ReviewApp extends AppResource
 {
     public function appMeta(): AppMeta
