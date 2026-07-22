@@ -249,13 +249,37 @@ new class extends Component
 
         {{-- Main --}}
         <main id="top" class="min-w-0 flex-1 lg:pt-10 [--rm-pad:1.25rem] sm:[--rm-pad:2rem] lg:[--rm-pad:3rem]">
-            {{-- Mobile top bar: logo | try + two-line menu (aligned) --}}
+            {{-- Mobile top bar: logo | try + two-line menu (aligned).
+                 Wordmark slides under the app icon in sync with the header CTA. --}}
             <div class="sticky top-0 z-40 flex items-center justify-between gap-3 bg-canvas/85 px-[var(--rm-pad)] py-3 backdrop-blur-md lg:hidden">
                 <a href="/" class="inline-flex min-w-0 shrink items-center hover:opacity-90" aria-label="ReviseMy home">
-                    <x-revisemy-logo variant="wordmark" size="lg" />
+                    <span class="inline-flex items-center">
+                        <img
+                            src="/images/app-icon.png"
+                            alt=""
+                            width="40"
+                            height="40"
+                            class="relative z-10 block size-10 shrink-0"
+                            decoding="async"
+                        />
+                        <span
+                            class="max-w-[7.5rem] overflow-hidden whitespace-nowrap pl-2.5 text-lg font-semibold tracking-tight text-zinc-900 opacity-100 transition-[max-width,opacity,transform,padding] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                            x-bind:class="showHeaderTry && '!max-w-0 !-translate-x-2 !pl-0 !opacity-0'"
+                            aria-hidden="true"
+                        >ReviseMy</span>
+                    </span>
                 </a>
                 <div class="flex shrink-0 items-center gap-2">
-                    <div x-show="showHeaderTry" x-cloak>
+                    <div
+                        x-show="showHeaderTry"
+                        x-cloak
+                        x-transition:enter="transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                        x-transition:enter-start="translate-x-2 opacity-0"
+                        x-transition:enter-end="translate-x-0 opacity-100"
+                        x-transition:leave="transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                        x-transition:leave-start="translate-x-0 opacity-100"
+                        x-transition:leave-end="translate-x-2 opacity-0"
+                    >
                         <x-try-token-button fathom-event="Try token header" />
                     </div>
                     <button
