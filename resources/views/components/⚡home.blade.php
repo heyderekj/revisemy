@@ -1114,34 +1114,37 @@ new class extends Component
                             </div>
                         </article>
 
-                        <article class="bg-[var(--color-canvas)] p-7 sm:p-8">
-                            <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Plus</p>
-                            <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
-                                ${{ $plusPrice }}<span class="text-lg font-medium text-zinc-500">/mo</span>
-                            </p>
-                            <p class="mt-2 text-[15px] leading-relaxed text-pretty text-zinc-600">
-                                {{ $plusCredits }} credits each month.<br>
-                                Reviews stick around {{ $plusRetention }}&nbsp;days.
-                            </p>
-                            <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
-                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Same full capture quality</li>
-                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> More room for URL checkups</li>
-                                <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Cancel anytime via your agent</li>
-                            </ul>
-                            <div class="mt-8">
-                                <flux:button
-                                    variant="ghost"
-                                    size="sm"
-                                    href="#setup"
-                                    class="!border !border-zinc-200 !bg-white hover:!border-zinc-300 hover:!bg-zinc-50"
-                                >
-                                    Upgrade via your agent
-                                </flux:button>
-                                <p class="mt-3 max-w-xs text-[13px] leading-relaxed text-zinc-500">
-                                    After you try Free, ask your agent for
-                                    <code class="bg-zinc-100 px-1 py-0.5 text-[12px] text-zinc-800">create_checkout</code>
-                                    and open the Paddle link.
+                        <article class="relative overflow-hidden bg-[var(--color-canvas)] p-7 sm:p-8">
+                            <div class="rm-plus-grid" aria-hidden="true"></div>
+                            <div class="relative z-10">
+                                <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Plus</p>
+                                <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
+                                    ${{ $plusPrice }}<span class="text-lg font-medium text-zinc-500">/mo</span>
                                 </p>
+                                <p class="mt-2 text-[15px] leading-relaxed text-pretty text-zinc-600">
+                                    {{ $plusCredits }} credits each month.<br>
+                                    Reviews stick around {{ $plusRetention }}&nbsp;days.
+                                </p>
+                                <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
+                                    <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Same full capture quality</li>
+                                    <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> More room for URL checkups</li>
+                                    <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Cancel anytime via your agent</li>
+                                </ul>
+                                <div class="mt-8">
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        href="#setup"
+                                        class="!border !border-zinc-200 !bg-white hover:!border-zinc-300 hover:!bg-zinc-50"
+                                    >
+                                        Upgrade via your agent
+                                    </flux:button>
+                                    <p class="mt-3 max-w-xs text-[13px] leading-relaxed text-zinc-500">
+                                        After you try Free, ask your agent for
+                                        <code class="bg-zinc-100 px-1 py-0.5 text-[12px] text-zinc-800">create_checkout</code>
+                                        and open the Paddle link.
+                                    </p>
+                                </div>
                             </div>
                         </article>
                     </div>
