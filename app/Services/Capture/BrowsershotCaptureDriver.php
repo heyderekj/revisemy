@@ -20,13 +20,16 @@ class BrowsershotCaptureDriver implements CaptureDriver
 
     public function captureUrl(string $url, array $viewports): array
     {
+        $fullPage = (bool) config('revisemy.capture.url_full_page', true);
+
         // Full-page at DPR 1 — matches hosted driver; avoids Cloud OOM on tall pages.
         return $this->capture(
             fn () => Browsershot::url($url),
             $viewports,
             ['origin' => 'capture', 'page_url' => $url],
-            fullPage: (bool) config('revisemy.capture.url_full_page', true),
+            fullPage: $fullPage,
             deviceScaleFactor: max(1, (int) config('revisemy.capture.url_device_scale_factor', 1)),
+            scrollReveal: $fullPage && ScrollRevealScript::enabled(),
         );
     }
 
@@ -72,7 +75,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage = false, ?int $deviceScaleFactor = null): array
+    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage = false, ?int $deviceScaleFactor = null, bool $scrollReveal = false): array
     {
         if (! $this->enabled()) {
             throw ValidationException::withMessages([
@@ -87,7 +90,10 @@ class BrowsershotCaptureDriver implements CaptureDriver
         $waitUntil = (string) config('revisemy.capture.wait_until', 'networkidle2');
         // networkidle0 = strict; networkidle2 = non-strict (default).
         $networkIdleStrict = $waitUntil === 'networkidle0';
-        $chromeTimeout = $timeout + (int) ceil($waitMs / 1000) + 5;
+        $scrollTimeoutMs = $scrollReveal ? ScrollRevealScript::timeoutMs() : 0;
+        // delay runs before waitForFunction in Browsershot's browser.cjs — same
+        // order as Browserless — so the scroll sweep lives in waitForFunction.
+        $chromeTimeout = $timeout + (int) ceil($waitMs / 1000) + (int) ceil($scrollTimeoutMs / 1000) + 5;
         $dpr = $deviceScaleFactor ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
 
         foreach ($viewports as [$width, $height, $label]) {
@@ -97,6 +103,13 @@ class BrowsershotCaptureDriver implements CaptureDriver
                 ->timeout($chromeTimeout)
                 ->waitUntilNetworkIdle($networkIdleStrict)
                 ->delay($waitMs);
+
+            if ($scrollReveal) {
+                $shot->waitForFunction(
+                    ScrollRevealScript::functionBody(),
+                    timeout: $scrollTimeoutMs,
+                );
+            }
 
             if ($fullPage) {
                 $shot->fullPage();

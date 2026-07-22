@@ -69,11 +69,15 @@ class CaptureIngestionTest extends TestCase
             $viewport = $body['viewport'] ?? [];
             $goto = $body['gotoOptions'] ?? [];
             $options = $body['options'] ?? [];
+            $waitForFunction = $body['waitForFunction'] ?? null;
+            $fn = is_array($waitForFunction) ? (string) ($waitForFunction['fn'] ?? '') : '';
 
             return ($viewport['deviceScaleFactor'] ?? null) === 1
                 && ($options['fullPage'] ?? null) === true
                 && ($body['waitForTimeout'] ?? null) === (int) config('revisemy.capture.wait_ms', 2500)
-                && ($goto['waitUntil'] ?? null) === (string) config('revisemy.capture.wait_until', 'networkidle2');
+                && ($goto['waitUntil'] ?? null) === (string) config('revisemy.capture.wait_until', 'networkidle2')
+                && str_contains($fn, '__rmScrollRevealDone')
+                && str_contains($fn, 'scrollTo');
         });
     }
 
@@ -93,6 +97,14 @@ class CaptureIngestionTest extends TestCase
         $response->assertJsonPath('type', 'email');
         $this->assertCount(1, $response->json('screenshots'));
         $this->assertSame('html', $response->json('screenshots.0.meta.origin'));
+
+        // Email HTML has no scroll-triggered reveals — skip the sweep.
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+
+            return ($body['html'] ?? null) !== null
+                && ! array_key_exists('waitForFunction', $body);
+        });
     }
 
     public function test_multiple_sources_are_rejected(): void

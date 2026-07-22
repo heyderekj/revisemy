@@ -20,13 +20,17 @@ class HostedCaptureDriver implements CaptureDriver
 
     public function captureUrl(string $url, array $viewports): array
     {
+        $fullPage = (bool) config('revisemy.capture.url_full_page', true);
+
         // Full-page at DPR 1 — tall 2× PNGs routinely OOM Cloud's 256MB PHP.
         return $this->capture(
             ['url' => $url],
             $viewports,
             ['origin' => 'capture', 'page_url' => $url],
-            fullPage: (bool) config('revisemy.capture.url_full_page', true),
+            fullPage: $fullPage,
             deviceScaleFactor: max(1, (int) config('revisemy.capture.url_device_scale_factor', 1)),
+            // Sweep viewport so IntersectionObserver / scroll-in reveals fire.
+            scrollReveal: $fullPage && ScrollRevealScript::enabled(),
         );
     }
 
@@ -61,33 +65,45 @@ class HostedCaptureDriver implements CaptureDriver
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(array $source, array $viewports, array $baseMeta, bool $fullPage = false, ?int $deviceScaleFactor = null): array
+    protected function capture(array $source, array $viewports, array $baseMeta, bool $fullPage = false, ?int $deviceScaleFactor = null, bool $scrollReveal = false): array
     {
         $endpoint = $this->authenticatedUrl((string) config('revisemy.capture.endpoint'));
         $timeout = (int) config('revisemy.capture.timeout', 30);
         $waitMs = (int) config('revisemy.capture.wait_ms', 2500);
         $waitUntil = (string) config('revisemy.capture.wait_until', 'networkidle2');
-        // Outer HTTP budget must cover navigation + settle delay.
-        $httpTimeout = $timeout + (int) ceil($waitMs / 1000) + 5;
+        $scrollTimeoutMs = $scrollReveal ? ScrollRevealScript::timeoutMs() : 0;
+        // Outer HTTP budget must cover navigation + settle + optional scroll sweep.
+        // Browserless runs waitForTimeout before waitForFunction, so the scroll
+        // (and its settle) must live in waitForFunction — not scrollPage alone.
+        $httpTimeout = $timeout + (int) ceil($waitMs / 1000) + (int) ceil($scrollTimeoutMs / 1000) + 5;
         $dpr = $deviceScaleFactor ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
         $shots = [];
 
         foreach ($viewports as [$width, $height, $label]) {
+            $payload = $source + [
+                'viewport' => [
+                    'width' => $width,
+                    'height' => $height,
+                    'deviceScaleFactor' => $dpr,
+                ],
+                'options' => ['type' => 'png', 'fullPage' => $fullPage],
+                'gotoOptions' => [
+                    'waitUntil' => $waitUntil,
+                    'timeout' => $timeout * 1000,
+                ],
+                'waitForTimeout' => $waitMs,
+            ];
+
+            if ($scrollReveal) {
+                $payload['waitForFunction'] = [
+                    'fn' => ScrollRevealScript::functionBody(),
+                    'timeout' => $scrollTimeoutMs,
+                ];
+            }
+
             try {
                 $response = Http::timeout($httpTimeout)
-                    ->post($endpoint, $source + [
-                        'viewport' => [
-                            'width' => $width,
-                            'height' => $height,
-                            'deviceScaleFactor' => $dpr,
-                        ],
-                        'options' => ['type' => 'png', 'fullPage' => $fullPage],
-                        'gotoOptions' => [
-                            'waitUntil' => $waitUntil,
-                            'timeout' => $timeout * 1000,
-                        ],
-                        'waitForTimeout' => $waitMs,
-                    ]);
+                    ->post($endpoint, $payload);
             } catch (\Throwable $e) {
                 Log::warning('Hosted capture request failed', [
                     'label' => $label,

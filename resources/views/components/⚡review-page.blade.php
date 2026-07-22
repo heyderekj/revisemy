@@ -1822,6 +1822,7 @@ new class extends Component
                 wire:key="pending-note-{{ $pendingX }}-{{ $pendingY }}-{{ $pendingW }}-{{ $pendingH }}"
                 class="contents"
                 x-data="{
+                    anchorHeight: null,
                     place() {
                         const panel = this.$refs.panel;
                         const mark = document.querySelector('[data-pending-mark]');
@@ -1841,7 +1842,12 @@ new class extends Component
                         const gap = 12;
                         const rect = mark.getBoundingClientRect();
                         const pw = panel.offsetWidth || 320;
-                        const ph = panel.offsetHeight || 280;
+                        // Freeze height after first place so typing/growth does not re-center.
+                        const measured = panel.offsetHeight || 280;
+                        if (this.anchorHeight == null) {
+                            this.anchorHeight = measured;
+                        }
+                        const ph = this.anchorHeight;
                         const spaceRight = window.innerWidth - rect.right;
                         const placeRight = spaceRight >= pw + gap || spaceRight >= rect.left;
                         let left = placeRight ? rect.right + gap : rect.left - pw - gap;
@@ -1851,6 +1857,10 @@ new class extends Component
                         panel.style.left = left + 'px';
                         panel.style.top = top + 'px';
                         panel.style.transformOrigin = placeRight ? 'left center' : 'right center';
+                    },
+                    onScroll(e) {
+                        if (e?.target?.closest?.('.rm-note-composer')) return;
+                        this.place();
                     },
                     focusNote() {
                         this.$nextTick(() => {
@@ -1862,7 +1872,7 @@ new class extends Component
                 }"
                 x-init="$nextTick(() => { place(); requestAnimationFrame(() => place()); focusNote(); })"
                 x-on:resize.window.debounce.50ms="place()"
-                x-on:scroll.window.capture="place()"
+                x-on:scroll.window.capture="onScroll($event)"
             >
                 <button
                     type="button"

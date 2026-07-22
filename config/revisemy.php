@@ -81,10 +81,18 @@ return [
         'content_endpoint' => env('REVISEMY_CAPTURE_CONTENT_ENDPOINT'),
         'api_key' => env('REVISEMY_CAPTURE_KEY'),
         'timeout' => (int) env('REVISEMY_CAPTURE_TIMEOUT', 30),
-        // Post-load settle before screenshot (CSS stagger / fade-ins).
+        // Post-load settle before screenshot (above-fold CSS stagger / fade-ins).
         'wait_ms' => max(0, (int) env('REVISEMY_CAPTURE_WAIT_MS', 2500)),
         // Puppeteer/Browserless navigation waitUntil (networkidle2 recommended).
         'wait_until' => env('REVISEMY_CAPTURE_WAIT_UNTIL', 'networkidle2'),
+        // Walk the page before full-page URL shots so scroll-triggered reveals fire.
+        // Implemented via waitForFunction (Browserless runs waitForTimeout before
+        // scrollPage, so scrollPage alone screenshots mid-animation).
+        'scroll_page' => filter_var(env('REVISEMY_CAPTURE_SCROLL_PAGE', true), FILTER_VALIDATE_BOOL),
+        'scroll_timeout_ms' => max(5_000, (int) env('REVISEMY_CAPTURE_SCROLL_TIMEOUT_MS', 45_000)),
+        'scroll_step_ms' => max(50, (int) env('REVISEMY_CAPTURE_SCROLL_STEP_MS', 175)),
+        'scroll_end_settle_ms' => max(200, (int) env('REVISEMY_CAPTURE_SCROLL_END_SETTLE_MS', 450)),
+        'scroll_top_settle_ms' => max(100, (int) env('REVISEMY_CAPTURE_SCROLL_TOP_SETTLE_MS', 250)),
         'chrome_path' => env('REVISEMY_CAPTURE_CHROME_PATH', PHP_OS_FAMILY === 'Darwin'
             ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
             : null),
