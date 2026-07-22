@@ -94,8 +94,11 @@ class BillingService
     public function checkoutOpenOptions(Workspace $workspace): array
     {
         $options = $this->checkoutForWorkspace($workspace)->options();
-        $options['settings']['displayMode'] = 'overlay';
-        unset($options['settings']['frameStyle'], $options['settings']['frameTarget']);
+        $options['settings']['displayMode'] = 'inline';
+        $options['settings']['frameTarget'] = 'paddle-checkout';
+        $options['settings']['frameInitialHeight'] = '516';
+        $options['settings']['frameStyle'] = 'width: 100%; min-width: 312px; background-color: transparent; border: none;';
+        $options['settings']['variant'] = 'one-page';
 
         return $options;
     }

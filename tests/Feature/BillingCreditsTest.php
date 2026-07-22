@@ -183,6 +183,42 @@ class BillingCreditsTest extends TestCase
             );
     }
 
+    public function test_checkout_page_renders_inline_paddle_mount(): void
+    {
+        config([
+            'cashier.api_key' => 'pdl_test',
+            'cashier.client_side_token' => 'test_token',
+            'billing.plans.pro.paddle_price' => 'pri_test',
+        ]);
+
+        $workspace = app(TryTokenService::class)->create()['workspace'];
+        $url = app(BillingService::class)->createCheckoutUrl($workspace);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertSee('Upgrade to Pro', false)
+            ->assertSee('paddle-checkout', false)
+            ->assertSee('displayMode', false)
+            ->assertDontSee('Open checkout', false);
+    }
+
+    public function test_checkout_open_options_use_inline_one_page(): void
+    {
+        config([
+            'cashier.api_key' => 'pdl_test',
+            'cashier.client_side_token' => 'test_token',
+            'billing.plans.pro.paddle_price' => 'pri_test',
+        ]);
+
+        $workspace = app(TryTokenService::class)->create()['workspace'];
+        $options = app(BillingService::class)->checkoutOpenOptions($workspace);
+
+        $this->assertSame('inline', $options['settings']['displayMode'] ?? null);
+        $this->assertSame('paddle-checkout', $options['settings']['frameTarget'] ?? null);
+        $this->assertSame('one-page', $options['settings']['variant'] ?? null);
+        $this->assertSame($workspace->public_id, $options['customData']['workspace_public_id'] ?? null);
+    }
+
     public function test_api_billing_endpoint(): void
     {
         $result = app(TryTokenService::class)->create();
