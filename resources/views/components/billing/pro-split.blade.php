@@ -75,13 +75,19 @@
                 @isset($paymentIntro)
                     {{ $paymentIntro }}
                 @endisset
-                <p class="mt-3 text-[13px] leading-relaxed text-zinc-500">
+                <p class="mt-3 max-w-[300px] text-[13px] leading-relaxed text-zinc-500">
                     Paddle is the merchant of record. After you pay, return to your agent and continue the checkup.
+                </p>
+                <p class="mt-4 border border-amber-200/80 bg-amber-50/70 px-3 py-2.5 text-[13px] leading-relaxed text-amber-950/85">
+                    <span class="font-medium text-amber-950">Tax at checkout.</span>
+                    ${{ $priceUsd }}/mo is before tax — Paddle adds sales tax or VAT based on your location.
                 </p>
             </div>
 
-            <div class="mt-6 min-h-[516px]">
-                {{ $slot }}
+            <div class="rm-pad mt-6">
+                <div class="min-h-[516px] bg-white p-4 ring-1 ring-zinc-200 sm:p-6">
+                    {{ $slot }}
+                </div>
             </div>
 
             @isset($paymentFooter)
