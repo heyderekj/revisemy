@@ -1597,7 +1597,7 @@ new class extends Component
                         'rounded-t-2xl' => $review->isOpenForFeedback(),
                         'rounded-2xl' => ! $review->isOpenForFeedback(),
                     ])>
-                        <div data-zoom-controls class="absolute right-2 top-2 z-30 flex items-center gap-0.5 rounded-lg border border-zinc-200/80 bg-white/95 p-0.5 shadow-sm backdrop-blur">
+                        <div data-zoom-controls class="absolute bottom-2 left-2 z-30 flex items-center gap-0.5 rounded-lg border border-zinc-200/80 bg-white/95 p-0.5 shadow-sm backdrop-blur">
                             <button
                                 type="button"
                                 class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
