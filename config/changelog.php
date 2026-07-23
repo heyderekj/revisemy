@@ -15,6 +15,23 @@ return [
     'entries' => [
 
         [
+            'version' => '1.1.2',
+            'date' => '2026-07-23',
+            'title' => 'Agent-native feedback loop',
+            'highlights' => [
+                'Work packets now include mark comments, suggested copy, question answers, and finding provenance',
+                'Pass ledger on multi-pass reviews plus an “Awaiting your verify” focus with verify-all',
+                'Faster second-opinion and guest triage: accept as severity, accept/dismiss all',
+                'Enriched list_reviews summaries and a token-scoped /reviews page (no account)',
+            ],
+            'links' => [
+                ['label' => 'Changelog', 'href' => '/changelog'],
+                ['label' => 'Recent reviews', 'href' => '/reviews'],
+                ['label' => 'Board', 'href' => '/board'],
+            ],
+        ],
+
+        [
             'version' => '1.1.1',
             'date' => '2026-07-22',
             'title' => 'Capture scroll and second-opinion marks',

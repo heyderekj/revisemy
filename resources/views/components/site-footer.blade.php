@@ -10,6 +10,7 @@
             <p class="flex flex-wrap gap-x-4 gap-y-2">
                 <a href="/privacy" class="transition hover:text-zinc-900">Privacy</a>
                 <a href="/terms" class="transition hover:text-zinc-900">Terms</a>
+                <a href="/reviews" class="transition hover:text-zinc-900">Recent reviews</a>
                 <a href="/changelog" class="transition hover:text-zinc-900">Changelog</a>
             </p>
         </div>

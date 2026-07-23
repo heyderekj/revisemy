@@ -233,6 +233,9 @@ new class extends Component
                             <a href="/guest-links" class="transition hover:text-zinc-900">Guest links</a>
                         </li>
                         <li>
+                            <a href="/reviews" class="transition hover:text-zinc-900">Recent reviews</a>
+                        </li>
+                        <li>
                             <a href="/alternatives" class="transition hover:text-zinc-900">Alternatives</a>
                         </li>
                         <li>
@@ -396,7 +399,7 @@ new class extends Component
                         <article class="bg-[var(--color-canvas)] p-7 lg:row-start-1">
                             <x-mark-type-icon type="m" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Precise marks</h3>
-                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Open the review link, point or outline the exact area, set must-fix / nice to have / question / keep, and keep a threaded comment on each mark.</p>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Open the review link, point or outline the exact area, set must-fix / nice to have / question / keep. Add suggested copy or answer a question — threads and answers go straight into the agent’s work packet.</p>
                         </article>
 
                         <div
@@ -422,7 +425,7 @@ new class extends Component
                         <article class="bg-[var(--color-canvas)] p-7 lg:row-start-3">
                             <x-use-case-icon name="queue-list" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Board to done</h3>
-                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Track marks from open → resolved → verified on the board. Agents can attach before/after evidence when they fix something.</p>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Track marks from open → resolved → verified. When the agent resolves a batch, the review focuses on verify — with before/after evidence and a pass ledger across rounds.</p>
                             <a
                                 href="/board"
                                 class="mt-2 inline-block text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
@@ -434,7 +437,7 @@ new class extends Component
                                 <flux:icon.arrow-path variant="micro" class="size-[18px]" />
                             </div>
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Approve and loop</h3>
-                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or request changes. Structured next steps return over MCP — repeat until it feels right.</p>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or request changes. Structured <code class="font-mono text-[12px]">next_action</code> returns over MCP — and <a href="/reviews" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-700">Recent reviews</a> keeps the same token memory humans and agents share.</p>
                         </article>
                     </div>
                 </div>
@@ -1324,7 +1327,7 @@ new class extends Component
                                 </span>
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                The board is your checklist: each mark moves <span class="font-medium text-zinc-800">open → resolved → verified</span>. Request changes and your agent fixes what you marked, then uploads fresh captures for <span class="font-medium text-zinc-800">pass 2</span> (and on). Agents can attach before/after shots when they resolve a mark — you verify when it actually looks right. See <a href="/board" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">the board</a>.
+                                The board is your checklist: each mark moves <span class="font-medium text-zinc-800">open → resolved → verified</span>. When the agent resolves marks, the review shows <span class="font-medium text-zinc-800">Awaiting your verify</span> so you can check before/after and verify (or reopen). Request changes and your agent uploads fresh captures for <span class="font-medium text-zinc-800">pass 2</span> (and on) — the <span class="font-medium text-zinc-800">pass ledger</span> keeps that history scannable. See <a href="/board" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">the board</a>.
                             </p>
                         </details>
 
@@ -1518,6 +1521,7 @@ new class extends Component
                             </a>
                         </li>
                         <li><a href="/guest-links" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Guest links</a></li>
+                        <li><a href="/reviews" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Recent reviews</a></li>
                         <li><a href="/alternatives" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Alternatives</a></li>
                         <li>
                             <a href="https://github.com/heyderekj/revisemy" class="block py-0.5 transition hover:text-zinc-900" target="_blank" rel="noreferrer" x-on:click="mobileNav = false">

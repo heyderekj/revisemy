@@ -14,13 +14,16 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 - **Review types** — `ui`, `website`, `presentation` (Slide in the UI), or `email`: each gets its own checklist and vision lens (emails get CTA/dark-mode/client checks, slides get slide-density checks, sites get above-the-fold/responsive checks).
 - **Four ways to ingest** — `images` (https URL, data URL, or base64), `capture_url` + `page_url` (desktop + mobile screenshots), `pdf` (one shot per page), or raw `html` (email at ~600px). URL capture also stores a DOM snapshot for grounding.
 - **Before/after evidence** — agents attach an `after_image` when resolving a mark; the review page and board show a before/after crop next to the resolution note.
-- **Mark lifecycle + board** — `/r/{token}/board` groups marks Open → In progress → Resolved → Verified. Agents call `resolve_marks` as they fix code; only the human verifies or reopens.
-- **Thread comments** — reply on a mark without moving it on the canvas.
-- **Agent subagent path** — `add_findings` drops suggestion / a11y / polish notes into the same review before you look.
+- **Mark lifecycle + board** — `/r/{token}/board` groups marks Open → In progress → Resolved → Verified. Agents call `resolve_marks` as they fix code; only the human verifies or reopens. When marks await verify, the review page surfaces an **Awaiting your verify** focus (with verify-all).
+- **Thread comments** — reply on a mark without moving it on the canvas; recent comments land in `get_review` work packets for the agent.
+- **Suggested copy + question answers** — optional exact-copy strings and answers on question marks ship in work packets so agents don’t invent wording.
+- **Agent subagent path** — `add_findings` drops suggestion / a11y / polish notes into the same review before you look. Accept/dismiss (including batch and accept-as severity) promotes hints to marks with provenance (`guest` / `checklist` / `vision` / `agent`).
 - **Work packets + `next_action`** — agents know whether to wait, apply marks, open the next pass, or stop.
+- **Pass ledger** — multi-pass reviews show a revision ledger (decisions, mark counts, after evidence) in the UI and in `get_review`.
 - **Multi-pass checkups** — `create_review` with `parent_id` for pass 2+ after you request changes (type and webhook inherit from the parent).
 - **Decision webhooks** — optional `webhook_url` on `create_review`; ReviseMy POSTs a signed `review.decided` event when the human approves or requests changes, so CI/CD can gate without polling.
 - **Guest share links** — `guest_share_url` lets stakeholders leave suggestions (not authoritative marks); the owner accepts or dismisses them.
+- **Token-scoped recent reviews** — `/reviews` and enriched `list_reviews` show pass #, outstanding counts, and awaiting-verification without an account (same try token).
 - **MCP Apps inline review** — in hosts that support [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview) (Claude web/desktop, Copilot, …), `create_review` / `get_review` render the review inline so humans can mark and decide without leaving chat. Cursor and Claude Code use the `review_url` link instead.
 - **Try token, no account** — one-click token on the homepage; paste MCP config for ChatGPT, Claude, Copilot, Cursor, or Grok.
 - **Secret review links** — humans open `/r/{token}` without signing up.
@@ -43,7 +46,7 @@ No account required for the human reviewer.
 |------|---------|
 | `create_review` | title + one source — `images`, `capture_url` (renders `page_url`), `pdf`, or `html` — (+ optional `type`, `page_url`, `parent_id`, `webhook_url`) → review URL; starts second opinion |
 | `get_review` | work packets + `next_action` (`wait_for_human` / `apply_pins_then_next_pass` / `done`) |
-| `list_reviews` | recent reviews for this try token |
+| `list_reviews` | recent reviews for this try token (summaries: status, pass, outstanding / awaiting-verification counts — call `get_review` for pins) |
 | `add_screenshot` | append a shot to an open review |
 | `add_findings` | agent subagent — push suggestion/a11y/polish into the review |
 | `resolve_marks` | agent progress on human marks: `in_progress` → `resolved` (+ note, optional `after_image`); never `verified` |

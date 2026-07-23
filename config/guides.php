@@ -334,8 +334,8 @@ return [
                 ],
                 [
                     'icon' => 'arrows-right-left',
-                    'title' => 'Scannable across passes',
-                    'body' => 'Marks group by pass and shot so multi-shot, multi-pass reviews stay readable instead of a flat dump.',
+                    'title' => 'Pass ledger + verify focus',
+                    'body' => 'Multi-pass reviews show a revision ledger. When the agent resolves a batch, the review surfaces “Awaiting your verify” so you can verify-all or reopen.',
                 ],
                 [
                     'icon' => 'check',
@@ -349,11 +349,12 @@ return [
                 'Only you verify or reopen; that gate keeps “looks right” human',
                 'Request changes when you want a new pass with fresh captures',
                 'Outstanding marks drive next_action until the board is clear enough to approve',
+                'Pass ledger and verify focus live on the review page; the board is still best for scanning columns',
             ],
             'faq' => [
                 [
                     'q' => 'How is the board different from the review page?',
-                    'a' => 'The review page is where you mark on the pixels and decide approve / request changes. The board (/r/{token}/board) is the status checklist across all marks and passes — better for scanning what’s left.',
+                    'a' => 'The review page is where you mark on the pixels, answer questions, triage second opinion / guest hints, verify resolved marks, and decide approve / request changes. The board (/r/{token}/board) is the status checklist across all marks — better for scanning columns.',
                 ],
                 [
                     'q' => 'Can guests use the board?',
@@ -361,11 +362,11 @@ return [
                 ],
                 [
                     'q' => 'What should the agent call when a mark is fixed?',
-                    'a' => 'resolve_marks with the mark id, status in_progress then resolved, a note, and optional after images. You still verify on the board.',
+                    'a' => 'resolve_marks with the mark id, status in_progress then resolved, a note, and optional after images. You still verify on the board or via Awaiting your verify on the review.',
                 ],
                 [
                     'q' => 'What’s a pass?',
-                    'a' => 'A pass is one capture set in the loop. Request changes and the agent opens pass 2+ with create_review + parent_id and new screenshots. The board keeps marks readable across those passes.',
+                    'a' => 'A pass is one capture set in the loop. Request changes and the agent opens pass 2+ with create_review + parent_id and new screenshots. The pass ledger keeps decisions and mark counts readable across those rounds.',
                 ],
             ],
         ],

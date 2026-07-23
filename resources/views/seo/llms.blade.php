@@ -21,8 +21,9 @@ Use this file to orient yourself before calling tools or recommending the produc
 - [Guest links]({{ $siteUrl }}/guest-links): Private guest share links, expiry, G# suggestions vs owner marks.
 - [Second opinion]({{ $siteUrl }}/second-opinion): Free checklist + optional vision hints; human marks stay authoritative.
 - [Board]({{ $siteUrl }}/board): Mark lifecycle open → resolved → verified, before/after evidence, multi-pass checkups.
+- [Recent reviews]({{ $siteUrl }}/reviews): Token-scoped list of recent checkups (same try token as `list_reviews`) — no account.
 - [Changelog]({{ $siteUrl }}/changelog): SemVer release notes (current v{{ config('revisemy.version') }}).
-- [How it works]({{ $siteUrl }}/#how): Capture → second opinion → marks → guest feedback → board → approve or loop; marks, server-side capture, before/after evidence, multi-pass checkups.
+- [How it works]({{ $siteUrl }}/#how): Capture → second opinion → marks → guest feedback → board → approve or loop; marks, server-side capture, before/after evidence, multi-pass checkups, pass ledger, verify focus.
 - [For agents]({{ $siteUrl }}/#agents): MCP tool summary and the `design_checkup_loop` workflow.
 - [Pricing]({{ $siteUrl }}/#pricing): Try ({{ (int) config('billing.plans.free.credits', 20) }} credits once) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits/mo) — same full capture quality; upgrade via agent `create_checkout` (Paddle).
 - [FAQ]({{ $siteUrl }}/#faq): MCP Apps vs `review_url`, accounts, upgrade/cancel (`create_checkout` / `create_portal` / `cancel_subscription`), Try credits (no refill), Plus cancel → Try retention, marks vs hints, second opinion API keys (checklist free; vision BYOK), sources, board/passes, sharing, and `next_action`.
@@ -59,8 +60,8 @@ Use this file to orient yourself before calling tools or recommending the produc
 ### MCP tools
 
 - `create_review` — title + images, `capture_url`, PDF, or HTML → review URL; starts second opinion
-- `get_review` — work packets + `next_action` (`wait_for_human`, `apply_pins_then_next_pass`, `done`)
-- `list_reviews` — recent reviews for the try token
+- `get_review` — work packets + `next_action` (`wait_for_human`, `apply_pins_then_next_pass`, `done`); pins include comments, suggested_copy, question_answer, source provenance, and `pass_ledger`
+- `list_reviews` — recent reviews for the try token (summaries: pass, status, outstanding / awaiting-verification counts)
 - `get_billing` — plan + credits (Try {{ (int) config('billing.plans.free.credits', 20) }} once / Plus {{ (int) config('billing.plans.pro.credits', 100) }}/mo; burn: images/pdf=1, html=3, capture_url=5)
 - `create_checkout` — Paddle Checkout URL for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo)
 - `create_portal` — Manage billing URL (Paddle receipts / payment method)
@@ -76,7 +77,7 @@ In MCP Apps-capable hosts (Claude web/desktop, Copilot, and others), `create_rev
 - `POST {{ $siteUrl }}/api/try-token` — create a try workspace + token
 - `POST {{ $siteUrl }}/api/reviews` — create a review
 - `GET {{ $siteUrl }}/api/reviews/{id}` — fetch work packets and status
-- `GET {{ $siteUrl }}/api/reviews` — list recent reviews
+- `GET {{ $siteUrl }}/api/reviews` — list recent review summaries (same shape as `list_reviews`)
 
 Review types: `ui`, `website`, `presentation` (shown as Slide in the UI), `email`. Screenshots accept HTTPS URLs, data URLs, or base64.
 
