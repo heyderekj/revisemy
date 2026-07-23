@@ -87,8 +87,8 @@ class McpAppTest extends TestCase
         );
         $this->assertNotEmpty($serverIcons);
         $this->assertTrue(
-            collect($serverIcons)->contains(fn (array $icon) => str_contains($icon['src'], '/images/app-icon-v9.png')),
-            'ReviseMyServer should advertise images/app-icon-v9.png in serverInfo.icons',
+            collect($serverIcons)->contains(fn (array $icon) => str_starts_with($icon['src'], 'data:image/png;base64,')),
+            'ReviseMyServer should advertise an inline data-URI yellow mark in serverInfo.icons',
         );
 
         $resourceIcons = array_map(
@@ -96,8 +96,8 @@ class McpAppTest extends TestCase
             app(ReviewApp::class)->resolvedIcons(),
         );
         $this->assertTrue(
-            collect($resourceIcons)->contains(fn (array $icon) => str_contains($icon['src'], '/images/app-icon-v9.png')),
-            'ReviewApp should advertise images/app-icon-v9.png',
+            collect($resourceIcons)->contains(fn (array $icon) => str_starts_with($icon['src'], 'data:image/png;base64,')),
+            'ReviewApp should advertise an inline data-URI yellow mark',
         );
     }
 

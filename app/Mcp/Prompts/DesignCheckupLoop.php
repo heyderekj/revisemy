@@ -32,7 +32,7 @@ You are running a ReviseMy design checkup loop for: {$focus}
    - If `create_review` returns `[insufficient_credits]`, call `get_billing`, then `create_checkout`, open `checkout_url` (Paddle) for the human (Plus $9/mo, 100 credits, same full quality), then retry.
 2. **Open a review** — Call `create_review` with a short title, optional context (what the human should look at), and the source from step 1.
 3. **Optional subagent critique** — Call `add_findings` with suggestion/a11y/polish notes only (never must-fix). The human still decides.
-4. **Hand off** — Share `review_url` with the human. Tell them to mark feedback and approve or request changes.
+4. **Hand off** — Share `review_url` with the human as a markdown image link using the yellow mark (`![ReviseMy](https://revisemy.com/images/app-icon-v9.png?v=9)` wrapping the URL), and put the raw URL in backticks — never a bare `https://revisemy.com/...` autolink (hosts cache an old pink domain favicon). Tell them to mark feedback and approve or request changes.
 5. **Wait** — Poll `get_review` with the review id. While `status` is `pending`, do not claim the UI is done.
 6. **Act on the work packet** — When status changes:
    - `approved` → stop. Follow `next_action`. Celebrate briefly; do not keep editing unless asked.

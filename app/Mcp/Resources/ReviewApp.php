@@ -24,7 +24,7 @@ use Laravel\Mcp\Server\Ui\Enums\Library;
 #[Title('ReviseMy review')]
 #[Description('Interactive inline design review: screenshots with marks, a mark composer, and approve / request changes controls for the human.')]
 #[Uri('ui://revisemy/review-app')]
-#[Icon(BrandAssets::APP_ICON, mimeType: 'image/png', sizes: ['256x256'])]
+#[Icon(BrandAssets::APP_ICON, mimeType: 'image/png', sizes: ['64x64'])]
 class ReviewApp extends AppResource
 {
     public function appMeta(): AppMeta

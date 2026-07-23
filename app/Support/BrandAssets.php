@@ -10,7 +10,10 @@ final class BrandAssets
 {
     public const CACHE_BUST = '9';
 
-    public const APP_ICON = 'images/app-icon-v9.png?v='.self::CACHE_BUST;
+    /** Prefer the inline mark in MCP so hosts never hit a stale domain-favicon CDN. */
+    public const APP_ICON = BrandIconData::APP_ICON_64;
+
+    public const APP_ICON_HTTPS = 'images/app-icon-v9.png?v='.self::CACHE_BUST;
 
     public const FAVICON_32 = 'images/favicon-32x32-v9.png?v='.self::CACHE_BUST;
 

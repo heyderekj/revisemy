@@ -62,15 +62,18 @@ class CreateReviewTool extends Tool
         $payload = $review->toAgentPayload();
         $passLabel = $payload['pass'] > 1 ? " (pass {$payload['pass']})" : '';
         $mark = BrandAssets::appIconUrl();
+        $url = $payload['review_url'];
+        $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
             "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
-            // Embed the yellow mark so hosts that cache domain favicons still show the current brand.
-            "Open this link:\n[![ReviseMy]({$mark})]({$payload['review_url']}) {$payload['review_url']}\n\n".
+            // Yellow mark as markdown image; keep the raw URL in backticks so Cursor does not
+            // attach Google's stale domain favicon chip (gstatic still caches the old pink mark).
+            "Open this link:\n[![ReviseMy]({$mark})]({$url})\n`{$url}`\n\n".
             "Then poll get_review with id `{$payload['id']}`.\n\n".
-            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            "```json\n{$json}\n```"
         ))->withStructuredContent($payload);
     }
 
