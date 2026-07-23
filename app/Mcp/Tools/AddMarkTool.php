@@ -56,6 +56,7 @@ class AddMarkTool extends Tool
             'area.h' => 'required_with:area|numeric|between:0.01,1',
             'severity' => 'required|in:'.implode(',', Annotation::severities()),
             'body' => FeedbackText::bodyRules(),
+            'suggested_copy' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['review_id']);
@@ -80,6 +81,10 @@ class AddMarkTool extends Tool
             return Response::error('Leave a note on this spot.');
         }
 
+        $suggestedCopy = isset($data['suggested_copy'])
+            ? FeedbackText::sanitizeBody($data['suggested_copy'])
+            : null;
+
         $mark = $this->lifecycle->createMark(
             $screenshot,
             (float) $data['x'],
@@ -92,6 +97,10 @@ class AddMarkTool extends Tool
             ] : null,
             $data['severity'],
             $body,
+            [
+                'suggested_copy' => $suggestedCopy !== '' ? $suggestedCopy : null,
+                'source' => Annotation::SOURCE_HUMAN,
+            ],
         );
 
         return Response::structured($review->refresh()->toAgentPayload())
@@ -111,6 +120,7 @@ class AddMarkTool extends Tool
             'area' => $schema->object()->description('Optional normalized rectangle {x, y, w, h} (top-left origin)'),
             'severity' => $schema->string()->enum(Annotation::severities())->description('must-fix, nit, question, or keep')->required(),
             'body' => $schema->string()->description('The human note for this mark')->required(),
+            'suggested_copy' => $schema->string()->description('Optional exact copy string for the agent to apply'),
         ];
     }
 }

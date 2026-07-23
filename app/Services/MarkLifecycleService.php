@@ -87,9 +87,17 @@ class MarkLifecycleService
      * add_mark tool. Broadcasts so open review pages refresh live.
      *
      * @param  array{x: float, y: float, w: float, h: float}|null  $area
+     * @param  array{suggested_copy?: ?string, source?: string, promoted_from_finding_id?: ?int}  $options
      */
-    public function createMark(Screenshot $screenshot, float $x, float $y, ?array $area, string $severity, string $body): Annotation
-    {
+    public function createMark(
+        Screenshot $screenshot,
+        float $x,
+        float $y,
+        ?array $area,
+        string $severity,
+        string $body,
+        array $options = [],
+    ): Annotation {
         if ($area !== null) {
             $area = [
                 'x' => max(0.0, min(1.0 - (float) $area['w'], (float) $area['x'])),
@@ -99,18 +107,73 @@ class MarkLifecycleService
             ];
         }
 
+        $source = $options['source'] ?? Annotation::SOURCE_HUMAN;
+
+        if (! in_array($source, Annotation::sources(), true)) {
+            $source = Annotation::SOURCE_HUMAN;
+        }
+
+        $suggestedCopy = $options['suggested_copy'] ?? null;
+        $suggestedCopy = is_string($suggestedCopy) && trim($suggestedCopy) !== ''
+            ? trim($suggestedCopy)
+            : null;
+
         $annotation = $screenshot->annotations()->create([
             'x' => max(0.0, min(1.0, $x)),
             'y' => max(0.0, min(1.0, $y)),
             'area' => $area,
             'severity' => $severity,
             'body' => $body,
+            'suggested_copy' => $suggestedCopy,
+            'source' => $source,
+            'promoted_from_finding_id' => $options['promoted_from_finding_id'] ?? null,
             'number' => $screenshot->review->nextMarkNumber(),
         ]);
 
         MarkUpdated::dispatch($annotation);
 
         return $annotation;
+    }
+
+    /**
+     * Record the human's answer on a question mark so the agent can act on it.
+     */
+    public function answerQuestion(Annotation $annotation, string $answer): bool
+    {
+        if ($annotation->severity !== Annotation::SEVERITY_QUESTION) {
+            return false;
+        }
+
+        $answer = trim($answer);
+
+        if ($answer === '') {
+            return false;
+        }
+
+        $annotation->update(['question_answer' => $answer]);
+
+        MarkUpdated::dispatch($annotation);
+
+        return true;
+    }
+
+    /**
+     * Verify every resolved mark on this review (owner batch action).
+     */
+    public function verifyAllResolved(Review $review): int
+    {
+        $count = 0;
+
+        $review->annotations()
+            ->where('status', Annotation::STATUS_RESOLVED)
+            ->get()
+            ->each(function (Annotation $annotation) use (&$count): void {
+                if ($this->verify($annotation)) {
+                    $count++;
+                }
+            });
+
+        return $count;
     }
 
     /**

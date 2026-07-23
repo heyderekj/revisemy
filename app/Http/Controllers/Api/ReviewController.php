@@ -22,11 +22,15 @@ class ReviewController extends Controller
         $reviews = $workspace->reviews()
             ->latest()
             ->limit(20)
-            ->with(['screenshots.annotations', 'screenshots.findings'])
+            ->with(['screenshots.annotations', 'parent'])
             ->get()
-            ->map(fn (Review $review) => $review->toAgentPayload());
+            ->map(fn (Review $review) => $review->toListSummary())
+            ->values();
 
-        return response()->json(['reviews' => $reviews]);
+        return response()->json([
+            'reviews' => $reviews,
+            'count' => $reviews->count(),
+        ]);
     }
 
     public function store(Request $request, ReviewService $reviews): JsonResponse

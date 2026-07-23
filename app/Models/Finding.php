@@ -136,12 +136,14 @@ class Finding extends Model
         return [
             'id' => $this->id,
             'source' => $this->source,
+            'source_label' => $this->sourceLabel(),
             'author' => $this->author,
             'severity' => $this->severity,
             'body' => $this->body,
             'area' => $this->region(),
             'related_pin' => $this->related_pin,
             'status' => $this->status ?? self::STATUS_OPEN,
+            'pin_severity' => $this->pinSeverity(),
         ];
     }
 }

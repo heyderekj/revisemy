@@ -635,6 +635,9 @@ new class extends Component
                 <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Try it with your agent</h2>
                 <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
                     Choose the app you already use. Try free — no account required — and connect ChatGPT, Claude, Copilot, Cursor, or Grok.
+                    After you have a token, open
+                    <a href="/reviews" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500">Recent reviews</a>
+                    for the same list your agent sees via <code class="font-mono text-[13px]">list_reviews</code>.
                     Any MCP client can use the same URL and Bearer token; see
                     <a href="/connectors" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 hover:text-rose-500">Connectors</a>
                     for the full host list.

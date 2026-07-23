@@ -40,12 +40,60 @@ class Annotation extends Model
 
     public const STATUS_VERIFIED = 'verified';
 
+    public const SOURCE_HUMAN = 'human';
+
+    public const SOURCE_GUEST = 'guest';
+
+    public const SOURCE_CHECKLIST = 'checklist';
+
+    public const SOURCE_VISION = 'vision';
+
+    public const SOURCE_AGENT = 'agent';
+
     /**
      * @return list<string>
      */
     public static function severities(): array
     {
         return array_keys(self::severityLabels());
+    }
+
+    /**
+     * Provenance for marks promoted from findings or left by the owner.
+     *
+     * @return list<string>
+     */
+    public static function sources(): array
+    {
+        return [
+            self::SOURCE_HUMAN,
+            self::SOURCE_GUEST,
+            self::SOURCE_CHECKLIST,
+            self::SOURCE_VISION,
+            self::SOURCE_AGENT,
+        ];
+    }
+
+    public static function sourceFromFinding(Finding $finding): string
+    {
+        return match ($finding->source) {
+            Finding::SOURCE_GUEST => self::SOURCE_GUEST,
+            Finding::SOURCE_CHECKLIST => self::SOURCE_CHECKLIST,
+            Finding::SOURCE_OPENAI, Finding::SOURCE_ANTHROPIC => self::SOURCE_VISION,
+            Finding::SOURCE_AGENT => self::SOURCE_AGENT,
+            default => self::SOURCE_HUMAN,
+        };
+    }
+
+    public function sourceLabel(): string
+    {
+        return match ($this->source ?: self::SOURCE_HUMAN) {
+            self::SOURCE_GUEST => 'Guest',
+            self::SOURCE_CHECKLIST => 'Checklist',
+            self::SOURCE_VISION => 'Vision',
+            self::SOURCE_AGENT => 'Agent',
+            default => 'You',
+        };
     }
 
     /**
@@ -247,6 +295,10 @@ class Annotation extends Model
         'area',
         'severity',
         'body',
+        'suggested_copy',
+        'question_answer',
+        'source',
+        'promoted_from_finding_id',
         'number',
         'status',
         'resolution_note',
@@ -274,6 +326,10 @@ class Annotation extends Model
                 $annotation->status = $annotation->severity === self::SEVERITY_KEEP
                     ? self::STATUS_VERIFIED
                     : self::STATUS_OPEN;
+            }
+
+            if ($annotation->source === null || $annotation->source === '') {
+                $annotation->source = self::SOURCE_HUMAN;
             }
         });
     }

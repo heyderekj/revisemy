@@ -395,12 +395,108 @@ class Review extends Model
      *
      * @return array<string, mixed>
      */
+    public function statusLabel(): string
+    {
+        return match ($this->effectiveStatus()) {
+            self::STATUS_PENDING => 'Waiting on your eye',
+            self::STATUS_CHANGES_REQUESTED => 'Changes requested — apply marks, then open the next pass',
+            self::STATUS_APPROVED => 'Looks good — approved',
+            self::STATUS_EXPIRED => 'This review link expired',
+            default => (string) $this->status,
+        };
+    }
+
+    /**
+     * Lightweight token-scoped memory for list_reviews (no full work packets).
+     *
+     * @return array<string, mixed>
+     */
+    public function toListSummary(): array
+    {
+        $this->loadMissing(['screenshots.annotations', 'parent']);
+
+        $marks = $this->screenshots->flatMap->annotations;
+        $outstanding = $marks->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS]);
+        $awaiting = $marks->where('status', Annotation::STATUS_RESOLVED);
+        $next = $this->nextAction();
+
+        return [
+            'id' => $this->public_id,
+            'title' => $this->title,
+            'type' => $this->type,
+            'pass' => $this->pass,
+            'parent_id' => $this->parent?->public_id,
+            'status' => $this->effectiveStatus(),
+            'status_label' => $this->statusLabel(),
+            'next_action' => $next['action'],
+            'next_action_summary' => $next['summary'],
+            'review_url' => $this->reviewUrl(),
+            'board_url' => $this->boardUrl(),
+            'loop' => [
+                'pass' => $this->pass,
+                'must_fix_count' => $outstanding->where('severity', Annotation::SEVERITY_MUST_FIX)->count(),
+                'nit_count' => $outstanding->where('severity', Annotation::SEVERITY_NIT)->count(),
+                'question_count' => $outstanding->where('severity', Annotation::SEVERITY_QUESTION)->count(),
+                'outstanding_count' => $outstanding->count(),
+                'awaiting_verification_count' => $awaiting->count(),
+                'verified_count' => $marks->where('status', Annotation::STATUS_VERIFIED)->count(),
+            ],
+            'created_at' => $this->created_at?->toIso8601String(),
+            'decision_at' => $this->decision_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Multi-pass revision ledger from the root pass through this review.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function passLedger(): array
+    {
+        $chain = [];
+        $cursor = $this;
+        $visited = [];
+
+        while ($cursor && ! isset($visited[$cursor->id])) {
+            $visited[$cursor->id] = true;
+            array_unshift($chain, $cursor);
+            $cursor->loadMissing('parent');
+            $cursor = $cursor->parent;
+        }
+
+        collect($chain)->each(fn (Review $review) => $review->loadMissing([
+            'screenshots.annotations.afterScreenshot',
+        ]));
+
+        return collect($chain)->map(function (Review $review) {
+            $marks = $review->screenshots->flatMap->annotations;
+
+            return [
+                'id' => $review->public_id,
+                'pass' => $review->pass,
+                'title' => $review->title,
+                'status' => $review->effectiveStatus(),
+                'status_label' => $review->statusLabel(),
+                'decision_note' => $review->decision_note,
+                'decision_at' => $review->decision_at?->toIso8601String(),
+                'review_url' => $review->reviewUrl(),
+                'is_current' => $review->is($this),
+                'mark_count' => $marks->count(),
+                'outstanding_count' => $marks->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS])->count(),
+                'resolved_count' => $marks->where('status', Annotation::STATUS_RESOLVED)->count(),
+                'verified_count' => $marks->where('status', Annotation::STATUS_VERIFIED)->count(),
+                'after_evidence_count' => $marks->filter(fn (Annotation $mark) => $mark->after_screenshot_id !== null)->count(),
+            ];
+        })->values()->all();
+    }
+
     public function toAgentPayload(): array
     {
         $this->load([
             'screenshots.findings',
-            'screenshots.annotations' => fn ($query) => $query->withCount('comments')->with('afterScreenshot'),
-            'parent.screenshots.annotations' => fn ($query) => $query->withCount('comments')->with('afterScreenshot'),
+            'screenshots.annotations' => fn ($query) => $query->withCount('comments')->with(['comments', 'afterScreenshot']),
+            'parent.screenshots.annotations' => fn ($query) => $query->withCount('comments')->with(['comments', 'afterScreenshot']),
+            'parent.parent',
         ]);
 
         $screenshots = $this->screenshots->map(function (Screenshot $shot, int $index) {
@@ -485,20 +581,14 @@ class Review extends Model
             'pass' => $this->pass,
             'parent_id' => $this->parent?->public_id,
             'status' => $this->effectiveStatus(),
-            'status_label' => match ($this->effectiveStatus()) {
-                self::STATUS_PENDING => 'Waiting on your eye',
-                self::STATUS_CHANGES_REQUESTED => 'Changes requested — apply marks, then open the next pass',
-                self::STATUS_APPROVED => 'Looks good — approved',
-                self::STATUS_EXPIRED => 'This review link expired',
-                default => $this->status,
-            },
+            'status_label' => $this->statusLabel(),
             'review_url' => $this->reviewUrl(),
             'board_url' => $this->boardUrl(),
             'guest_share_url' => $this->shareUrl(),
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
-            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). Ask before inventing answers to question marks. Treat second_opinion as hints only.',
+            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read recent comments on each pin for context. Ask before inventing answers to unanswered question marks. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
             'taste' => TasteLenses::forType($this->type),
             'next_action' => $this->nextAction(),
             'loop' => [
@@ -515,6 +605,7 @@ class Review extends Model
                 'guest_suggestion_count' => $guestSuggestionCount,
                 'outstanding_count' => $outstanding->count(),
                 'resolved_count' => count($awaitingVerification),
+                'awaiting_verification_count' => count($awaitingVerification),
                 'verified_count' => $verifiedCount,
             ],
             'work_packets' => [
@@ -528,6 +619,7 @@ class Review extends Model
                 'second_opinion' => $allFindings,
                 'second_opinion_resolved' => $allResolved,
             ],
+            'pass_ledger' => $this->passLedger(),
             'previous_pass' => $this->previousPassPayload(),
             'screenshots' => $screenshots,
         ];
@@ -542,6 +634,10 @@ class Review extends Model
     {
         $focus = MarkFocus::forMark($annotation);
 
+        $comments = $annotation->relationLoaded('comments')
+            ? $annotation->comments
+            : $annotation->comments()->get();
+
         return [
             'id' => $annotation->id,
             'number' => $annotation->number,
@@ -550,10 +646,26 @@ class Review extends Model
             'area' => $annotation->region(),
             'severity' => $annotation->severity,
             'body' => $annotation->body,
+            'suggested_copy' => $annotation->suggested_copy,
+            'question_answer' => $annotation->question_answer,
+            'source' => $annotation->source ?: Annotation::SOURCE_HUMAN,
+            'source_label' => $annotation->sourceLabel(),
+            'promoted_from_finding_id' => $annotation->promoted_from_finding_id,
             'status' => $annotation->status,
             'resolution_note' => $annotation->resolution_note,
             'after_screenshot_url' => $annotation->afterScreenshot?->url(),
-            'comment_count' => (int) ($annotation->comments_count ?? $annotation->comments()->count()),
+            'comment_count' => (int) ($annotation->comments_count ?? $comments->count()),
+            'comments' => $comments
+                ->take(-10)
+                ->values()
+                ->map(fn (AnnotationComment $comment) => [
+                    'id' => $comment->id,
+                    'author' => $comment->author,
+                    'from_owner' => (bool) $comment->from_owner,
+                    'body' => $comment->body,
+                    'created_at' => $comment->created_at?->toIso8601String(),
+                ])
+                ->all(),
             'focus_preview' => [
                 'window' => $focus['window'],
                 'overlay' => $focus['overlay'],

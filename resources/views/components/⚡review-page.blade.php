@@ -29,6 +29,8 @@ new class extends Component
 
     public string $draftSeverity = Annotation::SEVERITY_MUST_FIX;
 
+    public string $draftSuggestedCopy = '';
+
     public ?float $pendingX = null;
 
     public ?float $pendingY = null;
@@ -54,6 +56,10 @@ new class extends Component
     public string $markCommentBody = '';
 
     public ?int $activeCommentMarkId = null;
+
+    public string $questionAnswerDraft = '';
+
+    public ?int $answeringMarkId = null;
 
     public string $shareExpiryDate = '';
 
@@ -198,6 +204,7 @@ new class extends Component
         $this->pendingW = $hasRegion ? $w : null;
         $this->pendingH = $hasRegion ? $h : null;
         $this->draftBody = '';
+        $this->draftSuggestedCopy = '';
         $this->draftSeverity = Annotation::SEVERITY_MUST_FIX;
     }
 
@@ -208,6 +215,7 @@ new class extends Component
         $this->pendingW = null;
         $this->pendingH = null;
         $this->draftBody = '';
+        $this->draftSuggestedCopy = '';
     }
 
     public function savePin(): void
@@ -221,11 +229,13 @@ new class extends Component
         }
 
         $this->draftBody = FeedbackText::sanitizeBody($this->draftBody);
+        $this->draftSuggestedCopy = FeedbackText::sanitizeBody($this->draftSuggestedCopy);
         $this->guestName = FeedbackText::sanitizeName($this->guestName);
 
         $rules = [
             'draftBody' => FeedbackText::bodyRules(),
             'draftSeverity' => ['required', 'in:'.implode(',', Annotation::severities())],
+            'draftSuggestedCopy' => ['nullable', 'string', 'max:2000'],
         ];
 
         $messages = [
@@ -236,7 +246,7 @@ new class extends Component
             $this->draftSeverity = Annotation::SEVERITY_MUST_FIX;
             FeedbackText::throttleGuest($this->review->id);
             $rules['guestName'] = FeedbackText::nameRules();
-            unset($rules['draftSeverity']);
+            unset($rules['draftSeverity'], $rules['draftSuggestedCopy']);
             $messages = array_merge($messages, FeedbackText::nameMessages('guestName'), [
                 'guestName.required' => 'Add your name so the owner knows who suggested this.',
             ]);
@@ -273,6 +283,10 @@ new class extends Component
                 $area,
                 $this->draftSeverity,
                 $this->draftBody,
+                [
+                    'suggested_copy' => $this->draftSuggestedCopy !== '' ? $this->draftSuggestedCopy : null,
+                    'source' => Annotation::SOURCE_HUMAN,
+                ],
             );
         } else {
             $screenshot->findings()->create([
@@ -331,6 +345,16 @@ new class extends Component
         $this->loadReview();
     }
 
+    public function verifyAllResolved(MarkLifecycleService $lifecycle): void
+    {
+        if (! $this->canManageMarks()) {
+            return;
+        }
+
+        $lifecycle->verifyAllResolved($this->review);
+        $this->loadReview();
+    }
+
     public function reopenMark(int $annotationId, MarkLifecycleService $lifecycle): void
     {
         if (! $this->canManageMarks()) {
@@ -344,6 +368,76 @@ new class extends Component
         }
 
         $this->loadReview();
+    }
+
+    public function startAnswerQuestion(int $annotationId): void
+    {
+        if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
+            return;
+        }
+
+        $annotation = $this->ownedAnnotation($annotationId);
+
+        if (! $annotation || $annotation->severity !== Annotation::SEVERITY_QUESTION) {
+            return;
+        }
+
+        $this->answeringMarkId = $annotationId;
+        $this->questionAnswerDraft = (string) ($annotation->question_answer ?? '');
+        $this->resetValidation(['questionAnswerDraft']);
+    }
+
+    public function cancelAnswerQuestion(): void
+    {
+        $this->answeringMarkId = null;
+        $this->questionAnswerDraft = '';
+        $this->resetValidation(['questionAnswerDraft']);
+    }
+
+    public function answerQuestion(int $annotationId, MarkLifecycleService $lifecycle): void
+    {
+        if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
+            return;
+        }
+
+        $annotation = $this->ownedAnnotation($annotationId);
+
+        if (! $annotation || $annotation->severity !== Annotation::SEVERITY_QUESTION) {
+            return;
+        }
+
+        $this->questionAnswerDraft = FeedbackText::sanitizeBody($this->questionAnswerDraft);
+
+        $this->validate([
+            'questionAnswerDraft' => FeedbackText::bodyRules(1000),
+        ], [
+            'questionAnswerDraft.required' => 'Write the answer the agent should follow.',
+        ]);
+
+        $lifecycle->answerQuestion($annotation, $this->questionAnswerDraft);
+
+        $this->cancelAnswerQuestion();
+        $this->loadReview();
+    }
+
+    /**
+     * Marks on this pass waiting for the human to verify agent fixes.
+     */
+    public function awaitingVerificationMarks()
+    {
+        return $this->review->screenshots
+            ->flatMap->annotations
+            ->filter(fn (Annotation $mark) => $mark->awaitsVerification())
+            ->sortBy('number')
+            ->values();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function passLedgerEntries(): array
+    {
+        return $this->review->passLedger();
     }
 
     /**
@@ -433,7 +527,7 @@ new class extends Component
         $this->loadReview();
     }
 
-    public function acceptFinding(int $findingId): void
+    public function acceptFinding(int $findingId, ?string $asSeverity = null): void
     {
         if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
             return;
@@ -448,30 +542,7 @@ new class extends Component
             return;
         }
 
-        $screenshot = $finding->screenshot;
-        $area = $finding->region();
-
-        $x = $finding->x !== null
-            ? (float) $finding->x
-            : ($area ? (float) $area['x'] + ((float) $area['w'] / 2) : 0.5);
-        $y = $finding->y !== null
-            ? (float) $finding->y
-            : ($area ? (float) $area['y'] + ((float) $area['h'] / 2) : 0.5);
-
-        $pin = app(MarkLifecycleService::class)->createMark(
-            $screenshot,
-            (float) $x,
-            (float) $y,
-            $area,
-            $finding->pinSeverity(),
-            $finding->body,
-        );
-
-        $finding->update([
-            'status' => Finding::STATUS_ACCEPTED,
-            'related_pin' => $pin->number,
-        ]);
-
+        $this->promoteFinding($finding, $asSeverity);
         $this->loadReview();
     }
 
@@ -492,6 +563,101 @@ new class extends Component
 
         $finding->update(['status' => Finding::STATUS_DISMISSED]);
         $this->loadReview();
+    }
+
+    /**
+     * Batch-accept open findings on the active screenshot.
+     * $panel: "second" (non-guest) or "guest".
+     */
+    public function acceptOpenFindings(string $panel = 'second'): void
+    {
+        if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
+            return;
+        }
+
+        $shot = $this->activeScreenshot;
+
+        if (! $shot) {
+            return;
+        }
+
+        $findings = $shot->findings
+            ->filter(fn (Finding $finding) => $finding->isOpen())
+            ->filter(fn (Finding $finding) => $panel === 'guest' ? $finding->isGuest() : ! $finding->isGuest())
+            ->values();
+
+        foreach ($findings as $finding) {
+            $this->promoteFinding($finding);
+        }
+
+        $this->loadReview();
+    }
+
+    /**
+     * Batch-dismiss open findings on the active screenshot.
+     * $panel: "second" (non-guest) or "guest".
+     */
+    public function dismissOpenFindings(string $panel = 'second'): void
+    {
+        if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
+            return;
+        }
+
+        $shot = $this->activeScreenshot;
+
+        if (! $shot) {
+            return;
+        }
+
+        $findings = $shot->findings
+            ->filter(fn (Finding $finding) => $finding->isOpen())
+            ->filter(fn (Finding $finding) => $panel === 'guest' ? $finding->isGuest() : ! $finding->isGuest())
+            ->values();
+
+        foreach ($findings as $finding) {
+            $finding->update(['status' => Finding::STATUS_DISMISSED]);
+        }
+
+        $this->loadReview();
+    }
+
+    protected function promoteFinding(Finding $finding, ?string $asSeverity = null): void
+    {
+        if (! $finding->isOpen()) {
+            return;
+        }
+
+        $severity = $asSeverity && in_array($asSeverity, Annotation::severities(), true)
+            ? $asSeverity
+            : $finding->pinSeverity();
+
+        $screenshot = $finding->screenshot;
+        $area = $finding->region();
+
+        $x = $finding->x !== null
+            ? (float) $finding->x
+            : ($area ? (float) $area['x'] + ((float) $area['w'] / 2) : 0.5);
+        $y = $finding->y !== null
+            ? (float) $finding->y
+            : ($area ? (float) $area['y'] + ((float) $area['h'] / 2) : 0.5);
+
+        $pin = app(MarkLifecycleService::class)->createMark(
+            $screenshot,
+            (float) $x,
+            (float) $y,
+            $area,
+            $severity,
+            $finding->body,
+            [
+                'source' => Annotation::sourceFromFinding($finding),
+                'promoted_from_finding_id' => $finding->id,
+            ],
+        );
+
+        $finding->update([
+            'status' => Finding::STATUS_ACCEPTED,
+            'related_pin' => $pin->number,
+        ]);
     }
 
     public function refreshSecondOpinion(SecondOpinionService $opinions): void
@@ -1818,31 +1984,51 @@ new class extends Component
         @endif
 
         @if ($pendingX !== null)
+            {{-- Real wrapper (not display:contents) so Alpine $refs stay reliable; position via
+                 x-bind:style so Livewire morphs cannot wipe left/top back to the top-left. --}}
             <div
                 wire:key="pending-note-{{ $pendingX }}-{{ $pendingY }}-{{ $pendingW }}-{{ $pendingH }}"
-                class="contents"
+                class="pointer-events-none fixed inset-0 z-50"
                 x-data="{
+                    left: null,
+                    top: null,
+                    origin: 'left center',
+                    placed: false,
                     anchorHeight: null,
+                    _placeScheduled: false,
+                    mobile() {
+                        return window.matchMedia('(max-width: 767px)').matches;
+                    },
+                    get panelStyle() {
+                        if (this.mobile()) {
+                            return '';
+                        }
+                        if (! this.placed || this.left == null || this.top == null) {
+                            return 'visibility: hidden;';
+                        }
+                        return 'left:' + this.left + 'px; top:' + this.top + 'px; right: auto; bottom: auto; transform-origin: ' + this.origin + ';';
+                    },
                     place() {
                         const panel = this.$refs.panel;
-                        const mark = document.querySelector('[data-pending-mark]');
-                        if (! panel) return;
+                        if (! panel) return false;
 
-                        if (window.matchMedia('(max-width: 767px)').matches) {
-                            panel.style.left = '';
-                            panel.style.top = '';
-                            panel.style.right = '';
-                            panel.style.transform = '';
-                            panel.style.transformOrigin = 'bottom center';
-                            return;
+                        if (this.mobile()) {
+                            this.left = null;
+                            this.top = null;
+                            this.placed = true;
+                            this.origin = 'bottom center';
+                            return true;
                         }
 
-                        if (! mark) return;
+                        const mark = document.querySelector('[data-pending-mark]');
+                        if (! mark) return false;
+
+                        const rect = mark.getBoundingClientRect();
+                        // Mark not laid out yet — retry rather than pinning to 0,0 → top-left.
+                        if (rect.width < 1 && rect.height < 1) return false;
 
                         const gap = 12;
-                        const rect = mark.getBoundingClientRect();
                         const pw = panel.offsetWidth || 320;
-                        // Freeze height after first place so typing/growth does not re-center.
                         const measured = panel.offsetHeight || 280;
                         if (this.anchorHeight == null) {
                             this.anchorHeight = measured;
@@ -1854,9 +2040,26 @@ new class extends Component
                         let top = rect.top + (rect.height / 2) - (ph / 2);
                         left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
                         top = Math.max(8, Math.min(top, window.innerHeight - ph - 8));
-                        panel.style.left = left + 'px';
-                        panel.style.top = top + 'px';
-                        panel.style.transformOrigin = placeRight ? 'left center' : 'right center';
+                        this.left = left;
+                        this.top = top;
+                        this.origin = placeRight ? 'left center' : 'right center';
+                        this.placed = true;
+                        return true;
+                    },
+                    placeWhenReady(attempts = 0) {
+                        if (this.place() || attempts >= 20) {
+                            this.focusNote();
+                            return;
+                        }
+                        requestAnimationFrame(() => this.placeWhenReady(attempts + 1));
+                    },
+                    schedulePlace() {
+                        if (this._placeScheduled) return;
+                        this._placeScheduled = true;
+                        this.$nextTick(() => {
+                            this._placeScheduled = false;
+                            this.place();
+                        });
                     },
                     onScroll(e) {
                         if (e?.target?.closest?.('.rm-note-composer')) return;
@@ -1870,20 +2073,25 @@ new class extends Component
                         });
                     }
                 }"
-                x-init="$nextTick(() => { place(); requestAnimationFrame(() => place()); focusNote(); })"
+                x-init="
+                    $nextTick(() => placeWhenReady());
+                    let unhook = window.Livewire?.hook?.('morph.updated', () => schedulePlace());
+                    return () => { if (typeof unhook === 'function') unhook(); };
+                "
                 x-on:resize.window.debounce.50ms="place()"
                 x-on:scroll.window.capture="onScroll($event)"
             >
                 <button
                     type="button"
-                    class="fixed inset-0 z-40 bg-zinc-950/25 md:bg-transparent"
+                    class="pointer-events-auto fixed inset-0 z-40 bg-zinc-950/25 md:bg-transparent"
                     wire:click="cancelPin"
                     aria-label="Dismiss note"
                 ></button>
 
                 <div
                     x-ref="panel"
-                    class="rm-note-composer fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-[0_-12px_40px_-18px_rgba(24,24,27,0.45)] md:inset-x-auto md:bottom-auto md:w-[min(20rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
+                    x-bind:style="panelStyle"
+                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-[0_-12px_40px_-18px_rgba(24,24,27,0.45)] md:inset-x-auto md:bottom-auto md:w-[min(20rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
                     role="dialog"
                     aria-label="{{ $mode === 'guest' ? 'Suggest a change' : 'Leave a note' }}"
                     x-on:keydown.escape.window="$wire.cancelPin()"
@@ -1926,11 +2134,17 @@ new class extends Component
                         <div class="flex flex-wrap gap-2">
                             @foreach (\App\Models\Annotation::severityLabels() as $value => $label)
                                 <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-sm has-[:checked]:border-zinc-400 has-[:checked]:bg-white has-[:checked]:shadow-sm">
-                                    <input type="radio" wire:model="draftSeverity" value="{{ $value }}" class="{{ \App\Models\Annotation::accentClass($value) }}">
+                                    <input type="radio" wire:model.live="draftSeverity" value="{{ $value }}" class="{{ \App\Models\Annotation::accentClass($value) }}">
                                     {{ $label }}
                                 </label>
                             @endforeach
                         </div>
+                        @if (in_array($draftSeverity, [\App\Models\Annotation::SEVERITY_MUST_FIX, \App\Models\Annotation::SEVERITY_NIT], true))
+                            <div>
+                                <flux:textarea wire:model="draftSuggestedCopy" rows="2" placeholder="Suggested copy (optional) — exact string for the agent" />
+                                <flux:error name="draftSuggestedCopy" />
+                            </div>
+                        @endif
                         @endif
                         <div class="flex flex-col gap-2 sm:flex-row">
                             @if ($mode === 'guest')
@@ -1955,10 +2169,12 @@ new class extends Component
             @php($previousMarks = ($mode === 'owner' && $parent)
                 ? $parent->screenshots->flatMap->annotations->sortBy('number')->values()
                 : collect())
+            @php($awaitingVerify = $mode === 'owner' ? $this->awaitingVerificationMarks() : collect())
+            @php($passLedger = $mode === 'owner' ? $this->passLedgerEntries() : [])
             <div
                 class="space-y-4 pb-4 md:pb-6"
                 x-data="{
-                    panels: { marks: true, previous: false, second: false, guest: false },
+                    panels: { marks: true, previous: false, second: false, guest: false, ledger: {{ count($passLedger) > 1 ? 'true' : 'false' }} },
                     init() {
                         this.$watch(() => this.$store.rmFocus.mark, (id) => {
                             if (! id) return;
@@ -1976,6 +2192,92 @@ new class extends Component
                     }
                 }"
             >
+            @if ($awaitingVerify->isNotEmpty() && $this->canManageMarks())
+                <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 sm:px-4" data-panel="verify">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-amber-950">Awaiting your verify</p>
+                            <p class="mt-0.5 text-xs leading-snug text-amber-900/80">
+                                Agent resolved {{ $awaitingVerify->count() }} {{ $awaitingVerify->count() === 1 ? 'mark' : 'marks' }}. Check before/after, then verify or reopen.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            wire:click="verifyAllResolved"
+                            class="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-500"
+                        >
+                            Verify all {{ $awaitingVerify->count() }}
+                        </button>
+                    </div>
+                    <ul class="mt-3 space-y-1.5">
+                        @foreach ($awaitingVerify->take(5) as $mark)
+                            <li>
+                                <button
+                                    type="button"
+                                    class="flex w-full items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5 text-left text-xs transition hover:bg-white"
+                                    x-on:click="$store.rmFocus.mark = {{ $mark->id }}; panels.marks = true"
+                                >
+                                    <span class="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $mark->markerClass() }}">M{{ $mark->number }}</span>
+                                    <span class="min-w-0 flex-1 truncate text-zinc-700">{{ $mark->body }}</span>
+                                    <span class="shrink-0 font-medium text-emerald-700" wire:click.stop="verifyMark({{ $mark->id }})">Verify</span>
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+                    @if ($review->boardUrl())
+                        <a href="{{ $review->boardUrl() }}" class="mt-2 inline-flex text-xs font-medium text-amber-900/80 underline decoration-amber-900/20 underline-offset-2 hover:text-amber-950">Open board</a>
+                    @endif
+                </div>
+            @endif
+
+            @if (count($passLedger) > 1)
+                <div class="border border-zinc-200 bg-white" data-panel="ledger">
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
+                        x-on:click="panels.ledger = ! panels.ledger"
+                        x-bind:aria-expanded="panels.ledger.toString()"
+                    >
+                        <flux:heading size="sm" class="min-w-0 flex-1">Pass ledger</flux:heading>
+                        <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">{{ count($passLedger) }}</span>
+                        <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-zinc-400 transition" x-bind:class="panels.ledger && 'rotate-180'" />
+                    </button>
+                    <div class="border-t border-zinc-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.ledger" x-cloak>
+                        <ol class="space-y-2">
+                            @foreach ($passLedger as $entry)
+                                <li @class([
+                                    'rounded-lg border px-2.5 py-2',
+                                    'border-rose-200 bg-rose-50/40' => $entry['is_current'],
+                                    'border-zinc-100 bg-zinc-50/50' => ! $entry['is_current'],
+                                ])>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-xs font-semibold text-zinc-800">Pass {{ $entry['pass'] }}</span>
+                                        @if ($entry['is_current'])
+                                            <span class="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-medium text-rose-800">Current</span>
+                                        @endif
+                                        <span class="text-[10px] text-zinc-500">{{ $entry['status_label'] }}</span>
+                                    </div>
+                                    <p class="mt-1 text-[11px] tabular-nums text-zinc-500">
+                                        {{ $entry['mark_count'] }} marks
+                                        · {{ $entry['verified_count'] }} verified
+                                        · {{ $entry['resolved_count'] }} awaiting
+                                        @if ($entry['after_evidence_count'] > 0)
+                                            · {{ $entry['after_evidence_count'] }} after
+                                        @endif
+                                    </p>
+                                    @if ($entry['decision_note'])
+                                        <p class="mt-1 text-xs leading-relaxed text-zinc-600">{{ $entry['decision_note'] }}</p>
+                                    @endif
+                                    @if (! $entry['is_current'])
+                                        <a href="{{ $entry['review_url'] }}" class="mt-1 inline-block text-[11px] font-medium text-zinc-500 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-800">Open pass {{ $entry['pass'] }}</a>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ol>
+                    </div>
+                </div>
+            @endif
+
             <div class="border border-zinc-200 bg-white" data-panel="marks">
                 <button
                     type="button"
@@ -2007,12 +2309,26 @@ new class extends Component
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $pin->label() }}</span>
                                         <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $pin->statusBadgeClass() }}">{{ $pin->statusLabel() }}</span>
+                                        @if ($pin->source && $pin->source !== \App\Models\Annotation::SOURCE_HUMAN)
+                                            <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">{{ $pin->sourceLabel() }}</span>
+                                        @endif
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
                                         <button type="button" class="text-xs text-zinc-400 hover:text-rose-600" wire:click="deletePin({{ $pin->id }})" wire:confirm="Remove this mark?">Remove</button>
                                     @endif
                                 </div>
                                 <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
+                                @if ($pin->suggested_copy)
+                                    <div class="mt-2 rounded-lg border border-dashed border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs leading-relaxed text-zinc-700">
+                                        <span class="font-medium text-zinc-500">Suggested copy:</span>
+                                        <span class="font-mono">{{ $pin->suggested_copy }}</span>
+                                    </div>
+                                @endif
+                                @if ($pin->question_answer)
+                                    <div class="mt-2 rounded-lg bg-sky-50/80 px-2.5 py-1.5 text-xs leading-relaxed text-sky-950">
+                                        <span class="font-medium">Answer:</span> {{ $pin->question_answer }}
+                                    </div>
+                                @endif
                                 @if ($pin->resolution_note)
                                     <div class="mt-2 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900">
                                         <span class="font-medium">Agent:</span> {{ $pin->resolution_note }}
@@ -2079,6 +2395,26 @@ new class extends Component
                                         </p>
                                     @endif
                                 </div>
+                                @if ($mode === 'owner' && $pin->severity === \App\Models\Annotation::SEVERITY_QUESTION && $review->isOpenForFeedback())
+                                    <div class="mt-2">
+                                        @if ($answeringMarkId === $pin->id)
+                                            <div class="space-y-2 rounded-lg border border-sky-200 bg-sky-50/60 p-2">
+                                                <flux:textarea wire:model="questionAnswerDraft" rows="2" placeholder="Answer for the agent…" />
+                                                <flux:error name="questionAnswerDraft" />
+                                                <div class="flex gap-2">
+                                                    <flux:button size="sm" variant="primary" wire:click="answerQuestion({{ $pin->id }})">Save answer</flux:button>
+                                                    <flux:button size="sm" variant="ghost" wire:click="cancelAnswerQuestion">Cancel</flux:button>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <button
+                                                type="button"
+                                                class="text-xs font-medium text-sky-700 transition hover:text-sky-900"
+                                                wire:click="startAnswerQuestion({{ $pin->id }})"
+                                            >{{ $pin->question_answer ? 'Edit answer' : 'Answer for agent' }}</button>
+                                        @endif
+                                    </div>
+                                @endif
                                 @if ($mode === 'owner' && $pin->severity !== \App\Models\Annotation::SEVERITY_KEEP && $this->canManageMarks())
                                     <div class="mt-2 flex items-center gap-2">
                                         @if ($pin->awaitsVerification())
@@ -2200,6 +2536,22 @@ new class extends Component
                     <p class="min-w-0 text-xs leading-snug text-zinc-500">Hints until you accept — then they become your marks</p>
                     <x-taste-craft-chip :taste="$taste" />
                 </div>
+                @if ($review->isOpenForFeedback() && $secondOpinionFindings->isNotEmpty())
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="acceptOpenFindings('second')"
+                            wire:confirm="Accept all open second-opinion hints on this shot as marks?"
+                            class="rounded-md bg-sky-600 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-sky-500"
+                        >Accept all</button>
+                        <button
+                            type="button"
+                            wire:click="dismissOpenFindings('second')"
+                            wire:confirm="Dismiss all open second-opinion hints on this shot?"
+                            class="rounded-md bg-zinc-100 px-2 py-1 text-[11px] font-medium text-zinc-600 transition hover:bg-zinc-200"
+                        >Dismiss all</button>
+                    </div>
+                @endif
 
                 @php($findings = $secondOpinionFindings)
                 @php($status = $shot?->second_opinion_status ?? 'idle')
@@ -2367,16 +2719,31 @@ new class extends Component
                                             <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">{{ $finding->sourceLabel() }}</span>
                                         </div>
                                         @if ($review->isOpenForFeedback() && $mode === 'owner')
-                                            <div class="flex shrink-0 items-center gap-1" x-on:click.stop>
-                                                <button
-                                                    type="button"
-                                                    wire:click="acceptFinding({{ $finding->id }})"
-                                                    title="Accept as mark"
-                                                    aria-label="Accept as mark"
-                                                    class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-sky-600 text-white transition hover:bg-sky-500"
-                                                >
-                                                    <flux:icon.check variant="micro" class="size-3.5" />
-                                                </button>
+                                            <div class="flex shrink-0 items-center gap-1" x-on:click.stop x-data="{ open: false }">
+                                                <div class="relative">
+                                                    <button
+                                                        type="button"
+                                                        x-on:click="open = ! open"
+                                                        title="Accept as…"
+                                                        aria-label="Accept as mark"
+                                                        class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-sky-600 text-white transition hover:bg-sky-500"
+                                                    >
+                                                        <flux:icon.check variant="micro" class="size-3.5" />
+                                                    </button>
+                                                    <div
+                                                        x-show="open"
+                                                        x-cloak
+                                                        x-on:click.outside="open = false"
+                                                        class="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
+                                                    >
+                                                        <button type="button" class="block w-full px-3 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50" wire:click="acceptFinding({{ $finding->id }})" x-on:click="open = false">Default ({{ \App\Models\Annotation::allSeverityLabels()[$finding->pinSeverity()] ?? $finding->pinSeverity() }})</button>
+                                                        @foreach (\App\Models\Annotation::severityLabels() as $sev => $sevLabel)
+                                                            @if ($sev !== \App\Models\Annotation::SEVERITY_KEEP)
+                                                                <button type="button" class="block w-full px-3 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50" wire:click="acceptFinding({{ $finding->id }}, '{{ $sev }}')" x-on:click="open = false">As {{ $sevLabel }}</button>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                                </div>
                                                 <button
                                                     type="button"
                                                     wire:click="dismissFinding({{ $finding->id }})"
@@ -2415,6 +2782,22 @@ new class extends Component
                 <p class="mb-3 text-xs leading-snug text-zinc-500">
                     {{ $mode === 'owner' ? 'Teammate suggestions — accept to make them your marks' : 'Suggestions from you and other guests' }}
                 </p>
+                @if ($review->isOpenForFeedback() && $mode === 'owner' && $guestSuggestions->isNotEmpty())
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="acceptOpenFindings('guest')"
+                            wire:confirm="Accept all guest suggestions on this shot as marks?"
+                            class="rounded-md bg-zinc-700 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-zinc-600"
+                        >Accept all</button>
+                        <button
+                            type="button"
+                            wire:click="dismissOpenFindings('guest')"
+                            wire:confirm="Dismiss all guest suggestions on this shot?"
+                            class="rounded-md bg-zinc-100 px-2 py-1 text-[11px] font-medium text-zinc-600 transition hover:bg-zinc-200"
+                        >Dismiss all</button>
+                    </div>
+                @endif
 
                 @if ($guestSuggestions->isEmpty())
                     <p class="text-sm text-zinc-500">
@@ -2439,16 +2822,31 @@ new class extends Component
                                         <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-800">{{ $finding->sourceLabel() }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
-                                        <div class="flex shrink-0 items-center gap-1" x-on:click.stop>
-                                            <button
-                                                type="button"
-                                                wire:click="acceptFinding({{ $finding->id }})"
-                                                title="Accept as mark"
-                                                aria-label="Accept as mark"
-                                                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-600 text-white transition hover:bg-zinc-500"
-                                            >
-                                                <flux:icon.check variant="micro" class="size-3.5" />
-                                            </button>
+                                        <div class="flex shrink-0 items-center gap-1" x-on:click.stop x-data="{ open: false }">
+                                            <div class="relative">
+                                                <button
+                                                    type="button"
+                                                    x-on:click="open = ! open"
+                                                    title="Accept as…"
+                                                    aria-label="Accept as mark"
+                                                    class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-600 text-white transition hover:bg-zinc-500"
+                                                >
+                                                    <flux:icon.check variant="micro" class="size-3.5" />
+                                                </button>
+                                                <div
+                                                    x-show="open"
+                                                    x-cloak
+                                                    x-on:click.outside="open = false"
+                                                    class="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
+                                                >
+                                                    <button type="button" class="block w-full px-3 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50" wire:click="acceptFinding({{ $finding->id }})" x-on:click="open = false">Default</button>
+                                                    @foreach (\App\Models\Annotation::severityLabels() as $sev => $sevLabel)
+                                                        @if ($sev !== \App\Models\Annotation::SEVERITY_KEEP)
+                                                            <button type="button" class="block w-full px-3 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50" wire:click="acceptFinding({{ $finding->id }}, '{{ $sev }}')" x-on:click="open = false">As {{ $sevLabel }}</button>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            </div>
                                             <button
                                                 type="button"
                                                 wire:click="dismissFinding({{ $finding->id }})"

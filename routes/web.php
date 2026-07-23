@@ -57,6 +57,10 @@ Route::get('/llms.txt', [SeoController::class, 'llms']);
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 
+Route::get('/reviews', function () {
+    return view('recent-reviews');
+})->name('reviews.index');
+
 Route::get('/r/{token}', function (string $token) {
     return view('review', ['token' => $token]);
 })->name('reviews.show');

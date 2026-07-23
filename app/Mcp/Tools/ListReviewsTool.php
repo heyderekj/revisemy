@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('list_reviews')]
-#[Description('List recent design reviews for this try token only.')]
+#[Description('List recent design reviews for this try token only. Returns pass #, status, next_action, and outstanding / awaiting-verification counts — not full work packets. Call get_review for pins.')]
 #[IsReadOnly]
 class ListReviewsTool extends Tool
 {
@@ -30,20 +30,15 @@ class ListReviewsTool extends Tool
         $reviews = $workspace->reviews()
             ->latest()
             ->limit(20)
-            ->with(['screenshots.annotations'])
+            ->with(['screenshots.annotations', 'parent'])
             ->get()
-            ->map(fn (Review $review) => [
-                'id' => $review->public_id,
-                'title' => $review->title,
-                'pass' => $review->pass,
-                'status' => $review->effectiveStatus(),
-                'status_label' => $review->toAgentPayload()['status_label'],
-                'next_action' => $review->nextAction()['action'],
-                'review_url' => $review->reviewUrl(),
-                'created_at' => $review->created_at?->toIso8601String(),
-            ]);
+            ->map(fn (Review $review) => $review->toListSummary())
+            ->values();
 
-        return Response::text(json_encode(['reviews' => $reviews], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        return Response::structured([
+            'reviews' => $reviews,
+            'count' => $reviews->count(),
+        ]);
     }
 
     /**
