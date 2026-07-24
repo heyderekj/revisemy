@@ -61,8 +61,8 @@ class CreateReviewTool extends Tool
 
         $payload = $review->toAgentPayload();
         $passLabel = $payload['pass'] > 1 ? " (pass {$payload['pass']})" : '';
-        $mark = BrandAssets::appIconUrl();
         $url = $payload['review_url'];
+        $share = BrandAssets::markdownShareLink($url);
         $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         return Response::make(Response::text(
@@ -71,7 +71,7 @@ class CreateReviewTool extends Tool
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
             // Yellow mark as markdown image; keep the raw URL in backticks so Cursor does not
             // attach Google's stale domain favicon chip (gstatic still caches the old pink mark).
-            "Open this link:\n[![ReviseMy]({$mark})]({$url})\n`{$url}`\n\n".
+            "Open this link:\n{$share}\n\n".
             "Then poll get_review with id `{$payload['id']}`.\n\n".
             "```json\n{$json}\n```"
         ))->withStructuredContent($payload);
@@ -97,7 +97,7 @@ class CreateReviewTool extends Tool
                 ->max(5)
                 ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs 1 credit). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
             'capture_url' => $schema->boolean()
-                ->description('Capture page_url server-side (desktop + mobile; costs 5 credits). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call create_checkout.'),
+                ->description('Capture page_url server-side (desktop + mobile; costs 5 credits). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
             'pdf' => $schema->string()
                 ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
             'html' => $schema->string()

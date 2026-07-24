@@ -14,11 +14,23 @@ class BillingService
 {
     public function __construct(protected CreditsService $credits) {}
 
+    public function pricingEnabled(): bool
+    {
+        return (bool) config('billing.pricing_enabled', false);
+    }
+
     public function paddleConfigured(): bool
     {
         return filled(config('cashier.api_key'))
             && filled(config('cashier.client_side_token'))
             && filled(config('billing.plans.pro.paddle_price'));
+    }
+
+    public function checkoutAvailable(Workspace $workspace): bool
+    {
+        return $this->pricingEnabled()
+            && $this->paddleConfigured()
+            && $workspace->normalizedPlan() !== Workspace::PLAN_PRO;
     }
 
     /**
@@ -27,13 +39,14 @@ class BillingService
     public function status(Workspace $workspace): array
     {
         $summary = $this->credits->summary($workspace);
+        $summary['pricing_enabled'] = $this->pricingEnabled();
         $summary['paddle_configured'] = $this->paddleConfigured();
         $summary['stripe_configured'] = false; // legacy key for older agents
         $summary['subscribed'] = $workspace->normalizedPlan() === Workspace::PLAN_PRO
             && $workspace->subscribed('default');
-        $summary['checkout_available'] = $this->paddleConfigured()
-            && $workspace->normalizedPlan() !== Workspace::PLAN_PRO;
-        $summary['portal_available'] = $this->paddleConfigured()
+        $summary['checkout_available'] = $this->checkoutAvailable($workspace);
+        $summary['portal_available'] = $this->pricingEnabled()
+            && $this->paddleConfigured()
             && $workspace->customer !== null;
 
         return $summary;
@@ -46,6 +59,14 @@ class BillingService
      */
     public function createCheckoutUrl(Workspace $workspace): string
     {
+        if (! $this->pricingEnabled()) {
+            throw new RuntimeException(
+                '[pricing_disabled] Paid Plus checkout is paused. Workspaces get '.
+                (int) config('billing.plans.free.credits', 20).
+                ' credits that renew monthly — call get_billing for remaining credits and when they refill.',
+            );
+        }
+
         if (! $this->paddleConfigured()) {
             throw new RuntimeException(
                 '[billing_not_configured] Paddle is not configured on this ReviseMy host. Set PADDLE_API_KEY, PADDLE_CLIENT_SIDE_TOKEN, and PADDLE_PRICE_PRO.',
@@ -72,6 +93,10 @@ class BillingService
      */
     public function checkoutForWorkspace(Workspace $workspace): Checkout
     {
+        if (! $this->pricingEnabled()) {
+            throw new RuntimeException('[pricing_disabled] Paid Plus checkout is paused.');
+        }
+
         if (! $this->paddleConfigured()) {
             throw new RuntimeException('[billing_not_configured] Paddle is not configured.');
         }
@@ -110,6 +135,12 @@ class BillingService
      */
     public function createPortalUrl(Workspace $workspace): string
     {
+        if (! $this->pricingEnabled()) {
+            throw new RuntimeException(
+                '[pricing_disabled] Paid billing is paused. Call get_billing for monthly credits.',
+            );
+        }
+
         if (! $this->paddleConfigured()) {
             throw new RuntimeException(
                 '[billing_not_configured] Paddle is not configured on this ReviseMy host.',

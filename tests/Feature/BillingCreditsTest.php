@@ -93,7 +93,7 @@ class BillingCreditsTest extends TestCase
             ])
             ->assertStatus(402)
             ->assertJsonPath('error', 'insufficient_credits')
-            ->assertJsonPath('next_action', 'upgrade');
+            ->assertJsonPath('next_action', 'wait_for_refill');
     }
 
     public function test_get_billing_returns_plan_summary(): void
@@ -107,14 +107,16 @@ class BillingCreditsTest extends TestCase
                 ->where('plan_name', 'Try')
                 ->where('credits_remaining', 20)
                 ->where('credits_grant', 20)
-                ->where('credits_renew', false)
-                ->where('credits_period_ends_at', null)
+                ->where('credits_renew', true)
+                ->whereType('credits_period_ends_at', 'string')
+                ->where('pricing_enabled', false)
+                ->where('checkout_available', false)
                 ->where('burn_table.capture_url', 5)
                 ->etc()
             );
     }
 
-    public function test_try_does_not_refill_after_a_month(): void
+    public function test_try_refills_after_a_month(): void
     {
         $workspace = app(TryTokenService::class)->create()['workspace'];
         $workspace->forceFill([
@@ -124,8 +126,8 @@ class BillingCreditsTest extends TestCase
 
         $fresh = app(CreditsService::class)->ensurePeriod($workspace->fresh());
 
-        $this->assertSame(5, (int) $fresh->credits_balance);
-        $this->assertTrue($fresh->credits_period_start->lte(now()->subMonth()));
+        $this->assertSame(20, (int) $fresh->credits_balance);
+        $this->assertTrue($fresh->credits_period_start->greaterThan(now()->subDay()));
     }
 
     public function test_plus_refills_after_a_month(): void
@@ -153,7 +155,7 @@ class BillingCreditsTest extends TestCase
 
         $this->assertSame(Workspace::PLAN_FREE, $downgraded->plan);
         $this->assertSame(12, (int) $downgraded->credits_balance);
-        $this->assertFalse(app(CreditsService::class)->planRenews($downgraded));
+        $this->assertTrue(app(CreditsService::class)->planRenews($downgraded));
     }
 
     public function test_extend_try_command_adds_credits_and_extends_tokens(): void
@@ -187,9 +189,25 @@ class BillingCreditsTest extends TestCase
         $this->assertSame(22, (int) $workspace->fresh()->credits_balance);
     }
 
+    public function test_create_checkout_errors_when_pricing_disabled(): void
+    {
+        config([
+            'billing.pricing_enabled' => false,
+            'cashier.api_key' => 'pdl_test',
+            'cashier.client_side_token' => 'test_token',
+            'billing.plans.pro.paddle_price' => 'pri_test',
+        ]);
+
+        $result = app(TryTokenService::class)->create();
+
+        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, [])
+            ->assertHasErrors(['pricing_disabled']);
+    }
+
     public function test_create_checkout_errors_when_paddle_not_configured(): void
     {
         config([
+            'billing.pricing_enabled' => true,
             'cashier.api_key' => null,
             'cashier.client_side_token' => null,
             'billing.plans.pro.paddle_price' => null,
@@ -244,6 +262,7 @@ class BillingCreditsTest extends TestCase
     public function test_create_checkout_returns_signed_paddle_page_url_when_configured(): void
     {
         config([
+            'billing.pricing_enabled' => true,
             'cashier.api_key' => 'pdl_test',
             'cashier.client_side_token' => 'test_token',
             'billing.plans.pro.paddle_price' => 'pri_test',
@@ -253,9 +272,16 @@ class BillingCreditsTest extends TestCase
 
         ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, [])
             ->assertHasNoErrors()
+            ->assertSee([
+                'share this link with the human now',
+                'finish payment in the browser',
+                '[![ReviseMy](',
+            ])
             ->assertStructuredContent(fn ($json) => $json
                 ->whereType('checkout_url', 'string')
+                ->whereType('share_markdown', 'string')
                 ->where('plan', 'pro')
+                ->where('next_action', 'share_checkout_url')
                 ->etc()
             );
     }
@@ -263,6 +289,7 @@ class BillingCreditsTest extends TestCase
     public function test_checkout_page_renders_inline_paddle_mount(): void
     {
         config([
+            'billing.pricing_enabled' => true,
             'cashier.api_key' => 'pdl_test',
             'cashier.client_side_token' => 'test_token',
             'billing.plans.pro.paddle_price' => 'pri_test',
@@ -282,6 +309,7 @@ class BillingCreditsTest extends TestCase
     public function test_checkout_open_options_use_inline_one_page(): void
     {
         config([
+            'billing.pricing_enabled' => true,
             'cashier.api_key' => 'pdl_test',
             'cashier.client_side_token' => 'test_token',
             'billing.plans.pro.paddle_price' => 'pri_test',
@@ -306,8 +334,13 @@ class BillingCreditsTest extends TestCase
             ->assertJsonPath('plan', 'free')
             ->assertJsonPath('plan_name', 'Try')
             ->assertJsonPath('credits_grant', 20)
-            ->assertJsonPath('credits_renew', false)
-            ->assertJsonPath('credits_period_ends_at', null);
+            ->assertJsonPath('credits_renew', true)
+            ->assertJsonPath('pricing_enabled', false)
+            ->assertJsonPath('checkout_available', false)
+            ->assertJson(fn ($json) => $json
+                ->whereType('credits_period_ends_at', 'string')
+                ->etc()
+            );
     }
 
     public function test_upgrade_page_is_paddle_default_payment_link(): void

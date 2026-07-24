@@ -38,7 +38,7 @@
                 <section>
                     <h2 class="text-lg font-semibold tracking-tight text-zinc-900">Try tokens, credits, and reviews</h2>
                     <p class="mt-3">
-                            Homepage try tokens create a Try workspace so agents can call MCP and REST. Try is a one-time credit pack (no monthly refill). Plus adds a larger monthly grant via Paddle Checkout. Try and Plus use the same full capture quality. Creating a review spends credits by source (images/PDF, email HTML, or URL capture). Rate limits, retention, and expiry may apply (including guest-link and review lifetimes described in product docs). Unused Plus credits do not roll over. Paddle is the merchant of record for paid plans.
+                            Homepage try tokens create a Try workspace so agents can call MCP and REST. Try includes a monthly credit pack (no rollover) while paid pricing is paused. When Plus is offered, it adds a larger monthly grant via Paddle Checkout. Creating a review spends credits by source (images/PDF, email HTML, or URL capture). Rate limits, retention, and expiry may apply (including guest-link and review lifetimes described in product docs). Unused monthly credits do not roll over. Paddle is the merchant of record for paid plans when enabled.
                     </p>
                 </section>
 

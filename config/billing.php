@@ -4,12 +4,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Paid pricing (Plus / Paddle)
+    |--------------------------------------------------------------------------
+    |
+    | When false, create_checkout is disabled and public/agent copy steers
+    | people to the free monthly credit pack. Flip on when Plus is ready.
+    |
+    */
+
+    'pricing_enabled' => (bool) env('REVISEMY_PRICING_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Plans & credit grants
     |--------------------------------------------------------------------------
     |
-    | Try (internal key `free`) is a one-time credit pack — no monthly refill.
-    | Plus (internal key `pro`) renews monthly. Same capture quality on both;
-    | only the grant, retention, and token lifetime differ.
+    | Try (internal key `free`) is the default pack. While pricing is off it
+    | renews monthly (same lazy refill as Plus). Plus stays in config so
+    | existing subscribers and a future re-enable keep working.
     |
     */
 
@@ -17,9 +29,9 @@ return [
         'free' => [
             'name' => 'Try',
             'credits' => (int) env('REVISEMY_FREE_CREDITS', 20),
-            'renews' => false,
+            'renews' => (bool) env('REVISEMY_FREE_CREDITS_RENEW', true),
             'review_retention_days' => (int) env('REVISEMY_FREE_RETENTION_DAYS', 7),
-            'token_days' => (int) env('REVISEMY_FREE_TOKEN_DAYS', 14),
+            'token_days' => (int) env('REVISEMY_FREE_TOKEN_DAYS', 90),
         ],
         'pro' => [
             'name' => 'Plus',

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Services\BillingService;
+use App\Support\BrandAssets;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,7 +15,7 @@ use Laravel\Mcp\Server\Tool;
 use RuntimeException;
 
 #[Name('create_portal')]
-#[Description('Open the billing manage page so the human can cancel Plus (receipts/payment updates via Paddle). Returns portal_url.')]
+#[Description('Open the billing manage page so the human can update payment method, view receipts, or cancel Plus. Returns portal_url — immediately paste it into chat as the markdown share block (never only say “open the billing page”).')]
 class CreatePortalTool extends Tool
 {
     use ResolvesWorkspace;
@@ -35,15 +36,19 @@ class CreatePortalTool extends Tool
             return Response::error($e->getMessage());
         }
 
+        $share = BrandAssets::markdownShareLink($url);
         $payload = [
             'portal_url' => $url,
-            'next_action' => 'open_portal',
-            'hint' => 'Open portal_url for the human to manage their subscription.',
+            'share_markdown' => $share,
+            'next_action' => 'share_portal_url',
+            'hint' => 'Paste share_markdown (or portal_url as a markdown link + backticks) into the human-visible chat immediately. Do not only say “open the billing page.”',
         ];
+        $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         return Response::make(Response::text(
-            "Open this billing page for the human to manage or cancel Plus:\n{$url}\n\n".
-            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            "Billing manage page ready — share this link with the human now:\n".
+            "{$share}\n\n".
+            "```json\n{$json}\n```"
         ))->withStructuredContent($payload);
     }
 

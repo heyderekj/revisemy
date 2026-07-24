@@ -38,7 +38,7 @@
                 <x-billing.credit-costs compare class="mt-8" :show-label="false" />
 
                 <p class="mt-4 text-[14px] leading-relaxed text-pretty text-zinc-500">
-                    Plus credits reset monthly (no rollover). Try is a one-time pack.
+                    Credits reset monthly (no rollover).
                 </p>
 
                 <div class="mt-8 flex flex-wrap items-center gap-3">

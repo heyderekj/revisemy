@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Services\BillingService;
+use App\Support\BrandAssets;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,7 +15,7 @@ use Laravel\Mcp\Server\Tool;
 use RuntimeException;
 
 #[Name('create_checkout')]
-#[Description('Start Paddle Checkout for Plus ($9/mo, 100 credits, full quality). Returns checkout_url — open it for the human (Paddle collects email + payment). After they pay, continue with create_review. Prefer this when create_review returns [insufficient_credits].')]
+#[Description('Start Paddle Checkout for Plus when paid pricing is enabled. Often returns [pricing_disabled] — in that case do not ask the human to pay; tell them credits renew monthly and call get_billing. When checkout is available: immediately paste share_markdown / checkout_url into chat (never only say “finish payment in the browser”).')]
 class CreateCheckoutTool extends Tool
 {
     use ResolvesWorkspace;
@@ -35,19 +36,23 @@ class CreateCheckoutTool extends Tool
             return Response::error($e->getMessage());
         }
 
+        $share = BrandAssets::markdownShareLink($url);
         $payload = [
             'checkout_url' => $url,
+            'share_markdown' => $share,
             'plan' => 'pro',
             'price_usd' => (int) config('billing.plans.pro.price_usd', 9),
             'credits_grant' => (int) config('billing.plans.pro.credits', 100),
-            'next_action' => 'open_checkout',
-            'hint' => 'Open checkout_url in the browser for the human. After payment they return to the agent — call create_review again.',
+            'next_action' => 'share_checkout_url',
+            'hint' => 'Paste share_markdown (or checkout_url as a markdown link + backticks) into the human-visible chat immediately. Do not only say “finish payment in the browser.” On Cursor, also call open_resource with checkout_url. After payment, call get_billing then create_review again.',
         ];
+        $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         return Response::make(Response::text(
-            "Open this Paddle Checkout link for the human to upgrade to Plus:\n{$url}\n\n".
-            "After they finish, call create_review again (or get_billing to confirm credits).\n\n".
-            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            "Plus checkout ready — share this link with the human now (do not only say “finish payment in the browser”):\n".
+            "{$share}\n\n".
+            "After they pay, call get_billing to confirm credits, then continue.\n\n".
+            "```json\n{$json}\n```"
         ))->withStructuredContent($payload);
     }
 

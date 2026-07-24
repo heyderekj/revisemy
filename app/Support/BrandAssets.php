@@ -26,4 +26,15 @@ final class BrandAssets
     {
         return Seo::faviconUrl('/images/app-icon-v9.png');
     }
+
+    /**
+     * Clickable chat share block: yellow mark markdown link + backtick URL.
+     * Agents must paste this into the human-visible message (never “open in browser” alone).
+     */
+    public static function markdownShareLink(string $url, string $alt = 'ReviseMy'): string
+    {
+        $mark = self::appIconUrl();
+
+        return "[![{$alt}]({$mark})]({$url})\n`{$url}`";
+    }
 }

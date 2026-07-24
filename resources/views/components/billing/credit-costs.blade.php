@@ -13,6 +13,7 @@
     $plusCredits = (int) config('billing.plans.pro.credits', 100);
     $tryRetention = (int) config('billing.plans.free.review_retention_days', 7);
     $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);
+    $tryRenews = (bool) config('billing.plans.free.renews', true);
     $tryLabel = $tone === 'confirm' ? 'Was Try' : 'Try';
     $plusLabel = $tone === 'confirm' ? 'Now Plus' : 'Plus';
     $heading = 'Credit Cost Breakdown';
@@ -21,7 +22,7 @@
         [
             'icon' => 'ticket',
             'label' => 'Credits',
-            'free' => $tryCredits.' once',
+            'free' => $tryRenews ? $tryCredits.'/mo' : $tryCredits.' once',
             'plus' => $plusCredits.'/mo',
             'same' => false,
         ],

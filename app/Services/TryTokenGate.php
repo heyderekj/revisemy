@@ -8,7 +8,7 @@ use RuntimeException;
 
 class TryTokenGate
 {
-    public const MESSAGE = 'Try limit reached for today — come back tomorrow, or upgrade with create_checkout.';
+    public const MESSAGE = 'Try limit reached for today — come back tomorrow.';
 
     public function assertCanMint(Request $request): void
     {

@@ -29,7 +29,7 @@ You are running a ReviseMy design checkup loop for: {$focus}
    - **Local or app UI** → `images: [data URL or base64]` (type `ui`, **1 credit**). Prefer this for localhost — never pass `http://localhost…` to remote capture; encode as data URLs.
    - `page_url` alone does **not** trigger capture. Use `capture_url: true` for live pages.
    - If `create_review` returns `[capture_not_configured]` or `[capture_provider_failed]`, immediately fall back to `images` with desktop + mobile data URLs — do not keep retrying `capture_url`.
-   - If `create_review` returns `[insufficient_credits]`, call `get_billing`, then `create_checkout`, open `checkout_url` (Paddle) for the human (Plus $9/mo, 100 credits, same full quality), then retry.
+   - If `create_review` returns `[insufficient_credits]`, call `get_billing` and tell the human when the monthly pack refills. Paid Plus is paused (`create_checkout` returns `[pricing_disabled]`) — do not ask them to pay. Only if checkout succeeds, paste `share_markdown` into chat immediately.
 2. **Open a review** — Call `create_review` with a short title, optional context (what the human should look at), and the source from step 1.
 3. **Optional subagent critique** — Call `add_findings` with suggestion/a11y/polish notes only (never must-fix). The human still decides.
 4. **Hand off** — Share `review_url` with the human as a markdown image link using the yellow mark (`![ReviseMy](https://revisemy.com/images/app-icon-v9.png?v=9)` wrapping the URL), and put the raw URL in backticks — never a bare `https://revisemy.com/...` autolink (hosts cache an old pink domain favicon). Tell them to mark feedback and approve or request changes.

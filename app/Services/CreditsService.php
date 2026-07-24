@@ -37,7 +37,7 @@ class CreditsService
     }
 
     /**
-     * Plan credit pack size (Try one-time grant or Plus monthly grant).
+     * Plan credit pack size (Try monthly grant, or Plus monthly grant when pricing is on).
      */
     public function planGrant(Workspace $workspace): int
     {
@@ -178,7 +178,7 @@ class CreditsService
     }
 
     /**
-     * Downgrade to Try — no new credit grant (leftover balance kept; never refills).
+     * Downgrade to Try — no immediate grant (leftover balance kept; refills when the plan renews).
      */
     public function activateFree(Workspace $workspace): Workspace
     {

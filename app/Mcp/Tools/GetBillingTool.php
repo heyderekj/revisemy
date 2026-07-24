@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('get_billing')]
-#[Description('Show this workspace plan, credits remaining, and the burn table (images/pdf=1, html=3, capture_url=5). Try is a one-time pack (credits_renew=false); Plus renews monthly. When credits are low or zero, call create_checkout and open checkout_url (Paddle) for the human. Same full capture quality on Try and Plus.')]
+#[Description('Show this workspace plan, credits remaining, and the burn table (images/pdf=1, html=3, capture_url=5). Default Try pack is 20 credits that renew monthly (no rollover). When credits are zero, wait for the monthly refill — call get_billing for the period end. Paid Plus checkout is only available when pricing_enabled is true.')]
 class GetBillingTool extends Tool
 {
     use ResolvesWorkspace;
@@ -32,7 +32,7 @@ class GetBillingTool extends Tool
         $renews = (bool) ($status['credits_renew'] ?? false);
         $periodLine = $renews && filled($status['credits_period_ends_at'] ?? null)
             ? 'Period ends: '.$status['credits_period_ends_at']
-            : 'Credits: one-time Try pack (no monthly reset)';
+            : 'Credits: one-time pack (no monthly reset)';
 
         $lines = [
             "Plan: {$status['plan_name']} ({$status['plan']})",
@@ -43,12 +43,20 @@ class GetBillingTool extends Tool
         ];
 
         if ($status['credits_remaining'] <= 0) {
-            $lines[] = 'Credits exhausted — call create_checkout and open checkout_url for the human to upgrade to Plus ($'.$status['pro_price_usd'].'/mo, '.$status['pro_credits'].' credits/mo).';
-        } elseif ($status['checkout_available']) {
-            $lines[] = 'Upgrade anytime with create_checkout (Plus $'.$status['pro_price_usd'].'/mo → '.$status['pro_credits'].' credits/mo, same full quality).';
+            if ($status['checkout_available'] ?? false) {
+                $lines[] = 'Credits exhausted — call create_checkout and immediately paste share_markdown / checkout_url into chat for the human (Plus $'.$status['pro_price_usd'].'/mo, '.$status['pro_credits'].' credits/mo). Do not only say “finish payment in the browser.”';
+            } elseif ($renews) {
+                $lines[] = 'Credits exhausted — wait for the monthly refill (see period end above). Paid upgrade is paused.';
+            } else {
+                $lines[] = 'Credits exhausted — this pack does not refill.';
+            }
+        } elseif ($status['checkout_available'] ?? false) {
+            $lines[] = 'Upgrade anytime with create_checkout — paste the returned share_markdown into chat (Plus $'.$status['pro_price_usd'].'/mo → '.$status['pro_credits'].' credits/mo, same full quality).';
+        } elseif (! ($status['pricing_enabled'] ?? false) && $renews) {
+            $lines[] = 'Credits renew monthly (no rollover). Paid Plus checkout is paused while pricing is figured out.';
         }
 
-        if ($status['portal_available'] && $status['plan'] === 'pro') {
+        if (($status['portal_available'] ?? false) && $status['plan'] === 'pro') {
             $lines[] = 'To cancel Plus: call cancel_subscription with confirm:true (keeps Plus until period end, then Try with no new credit grant). For payment method / receipts: create_portal.';
         }
 
