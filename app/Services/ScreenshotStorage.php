@@ -6,7 +6,6 @@ use App\Models\Review;
 use App\Models\Screenshot;
 use App\Support\OutboundUrl;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -300,75 +299,45 @@ class ScreenshotStorage
     /**
      * Fetch a screenshot URL the caller supplied.
      *
-     * Every hop is checked with OutboundUrl first, and redirects are followed
-     * by hand — letting curl follow them would allow an allowed https host to
-     * bounce the request straight to loopback or the metadata endpoint. The
-     * body is read in chunks so an endless response cannot fill memory before
-     * the size check runs.
+     * The guard, redirect re-checking, and streamed size cap all live in
+     * OutboundUrl::fetch() — one implementation, shared with PDF ingestion, so
+     * a hardening fix cannot land on one source type and miss the other. Only
+     * the image-specific parts stay here: the up-front reject reason and the
+     * content-type check, both raised as agent-facing messages.
      */
     protected function downloadImage(string $url): string
     {
-        $tooLarge = ValidationException::withMessages([
-            'images' => 'That screenshot URL is larger than 8MB.',
-        ]);
-
-        for ($hop = 0; $hop <= OutboundUrl::MAX_REDIRECTS; $hop++) {
-            if ($reason = OutboundUrl::reasonToReject($url)) {
-                throw ValidationException::withMessages([
-                    'images' => 'Could not fetch that screenshot URL — '.$reason.'.',
-                ]);
-            }
-
-            $response = Http::timeout(20)->withoutRedirecting()->get($url);
-
-            if ($response->redirect()) {
-                $url = (string) $response->header('Location');
-
-                continue;
-            }
-
-            if (! $response->successful()) {
-                throw ValidationException::withMessages([
-                    'images' => 'Could not download that screenshot URL.',
-                ]);
-            }
-
-            $contentType = strtolower((string) $response->header('Content-Type'));
-
-            if ($contentType !== '' && ! str_starts_with($contentType, 'image/')) {
-                throw ValidationException::withMessages([
-                    'images' => 'That URL is not an image — use capture_url + page_url to screenshot a page.',
-                ]);
-            }
-
-            if ((int) $response->header('Content-Length') > self::MAX_IMAGE_BYTES) {
-                throw $tooLarge;
-            }
-
-            $binary = '';
-            $stream = $response->toPsrResponse()->getBody();
-
-            // Defensive: read from the start regardless of who touched the
-            // stream first. Faked responses in particular share one stream
-            // across matching requests.
-            if ($stream->isSeekable()) {
-                $stream->rewind();
-            }
-
-            while (! $stream->eof()) {
-                $binary .= $stream->read(256 * 1024);
-
-                if (strlen($binary) > self::MAX_IMAGE_BYTES) {
-                    throw $tooLarge;
-                }
-            }
-
-            return $binary;
+        if ($reason = OutboundUrl::reasonToReject($url)) {
+            throw ValidationException::withMessages([
+                'images' => 'Could not fetch that screenshot URL — '.$reason.'.',
+            ]);
         }
 
-        throw ValidationException::withMessages([
-            'images' => 'That screenshot URL redirected too many times.',
-        ]);
+        $binary = OutboundUrl::fetch(
+            $url,
+            self::MAX_IMAGE_BYTES,
+            // Thrown, not returned false: a wrong content type deserves its own
+            // message rather than a generic download failure.
+            function ($response): bool {
+                $contentType = strtolower((string) $response->header('Content-Type'));
+
+                if ($contentType !== '' && ! str_starts_with($contentType, 'image/')) {
+                    throw ValidationException::withMessages([
+                        'images' => 'That URL is not an image — use capture_url + page_url to screenshot a page.',
+                    ]);
+                }
+
+                return true;
+            },
+        );
+
+        if ($binary === null) {
+            throw ValidationException::withMessages([
+                'images' => 'Could not download that screenshot URL — it must be a reachable public https image under 8MB.',
+            ]);
+        }
+
+        return $binary;
     }
 
     protected function assertIsImage(string $binary, ?string $sourceUrl = null): void
