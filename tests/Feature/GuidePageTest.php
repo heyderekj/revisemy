@@ -105,7 +105,8 @@ class GuidePageTest extends TestCase
             ->assertSee('review_url', false)
             ->assertSee('add_mark', false)
             ->assertSee('MCP Apps', false)
-            ->assertSee("Where it's available", false)
+            // Escaped on purpose — Blade renders the apostrophe as &#039;.
+            ->assertSee("Where it's available")
             ->assertSee('Claude Desktop', false)
             ->assertSee('Copilot', false)
             ->assertSee('/for/claude', false)

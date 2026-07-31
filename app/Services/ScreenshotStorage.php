@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Review;
 use App\Models\Screenshot;
+use App\Support\OutboundUrl;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -12,6 +13,9 @@ use Illuminate\Validation\ValidationException;
 
 class ScreenshotStorage
 {
+    /** Ceiling for a caller-supplied screenshot, however it arrives. */
+    public const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
     /**
      * The disk every review artifact (screenshots, thumbs, DOM snapshots)
      * lives on.
@@ -217,7 +221,7 @@ class ScreenshotStorage
         $sourceHint = null;
 
         if ($image instanceof UploadedFile) {
-            if ($image->getSize() > 8 * 1024 * 1024) {
+            if ($image->getSize() > self::MAX_IMAGE_BYTES) {
                 throw ValidationException::withMessages([
                     'images' => 'Each screenshot needs to stay under 8MB.',
                 ]);
@@ -248,7 +252,7 @@ class ScreenshotStorage
             $payload = substr($image, strpos($image, ',') + 1);
             $binary = base64_decode($payload, true);
 
-            if ($binary === false || strlen($binary) > 8 * 1024 * 1024) {
+            if ($binary === false || strlen($binary) > self::MAX_IMAGE_BYTES) {
                 throw ValidationException::withMessages([
                     'images' => 'Could not decode that screenshot (max 8MB).',
                 ]);
@@ -261,7 +265,61 @@ class ScreenshotStorage
 
         if (filter_var($image, FILTER_VALIDATE_URL)) {
             $sourceHint = $image;
-            $response = Http::timeout(20)->get($image);
+            $binary = $this->downloadImage($image);
+
+            $this->assertIsImage($binary, $sourceHint);
+
+            return $binary;
+        }
+
+        $binary = base64_decode($image, true);
+
+        if ($binary === false || strlen($binary) < 32) {
+            throw ValidationException::withMessages([
+                'images' => 'Pass a screenshot as a data URL, https URL, or base64 string.',
+            ]);
+        }
+
+        if (strlen($binary) > self::MAX_IMAGE_BYTES) {
+            throw ValidationException::withMessages([
+                'images' => 'Each screenshot needs to stay under 8MB.',
+            ]);
+        }
+
+        $this->assertIsImage($binary);
+
+        return $binary;
+    }
+
+    /**
+     * Fetch a screenshot URL the caller supplied.
+     *
+     * Every hop is checked with OutboundUrl first, and redirects are followed
+     * by hand — letting curl follow them would allow an allowed https host to
+     * bounce the request straight to loopback or the metadata endpoint. The
+     * body is read in chunks so an endless response cannot fill memory before
+     * the size check runs.
+     */
+    protected function downloadImage(string $url): string
+    {
+        $tooLarge = ValidationException::withMessages([
+            'images' => 'That screenshot URL is larger than 8MB.',
+        ]);
+
+        for ($hop = 0; $hop <= OutboundUrl::MAX_REDIRECTS; $hop++) {
+            if ($reason = OutboundUrl::reasonToReject($url)) {
+                throw ValidationException::withMessages([
+                    'images' => 'Could not fetch that screenshot URL — '.$reason.'.',
+                ]);
+            }
+
+            $response = Http::timeout(20)->withoutRedirecting()->get($url);
+
+            if ($response->redirect()) {
+                $url = (string) $response->header('Location');
+
+                continue;
+            }
 
             if (! $response->successful()) {
                 throw ValidationException::withMessages([
@@ -277,36 +335,33 @@ class ScreenshotStorage
                 ]);
             }
 
-            $binary = $response->body();
-
-            if (strlen($binary) > 8 * 1024 * 1024) {
-                throw ValidationException::withMessages([
-                    'images' => 'That screenshot URL is larger than 8MB.',
-                ]);
+            if ((int) $response->header('Content-Length') > self::MAX_IMAGE_BYTES) {
+                throw $tooLarge;
             }
 
-            $this->assertIsImage($binary, $sourceHint);
+            $binary = '';
+            $stream = $response->toPsrResponse()->getBody();
+
+            // validateSource() and store() each resolve the same source, so the
+            // body may already have been read once.
+            if ($stream->isSeekable()) {
+                $stream->rewind();
+            }
+
+            while (! $stream->eof()) {
+                $binary .= $stream->read(256 * 1024);
+
+                if (strlen($binary) > self::MAX_IMAGE_BYTES) {
+                    throw $tooLarge;
+                }
+            }
 
             return $binary;
         }
 
-        $binary = base64_decode($image, true);
-
-        if ($binary === false || strlen($binary) < 32) {
-            throw ValidationException::withMessages([
-                'images' => 'Pass a screenshot as a data URL, https URL, or base64 string.',
-            ]);
-        }
-
-        if (strlen($binary) > 8 * 1024 * 1024) {
-            throw ValidationException::withMessages([
-                'images' => 'Each screenshot needs to stay under 8MB.',
-            ]);
-        }
-
-        $this->assertIsImage($binary);
-
-        return $binary;
+        throw ValidationException::withMessages([
+            'images' => 'That screenshot URL redirected too many times.',
+        ]);
     }
 
     protected function assertIsImage(string $binary, ?string $sourceUrl = null): void

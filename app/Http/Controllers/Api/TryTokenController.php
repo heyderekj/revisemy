@@ -27,11 +27,9 @@ class TryTokenController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
+            // Detail stays in the log — report() above already captured it.
             return response()->json([
                 'message' => 'Could not create try token. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.',
-                // Temporary: remove once Cloud DB is confirmed healthy.
-                'error' => $e->getMessage(),
-                'type' => $e::class,
             ], 500);
         }
 

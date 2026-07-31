@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\BrandAssets;
+
 return [
 
     'name' => 'ReviseMy',
@@ -63,7 +65,7 @@ return [
     'og_image_version' => '6',
 
     // Bump when favicons / app-icon change so browsers and Cursor refetch (keep in sync with BrandAssets::CACHE_BUST).
-    'favicon_version' => \App\Support\BrandAssets::CACHE_BUST,
+    'favicon_version' => BrandAssets::CACHE_BUST,
 
     'og_image_width' => 1200,
 

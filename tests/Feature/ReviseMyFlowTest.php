@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Services\SecondOpinionService;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -49,7 +51,7 @@ class ReviseMyFlowTest extends TestCase
             ]);
         $this->assertNotEmpty($tokenResponse->json('token_expires_at'));
         $this->assertTrue(
-            now()->diffInDays(\Illuminate\Support\Carbon::parse($tokenResponse->json('token_expires_at')), false) >= 6
+            now()->diffInDays(Carbon::parse($tokenResponse->json('token_expires_at')), false) >= 6
         );
         $this->assertStringContainsString('mcp-remote', (string) data_get($tokenResponse->json(), 'setup_prompts.claude_desktop'));
         $this->assertStringContainsString('~/.cursor/mcp.json', (string) data_get($tokenResponse->json(), 'setup_prompts.cursor'));
@@ -111,7 +113,7 @@ class ReviseMyFlowTest extends TestCase
             'revisemy.openai.api_key' => 'sk-test',
             'revisemy.openai.base_url' => null,
         ]);
-        \Illuminate\Support\Facades\Bus::fake();
+        Bus::fake();
 
         $token = $this->postJson('/api/try-token')->json('token');
 
@@ -120,7 +122,7 @@ class ReviseMyFlowTest extends TestCase
             'images' => [$this->tinyPngDataUrl()],
         ])->assertCreated()->json();
 
-        \Illuminate\Support\Facades\Bus::assertDispatchedAfterResponse(GenerateSecondOpinionJob::class);
+        Bus::assertDispatchedAfterResponse(GenerateSecondOpinionJob::class);
         $this->assertNotEmpty($payload['work_packets']['second_opinion']);
         $this->assertSame('queued', $payload['screenshots'][0]['second_opinion_status']);
     }
@@ -602,7 +604,7 @@ class ReviseMyFlowTest extends TestCase
 
     public function test_home_try_token_restore_backfills_expiry_from_sanctum(): void
     {
-        $created = app(\App\Services\TryTokenService::class)->create();
+        $created = app(TryTokenService::class)->create();
 
         Livewire::test('home')
             ->call(
@@ -631,7 +633,7 @@ class ReviseMyFlowTest extends TestCase
         Livewire::test('home')
             ->call('getTryToken')
             ->assertSet('token', null)
-            ->assertSet('error', 'Could not start a free try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.');
+            ->assertSet('error', 'Could not start a try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.');
     }
 
     public function test_guest_cannot_perform_owner_actions(): void
