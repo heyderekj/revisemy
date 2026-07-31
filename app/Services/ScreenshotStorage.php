@@ -25,19 +25,25 @@ class ScreenshotStorage
         return (string) config('filesystems.revisemy_disk', config('filesystems.default', 'public'));
     }
 
-    public function store(Review $review, string|UploadedFile $image, int $sortOrder = 0, string $kind = Screenshot::KIND_SOURCE): Screenshot
+    /**
+     * Pass $binary when the caller already resolved this source (see
+     * validateSource) — an https source is otherwise downloaded a second time.
+     */
+    public function store(Review $review, string|UploadedFile $image, int $sortOrder = 0, string $kind = Screenshot::KIND_SOURCE, ?string $binary = null): Screenshot
     {
-        $binary = $this->resolveBinary($image);
+        $binary ??= $this->resolveBinary($image);
 
         return $this->persist($review, $binary, $this->guessExtension($binary, $image), $sortOrder, $kind);
     }
 
     /**
-     * Validate an image source before persisting a review row.
+     * Validate an image source before persisting a review row, returning the
+     * resolved bytes so the caller can hand them back to store() instead of
+     * paying for a second download/decode.
      */
-    public function validateSource(string|UploadedFile $image): void
+    public function validateSource(string|UploadedFile $image): string
     {
-        $this->resolveBinary($image);
+        return $this->resolveBinary($image);
     }
 
     /**
@@ -342,8 +348,9 @@ class ScreenshotStorage
             $binary = '';
             $stream = $response->toPsrResponse()->getBody();
 
-            // validateSource() and store() each resolve the same source, so the
-            // body may already have been read once.
+            // Defensive: read from the start regardless of who touched the
+            // stream first. Faked responses in particular share one stream
+            // across matching requests.
             if ($stream->isSeekable()) {
                 $stream->rewind();
             }

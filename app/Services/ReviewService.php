@@ -134,9 +134,14 @@ class ReviewService
             ]);
         }
 
-        foreach (array_values($images) as $image) {
+        // Resolve every source up front: this validates before a review row
+        // exists, and the bytes are kept so store() below never re-downloads
+        // an https source or re-decodes a base64 one.
+        $resolved = [];
+
+        foreach (array_values($images) as $index => $image) {
             if (! is_array($image)) {
-                $this->screenshots->validateSource($image);
+                $resolved[$index] = $this->screenshots->validateSource($image);
             }
         }
 
@@ -186,7 +191,7 @@ class ReviewService
         foreach (array_values($images) as $index => $image) {
             $shot = is_array($image)
                 ? $this->screenshots->storeRaw($review, $image['binary'], $index, $image['meta'] ?? null)
-                : $this->screenshots->store($review, $image, $index);
+                : $this->screenshots->store($review, $image, $index, binary: $resolved[$index]);
             $this->opinions->queue($shot);
         }
 

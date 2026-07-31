@@ -280,6 +280,30 @@ class McpCreateReviewTest extends TestCase
         $this->assertSame(0, Review::query()->count());
     }
 
+    public function test_create_review_downloads_an_image_url_exactly_once(): void
+    {
+        $user = $this->setUpUser();
+
+        Http::fake([
+            'example.com/*' => Http::response(
+                $this->tinyPngBinary(),
+                200,
+                ['Content-Type' => 'image/png'],
+            ),
+        ]);
+
+        ReviseMyServer::actingAs($user)->tool(CreateReviewTool::class, [
+            'title' => 'Hosted screenshot',
+            'images' => ['https://example.com/shot.png'],
+        ])->assertHasNoErrors()->assertStructuredContent(
+            fn ($json) => $json->has('screenshots', 1)->etc()
+        );
+
+        // Validation and storage share one resolved copy of the bytes.
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request) => $request->url() === 'https://example.com/shot.png');
+    }
+
     public function test_create_review_rejects_invalid_image_payload(): void
     {
         $user = $this->setUpUser();
