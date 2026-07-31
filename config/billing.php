@@ -51,16 +51,19 @@ return [
     |
     | Caps new workspaces per client IP so Try packs cannot be farmed forever.
     |
-    | Both windows are checked, whichever trips first. At the defaults below
-    | they are equal, so per_day is the only one that can ever bind — per_hour
-    | only starts doing work once REVISEMY_TRY_TOKEN_PER_DAY is raised above it
-    | (e.g. 12/day with 3/hour to spread mints out).
+    | Both windows are checked, whichever trips first. Keep per_day above
+    | per_hour or the hourly gate is dead code: an equal pair means the daily
+    | counter always binds first and the hourly one can never fire.
+    |
+    | 3/hour shapes the burst; 12/day is the ceiling. A shared office or campus
+    | NAT is one IP to us, so a flat 3/day turned every colleague after the
+    | third into a support question.
     |
     */
 
     'try_token' => [
         'per_hour' => (int) env('REVISEMY_TRY_TOKEN_PER_HOUR', 3),
-        'per_day' => (int) env('REVISEMY_TRY_TOKEN_PER_DAY', 3),
+        'per_day' => (int) env('REVISEMY_TRY_TOKEN_PER_DAY', 12),
     ],
 
     /*

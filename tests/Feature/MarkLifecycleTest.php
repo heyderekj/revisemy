@@ -6,6 +6,7 @@ use App\Models\Annotation;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Livewire;
@@ -174,6 +175,64 @@ class MarkLifecycleTest extends TestCase
         $this->assertCount(1, $response->json('skipped'));
         $this->assertSame(999_999, $response->json('skipped.0.id'));
         $this->assertSame('not_found', $response->json('skipped.0.reason'));
+    }
+
+    public function test_remote_after_images_are_capped_per_call(): void
+    {
+        [$token, $review] = $this->setUpReview();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $png = hex2bin(
+            '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082'
+        );
+
+        Http::fake(['images.test/*' => Http::response($png, 200, ['Content-Type' => 'image/png'])]);
+
+        $marks = [];
+
+        for ($i = 1; $i <= MarkLifecycleService::MAX_REMOTE_AFTER_IMAGES + 2; $i++) {
+            $mark = $shot->annotations()->create([
+                'x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => "Fix {$i}", 'number' => $i,
+            ]);
+
+            $marks[] = ['id' => $mark->id, 'status' => 'resolved', 'after_image' => "https://images.test/after-{$i}.png"];
+        }
+
+        $response = $this->withToken($token)
+            ->postJson('/api/reviews/'.$review->public_id.'/marks/resolve', ['marks' => $marks])
+            ->assertOk();
+
+        // Only the budgeted number are fetched; the rest come back to be resent.
+        Http::assertSentCount(MarkLifecycleService::MAX_REMOTE_AFTER_IMAGES);
+        $this->assertSame(MarkLifecycleService::MAX_REMOTE_AFTER_IMAGES, $response->json('updated'));
+
+        $skipped = collect($response->json('skipped'));
+        $this->assertCount(2, $skipped);
+        $this->assertSame(['after_image_limit'], $skipped->pluck('reason')->unique()->values()->all());
+    }
+
+    public function test_inline_after_images_are_not_capped(): void
+    {
+        [$token, $review] = $this->setUpReview();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $marks = [];
+
+        for ($i = 1; $i <= MarkLifecycleService::MAX_REMOTE_AFTER_IMAGES + 2; $i++) {
+            $mark = $shot->annotations()->create([
+                'x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => "Fix {$i}", 'number' => $i,
+            ]);
+
+            $marks[] = ['id' => $mark->id, 'status' => 'resolved', 'after_image' => $this->tinyPngDataUrl()];
+        }
+
+        // Data URLs arrive in the request body — no outbound cost, no cap.
+        $response = $this->withToken($token)
+            ->postJson('/api/reviews/'.$review->public_id.'/marks/resolve', ['marks' => $marks])
+            ->assertOk();
+
+        $this->assertSame(MarkLifecycleService::MAX_REMOTE_AFTER_IMAGES + 2, $response->json('updated'));
+        $this->assertEmpty($response->json('skipped'));
     }
 
     public function test_a_human_only_status_is_skipped_rather_than_applied(): void

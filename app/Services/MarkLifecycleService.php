@@ -18,6 +18,13 @@ use Illuminate\Support\Collection;
  */
 class MarkLifecycleService
 {
+    /**
+     * How many after_image URLs one resolve_marks call will fetch. Matches the
+     * 5-screenshot cap on a review; the rest come back in `skipped` so the
+     * agent can resend them rather than losing them silently.
+     */
+    public const MAX_REMOTE_AFTER_IMAGES = 5;
+
     public function __construct(protected ScreenshotStorage $screenshots) {}
 
     /**
@@ -39,6 +46,7 @@ class MarkLifecycleService
 
         $updated = collect();
         $skipped = [];
+        $remoteFetches = 0;
 
         foreach ($marks as $mark) {
             $id = (int) ($mark['id'] ?? 0);
@@ -66,8 +74,29 @@ class MarkLifecycleService
                 continue;
             }
 
-            if (! empty($mark['after_image']) && is_string($mark['after_image'])) {
-                $this->storeAfterImage($annotation, $mark['after_image']);
+            $afterImage = ! empty($mark['after_image']) && is_string($mark['after_image'])
+                ? $mark['after_image']
+                : null;
+
+            if ($afterImage !== null && self::isRemote($afterImage)) {
+                // One 50-mark batch could otherwise drive 50 outbound fetches.
+                // Inline sources (data URL / base64) are unlimited — they cost
+                // us nothing on the wire.
+                if ($remoteFetches >= self::MAX_REMOTE_AFTER_IMAGES) {
+                    $skipped[] = [
+                        'id' => $id,
+                        'reason' => 'after_image_limit',
+                        'detail' => 'Only '.self::MAX_REMOTE_AFTER_IMAGES.' after_image URLs are fetched per call — resend this mark in a follow-up resolve_marks, or pass the image as a data URL.',
+                    ];
+
+                    continue;
+                }
+
+                $remoteFetches++;
+            }
+
+            if ($afterImage !== null) {
+                $this->storeAfterImage($annotation, $afterImage);
             }
 
             $this->transition($annotation, $status, $mark['note'] ?? null);
@@ -75,6 +104,21 @@ class MarkLifecycleService
         }
 
         return ['updated' => $updated, 'skipped' => $skipped];
+    }
+
+    /**
+     * Whether this source makes us fetch something. Data URLs and raw base64
+     * arrive in the request body; only an http(s) URL costs an outbound call.
+     */
+    protected static function isRemote(string $image): bool
+    {
+        $image = trim($image);
+
+        if (str_starts_with($image, 'data:image/')) {
+            return false;
+        }
+
+        return (bool) filter_var($image, FILTER_VALIDATE_URL);
     }
 
     /**
