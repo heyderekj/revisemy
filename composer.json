@@ -12,7 +12,7 @@
     ],
     "license": "proprietary",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "laravel/cashier-paddle": "*",
         "laravel/framework": "^13.8",
         "laravel/mcp": "^0.8.2",
