@@ -15,6 +15,24 @@ return [
     'entries' => [
 
         [
+            'version' => '1.2.0',
+            'date' => '2026-07-31',
+            'title' => 'Hardened ingestion and a leaner agent payload',
+            'highlights' => [
+                'Screenshot and PDF URLs are fetched under a strict guard: public https only, redirects re-checked at every hop, and loopback, private, and cloud-metadata addresses refused',
+                'get_review responses are ~60% smaller — mark crops ship as geometry the review app composes, so a signed URL no longer rides on every copy of every mark',
+                'resolve_marks now returns a skipped list, so a batch where only some marks landed can no longer read as a complete one',
+                'While paid Plus is paused, the checkout tools are no longer advertised — agents load 11 tool schemas instead of 14',
+                'PDF ingestion tells you when the host’s ImageMagick policy blocks the PDF coder (the Debian/Ubuntu default) instead of failing opaquely',
+            ],
+            'links' => [
+                ['label' => 'Changelog', 'href' => '/changelog'],
+                ['label' => 'Connectors', 'href' => '/connectors'],
+                ['label' => 'Board', 'href' => '/board'],
+            ],
+        ],
+
+        [
             'version' => '1.1.2',
             'date' => '2026-07-23',
             'title' => 'Agent-native feedback loop',
