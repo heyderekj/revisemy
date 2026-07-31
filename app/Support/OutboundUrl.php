@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
+
 /**
  * Guard for URLs the server itself fetches on a caller's behalf.
  *
@@ -21,6 +24,69 @@ class OutboundUrl
 {
     /** Redirect hops we will follow, each re-checked before the next request. */
     public const MAX_REDIRECTS = 3;
+
+    /**
+     * Guarded GET: every hop is checked before the request, redirects are
+     * followed by hand (curl following them would let an allowed host bounce
+     * to loopback), and the body is read in chunks so an endless response
+     * cannot exhaust memory before the size check.
+     *
+     * Returns the body, or null when a hop was rejected, the response failed,
+     * the redirect budget ran out, or $inspect vetoed the response. Callers
+     * decide what a failure means for their own error message.
+     *
+     * @param  callable(Response): bool|null  $inspect
+     */
+    public static function fetch(string $url, int $maxBytes, ?callable $inspect = null, int $timeout = 20): ?string
+    {
+        for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
+            if (self::reasonToReject($url) !== null) {
+                return null;
+            }
+
+            $response = Http::timeout($timeout)->withoutRedirecting()->get($url);
+
+            if ($response->redirect()) {
+                $url = (string) $response->header('Location');
+
+                continue;
+            }
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            if ($inspect !== null && ! $inspect($response)) {
+                return null;
+            }
+
+            if ((int) $response->header('Content-Length') > $maxBytes) {
+                return null;
+            }
+
+            $body = '';
+            $stream = $response->toPsrResponse()->getBody();
+
+            // Defensive: read from the start regardless of who touched the
+            // stream first. Faked responses in particular share one stream
+            // across matching requests.
+            if ($stream->isSeekable()) {
+                $stream->rewind();
+            }
+
+            while (! $stream->eof()) {
+                $body .= $stream->read(256 * 1024);
+
+                if (strlen($body) > $maxBytes) {
+                    return null;
+                }
+            }
+
+            return $body;
+        }
+
+        return null;
+    }
 
     /**
      * Why a URL must not be fetched, or null when it is safe.

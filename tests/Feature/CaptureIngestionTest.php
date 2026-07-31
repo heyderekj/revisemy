@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Review;
+use App\Services\DocumentIngestionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -195,9 +196,19 @@ class CaptureIngestionTest extends TestCase
             'pdf' => $pdf,
         ]);
 
-        if (! extension_loaded('imagick')) {
+        // Not every host can rasterise a PDF: the extension may be missing, or
+        // present with the PDF coder revoked by ImageMagick policy (the
+        // Debian/Ubuntu default, and what CI runners ship). Branch on what
+        // actually happened rather than predicting the environment — the
+        // contract is that an unsupported host says so actionably.
+        if (! DocumentIngestionService::supportsPdf() || $response->status() === 422) {
             $response->assertUnprocessable();
-            $this->assertStringContainsString('Imagick', collect($response->json('errors'))->flatten()->first());
+            $message = (string) collect($response->json('errors'))->flatten()->first();
+
+            $this->assertTrue(
+                str_contains($message, 'Imagick') || str_contains($message, 'policy'),
+                "PDF failure should name Imagick or the policy, got: {$message}"
+            );
 
             return;
         }

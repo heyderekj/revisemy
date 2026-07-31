@@ -2,12 +2,32 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Support\OutboundUrl;
 use Illuminate\Validation\ValidationException;
 
 class DocumentIngestionService
 {
     public const MAX_PAGES = 5;
+
+    public const MAX_PDF_BYTES = 20 * 1024 * 1024;
+
+    /**
+     * Whether this server can actually rasterise a PDF.
+     *
+     * The extension being loaded is not enough: Debian and Ubuntu ship an
+     * ImageMagick policy.xml that revokes rights on the PDF coder, so Imagick
+     * is present but every read fails with an opaque delegate error. Checking
+     * the format list covers both the missing extension and the locked-down
+     * policy.
+     */
+    public static function supportsPdf(): bool
+    {
+        if (! extension_loaded('imagick')) {
+            return false;
+        }
+
+        return \Imagick::queryFormats('PDF') !== [];
+    }
 
     /**
      * Render a PDF (base64 string or https URL) into one PNG per page,
@@ -17,9 +37,11 @@ class DocumentIngestionService
      */
     public function pdfToImages(string $pdf): array
     {
-        if (! extension_loaded('imagick')) {
+        if (! self::supportsPdf()) {
             throw ValidationException::withMessages([
-                'pdf' => 'PDF ingestion needs the Imagick PHP extension on this server — upload per-page screenshots instead.',
+                'pdf' => extension_loaded('imagick')
+                    ? 'This server has Imagick but its ImageMagick policy blocks the PDF coder (the Debian/Ubuntu default) — allow PDF in policy.xml, or upload per-page screenshots instead.'
+                    : 'PDF ingestion needs the Imagick PHP extension on this server — upload per-page screenshots instead.',
             ]);
         }
 
@@ -51,10 +73,30 @@ class DocumentIngestionService
 
             return $shots;
         } catch (\ImagickException $e) {
+            // A blocked PDF coder surfaces as an opaque delegate error ("Unable
+            // to ping image blob", "not authorized"). queryFormats() catches
+            // most builds up front, but not all of them report the policy the
+            // same way — so name the likely cause here too rather than passing
+            // ImageMagick's wording straight to the caller.
             throw ValidationException::withMessages([
-                'pdf' => 'Could not render that PDF: '.$e->getMessage(),
+                'pdf' => self::looksLikeBlockedCoder($e)
+                    ? 'This server\'s ImageMagick policy blocks the PDF coder (the Debian/Ubuntu default) — allow PDF in policy.xml, or upload per-page screenshots instead.'
+                    : 'Could not render that PDF: '.$e->getMessage(),
             ]);
         }
+    }
+
+    protected static function looksLikeBlockedCoder(\ImagickException $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        foreach (['not authorized', 'unable to ping', 'no decode delegate', 'nodecodedelegate'] as $needle) {
+            if (str_contains($message, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function resolvePdfBinary(string $pdf): string
@@ -62,15 +104,15 @@ class DocumentIngestionService
         $pdf = trim($pdf);
 
         if (filter_var($pdf, FILTER_VALIDATE_URL)) {
-            $response = Http::timeout(20)->get($pdf);
+            // Same guard as screenshot URLs — a try token is effectively
+            // unauthenticated, so this must not reach the private network.
+            $binary = OutboundUrl::fetch($pdf, self::MAX_PDF_BYTES);
 
-            if (! $response->successful()) {
+            if ($binary === null) {
                 throw ValidationException::withMessages([
-                    'pdf' => 'Could not download that PDF URL.',
+                    'pdf' => 'Could not download that PDF URL — it must be a public https URL under 20MB.',
                 ]);
             }
-
-            $binary = $response->body();
         } else {
             if (str_starts_with($pdf, 'data:application/pdf;base64,')) {
                 $pdf = substr($pdf, strpos($pdf, ',') + 1);
@@ -91,7 +133,7 @@ class DocumentIngestionService
             ]);
         }
 
-        if (strlen($binary) > 20 * 1024 * 1024) {
+        if (strlen($binary) > self::MAX_PDF_BYTES) {
             throw ValidationException::withMessages([
                 'pdf' => 'Keep the PDF under 20MB.',
             ]);

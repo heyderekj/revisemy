@@ -132,6 +132,43 @@ class OutboundUrlGuardTest extends TestCase
         $this->assertSame(0, Review::query()->count());
     }
 
+    public function test_pdf_urls_are_guarded_like_screenshot_urls(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake();
+
+        foreach ([
+            'http://169.254.169.254/latest/meta-data/',
+            'http://127.0.0.1/internal.pdf',
+            'http://10.0.0.5/deck.pdf',
+        ] as $url) {
+            $this->withToken($token)
+                ->postJson('/api/reviews', ['title' => 'PDF probe', 'pdf' => $url])
+                ->assertStatus(422);
+        }
+
+        Http::assertNothingSent();
+        $this->assertSame(0, Review::query()->count());
+    }
+
+    public function test_a_pdf_url_redirect_to_loopback_is_not_followed(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake([
+            'cdn.test/*' => Http::response('', 302, ['Location' => 'http://127.0.0.1/secret.pdf']),
+            '127.0.0.1/*' => Http::response('%PDF-1.4 secret', 200),
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/reviews', ['title' => 'PDF redirect', 'pdf' => 'https://cdn.test/deck.pdf'])
+            ->assertStatus(422);
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '127.0.0.1'));
+        $this->assertSame(0, Review::query()->count());
+    }
+
     public function test_guard_rejects_non_http_schemes_and_odd_ports(): void
     {
         $this->assertNotNull(OutboundUrl::reasonToReject('file:///etc/passwd'));

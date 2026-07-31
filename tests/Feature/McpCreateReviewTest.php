@@ -7,6 +7,7 @@ use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\GetReviewTool;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\DocumentIngestionService;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -28,6 +29,24 @@ class McpCreateReviewTest extends TestCase
     protected function tinyPngDataUrl(): string
     {
         return 'data:image/png;base64,'.base64_encode($this->tinyPngBinary());
+    }
+
+    /**
+     * Whether this host can actually rasterise a PDF, decided by trying it.
+     */
+    protected function canRenderPdf(string $base64Pdf): bool
+    {
+        if (! DocumentIngestionService::supportsPdf()) {
+            return false;
+        }
+
+        try {
+            app(DocumentIngestionService::class)->pdfToImages($base64Pdf);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     protected function setUpUser(): User
@@ -122,8 +141,12 @@ class McpCreateReviewTest extends TestCase
             'pdf' => $pdf,
         ]);
 
-        if (! extension_loaded('imagick')) {
-            $response->assertHasErrors(['Imagick']);
+        // Probe the real capability rather than predicting it: the extension
+        // can be loaded with the PDF coder revoked by ImageMagick policy (the
+        // Debian/Ubuntu default, and what CI runners ship), and builds differ
+        // on whether that shows up in queryFormats() or only at read time.
+        if (! $this->canRenderPdf($pdf)) {
+            $response->assertHasErrors([extension_loaded('imagick') ? 'policy' : 'Imagick']);
 
             return;
         }
