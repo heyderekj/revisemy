@@ -24,27 +24,45 @@ class MarkLifecycleService
      * Apply a batch of agent updates. Each entry is {id, status?, note?, after_image?}.
      * Marks are scoped to the workspace, so the agent can only touch its own.
      *
+     * Anything that could not be applied comes back in `skipped` rather than
+     * being dropped silently — a partial batch used to look identical to a full
+     * one, so an agent would move on believing every mark had landed.
+     *
      * @param  array<int, array{id: int|string, status?: string, note?: ?string, after_image?: ?string}>  $marks
-     * @return Collection<int, Annotation> the annotations that were updated
+     * @return array{updated: Collection<int, Annotation>, skipped: list<array{id: int, reason: string}>}
      */
-    public function applyAgentUpdates(Workspace $workspace, array $marks): Collection
+    public function applyAgentUpdates(Workspace $workspace, array $marks): array
     {
         $ids = collect($marks)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
 
         $annotations = $this->workspaceMarks($workspace, $ids)->keyBy('id');
 
         $updated = collect();
+        $skipped = [];
 
         foreach ($marks as $mark) {
-            $annotation = $annotations->get((int) ($mark['id'] ?? 0));
+            $id = (int) ($mark['id'] ?? 0);
+            $annotation = $annotations->get($id);
 
             if (! $annotation) {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'not_found',
+                    'detail' => 'No mark with that id on this try token — check work_packets.pins[].id.',
+                ];
+
                 continue;
             }
 
             $status = $mark['status'] ?? Annotation::STATUS_RESOLVED;
 
             if (! in_array($status, Annotation::agentStatuses(), true)) {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'invalid_status',
+                    'detail' => 'Agents may only set '.implode(' or ', Annotation::agentStatuses()).'; the human verifies.',
+                ];
+
                 continue;
             }
 
@@ -56,7 +74,7 @@ class MarkLifecycleService
             $updated->push($annotation);
         }
 
-        return $updated;
+        return ['updated' => $updated, 'skipped' => $skipped];
     }
 
     /**

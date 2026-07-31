@@ -63,7 +63,7 @@ class AddFindingsTool extends Tool
         return Response::text(
             'Added '.count($created)." agent finding(s) to the review for the human.\n\n".
             "Remember: these are suggestions only. Wait for the human decision via get_review.\n\n".
-            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode($payload, JSON_UNESCAPED_SLASHES)
         );
     }
 

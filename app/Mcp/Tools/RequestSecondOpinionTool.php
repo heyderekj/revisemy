@@ -54,7 +54,7 @@ class RequestSecondOpinionTool extends Tool
 
         return Response::text(
             "Queued second opinion for {$count} screenshot(s). Poll get_review until second_opinion_status is ready.\n\n".
-            json_encode($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload(), JSON_UNESCAPED_SLASHES)
         );
     }
 

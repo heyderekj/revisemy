@@ -249,10 +249,10 @@
                             <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700" @click="closeDetail()" aria-label="Close">×</button>
                         </div>
 
-                        <template x-if="activePin && activePin.focus_preview && activePin.focus_preview.bg_style">
+                        <template x-if="activePin && activePin.focus_preview">
                             <div class="w-full max-h-[min(40dvh,22rem)] overflow-hidden border-b border-zinc-100 bg-zinc-100">
                                 <div class="relative w-full bg-zinc-100 bg-no-repeat"
-                                    :style="'aspect-ratio:' + Math.max(activePin.focus_preview.ratio || 1.6, 0.01) + ';' + activePin.focus_preview.bg_style"
+                                    :style="'aspect-ratio:' + Math.max(activePin.focus_preview.ratio || 1.6, 0.01) + ';' + bgStyle(activePin)"
                                     role="img" :aria-label="'Cropped screenshot focused on mark M' + activePin.number">
                                     <template x-if="activePin.focus_preview.overlay">
                                         <div class="pointer-events-none absolute rounded-md border-2 border-rose-500 bg-rose-500/15"
@@ -284,7 +284,7 @@
                                     <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                         <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">Before</p>
                                         <div class="aspect-[4/3] max-h-28 bg-cover bg-top bg-no-repeat"
-                                            :style="activePin && activePin.focus_preview && activePin.focus_preview.bg_style ? activePin.focus_preview.bg_style : ''"></div>
+                                            :style="activePin && bgStyle(activePin)"></div>
                                     </div>
                                     <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                         <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">After</p>
@@ -399,7 +399,7 @@
                                         <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                             <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">Before</p>
                                             <div class="aspect-[4/3] max-h-24 bg-cover bg-top bg-no-repeat"
-                                                :style="pin.focus_preview && pin.focus_preview.bg_style ? pin.focus_preview.bg_style : ''"></div>
+                                                :style="bgStyle(pin)"></div>
                                         </div>
                                         <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                             <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">After</p>
@@ -452,7 +452,7 @@
                                             <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                                 <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">Before</p>
                                                 <div class="aspect-[4/3] max-h-24 bg-cover bg-top bg-no-repeat"
-                                                    :style="pin.focus_preview && pin.focus_preview.bg_style ? pin.focus_preview.bg_style : ''"></div>
+                                                    :style="bgStyle(pin)"></div>
                                             </div>
                                             <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                                 <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">After</p>
@@ -554,10 +554,10 @@
                                 </div>
                                 <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700" @click="closeDetail()" aria-label="Close">×</button>
                             </div>
-                            <template x-if="activePin.focus_preview && activePin.focus_preview.bg_style">
+                            <template x-if="activePin.focus_preview">
                                 <div class="w-full max-h-[min(40dvh,22rem)] overflow-hidden border-b border-zinc-100 bg-zinc-100">
                                     <div class="relative w-full bg-zinc-100 bg-no-repeat"
-                                        :style="'aspect-ratio:' + Math.max(activePin.focus_preview.ratio || 1.6, 0.01) + ';' + activePin.focus_preview.bg_style"
+                                        :style="'aspect-ratio:' + Math.max(activePin.focus_preview.ratio || 1.6, 0.01) + ';' + bgStyle(activePin)"
                                         role="img" :aria-label="'Cropped screenshot focused on mark M' + activePin.number">
                                         <template x-if="activePin.focus_preview.overlay">
                                             <div class="pointer-events-none absolute rounded-md border-2 border-rose-500 bg-rose-500/15"
@@ -586,7 +586,7 @@
                                         <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                             <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">Before</p>
                                             <div class="aspect-[4/3] max-h-28 bg-cover bg-top bg-no-repeat"
-                                                :style="activePin.focus_preview && activePin.focus_preview.bg_style ? activePin.focus_preview.bg_style : ''"></div>
+                                                :style="bgStyle(activePin)"></div>
                                         </div>
                                         <div class="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                                             <p class="border-b border-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">After</p>
@@ -857,7 +857,12 @@
             currentPins() {
                 if (!this.payload) return [];
                 return this.payload.screenshots.flatMap((s) =>
-                    (s.pins || []).map((p) => ({ ...p, _pass: this.payload.pass, _from_parent: false }))
+                    (s.pins || []).map((p) => ({
+                        ...p,
+                        screenshot_index: s.index,
+                        _pass: this.payload.pass,
+                        _from_parent: false,
+                    }))
                 );
             },
 
@@ -930,6 +935,33 @@
                     return '';
                 }
                 return `left:${a.x * 100}%; top:${a.y * 100}%; width:${a.w * 100}%; height:${a.h * 100}%;`;
+            },
+
+            // Signed screenshot URL for a pin — current pass by screenshot_index,
+            // else the parent pass's own shot list.
+            pinShotUrl(pin) {
+                if (! this.payload || ! pin) return '';
+                const shots = pin._from_parent
+                    ? (this.payload.previous_pass?.screenshots || [])
+                    : (this.payload.screenshots || []);
+                const i = Number(pin.screenshot_index);
+                const shot = Number.isFinite(i)
+                    ? shots.find((s) => Number(s.index) === i)
+                    : null;
+                return (shot || shots[0] || {}).url || '';
+            },
+            // Mirrors MarkFocus::backgroundStyle() — kept out of the payload so a
+            // signed URL is not repeated on every copy of every mark.
+            bgStyle(pin) {
+                const w = pin && pin.focus_preview && pin.focus_preview.window;
+                const url = this.pinShotUrl(pin);
+                if (! w || ! url) return '';
+                const sizeX = 100 / Math.max(w.w, 0.02);
+                const sizeY = 100 / Math.max(w.h, 0.02);
+                const posX = w.w < 1 ? (w.x / (1 - w.w)) * 100 : 0;
+                const posY = w.h < 1 ? (w.y / (1 - w.h)) * 100 : 0;
+                return `background-image:url(${url});background-size:${sizeX.toFixed(2)}% ${sizeY.toFixed(2)}%;`
+                    + `background-position:${posX.toFixed(2)}% ${posY.toFixed(2)}%;background-repeat:no-repeat;`;
             },
             draftRectStyle() {
                 const d = this.draft;

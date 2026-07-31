@@ -49,7 +49,7 @@ class AddScreenshotTool extends Tool
 
         return Response::text(
             "Screenshot added.\n\n".
-            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode($payload, JSON_UNESCAPED_SLASHES)
         );
     }
 

@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -219,9 +221,16 @@ class Review extends Model
             ->orderBy('sort_order');
     }
 
+    /**
+     * Marks across every source screenshot. HasManyThrough builds its own query
+     * on Screenshot, so it does not inherit the kind filter from screenshots()
+     * — it is repeated here or "after" evidence shots would leak into
+     * outstandingMarkCount() and verifyResolvedForReview().
+     */
     public function annotations(): HasManyThrough
     {
-        return $this->hasManyThrough(Annotation::class, Screenshot::class);
+        return $this->hasManyThrough(Annotation::class, Screenshot::class)
+            ->where('screenshots.kind', Screenshot::KIND_SOURCE);
     }
 
     /**
@@ -499,18 +508,25 @@ class Review extends Model
             'parent.parent',
         ]);
 
-        $screenshots = $this->screenshots->map(function (Screenshot $shot, int $index) {
-            $pins = $shot->annotations
-                ->sortBy('number')
-                ->values()
-                ->map(function (Annotation $annotation) use ($shot) {
-                    if (! $annotation->relationLoaded('screenshot')) {
-                        $annotation->setRelation('screenshot', $shot);
-                    }
+        // work_packets.pins, built as the screenshots are walked so each mark is
+        // serialized once rather than once per place it appears.
+        $allPins = [];
 
-                    return $this->markToArray($annotation);
-                })
-                ->all();
+        $screenshots = $this->screenshots->map(function (Screenshot $shot, int $index) use (&$allPins) {
+            $marks = $shot->annotations->sortBy('number')->values();
+
+            $marks->each(function (Annotation $annotation) use ($shot) {
+                if (! $annotation->relationLoaded('screenshot')) {
+                    $annotation->setRelation('screenshot', $shot);
+                }
+            });
+
+            $pins = $marks->map(fn (Annotation $annotation) => $this->markToArray($annotation, verbose: true))->all();
+
+            $allPins = array_merge($allPins, array_map(
+                fn (array $pin) => $pin + ['screenshot_index' => $index],
+                $pins,
+            ));
 
             $findings = $shot->findings
                 ->filter(fn (Finding $finding) => $finding->isOpen() && ! $finding->isGuest())
@@ -538,7 +554,6 @@ class Review extends Model
                 'meta' => $shot->meta,
                 'second_opinion_status' => $shot->second_opinion_status,
                 'pins' => $pins,
-                'annotations' => $pins,
                 'second_opinion' => $findings,
                 'second_opinion_resolved' => $resolved,
                 'guest_suggestion_count' => $guestOpenCount,
@@ -555,21 +570,25 @@ class Review extends Model
 
         $guestSuggestionCount = collect($screenshots)->sum('guest_suggestion_count');
 
-        $allPins = collect($screenshots)->flatMap(fn (array $s) => collect($s['pins'])->map(
-            fn (array $p) => $p + ['screenshot_index' => $s['index']]
-        ))->values()->all();
+        // Severity buckets are triage views of work_packets.pins, so they carry
+        // the mark minus its comment thread — the agent already has the full
+        // record above, keyed by the same id.
+        $bucket = fn (Collection $pins) => $pins
+            ->map(fn (array $pin) => Arr::except($pin, 'comments'))
+            ->values()
+            ->all();
 
         // The agent should only re-work marks it has not resolved yet. Keeps stay
         // fully listed (they are "leave this alone" reminders, not tasks).
         $outstanding = collect($allPins)->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS]);
 
-        $mustFix = $outstanding->where('severity', Annotation::SEVERITY_MUST_FIX)->values()->all();
-        $nits = $outstanding->where('severity', Annotation::SEVERITY_NIT)->values()->all();
-        $questions = $outstanding->where('severity', Annotation::SEVERITY_QUESTION)->values()->all();
-        $tweaks = $outstanding->whereIn('severity', Annotation::tweakSeverities())->values()->all();
-        $keeps = collect($allPins)->where('severity', Annotation::SEVERITY_KEEP)->values()->all();
+        $mustFix = $bucket($outstanding->where('severity', Annotation::SEVERITY_MUST_FIX));
+        $nits = $bucket($outstanding->where('severity', Annotation::SEVERITY_NIT));
+        $questions = $bucket($outstanding->where('severity', Annotation::SEVERITY_QUESTION));
+        $tweaks = $bucket($outstanding->whereIn('severity', Annotation::tweakSeverities()));
+        $keeps = $bucket(collect($allPins)->where('severity', Annotation::SEVERITY_KEEP));
 
-        $awaitingVerification = collect($allPins)->where('status', Annotation::STATUS_RESOLVED)->values()->all();
+        $awaitingVerification = $bucket(collect($allPins)->where('status', Annotation::STATUS_RESOLVED));
         $verifiedCount = collect($allPins)->where('status', Annotation::STATUS_VERIFIED)->count();
 
         return [
@@ -628,15 +647,18 @@ class Review extends Model
     /**
      * Serialize one mark (human annotation) for the agent work packet.
      *
+     * Every mark appears several times in a payload — under its screenshot, in
+     * work_packets.pins, and again in a severity bucket — so comment bodies
+     * ship on the canonical screenshots[].pins copy only. Agents read the
+     * buckets to decide what to fix and follow the id back for the thread.
+     *
      * @return array<string, mixed>
      */
-    protected function markToArray(Annotation $annotation): array
+    protected function markToArray(Annotation $annotation, bool $verbose = false): array
     {
-        $focus = MarkFocus::forMark($annotation);
-
-        $comments = $annotation->relationLoaded('comments')
-            ? $annotation->comments
-            : $annotation->comments()->get();
+        $comments = $verbose
+            ? ($annotation->relationLoaded('comments') ? $annotation->comments : $annotation->comments()->get())
+            : collect();
 
         return [
             'id' => $annotation->id,
@@ -654,7 +676,12 @@ class Review extends Model
             'status' => $annotation->status,
             'resolution_note' => $annotation->resolution_note,
             'after_screenshot_url' => $annotation->afterScreenshot?->url(),
-            'comment_count' => (int) ($annotation->comments_count ?? $comments->count()),
+            'comment_count' => (int) ($annotation->comments_count ?? $annotation->comments()->count()),
+            // Geometry only. The inline app pairs this with the screenshot url
+            // it already has rather than carrying a signed URL on every copy of
+            // every mark; server-rendered previews call MarkFocus directly.
+            'focus_preview' => Arr::except(MarkFocus::forMark($annotation), 'bg_style'),
+        ] + ($verbose ? [
             'comments' => $comments
                 ->take(-10)
                 ->values()
@@ -666,14 +693,7 @@ class Review extends Model
                     'created_at' => $comment->created_at?->toIso8601String(),
                 ])
                 ->all(),
-            'focus_preview' => [
-                'window' => $focus['window'],
-                'overlay' => $focus['overlay'],
-                'point' => $focus['point'],
-                'ratio' => $focus['ratio'],
-                'bg_style' => $focus['bg_style'],
-            ],
-        ];
+        ] : []);
     }
 
     /**
@@ -691,21 +711,29 @@ class Review extends Model
         }
 
         $marks = $parent->screenshots
-            ->flatMap(function (Screenshot $shot) {
-                return $shot->annotations->each(function (Annotation $annotation) use ($shot) {
+            ->flatMap(function (Screenshot $shot, int $index) {
+                return $shot->annotations->map(function (Annotation $annotation) use ($shot, $index) {
                     if (! $annotation->relationLoaded('screenshot')) {
                         $annotation->setRelation('screenshot', $shot);
                     }
+
+                    return [$annotation, $index];
                 });
             })
-            ->sortBy('number')
+            ->sortBy(fn (array $pair) => $pair[0]->number)
             ->values()
-            ->map(fn (Annotation $annotation) => $this->markToArray($annotation));
+            ->map(fn (array $pair) => $this->markToArray($pair[0]) + ['screenshot_index' => $pair[1]]);
 
         return [
             'id' => $parent->public_id,
             'pass' => $parent->pass,
             'review_url' => $parent->reviewUrl(),
+            // Just enough to render a parent-pass mark crop: one signed URL per
+            // shot instead of one embedded in every mark.
+            'screenshots' => $parent->screenshots->values()->map(fn (Screenshot $shot, int $index) => [
+                'index' => $index,
+                'url' => $shot->url(),
+            ])->all(),
             'marks' => $marks->all(),
             'outstanding_count' => $marks->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS])->count(),
             'resolved_count' => $marks->where('status', Annotation::STATUS_RESOLVED)->count(),

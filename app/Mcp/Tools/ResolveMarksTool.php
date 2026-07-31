@@ -54,7 +54,7 @@ class ResolveMarksTool extends Tool
         }
 
         try {
-            $updated = $this->lifecycle->applyAgentUpdates($workspace, $data['marks']);
+            ['updated' => $updated, 'skipped' => $skipped] = $this->lifecycle->applyAgentUpdates($workspace, $data['marks']);
         } catch (ValidationException $e) {
             return Response::error(collect($e->errors())->flatten()->first() ?? 'Could not apply those mark updates.');
         }
@@ -67,12 +67,21 @@ class ResolveMarksTool extends Tool
         $inProgress = $updated->where('status', Annotation::STATUS_IN_PROGRESS)->count();
 
         $payload = $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations'])?->toAgentPayload();
+        $payload['skipped_marks'] = $skipped;
+
+        // Call out a partial batch — silently updating 3 of 5 reads as success.
+        $warning = $skipped === [] ? '' : sprintf(
+            "%d mark(s) were NOT updated — fix these before moving on: %s\n\n",
+            count($skipped),
+            collect($skipped)->map(fn (array $s) => "#{$s['id']} ({$s['reason']}: {$s['detail']})")->implode('; '),
+        );
 
         return Response::text(
             "Updated {$updated->count()} mark(s): {$resolved} resolved, {$inProgress} in progress.\n\n".
+            $warning.
             'The human still has to verify resolved marks — keep polling get_review and follow next_action. '.
             "Open the next pass only once loop.outstanding_count is 0.\n\n".
-            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode($payload, JSON_UNESCAPED_SLASHES)
         );
     }
 

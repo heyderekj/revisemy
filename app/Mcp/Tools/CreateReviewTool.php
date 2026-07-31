@@ -63,7 +63,7 @@ class CreateReviewTool extends Tool
         $passLabel = $payload['pass'] > 1 ? " (pass {$payload['pass']})" : '';
         $url = $payload['review_url'];
         $share = BrandAssets::markdownShareLink($url);
-        $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
         return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".

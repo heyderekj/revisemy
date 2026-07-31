@@ -6,6 +6,7 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Mcp\Servers\ReviseMyServer;
 use App\Mcp\Tools\CancelSubscriptionTool;
 use App\Mcp\Tools\CreateCheckoutTool;
+use App\Mcp\Tools\CreatePortalTool;
 use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\GetBillingTool;
 use App\Models\Workspace;
@@ -15,6 +16,7 @@ use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Mcp\Server\Transport\FakeTransporter;
 use Tests\TestCase;
 
 class BillingCreditsTest extends TestCase
@@ -189,7 +191,7 @@ class BillingCreditsTest extends TestCase
         $this->assertSame(22, (int) $workspace->fresh()->credits_balance);
     }
 
-    public function test_create_checkout_errors_when_pricing_disabled(): void
+    public function test_checkout_tools_are_not_advertised_while_pricing_is_paused(): void
     {
         config([
             'billing.pricing_enabled' => false,
@@ -198,10 +200,64 @@ class BillingCreditsTest extends TestCase
             'billing.plans.pro.paddle_price' => 'pri_test',
         ]);
 
-        $result = app(TryTokenService::class)->create();
+        // Every registered tool's schema is loaded into the host's context for
+        // the whole session, so the ones that can only ever fail stay off.
+        $tools = $this->registeredTools();
 
-        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, [])
-            ->assertHasErrors(['pricing_disabled']);
+        $this->assertNotContains(CreateCheckoutTool::class, $tools);
+        $this->assertNotContains(CreatePortalTool::class, $tools);
+        $this->assertNotContains(CancelSubscriptionTool::class, $tools);
+
+        // get_billing stays — credits gate every create_review.
+        $this->assertContains(GetBillingTool::class, $tools);
+
+        // And the instructions say there is no checkout, so the model does not
+        // go looking for one (or invent a payment link).
+        $this->assertStringContainsString('no checkout tool', $this->serverInstructions());
+    }
+
+    public function test_checkout_tools_return_when_pricing_is_enabled(): void
+    {
+        config([
+            'billing.pricing_enabled' => true,
+            'cashier.api_key' => 'pdl_test',
+            'cashier.client_side_token' => 'test_token',
+            'billing.plans.pro.paddle_price' => 'pri_test',
+        ]);
+
+        $tools = $this->registeredTools();
+
+        $this->assertContains(CreateCheckoutTool::class, $tools);
+        $this->assertContains(CreatePortalTool::class, $tools);
+        $this->assertContains(CancelSubscriptionTool::class, $tools);
+        $this->assertStringContainsString('create_checkout', $this->serverInstructions());
+    }
+
+    public function test_the_mcp_server_reports_the_configured_product_version(): void
+    {
+        config(['revisemy.version' => '9.9.9']);
+
+        $this->assertSame('9.9.9', $this->serverProperty('version'));
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function registeredTools(): array
+    {
+        return $this->serverProperty('tools');
+    }
+
+    protected function serverInstructions(): string
+    {
+        return $this->serverProperty('instructions');
+    }
+
+    protected function serverProperty(string $name): mixed
+    {
+        $server = new ReviseMyServer(new FakeTransporter);
+
+        return (fn () => $this->{$name})->call($server);
     }
 
     public function test_create_checkout_errors_when_paddle_not_configured(): void

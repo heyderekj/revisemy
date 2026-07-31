@@ -15,6 +15,7 @@ use App\Services\ReviewService;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Mcp\Server\Contracts\Transport;
 use Tests\TestCase;
 
 class McpAppTest extends TestCase
@@ -80,7 +81,7 @@ class McpAppTest extends TestCase
 
     public function test_server_and_review_app_advertise_the_yellow_mark(): void
     {
-        $transport = \Mockery::mock(\Laravel\Mcp\Server\Contracts\Transport::class);
+        $transport = \Mockery::mock(Transport::class);
         $serverIcons = array_map(
             fn ($icon) => $icon->toArray(),
             (new ReviseMyServer($transport))->resolvedIcons(),
@@ -265,7 +266,8 @@ class McpAppTest extends TestCase
             fn ($json) => $json
                 ->has('work_packets.pins.0.focus_preview.window')
                 ->has('work_packets.pins.0.focus_preview.ratio')
-                ->has('work_packets.pins.0.focus_preview.bg_style')
+                // Geometry only — the app builds the CSS from screenshots[].url.
+                ->missing('work_packets.pins.0.focus_preview.bg_style')
                 ->where('work_packets.pins.0.comment_count', 0)
                 ->etc()
         );
@@ -285,7 +287,11 @@ class McpAppTest extends TestCase
         $this->assertSame(1.0, $pin['focus_preview']['window']['w']);
         $this->assertNotNull($pin['focus_preview']['overlay']);
         $this->assertIsFloat($pin['focus_preview']['ratio']);
-        $this->assertStringContainsString('background-image:', $pin['focus_preview']['bg_style']);
+        $this->assertArrayNotHasKey('bg_style', $pin['focus_preview']);
+
+        // The one signed URL the app needs to pair with that geometry.
+        $this->assertArrayHasKey('screenshot_index', $pin);
+        $this->assertStringContainsString('/shots/', $payload['screenshots'][0]['url']);
     }
 
     public function test_add_mark_refuses_a_closed_review(): void

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Annotation;
 use App\Models\Review;
+use App\Services\MarkLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -154,6 +155,45 @@ class MarkLifecycleTest extends TestCase
         $this->assertSame(Annotation::STATUS_OPEN, $markA->fresh()->status);
     }
 
+    public function test_a_partial_batch_names_the_marks_that_did_not_land(): void
+    {
+        [$token, $review] = $this->setUpReview();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $mark = $shot->annotations()->create(['x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Fix', 'number' => 1]);
+
+        $response = $this->withToken($token)->postJson('/api/reviews/'.$review->public_id.'/marks/resolve', [
+            'marks' => [
+                ['id' => $mark->id, 'status' => 'resolved', 'note' => 'Done.'],
+                ['id' => 999_999, 'status' => 'resolved'],   // not this workspace's
+            ],
+        ])->assertOk();
+
+        // Two in, one applied — the agent has to be told which one didn't.
+        $this->assertSame(1, $response->json('updated'));
+        $this->assertCount(1, $response->json('skipped'));
+        $this->assertSame(999_999, $response->json('skipped.0.id'));
+        $this->assertSame('not_found', $response->json('skipped.0.reason'));
+    }
+
+    public function test_a_human_only_status_is_skipped_rather_than_applied(): void
+    {
+        [, $review] = $this->setUpReview();
+        $shot = $review->screenshots()->firstOrFail();
+
+        $mark = $shot->annotations()->create(['x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Fix', 'number' => 1]);
+
+        // The REST layer rejects this in validation; this covers the service,
+        // which is the last line of defence for any other caller.
+        $result = app(MarkLifecycleService::class)->applyAgentUpdates($review->workspace, [
+            ['id' => $mark->id, 'status' => Annotation::STATUS_VERIFIED],
+        ]);
+
+        $this->assertTrue($result['updated']->isEmpty());
+        $this->assertSame('invalid_status', $result['skipped'][0]['reason']);
+        $this->assertSame(Annotation::STATUS_OPEN, $mark->fresh()->status);
+    }
+
     public function test_owner_verifies_and_reopens_via_component_and_approve_promotes_resolved(): void
     {
         [$token, $review] = $this->setUpReview();
@@ -238,7 +278,7 @@ class MarkLifecycleTest extends TestCase
         $open = $shot->annotations()->create(['x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Open', 'number' => 1]);
         $inProgress = $shot->annotations()->create(['x' => 0.4, 'y' => 0.4, 'severity' => 'must-fix', 'body' => 'Working', 'number' => 2, 'status' => Annotation::STATUS_IN_PROGRESS]);
 
-        $lifecycle = app(\App\Services\MarkLifecycleService::class);
+        $lifecycle = app(MarkLifecycleService::class);
 
         $this->assertTrue($lifecycle->resolveByOwner($open));
         $this->assertSame(Annotation::STATUS_RESOLVED, $open->fresh()->status);
@@ -254,7 +294,7 @@ class MarkLifecycleTest extends TestCase
             'x' => 0.5, 'y' => 0.5, 'severity' => 'must-fix', 'body' => 'Done', 'number' => 1, 'status' => Annotation::STATUS_VERIFIED,
         ]);
 
-        $lifecycle = app(\App\Services\MarkLifecycleService::class);
+        $lifecycle = app(MarkLifecycleService::class);
 
         $this->assertFalse($lifecycle->resolveByOwner($mark));
         $this->assertSame(Annotation::STATUS_VERIFIED, $mark->fresh()->status);

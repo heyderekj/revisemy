@@ -11,7 +11,6 @@ use App\Services\SecondOpinionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Validation\ValidationException;
 
 class ReviewController extends Controller
 {
@@ -85,11 +84,7 @@ class ReviewController extends Controller
             'image' => ['required'],
         ]);
 
-        try {
-            $reviews->addScreenshot($review, $data['image']);
-        } catch (ValidationException $e) {
-            throw $e;
-        }
+        $reviews->addScreenshot($review, $data['image']);
 
         return response()->json($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload());
     }
@@ -144,16 +139,19 @@ class ReviewController extends Controller
             'marks.*.after_image' => ['nullable', 'string'],
         ]);
 
-        $updated = $lifecycle->applyAgentUpdates($workspace, $data['marks']);
+        ['updated' => $updated, 'skipped' => $skipped] = $lifecycle->applyAgentUpdates($workspace, $data['marks']);
 
         if ($updated->isEmpty()) {
             return response()->json([
                 'message' => 'None of those mark ids belong to a review on this try token. Check work_packets.pins[].id.',
+                'skipped' => $skipped,
             ], 422);
         }
 
         return response()->json([
             'updated' => $updated->count(),
+            // Named so a partial batch cannot be mistaken for a complete one.
+            'skipped' => $skipped,
             'review' => $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations'])?->toAgentPayload(),
         ]);
     }
