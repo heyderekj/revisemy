@@ -49,15 +49,31 @@ No account required for the human reviewer.
 | `list_reviews` | recent reviews for this try token (summaries: status, pass, outstanding / awaiting-verification counts — call `get_review` for pins) |
 | `add_screenshot` | append a shot to an open review |
 | `add_findings` | agent subagent — push suggestion/a11y/polish into the review |
-| `resolve_marks` | agent progress on human marks: `in_progress` → `resolved` (+ note, optional `after_image`); never `verified` |
+| `resolve_marks` | agent progress on human marks: `in_progress` → `resolved` (+ note, optional `after_image`); never `verified`. Check `skipped` in the response — marks listed there did **not** land |
 | `request_second_opinion` | refresh checklist (+ vision if keyed) |
+| `get_billing` | plan, credits remaining, burn table, and when credits refill |
 | `add_mark` | **MCP Apps UI only** — human leaves a mark inline (agents must not call) |
 | `decide_review` | **MCP Apps UI only** — human approves or requests changes |
 | `verify_mark` | **MCP Apps UI only** — human verifies or reopens a resolved mark |
 
+Three more tools — `create_checkout`, `create_portal`, and `cancel_subscription` — are registered **only when `REVISEMY_PRICING_ENABLED=true`**. Paid Plus is paused by default, so a default install advertises 11 tools, not 14. Keeping the dead ones off the list keeps them out of every agent's context.
+
 Prompt: `design_checkup_loop` — full agent↔human checkup cycle.
 
-Screenshots accept **https URLs**, **data URLs**, or **base64**.
+Screenshots accept **https URLs**, **data URLs**, or **base64**. URLs are fetched server-side, so they must be public https on standard ports — loopback, private, and link-local addresses are rejected (including via redirect). For anything on localhost, pass a data URL instead.
+
+## Credits
+
+Every `create_review` costs credits, so this is the limit you'll hit first:
+
+| Source | Cost |
+|--------|------|
+| `images` | 1 |
+| `pdf` | 1 |
+| `html` | 3 |
+| `capture_url` | 5 |
+
+**Try** (the default, no account) grants **20 credits per month**, rolling, with no rollover — about 20 screenshot reviews or 4 full website captures. `get_billing` reports what's left and when it refills; a `create_review` that can't afford its source returns `[insufficient_credits]`. Self-hosting? Set `REVISEMY_FREE_CREDITS` and `REVISEMY_TRY_TOKEN_PER_DAY` to whatever you like.
 
 **Terminology:** UI copy uses *marks*; JSON still uses `work_packets.pins`, `related_pin`, and `apply_pins_then_next_pass`. Second opinion is suggestions only — see [docs/SECOND-OPINION.md](docs/SECOND-OPINION.md). Webhooks and MCP Apps details — see [docs/CONNECTORS.md](docs/CONNECTORS.md).
 
@@ -153,7 +169,7 @@ See [docs/DEPLOY.md](docs/DEPLOY.md) for Postgres pooler tips, Neon wake timeout
 
 ## Self-host
 
-Point MCP at your own origin. Use S3-compatible storage for screenshots in production. Rate limits and 7-day review expiry are built in.
+Point MCP at your own origin. Use S3-compatible storage for screenshots in production. Rate limits and review expiry are built in — retention is per plan (`REVISEMY_FREE_RETENTION_DAYS`, 7 by default; 90 on Plus), and guest share links expire on their own 7-day clock.
 
 For free pixel vision without a cloud API key, point `REVISEMY_OPENAI_BASE_URL` at Ollama (or another OpenAI-compatible `/v1` host) as in `.env.example`.
 

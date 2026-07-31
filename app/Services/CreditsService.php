@@ -46,14 +46,6 @@ class CreditsService
         return (int) config("billing.plans.{$plan}.credits", config('billing.plans.free.credits'));
     }
 
-    /**
-     * @deprecated Use planGrant()
-     */
-    public function monthlyGrant(Workspace $workspace): int
-    {
-        return $this->planGrant($workspace);
-    }
-
     public function planRenews(Workspace $workspace): bool
     {
         $plan = $workspace->normalizedPlan();

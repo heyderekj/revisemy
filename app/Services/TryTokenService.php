@@ -9,7 +9,10 @@ use Illuminate\Support\Str;
 
 class TryTokenService
 {
-    /** Try-plan API token lifetime fallback (days). Plus extends on upgrade. */
+    /**
+     * Fallback only — the real lifetime comes from billing.plans.{plan}.token_days
+     * (90 on Try, 365 on Plus). This applies just when that config is missing.
+     */
     public const TOKEN_DAYS = 14;
 
     /**

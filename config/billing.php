@@ -51,6 +51,11 @@ return [
     |
     | Caps new workspaces per client IP so Try packs cannot be farmed forever.
     |
+    | Both windows are checked, whichever trips first. At the defaults below
+    | they are equal, so per_day is the only one that can ever bind — per_hour
+    | only starts doing work once REVISEMY_TRY_TOKEN_PER_DAY is raised above it
+    | (e.g. 12/day with 3/hour to spread mints out).
+    |
     */
 
     'try_token' => [
