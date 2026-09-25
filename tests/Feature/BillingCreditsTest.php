@@ -344,6 +344,8 @@ class BillingCreditsTest extends TestCase
 
     public function test_checkout_page_renders_inline_paddle_mount(): void
     {
+        $this->markTestSkipped('Paid Plus is paused: billing.upgrade and the billing.pro-split component were removed in 85ec542. Re-enable when pricing returns.');
+
         config([
             'billing.pricing_enabled' => true,
             'cashier.api_key' => 'pdl_test',
@@ -399,8 +401,17 @@ class BillingCreditsTest extends TestCase
             );
     }
 
+    public function test_upgrade_page_is_hidden_while_pricing_is_paused(): void
+    {
+        config(['billing.pricing_enabled' => false]);
+
+        $this->get('/upgrade')->assertNotFound();
+    }
+
     public function test_upgrade_page_is_paddle_default_payment_link(): void
     {
+        $this->markTestSkipped('Paid Plus is paused: billing.upgrade and the billing.pro-split component were removed in 85ec542. Re-enable when pricing returns.');
+
         config([
             'cashier.client_side_token' => 'test_token',
             'cashier.sandbox' => true,
