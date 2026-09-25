@@ -139,11 +139,11 @@ class ReviewController extends Controller
             'marks.*.after_image' => ['nullable', 'string'],
         ]);
 
-        ['updated' => $updated, 'skipped' => $skipped] = $lifecycle->applyAgentUpdates($workspace, $data['marks']);
+        ['updated' => $updated, 'skipped' => $skipped] = $lifecycle->applyAgentUpdates($review, $data['marks']);
 
         if ($updated->isEmpty()) {
             return response()->json([
-                'message' => 'None of those mark ids belong to a review on this try token. Check work_packets.pins[].id.',
+                'message' => 'No marks were updated — see skipped for why each one was refused.',
                 'skipped' => $skipped,
             ], 422);
         }

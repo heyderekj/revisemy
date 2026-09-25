@@ -222,6 +222,9 @@
                         onKeyDown(e) {
                             if (e.code !== 'Space') return;
                             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
+                            // Space presses a focused button or link — only hijack it for panning
+                            // when nothing interactive has focus.
+                            if (e.target.closest?.('button, a[href], summary, [role=button], [role=tab], [role=dialog]')) return;
                             this.spaceHeld = true;
                             if (this.canPan()) e.preventDefault();
                         },
@@ -431,7 +434,7 @@
                                     @php($badgePosition = ($area['y'] ?? 0) < 0.07 ? '-left-2 -bottom-2' : (($area['x'] ?? 0) < 0.07 ? '-right-2 -top-2' : '-left-2 -top-2'))
                                     <div
                                         data-finding
-                                        class="absolute z-[5]"
+                                        class="absolute pointer-events-none z-[5]"
                                         style="left: {{ $area['x'] * 100 }}%; top: {{ $area['y'] * 100 }}%; width: {{ $area['w'] * 100 }}%; height: {{ $area['h'] * 100 }}%;"
                                         x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                     >
@@ -442,7 +445,7 @@
                                         ></div>
                                         <button
                                             type="button"
-                                            class="absolute {{ $badgePosition }} z-[6] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
+                                            class="pointer-events-auto absolute {{ $badgePosition }} z-[6] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
                                             title="{{ $finding->body }}"
                                             x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                             x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
@@ -459,7 +462,7 @@
                                     @php($badgePosition = ($area['y'] ?? 0) < 0.07 ? '-left-2 -bottom-2' : (($area['x'] ?? 0) < 0.07 ? '-right-2 -top-2' : '-left-2 -top-2'))
                                     <div
                                         data-finding
-                                        class="absolute z-[7]"
+                                        class="absolute pointer-events-none z-[7]"
                                         style="left: {{ $area['x'] * 100 }}%; top: {{ $area['y'] * 100 }}%; width: {{ $area['w'] * 100 }}%; height: {{ $area['h'] * 100 }}%;"
                                         x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                     >
@@ -470,7 +473,7 @@
                                         ></div>
                                         <button
                                             type="button"
-                                            class="absolute {{ $badgePosition }} z-[8] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
+                                            class="pointer-events-auto absolute {{ $badgePosition }} z-[8] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
                                             title="{{ $finding->body }}"
                                             x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                             x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"

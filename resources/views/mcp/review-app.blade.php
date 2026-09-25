@@ -371,6 +371,7 @@
                             <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/80"
                                 @click="closeComposer()">Cancel</button>
                         </div>
+                        <p class="mt-2 text-sm text-rose-600" x-show="error" x-text="error"></p>
                     </div>
 
                     {{-- linear mark list (current pass) --}}
@@ -647,7 +648,7 @@
                         @click="openFullReview()">Open full review</button>
                 </div>
 
-                <p class="mt-2 text-sm text-rose-600" x-show="error" x-text="error"></p>
+                <p class="mt-2 text-sm text-rose-600" x-show="error && !composer.open" x-text="error"></p>
             </div>
         </template>
     </div>
@@ -1020,7 +1021,7 @@
             async saveMark() {
                 const shot = this.activeShot();
                 if (!shot || !this.composer.body.trim()) return;
-                await this.run(() => window.mcpBridge.callTool('add_mark', {
+                const ok = await this.run(() => window.mcpBridge.callTool('add_mark', {
                     review_id: this.payload.id,
                     screenshot_id: shot.id,
                     x: this.composer.x,
@@ -1029,7 +1030,8 @@
                     severity: this.composer.severity,
                     body: this.composer.body.trim(),
                 }));
-                this.closeComposer();
+                // Keep the note on screen if the server refused it, so nothing typed is lost.
+                if (ok) this.closeComposer();
             },
 
             async verifyMark(pin, action) {
@@ -1039,10 +1041,10 @@
             },
 
             async decide(decision) {
-                await this.run(() => window.mcpBridge.callTool('decide_review', {
+                const ok = await this.run(() => window.mcpBridge.callTool('decide_review', {
                     review_id: this.payload.id, decision, note: this.decisionNote.trim() || undefined,
                 }));
-                this.decisionNote = '';
+                if (ok) this.decisionNote = '';
             },
 
             async refresh() {
@@ -1053,14 +1055,23 @@
                 if (this.payload) window.mcpBridge.openLink(this.payload.review_url);
             },
 
+            // Resolves true on success. Tool errors (Response::error) arrive as a
+            // normal result with isError set, not as a rejection — surface them.
             async run(fn) {
                 this.busy = true; this.error = '';
                 try {
                     const result = await fn();
+                    if (result && result.isError) {
+                        const text = (result.content || []).find((c) => c.type === 'text')?.text;
+                        this.error = text || 'Something went wrong. Try the full review page.';
+                        return false;
+                    }
                     const data = result && result.structuredContent;
                     if (data && data.id) this.apply(data);
+                    return true;
                 } catch (e) {
                     this.error = e.message || 'Something went wrong. Try the full review page.';
+                    return false;
                 } finally {
                     this.busy = false;
                 }

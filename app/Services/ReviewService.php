@@ -54,6 +54,12 @@ class ReviewService
 
         $pageUrl = trim((string) ($data['page_url'] ?? ''));
 
+        // A follow-up pass inherits page_url in create(), but capture_url needs
+        // it now — so "re-capture the same page" works without re-passing it.
+        if ($pageUrl === '' && ! empty($data['parent_id'])) {
+            $pageUrl = (string) $this->findForWorkspace($workspace, (string) $data['parent_id'])?->page_url;
+        }
+
         if (isset($sources['capture_url']) && ($pageUrl === '' || ! filter_var($pageUrl, FILTER_VALIDATE_URL))) {
             throw ValidationException::withMessages([
                 'page_url' => 'capture_url needs a valid page_url to render.',
@@ -85,7 +91,7 @@ class ReviewService
                 $data['title'],
                 $data['context'] ?? null,
                 $images,
-                $data['page_url'] ?? null,
+                $pageUrl !== '' ? $pageUrl : null,
                 $data['parent_id'] ?? null,
                 $type,
                 $domHtml,

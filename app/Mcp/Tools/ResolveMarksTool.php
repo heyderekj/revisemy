@@ -50,17 +50,22 @@ class ResolveMarksTool extends Tool
         }
 
         if ($review->effectiveStatus() !== Review::STATUS_CHANGES_REQUESTED) {
-            return Response::error('You can only resolve marks after the human requests changes. Current status: '.$review->effectiveStatus().'.');
+            return Response::error(match ($review->effectiveStatus()) {
+                Review::STATUS_PENDING => 'The human has not decided yet — nothing to resolve. Poll get_review and follow next_action.',
+                Review::STATUS_APPROVED => 'The human approved this review — there is nothing to resolve. Stop unless they ask for another checkup.',
+                Review::STATUS_EXPIRED => 'This review expired. Start a fresh create_review if you still need a checkup.',
+                default => 'You can only resolve marks after the human requests changes. Current status: '.$review->effectiveStatus().'.',
+            });
         }
 
         try {
-            ['updated' => $updated, 'skipped' => $skipped] = $this->lifecycle->applyAgentUpdates($workspace, $data['marks']);
+            ['updated' => $updated, 'skipped' => $skipped] = $this->lifecycle->applyAgentUpdates($review, $data['marks']);
         } catch (ValidationException $e) {
             return Response::error(collect($e->errors())->flatten()->first() ?? 'Could not apply those mark updates.');
         }
 
         if ($updated->isEmpty()) {
-            return Response::error('None of those mark ids belong to a review on this try token. Check work_packets.pins[].id.');
+            return Response::error('No marks were updated: '.self::describeSkipped($skipped));
         }
 
         $resolved = $updated->where('status', Annotation::STATUS_RESOLVED)->count();
@@ -73,16 +78,24 @@ class ResolveMarksTool extends Tool
         $warning = $skipped === [] ? '' : sprintf(
             "%d mark(s) were NOT updated — fix these before moving on: %s\n\n",
             count($skipped),
-            collect($skipped)->map(fn (array $s) => "#{$s['id']} ({$s['reason']}: {$s['detail']})")->implode('; '),
+            self::describeSkipped($skipped),
         );
 
         return Response::text(
             "Updated {$updated->count()} mark(s): {$resolved} resolved, {$inProgress} in progress.\n\n".
             $warning.
-            'The human still has to verify resolved marks — keep polling get_review and follow next_action. '.
-            "Open the next pass only once loop.outstanding_count is 0.\n\n".
+            'Follow next_action. Once loop.outstanding_count is 0, open the next pass (create_review with parent_id) — '.
+            "the human verifies your fixes there, so do not wait for verification on this pass.\n\n".
             json_encode($payload, JSON_UNESCAPED_SLASHES)
         );
+    }
+
+    /**
+     * @param  list<array{id: int, reason: string, detail: string}>  $skipped
+     */
+    protected static function describeSkipped(array $skipped): string
+    {
+        return collect($skipped)->map(fn (array $s) => "#{$s['id']} ({$s['reason']}: {$s['detail']})")->implode('; ');
     }
 
     /**

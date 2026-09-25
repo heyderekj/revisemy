@@ -244,7 +244,7 @@ class MarkLifecycleTest extends TestCase
 
         // The REST layer rejects this in validation; this covers the service,
         // which is the last line of defence for any other caller.
-        $result = app(MarkLifecycleService::class)->applyAgentUpdates($review->workspace, [
+        $result = app(MarkLifecycleService::class)->applyAgentUpdates($review, [
             ['id' => $mark->id, 'status' => Annotation::STATUS_VERIFIED],
         ]);
 

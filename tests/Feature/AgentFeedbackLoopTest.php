@@ -130,7 +130,7 @@ class AgentFeedbackLoopTest extends TestCase
             'Tighten gap',
         );
 
-        app(MarkLifecycleService::class)->applyAgentUpdates($review->workspace, [
+        app(MarkLifecycleService::class)->applyAgentUpdates($review, [
             ['id' => $open->id, 'status' => Annotation::STATUS_RESOLVED, 'note' => 'Bumped contrast'],
         ]);
 
@@ -208,7 +208,7 @@ class AgentFeedbackLoopTest extends TestCase
             'Fix padding',
         );
 
-        app(MarkLifecycleService::class)->applyAgentUpdates($review->workspace, [
+        app(MarkLifecycleService::class)->applyAgentUpdates($review, [
             ['id' => $mark->id, 'status' => Annotation::STATUS_RESOLVED, 'note' => 'Done'],
         ]);
 

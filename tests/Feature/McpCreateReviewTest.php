@@ -8,6 +8,7 @@ use App\Mcp\Tools\GetReviewTool;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\DocumentIngestionService;
+use App\Services\ReviewService;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -189,6 +190,38 @@ class McpCreateReviewTest extends TestCase
             'title' => 'No url',
             'capture_url' => true,
         ])->assertHasErrors();
+    }
+
+    public function test_follow_up_capture_inherits_the_parent_page_url(): void
+    {
+        $user = $this->setUpUser();
+
+        Http::fake([
+            'capture.test/*' => Http::response($this->tinyPngBinary()),
+        ]);
+
+        $parent = app(ReviewService::class)->create(
+            $user->workspace,
+            'Pass 1',
+            null,
+            [$this->tinyPngDataUrl()],
+            pageUrl: 'https://example.com/pricing',
+        );
+        $parent->update(['status' => Review::STATUS_CHANGES_REQUESTED, 'decision_at' => now()]);
+
+        $this->assertSame('https://example.com/pricing', $parent->fresh()->nextAction()['page_url']);
+
+        ReviseMyServer::actingAs($user)->tool(CreateReviewTool::class, [
+            'title' => 'Pass 2',
+            'capture_url' => true,
+            'parent_id' => $parent->public_id,
+        ])->assertHasNoErrors()->assertStructuredContent(
+            fn ($json) => $json
+                ->where('pass', 2)
+                ->where('page_url', 'https://example.com/pricing')
+                ->has('screenshots', 2)
+                ->etc()
+        );
     }
 
     public function test_create_review_capture_fails_cleanly_when_not_configured(): void

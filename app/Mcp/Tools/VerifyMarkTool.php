@@ -54,9 +54,15 @@ class VerifyMarkTool extends Tool
             return Response::error('No review with that id for this token.');
         }
 
+        if (! $review->allowsMarkManagement()) {
+            return Response::error('This review is '.$review->effectiveStatus().' — marks can no longer be verified or reopened here.');
+        }
+
+        // Pass 2+ shows the previous pass's marks for verification, so reach
+        // one level up the chain (same as the web review page).
         $mark = Annotation::query()
             ->whereKey($data['mark_id'])
-            ->whereHas('screenshot', fn ($q) => $q->where('review_id', $review->id))
+            ->whereHas('screenshot', fn ($q) => $q->whereIn('review_id', array_filter([$review->id, $review->parent_id])))
             ->first();
 
         if (! $mark) {

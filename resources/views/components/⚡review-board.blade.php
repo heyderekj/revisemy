@@ -159,6 +159,13 @@ new class extends Component
 
     public function moveMark(int $annotationId, string $status, MarkLifecycleService $lifecycle): void
     {
+        if (! $this->review->allowsMarkManagement()) {
+            session()->flash('board_message', 'This review is closed — marks can no longer move.');
+            $this->loadBoard();
+
+            return;
+        }
+
         $annotation = $this->ownedAnnotation($annotationId);
 
         if (! $annotation) {

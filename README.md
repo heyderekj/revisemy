@@ -45,7 +45,7 @@ No account required for the human reviewer.
 | Tool | Purpose |
 |------|---------|
 | `create_review` | title + one source — `images`, `capture_url` (renders `page_url`), `pdf`, or `html` — (+ optional `type`, `page_url`, `parent_id`, `webhook_url`) → review URL; starts second opinion |
-| `get_review` | work packets + `next_action` (`wait_for_human` / `apply_pins_then_next_pass` / `done`) |
+| `get_review` | work packets + `next_action` (`wait_for_human` / `apply_pins_then_next_pass` / `apply_decision_note` / `open_next_pass` / `done`), plus `work_packets.carried_over` for previous-pass marks the human reopened |
 | `list_reviews` | recent reviews for this try token (summaries: status, pass, outstanding / awaiting-verification counts — call `get_review` for pins) |
 | `add_screenshot` | append a shot to an open review |
 | `add_findings` | agent subagent — push suggestion/a11y/polish into the review |

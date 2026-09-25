@@ -72,6 +72,10 @@ class BillingController extends Controller
      */
     public function upgrade(): View
     {
+        // Paid Plus is paused and its page is not built yet — 404 rather than
+        // render a view that does not exist.
+        abort_unless(config('billing.pricing_enabled'), 404);
+
         return view('billing.upgrade', [
             'priceUsd' => (int) config('billing.plans.pro.price_usd', 9),
             'credits' => (int) config('billing.plans.pro.credits', 100),
