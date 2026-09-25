@@ -225,7 +225,7 @@ class Review extends Model
      * Marks across every source screenshot. HasManyThrough builds its own query
      * on Screenshot, so it does not inherit the kind filter from screenshots()
      * — it is repeated here or "after" evidence shots would leak into
-     * outstandingMarkCount() and verifyResolvedForReview().
+     * the mark counts and verifyResolvedForReview().
      */
     public function annotations(): HasManyThrough
     {
@@ -359,35 +359,35 @@ class Review extends Model
     }
 
     /**
+     * The human can verify / reopen / move marks while waiting on the first
+     * look and after requesting changes (so the agent's resolutions can be
+     * checked next pass). Approved and expired reviews are frozen.
+     */
+    public function allowsMarkManagement(): bool
+    {
+        return in_array($this->effectiveStatus(), [self::STATUS_PENDING, self::STATUS_CHANGES_REQUESTED], true);
+    }
+
+    /**
+     * Seconds an agent should wait between get_review polls while the human looks.
+     */
+    public const POLL_AFTER_SECONDS = 30;
+
+    /**
      * What the agent should do next in the design checkup loop.
      *
-     * @return array{action: string, summary: string, create_next_pass?: bool, parent_id?: string}
+     * @return array<string, mixed>
      */
     public function nextAction(): array
     {
         return match ($this->effectiveStatus()) {
             self::STATUS_PENDING => [
                 'action' => 'wait_for_human',
-                'summary' => 'Share review_url with the human. Poll get_review until they approve or request changes. Do not claim the UI is done.',
+                'summary' => 'Share review_url with the human. Poll get_review about every '.self::POLL_AFTER_SECONDS.'s until they approve or request changes (compare updated_at to skip unchanged polls). Do not claim the UI is done.',
+                'poll_after_seconds' => self::POLL_AFTER_SECONDS,
             ],
-            self::STATUS_CHANGES_REQUESTED => $this->outstandingMarkCount() > 0
-                ? [
-                    'action' => 'apply_pins_then_next_pass',
-                    'summary' => 'Apply work_packets.pins (human marks) in order: must-fix → nit. Honor keep (do not change). Resolve question with the human before inventing a fix. As you work each mark, call resolve_marks with its id — status "in_progress" while editing, "resolved" (with a short note) once fixed. Never set "verified"; that is the human\'s call. Treat second_opinion as hints. Once every mark is resolved, create_review with parent_id set to this review id, new screenshots of the fixed UI, and a fresh context for what to look at on this next pass.',
-                    'create_next_pass' => true,
-                    'parent_id' => $this->public_id,
-                    'outstanding_marks' => $this->outstandingMarkCount(),
-                ]
-                : [
-                    'action' => 'open_next_pass',
-                    'summary' => 'Every mark is resolved. Open the next pass now: create_review with parent_id set to this review id and fresh screenshots of the fixed UI so the human can verify.',
-                    'create_next_pass' => true,
-                    'parent_id' => $this->public_id,
-                ],
-            self::STATUS_APPROVED => [
-                'action' => 'done',
-                'summary' => 'Human approved this pass. Stop editing unless they ask for another checkup.',
-            ],
+            self::STATUS_CHANGES_REQUESTED => $this->changesRequestedAction(),
+            self::STATUS_APPROVED => $this->approvedAction(),
             self::STATUS_EXPIRED => [
                 'action' => 'expired',
                 'summary' => 'This review link expired. Start a fresh create_review if you still need a checkup.',
@@ -395,8 +395,140 @@ class Review extends Model
             default => [
                 'action' => 'wait_for_human',
                 'summary' => 'Poll get_review and follow the human decision.',
+                'poll_after_seconds' => self::POLL_AFTER_SECONDS,
             ],
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function changesRequestedAction(): array
+    {
+        $outstanding = $this->outstandingMarks();
+        $own = $outstanding->where('carried_over', false);
+        $carried = $outstanding->where('carried_over', true);
+        $note = trim((string) $this->decision_note);
+        $noteLine = $note !== '' ? ' The human also wrote: "'.$note.'" — apply that too.' : '';
+
+        $nextPass = array_filter([
+            'create_next_pass' => true,
+            'parent_id' => $this->public_id,
+            // capture_url passes need page_url; it is inherited, but saying so
+            // saves the agent a failed call.
+            'page_url' => $this->page_url,
+        ], fn ($value) => $value !== null);
+
+        // Changes requested with nothing marked: the note is the whole brief.
+        // Saying "every mark is resolved" here sent agents straight to a new
+        // pass with unchanged screenshots.
+        if ($outstanding->isEmpty() && ! $this->annotations()->exists()) {
+            return [
+                'action' => 'apply_decision_note',
+                'summary' => $note !== ''
+                    ? 'The human requested changes without leaving marks. Their note: "'.$note.'". Apply it, then create_review with parent_id set to this review id and fresh screenshots of the fixed UI.'
+                    : 'The human requested changes but left no marks and no note. Ask them in chat what to change before editing anything.',
+                'decision_note' => $note !== '' ? $note : null,
+            ] + $nextPass;
+        }
+
+        if ($outstanding->isEmpty()) {
+            return [
+                'action' => 'open_next_pass',
+                'summary' => 'Every mark is resolved.'.$noteLine.' Open the next pass now: create_review with parent_id set to this review id and fresh screenshots of the fixed UI so the human can verify.',
+            ] + $nextPass;
+        }
+
+        $summary = 'Apply work_packets.pins (human marks) in order: must-fix → nit. Honor keep (do not change). As you work each mark, call resolve_marks with its id — status "in_progress" while editing, "resolved" (with a short note) once fixed. Never set "verified"; that is the human\'s call. Treat second_opinion as hints.';
+
+        if ($carried->isNotEmpty()) {
+            $summary .= ' The human reopened '.$carried->count().' mark(s) from the previous pass ('.$this->markNumbers($carried).') — they are in work_packets.carried_over; fix and resolve those too.';
+        }
+
+        $unanswered = $outstanding->filter(
+            fn (array $mark) => $mark['severity'] === Annotation::SEVERITY_QUESTION && $mark['question_answer'] === null,
+        );
+
+        if ($unanswered->isNotEmpty()) {
+            $summary .= ' '.$this->markNumbers($unanswered).' '.($unanswered->count() === 1 ? 'is a question' : 'are questions').' with no answer yet: ask the human in chat to answer in the review, then get_review again — do not invent an answer.';
+        }
+
+        $summary .= $noteLine.' Once every mark is resolved, create_review with parent_id set to this review id, new screenshots of the fixed UI, and a fresh context for what to look at on this next pass.';
+
+        return array_filter([
+            'action' => 'apply_pins_then_next_pass',
+            'summary' => $summary,
+            'outstanding_marks' => $outstanding->count(),
+            'carried_over_marks' => $carried->isNotEmpty() ? $carried->count() : null,
+            'awaiting_answers' => $unanswered->isNotEmpty()
+                ? $unanswered->map(fn (array $mark) => Arr::only($mark, ['id', 'number']))->values()->all()
+                : null,
+            'decision_note' => $note !== '' ? $note : null,
+        ], fn ($value) => $value !== null) + $nextPass;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function approvedAction(): array
+    {
+        $open = $this->outstandingMarks();
+
+        if ($open->isEmpty()) {
+            return [
+                'action' => 'done',
+                'summary' => 'Human approved this pass. Stop editing unless they ask for another checkup.',
+            ];
+        }
+
+        return [
+            'action' => 'done',
+            'summary' => 'Human approved this pass with '.$open->count().' mark(s) still open ('.$this->markNumbers($open).'). Mention them to the human, but do not fix them unless asked.',
+            'open_marks' => $open->count(),
+        ];
+    }
+
+    /**
+     * Marks still needing agent work (open or in progress) on this pass, plus
+     * previous-pass marks that are still open — typically ones the human
+     * reopened while checking this pass. Plain arrays, not models: this runs
+     * for every row in list_reviews.
+     *
+     * @return Collection<int, array{id: int, number: int, severity: string, question_answer: ?string, carried_over: bool}>
+     */
+    public function outstandingMarks(): Collection
+    {
+        $reviewIds = array_values(array_filter([$this->id, $this->parent_id]));
+
+        return Annotation::query()
+            ->join('screenshots', 'screenshots.id', '=', 'annotations.screenshot_id')
+            ->whereIn('screenshots.review_id', $reviewIds)
+            ->where('screenshots.kind', Screenshot::KIND_SOURCE)
+            ->whereIn('annotations.status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS])
+            ->orderBy('screenshots.review_id')
+            ->orderBy('annotations.number')
+            ->get(['annotations.id', 'annotations.number', 'annotations.severity', 'annotations.question_answer', 'screenshots.review_id'])
+            ->map(fn (Annotation $mark) => [
+                'id' => (int) $mark->id,
+                'number' => (int) $mark->number,
+                'severity' => (string) $mark->severity,
+                'question_answer' => filled($mark->question_answer) ? (string) $mark->question_answer : null,
+                'carried_over' => (int) $mark->review_id !== (int) $this->id,
+            ])
+            ->values();
+    }
+
+    /**
+     * "M2, M5" — how the human refers to marks. Previous-pass marks are
+     * prefixed with their pass so M2 (pass 1) and M2 (pass 2) stay distinct.
+     *
+     * @param  Collection<int, array{number: int, carried_over: bool}>  $marks
+     */
+    protected function markNumbers(Collection $marks): string
+    {
+        return $marks
+            ->map(fn (array $mark) => 'M'.$mark['number'].($mark['carried_over'] ? ' (previous pass)' : ''))
+            ->implode(', ');
     }
 
     /**
@@ -591,6 +723,13 @@ class Review extends Model
         $awaitingVerification = $bucket(collect($allPins)->where('status', Annotation::STATUS_RESOLVED));
         $verifiedCount = collect($allPins)->where('status', Annotation::STATUS_VERIFIED)->count();
 
+        // Previous-pass marks that are open again (the human reopened them while
+        // checking this pass). They are work for this pass too; without this
+        // they only surfaced inside previous_pass and an approve left them open.
+        $previousPass = $this->previousPassPayload();
+        $carriedOver = $bucket(collect($previousPass['marks'] ?? [])
+            ->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS]));
+
         return [
             'id' => $this->public_id,
             'title' => $this->title,
@@ -607,6 +746,9 @@ class Review extends Model
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
+            // Changes whenever the human does anything — an unchanged value
+            // means the poll can be skipped.
+            'updated_at' => $this->lastActivityAt()?->toIso8601String(),
             'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read recent comments on each pin for context. Ask before inventing answers to unanswered question marks. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
             'taste' => TasteLenses::forType($this->type),
             'next_action' => $this->nextAction(),
@@ -622,7 +764,8 @@ class Review extends Model
                 'second_opinion_accepted_count' => collect($allResolved)->where('status', Finding::STATUS_ACCEPTED)->count(),
                 'second_opinion_dismissed_count' => collect($allResolved)->where('status', Finding::STATUS_DISMISSED)->count(),
                 'guest_suggestion_count' => $guestSuggestionCount,
-                'outstanding_count' => $outstanding->count(),
+                'outstanding_count' => $outstanding->count() + count($carriedOver),
+                'carried_over_count' => count($carriedOver),
                 'resolved_count' => count($awaitingVerification),
                 'awaiting_verification_count' => count($awaitingVerification),
                 'verified_count' => $verifiedCount,
@@ -635,13 +778,32 @@ class Review extends Model
                 'keeps' => $keeps,
                 'tweaks' => $tweaks,
                 'awaiting_verification' => $awaitingVerification,
+                'carried_over' => $carriedOver,
                 'second_opinion' => $allFindings,
                 'second_opinion_resolved' => $allResolved,
             ],
             'pass_ledger' => $this->passLedger(),
-            'previous_pass' => $this->previousPassPayload(),
+            'previous_pass' => $previousPass,
             'screenshots' => $screenshots,
         ];
+    }
+
+    /**
+     * Latest human or agent activity on this pass: the review row, its marks,
+     * comments, findings, and the parent's marks (reopened on this pass).
+     * Expects toAgentPayload()'s relations to be loaded.
+     */
+    protected function lastActivityAt(): ?Carbon
+    {
+        $marks = $this->screenshots->flatMap->annotations
+            ->merge($this->parent?->screenshots->flatMap->annotations ?? []);
+
+        return collect([$this->updated_at])
+            ->merge($marks->pluck('updated_at'))
+            ->merge($marks->flatMap->comments->pluck('created_at'))
+            ->merge($this->screenshots->flatMap->findings->pluck('updated_at'))
+            ->filter()
+            ->max();
     }
 
     /**
@@ -744,15 +906,5 @@ class Review extends Model
     public function boardUrl(): string
     {
         return url('/r/'.$this->token.'/board');
-    }
-
-    /**
-     * Marks still needing agent work (open or in progress), across all passes' screenshots.
-     */
-    public function outstandingMarkCount(): int
-    {
-        return $this->annotations()
-            ->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS])
-            ->count();
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Single source of truth for mark (annotation) status transitions.
@@ -29,20 +30,22 @@ class MarkLifecycleService
 
     /**
      * Apply a batch of agent updates. Each entry is {id, status?, note?, after_image?}.
-     * Marks are scoped to the workspace, so the agent can only touch its own.
+     * Marks must belong to this review or its parent pass (reopened parent
+     * marks are carried over for the agent to fix alongside this pass's).
      *
      * Anything that could not be applied comes back in `skipped` rather than
      * being dropped silently — a partial batch used to look identical to a full
      * one, so an agent would move on believing every mark had landed.
      *
      * @param  array<int, array{id: int|string, status?: string, note?: ?string, after_image?: ?string}>  $marks
-     * @return array{updated: Collection<int, Annotation>, skipped: list<array{id: int, reason: string}>}
+     * @return array{updated: Collection<int, Annotation>, skipped: list<array{id: int, reason: string, detail: string}>}
      */
-    public function applyAgentUpdates(Workspace $workspace, array $marks): array
+    public function applyAgentUpdates(Review $review, array $marks): array
     {
         $ids = collect($marks)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
 
-        $annotations = $this->workspaceMarks($workspace, $ids)->keyBy('id');
+        $annotations = $this->workspaceMarks($review->workspace, $ids)->keyBy('id');
+        $reviewIds = array_map(intval(...), array_filter([$review->id, $review->parent_id]));
 
         $updated = collect();
         $skipped = [];
@@ -56,7 +59,37 @@ class MarkLifecycleService
                 $skipped[] = [
                     'id' => $id,
                     'reason' => 'not_found',
-                    'detail' => 'No mark with that id on this try token — check work_packets.pins[].id.',
+                    'detail' => 'No mark with that id on this try token — use work_packets.pins[].id (the database id), not the M# number.',
+                ];
+
+                continue;
+            }
+
+            if (! in_array((int) $annotation->screenshot->review_id, $reviewIds, true)) {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'wrong_review',
+                    'detail' => 'That mark belongs to a different review — resolve it with that review\'s id.',
+                ];
+
+                continue;
+            }
+
+            if ($annotation->severity === Annotation::SEVERITY_KEEP) {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'keep',
+                    'detail' => 'Keep marks mean "do not change this" — there is nothing to resolve.',
+                ];
+
+                continue;
+            }
+
+            if ($annotation->status === Annotation::STATUS_VERIFIED) {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'already_verified',
+                    'detail' => 'The human already verified this fix — leave it alone.',
                 ];
 
                 continue;
@@ -96,7 +129,20 @@ class MarkLifecycleService
             }
 
             if ($afterImage !== null) {
-                $this->storeAfterImage($annotation, $afterImage);
+                // A bad image skips just this mark. Throwing here used to fail
+                // the whole call after earlier marks had already transitioned,
+                // so a retry stored their after shots twice.
+                try {
+                    $this->storeAfterImage($annotation, $afterImage);
+                } catch (ValidationException $e) {
+                    $skipped[] = [
+                        'id' => $id,
+                        'reason' => 'invalid_after_image',
+                        'detail' => (collect($e->errors())->flatten()->first() ?? 'Could not store that after_image.').' The mark was not updated — resend it with a valid image or without after_image.',
+                    ];
+
+                    continue;
+                }
             }
 
             $this->transition($annotation, $status, $mark['note'] ?? null);
@@ -328,6 +374,7 @@ class MarkLifecycleService
         return Annotation::query()
             ->whereKey($ids)
             ->whereHas('screenshot.review', fn ($q) => $q->where('workspace_id', $workspace->id))
+            ->with('screenshot')
             ->get();
     }
 }

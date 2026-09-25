@@ -338,8 +338,7 @@ new class extends Component
      */
     public function canManageMarks(): bool
     {
-        return $this->isOwner()
-            && in_array($this->review->effectiveStatus(), [Review::STATUS_PENDING, Review::STATUS_CHANGES_REQUESTED], true);
+        return $this->isOwner() && $this->review->allowsMarkManagement();
     }
 
     public function verifyMark(int $annotationId, MarkLifecycleService $lifecycle): void
