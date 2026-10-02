@@ -173,7 +173,7 @@ new class extends Component
     class="space-y-5"
 >
     {{-- One list. --}}
-    <div class="grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Your assistant">
+    <div class="grid grid-cols-2 gap-2 lg:grid-cols-4" role="tablist" aria-label="Your assistant">
         @foreach ($hosts as $id => $host)
             <button
                 type="button"

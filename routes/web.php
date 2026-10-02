@@ -14,6 +14,19 @@ Route::get('/', function () {
     return view('home');
 });
 
+/*
+ * Pages folded into others, kept as permanent redirects so old links and
+ * search results land on the same content.
+ */
+foreach (['chatgpt' => 'chatgpt', 'claude' => 'claude', 'copilot' => 'vscode', 'cursor' => 'cursor', 'grok' => 'grok'] as $from => $host) {
+    Route::permanentRedirect("/for/{$from}", "/connectors#{$host}");
+}
+foreach (['designers', 'product', 'engineers', 'founders'] as $audience) {
+    Route::permanentRedirect("/for/{$audience}", "/for#{$audience}");
+}
+Route::permanentRedirect('/mcp-apps', '/connectors#mcp-apps');
+Route::permanentRedirect('/webhooks', '/connectors#webhooks');
+
 Route::get('/for', [UseCaseController::class, 'index']);
 Route::get('/for/{slug}', [UseCaseController::class, 'show'])
     ->where('slug', '[a-z]+');
@@ -26,10 +39,6 @@ Route::get('/board', [GuideController::class, 'show'])
     ->defaults('slug', 'board');
 Route::get('/guest-links', [GuideController::class, 'show'])
     ->defaults('slug', 'guest-links');
-Route::get('/webhooks', [GuideController::class, 'show'])
-    ->defaults('slug', 'webhooks');
-Route::get('/mcp-apps', [GuideController::class, 'show'])
-    ->defaults('slug', 'mcp-apps');
 Route::get('/changelog', [GuideController::class, 'show'])
     ->defaults('slug', 'changelog');
 

@@ -33,37 +33,28 @@ class UseCasePageTest extends TestCase
 
     public function test_for_hub_lists_review_types_and_audiences(): void
     {
-        $response = $this->get('/for');
+        $response = $this->get('/for')
+            ->assertOk()
+            ->assertSee('Anything visual, anyone in the loop', false);
 
-        $response->assertOk()
-            ->assertSee('Review types for agents and humans', false);
-
-        foreach (config('use-cases.pages', []) as $page) {
+        foreach (config('use-cases.pages', []) + config('use-cases.audiences', []) + config('use-cases.audience_notes', []) as $page) {
             $response->assertSee($page['label'], false);
         }
 
-        foreach (config('use-cases.audiences', []) as $page) {
-            $response->assertSee($page['label'], false);
+        foreach (array_keys(config('use-cases.audience_notes', [])) as $slug) {
+            $response->assertSee('id="'.$slug.'"', false);
         }
-
-        foreach (config('hosts.pages', []) as $page) {
-            $response->assertSee($page['label'], false);
-        }
-
-        $response->assertSee('Agents', false);
     }
 
-    public function test_host_pages_return_success(): void
+    public function test_folded_pages_redirect_to_where_their_content_lives(): void
     {
-        foreach (config('hosts.pages', []) as $slug => $page) {
-            $this->get("/for/{$slug}")
-                ->assertOk()
-                ->assertSee($page['headline'], false)
-                ->assertSee($page['title'], false)
-                ->assertSee($page['label'], false)
-                ->assertSee('Connectors', false)
-                ->assertDontSee('How to get pixels in', false);
-        }
+        $this->get('/for/claude')->assertRedirect('/connectors#claude')->assertStatus(301);
+        $this->get('/for/copilot')->assertRedirect('/connectors#vscode');
+        $this->get('/for/grok')->assertRedirect('/connectors#grok');
+        $this->get('/for/designers')->assertRedirect('/for#designers')->assertStatus(301);
+        $this->get('/for/founders')->assertRedirect('/for#founders');
+        $this->get('/mcp-apps')->assertRedirect('/connectors#mcp-apps')->assertStatus(301);
+        $this->get('/webhooks')->assertRedirect('/connectors#webhooks')->assertStatus(301);
     }
 
     public function test_unknown_use_case_slug_returns_not_found(): void
@@ -81,8 +72,6 @@ class UseCasePageTest extends TestCase
             ->assertSee('/second-opinion', false)
             ->assertSee('/board', false)
             ->assertSee('/guest-links', false)
-            ->assertSee('/webhooks', false)
-            ->assertSee('/mcp-apps', false)
             ->assertSee('/changelog', false)
             ->assertSee('/privacy', false)
             ->assertSee('/terms', false)
@@ -96,9 +85,6 @@ class UseCasePageTest extends TestCase
             $response->assertSee("/for/{$slug}", false);
         }
 
-        foreach (array_keys(config('hosts.pages', [])) as $slug) {
-            $response->assertSee("/for/{$slug}", false);
-        }
     }
 
     public function test_llms_txt_includes_discovery_pages(): void
@@ -111,8 +97,6 @@ class UseCasePageTest extends TestCase
             ->assertSee('/second-opinion', false)
             ->assertSee('/board', false)
             ->assertSee('/guest-links', false)
-            ->assertSee('/webhooks', false)
-            ->assertSee('/mcp-apps', false)
             ->assertSee('/changelog', false)
             ->assertSee('/privacy', false)
             ->assertSee('/terms', false)
@@ -129,9 +113,5 @@ class UseCasePageTest extends TestCase
                 ->assertSee($page['label'], false);
         }
 
-        foreach (config('hosts.pages', []) as $slug => $page) {
-            $response->assertSee("/for/{$slug}", false)
-                ->assertSee($page['label'], false);
-        }
     }
 }

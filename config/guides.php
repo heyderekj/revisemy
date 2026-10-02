@@ -9,89 +9,63 @@ return [
             'path' => '/connectors',
             'label' => 'Connectors',
             'icon' => 'puzzle-piece',
-            'title' => 'Connect ReviseMy to your agent — ChatGPT, Claude, Copilot, Cursor, Grok',
-            'description' => 'Plug ReviseMy into ChatGPT, Claude, Copilot, Cursor, or Grok over Laravel MCP. Get a try token, paste the config, and run a human-in-the-loop design checkup.',
+            'title' => 'Connect ReviseMy to Claude, ChatGPT, Cursor, VS Code, Grok, Muse or Codex',
+            'description' => 'Add ReviseMy to the assistant you already use. Claude and ChatGPT connect by pasting one address and clicking Connect; Cursor and VS Code in one click; Grok, Muse and Codex with a free try token.',
             'keywords' => [
                 'MCP connectors',
-                'Cursor MCP',
-                'Claude MCP',
+                'Claude custom connector',
                 'ChatGPT connector',
-                'Copilot MCP',
-                'Grok connectors',
+                'Cursor MCP',
+                'VS Code MCP',
+                'Grok MCP',
+                'Muse connector',
                 'design review MCP',
             ],
-            'headline' => 'Connect ReviseMy to the agent you already use',
-            'subheadline' => 'One MCP endpoint and a Bearer try token. Paste the config into ChatGPT, Claude, Copilot, Cursor, or Grok — then run a design checkup without leaving your workflow.',
-            'features_heading' => 'What you get once connected',
-            'problem' => 'Agent setup docs often live on GitHub while the product lives on a marketing homepage. You need a crawlable place that explains which hosts support inline review, which share a link, and how to plug in without guessing.',
-            'loop' => 'Get a free try token on the homepage, copy the host-specific MCP config, then ask your agent to call `create_review`. On MCP Apps hosts the review opens inline; on CLI and link hosts you open the `review_url`. Your agent polls `get_review` and follows `next_action` until you approve.',
+            'headline' => 'Connect the assistant you already use',
+            'subheadline' => 'One address for every assistant. Most connect by pasting it and clicking Connect — no account, no token to copy.',
+            'problem' => 'Every assistant adds a connector a little differently, and setup docs drift from what the app actually asks for.',
+            'loop' => 'Pick your assistant below and follow its two or three steps. The page shows when it’s connected, then you ask for a design checkup.',
             'loop_steps' => [
-                [
-                    'text' => 'Get a free try token on the homepage and copy the host-specific MCP config.',
-                ],
-                [
-                    'command' => 'create_review',
-                    'text' => 'opens inline on MCP Apps hosts, or shares a',
-                    'after' => [
-                        ['type' => 'text', 'value' => ' '],
-                        ['type' => 'command', 'value' => 'review_url'],
-                        ['type' => 'text', 'value' => ' on CLI and link hosts.'],
-                    ],
-                ],
-                [
-                    'command' => 'get_review',
-                    'text' => 'polls until you decide;',
-                    'after' => [
-                        ['type' => 'text', 'value' => ' '],
-                        ['type' => 'command', 'value' => 'next_action'],
-                        ['type' => 'text', 'value' => ' tells the agent what to do next.'],
-                    ],
-                ],
+                ['text' => 'Pick your assistant and follow its steps: paste and Connect, one click, or a try token.'],
+                ['text' => 'This page shows the moment your assistant makes its first call.'],
+                ['command' => 'create_review', 'text' => 'starts a checkup. You mark it, approve or ask for changes, and your agent keeps going.'],
             ],
             // Rendered by <livewire:connect-hub>, from config/hosts.php `connect`.
             'hosts' => true,
-            'features' => [
+            // Folded in from /mcp-apps and /webhooks (both redirect here).
+            'sections' => [
                 [
-                    'icon' => 'cursor-arrow-rays',
-                    'title' => 'MCP Apps vs link hosts',
-                    'body' => 'Claude Desktop, claude.ai, and Copilot can render the review inline. Cursor, Claude Code, and Grok use the review_url tab — same marks, board, and next_action. Deep dive: /mcp-apps.',
+                    'id' => 'mcp-apps',
+                    'heading' => 'Reviews right in the chat',
+                    'body' => 'In Claude and VS Code, the review opens inside the conversation, so you mark and decide without leaving it. Everywhere else your agent shares the review link. Same loop either way; comments, guest links and the full board live on the link.',
+                    'items' => [
+                        'Approving, asking for changes and verifying are yours: those controls exist only for you in the inline view.',
+                        'Your agent reads what to do next from get_review, wherever you decided.',
+                    ],
                 ],
                 [
-                    'icon' => 'link',
-                    'title' => 'One try token, any host',
-                    'body' => 'Homepage try tokens mint a Sanctum Bearer for /mcp/revisemy and the REST API. Host packaging is install UX on top of the same Cloud-hosted endpoint. Thin landings: /for/chatgpt through /for/grok.',
-                ],
-                [
-                    'icon' => 'arrow-path',
-                    'title' => 'Webhooks for CI/CD',
-                    'body' => 'Pass webhook_url to create_review. ReviseMy POSTs a signed review.decided event when you approve or request changes — gate pipelines instead of polling. Deep dive: /webhooks.',
-                ],
-                [
-                    'icon' => 'code-bracket',
-                    'title' => 'REST when MCP is not an option',
-                    'body' => 'Custom GPT Actions and scripts can use POST /api/reviews with the same Bearer token. Tool names and payloads stay host-agnostic.',
+                    'id' => 'webhooks',
+                    'heading' => 'Webhooks for CI',
+                    'body' => 'Pass an HTTPS webhook_url to create_review and ReviseMy posts a signed review.decided event when you approve or ask for changes, so a pipeline can wait on you without polling.',
+                    'items' => [
+                        'Verify X-ReviseMy-Signature: an HMAC-SHA256 of the raw body, keyed with the review’s owner token.',
+                        'Branch on review.status, and read review.next_action for what comes next.',
+                        'Later passes inherit the webhook. Addresses inside private networks are refused, redirects aren’t followed, and five failed deliveries in a row pause it.',
+                    ],
                 ],
             ],
             'faq' => [
                 [
                     'q' => 'Do I need a ReviseMy account?',
-                    'a' => 'No. Grab a free try token on the homepage, paste the MCP config, and go. Reviewers only need the secret /r/{token} link.',
+                    'a' => 'No. Connect makes a try workspace that’s yours, and the people you ask for a review only need its link.',
                 ],
                 [
-                    'q' => 'Where do I get the config JSON?',
-                    'a' => 'On the homepage Try with your agent section. Generate a try token, pick your host tab, and copy the ready-made MCP URL, Bearer token, or JSON.',
+                    'q' => 'My assistant isn’t listed.',
+                    'a' => 'Any MCP client can use the address. It signs in the same way, or takes a try token as a Bearer header.',
                 ],
                 [
-                    'q' => 'Can any MCP client connect?',
-                    'a' => 'Yes. Any client that speaks HTTP MCP can use /mcp/revisemy with Authorization: Bearer {try_token}. Host-specific tabs are shortcuts, not a closed list.',
-                ],
-                [
-                    'q' => 'Inline review vs review_url?',
-                    'a' => 'MCP Apps hosts open the review in chat; CLI and link hosts share review_url. Same loop — see /mcp-apps.',
-                ],
-                [
-                    'q' => 'How do decision webhooks work?',
-                    'a' => 'Pass webhook_url on create_review. You get a signed review.decided POST when the human decides. Details on /webhooks.',
+                    'q' => 'Can my agent approve for me?',
+                    'a' => 'No. It creates reviews and reports its fixes. Approving, asking for changes and verifying stay with you.',
                 ],
             ],
         ],
@@ -360,180 +334,6 @@ return [
                 [
                     'q' => 'Is the owner review link different?',
                     'a' => 'Yes. Anyone with the owner token can mark and decide — treat it like a password. Use a guest link when you want eyes without that power.',
-                ],
-            ],
-        ],
-
-        'webhooks' => [
-            'slug' => 'webhooks',
-            'path' => '/webhooks',
-            'label' => 'Webhooks',
-            'icon' => 'bolt',
-            'title' => 'Decision webhooks — gate CI on review.decided',
-            'description' => 'Pass webhook_url to create_review and ReviseMy POSTs when the human approves or requests changes. HMAC-signed review.decided events so pipelines can gate without polling get_review.',
-            'keywords' => [
-                'design review webhook',
-                'review.decided',
-                'CI design approval',
-                'MCP webhook',
-                'HMAC webhook',
-                'human in the loop CI',
-            ],
-            'headline' => 'Gate the pipeline when a human decides',
-            'subheadline' => 'Polling get_review works. For CI/CD and event-driven agents, pass an HTTPS webhook_url on create_review — ReviseMy POSTs a signed review.decided payload when you approve or request changes.',
-            'features_heading' => 'What gets delivered',
-            'checklist_heading' => 'Integration checklist',
-            'problem' => 'Agents that only poll burn cycles waiting on humans. Pipelines need a clear signal that the review was approved or sent back — without trusting an unsigned HTTP POST.',
-            'loop' => 'Pass webhook_url when calling create_review (MCP or REST). When you decide, a queued job POSTs { event: review.decided, review: … } with HMAC headers. Follow-up passes inherit the parent webhook. Verify the signature with the owner review token before acting.',
-            'loop_steps' => [
-                [
-                    'command' => 'create_review',
-                    'text' => 'with an HTTPS',
-                    'after' => [
-                        ['type' => 'text', 'value' => ' '],
-                        ['type' => 'command', 'value' => 'webhook_url'],
-                        ['type' => 'text', 'value' => ' (and your usual source).'],
-                    ],
-                ],
-                [
-                    'text' => 'You approve or request changes on the review (or inline MCP App).',
-                ],
-                [
-                    'text' => 'Your endpoint receives review.decided — check status and next_action, verify X-ReviseMy-Signature, then continue or stop the pipeline.',
-                ],
-            ],
-            'features' => [
-                [
-                    'icon' => 'bolt',
-                    'title' => 'Event: review.decided',
-                    'body' => 'Payload includes decided_at and the same agent-shaped review object get_review returns — status, next_action, work packets.',
-                ],
-                [
-                    'icon' => 'check',
-                    'title' => 'HMAC with the review token',
-                    'body' => 'Headers: X-ReviseMy-Event, X-ReviseMy-Review, X-ReviseMy-Signature: sha256=<hmac>. Key = owner token from review_url. Verify before trusting.',
-                ],
-                [
-                    'icon' => 'arrow-path',
-                    'title' => 'Queued retries',
-                    'body' => 'Delivery is queued (10s timeout, 3 attempts with backoff). Failures are logged and never block the human decision.',
-                ],
-                [
-                    'icon' => 'link',
-                    'title' => 'Inherits on parent_id passes',
-                    'body' => 'Follow-up create_review calls with parent_id keep the parent webhook so multi-pass loops stay wired.',
-                ],
-            ],
-            'checklist' => [
-                'HTTPS webhook_url on create_review (http only in local/testing)',
-                'Verify HMAC-SHA256 of the raw body with the owner review token',
-                'Branch on review.status: approved vs changes_requested',
-                'Read review.next_action for what the agent should do next',
-                'Prefer webhooks for CI gates; poll get_review when you need mid-loop progress',
-            ],
-            'faq' => [
-                [
-                    'q' => 'Do I still need to poll get_review?',
-                    'a' => 'For mid-loop work (wait_for_human, applying marks) polling or MCP Apps still help. Use the webhook when you care about the decision moment — especially CI approve/block.',
-                ],
-                [
-                    'q' => 'What if delivery fails?',
-                    'a' => 'ReviseMy retries a few times with backoff, then logs the failure. The human decision already succeeded — your endpoint should be idempotent.',
-                ],
-                [
-                    'q' => 'Where is the deep setup?',
-                    'a' => 'See /connectors for host setup and docs/CONNECTORS.md for the full webhook contract.',
-                ],
-            ],
-        ],
-
-        'mcp-apps' => [
-            'slug' => 'mcp-apps',
-            'path' => '/mcp-apps',
-            'label' => 'MCP Apps',
-            'icon' => 'puzzle-piece',
-            'title' => 'MCP Apps — inline design review in chat',
-            'description' => 'On Claude Desktop, claude.ai, and Copilot, ReviseMy renders the review inline via MCP Apps. Cursor, Claude Code, and Grok share a review_url instead. Same loop either way.',
-            'keywords' => [
-                'MCP Apps',
-                'inline design review',
-                'Claude Desktop MCP',
-                'Copilot MCP Apps',
-                'review_url',
-                'human in the loop MCP',
-            ],
-            'headline' => 'Mark and decide without leaving the chat',
-            'subheadline' => 'Hosts that support MCP Apps render the review inline after create_review / get_review. CLI and link hosts still share review_url. The checkup loop is the same — only the surface changes.',
-            'supported_agents_heading' => "Where it's available",
-            'supported_agents_intro' => 'Hosts that can open the review inline in chat via MCP Apps.',
-            'supported_agents' => [
-                [
-                    'id' => 'claude',
-                    'label' => 'Claude Desktop',
-                ],
-                [
-                    'id' => 'copilot',
-                    'label' => 'Copilot',
-                ],
-            ],
-            'features_heading' => 'Inline vs link',
-            'checklist_heading' => 'What stays on the full review URL',
-            'problem' => 'Copying a review link out of chat breaks flow. Some hosts can host an interactive UI in a sandboxed iframe; others are CLI-only. Agents need one protocol that works for both.',
-            'loop' => 'create_review and get_review declare a ui://revisemy/review-app resource. MCP Apps hosts open it inline so you can mark, verify, and decide in chat. Cursor, Claude Code, and Grok share the review_url. Full owner workspace (comments, guest share, drag columns) stays on review_url / board_url.',
-            'loop_steps' => [
-                [
-                    'command' => 'create_review',
-                    'text' => 'returns a review; MCP Apps hosts open the inline UI.',
-                ],
-                [
-                    'text' => 'You mark regions and approve or request changes in chat — or on the review_url if the host is link-only.',
-                ],
-                [
-                    'command' => 'get_review',
-                    'text' => 'gives the agent next_action; human-only app tools never get called by agents.',
-                ],
-            ],
-            'features' => [
-                [
-                    'icon' => 'puzzle-piece',
-                    'title' => 'Inline on MCP Apps hosts',
-                    'body' => 'Claude Desktop, claude.ai, Copilot, and similar hosts render screenshot + board views in a sandboxed iframe.',
-                ],
-                [
-                    'icon' => 'link',
-                    'title' => 'review_url on CLI / link hosts',
-                    'body' => 'Cursor, Claude Code, Grok, and others share the secret link. Same marks, same next_action — open the URL in a browser.',
-                ],
-                [
-                    'icon' => 'users',
-                    'title' => 'Human-only app tools',
-                    'body' => 'add_mark, decide_review, and verify_mark power the inline UI (Visibility::App). Agents never call them — they poll get_review.',
-                ],
-                [
-                    'icon' => 'queue-list',
-                    'title' => 'Full workspace still on the web',
-                    'body' => 'Comment threads, guest link management, drag-and-drop columns, second-opinion triage, and title edit stay on review_url / board_url.',
-                ],
-            ],
-            'checklist' => [
-                'Inline: Claude Desktop / claude.ai / Copilot (when MCP Apps is enabled)',
-                'Link: Cursor, Claude Code, Grok — open review_url',
-                'Agents follow next_action; they do not call add_mark or decide_review',
-                'Use /connectors#{host} for paste-ready setup',
-                'Parity: MCP app chrome ships with the same review loop as the web board',
-            ],
-            'faq' => [
-                [
-                    'q' => 'Does inline replace the review URL?',
-                    'a' => 'No. Inline covers the human mark / decide loop in chat. Owner tools like guest share and rich comments still live on the full review and board URLs.',
-                ],
-                [
-                    'q' => 'Can my agent call decide_review?',
-                    'a' => 'No. Those tools are human-only for the MCP App. Agents use get_review and next_action.',
-                ],
-                [
-                    'q' => 'Where do I set up each host?',
-                    'a' => 'Start at /connectors, or jump to a host landing under /for/chatgpt, /for/claude, /for/copilot, /for/cursor, or /for/grok.',
                 ],
             ],
         ],
