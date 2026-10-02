@@ -32,6 +32,12 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Billing is off and unconfigured unless a test turns it on, whatever a local .env says. -->
+        <env name="REVISEMY_PRICING_ENABLED" value="false"/>
+        <env name="POLAR_ACCESS_TOKEN" value=""/>
+        <env name="POLAR_WEBHOOK_SECRET" value=""/>
+        <env name="POLAR_PRODUCT_PLUS" value=""/>
+        <env name="POLAR_PRODUCT_CREDITS_50" value=""/>
         <env name="REVISEMY_TRY_TOKEN_PER_HOUR" value="1000"/>
         <env name="REVISEMY_TRY_TOKEN_PER_DAY" value="1000"/>
     </php>

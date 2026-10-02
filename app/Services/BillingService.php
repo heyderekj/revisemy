@@ -273,7 +273,12 @@ class BillingService
         $workspace = $this->workspaceFromPayload($data);
 
         if (! $workspace) {
-            Log::info('Polar webhook ignored: no matching workspace', ['type' => $type, 'id' => $data['id'] ?? null]);
+            // A paid order we can't tie to a workspace is a customer who paid and got nothing.
+            Log::log(
+                $type === 'order.paid' ? 'warning' : 'info',
+                'Polar webhook ignored: no matching workspace',
+                ['type' => $type, 'id' => $data['id'] ?? null],
+            );
 
             return;
         }

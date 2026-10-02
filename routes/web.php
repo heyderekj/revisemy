@@ -51,7 +51,11 @@ Route::post('/billing/manage/{workspace}/portal', [BillingController::class, 'po
 Route::post('/billing/manage/{workspace}/cancel', [BillingController::class, 'cancelSubscription'])
     ->middleware('signed')
     ->name('billing.cancel-subscription');
-Route::post('/polar/webhook', PolarWebhookController::class)->name('polar.webhook');
+// Server to server, authenticated by its signature: no session, cookies or CSRF.
+// (Left in the web group, every delivery would also write a sessions row.)
+Route::post('/polar/webhook', PolarWebhookController::class)
+    ->withoutMiddleware('web')
+    ->name('polar.webhook');
 
 Route::get('/alternatives', [AlternativeController::class, 'index']);
 Route::get('/alternatives/{slug}', [AlternativeController::class, 'show'])

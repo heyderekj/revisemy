@@ -7,6 +7,8 @@ use App\Services\BillingService;
 use App\Services\CreditsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -15,7 +17,7 @@ class BillingController extends Controller
     /**
      * Signed link from create_checkout → a fresh Polar checkout session.
      */
-    public function checkout(Request $request, string $workspace, BillingService $billing): View|RedirectResponse
+    public function checkout(Request $request, string $workspace, BillingService $billing): View|RedirectResponse|Response
     {
         $model = Workspace::query()->where('public_id', $workspace)->firstOrFail();
         $product = (string) $request->query('product', BillingService::PRODUCT_PLUS);
@@ -30,7 +32,15 @@ class BillingController extends Controller
         try {
             $url = $billing->startCheckout($model, $product);
         } catch (RuntimeException $e) {
-            abort(503, $e->getMessage());
+            // The person gets a plain "not right now"; the reason ([pricing_disabled],
+            // Polar's own rejection, …) goes to the log for whoever runs the server.
+            Log::warning('Checkout unavailable', [
+                'workspace' => $model->public_id,
+                'product' => $product,
+                'reason' => $e->getMessage(),
+            ]);
+
+            return response()->view('billing.unavailable', [], 503);
         }
 
         return redirect()->away($url);
