@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RecordAssistantCall;
 use App\Mcp\Servers\ReviseMyServer;
 use Laravel\Mcp\Facades\Mcp;
 
@@ -9,7 +10,7 @@ use Laravel\Mcp\Facades\Mcp;
  * Claude Desktop and ChatGPT add a custom connector from just a URL.
  */
 Mcp::web('/mcp/revisemy', ReviseMyServer::class)
-    ->middleware(['auth:sanctum,api', 'throttle:120,1']);
+    ->middleware(['auth:sanctum,api', 'throttle:120,1', RecordAssistantCall::class]);
 
 /*
  * The discovery documents an MCP client reads to find out where to sign in,

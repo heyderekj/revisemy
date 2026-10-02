@@ -4,12 +4,14 @@
     @php($returnsTo = parse_url((string) $request->redirect_uri, PHP_URL_HOST) ?: (string) $request->redirect_uri)
     <div class="rm-desk flex min-h-svh flex-col">
         <main class="rm-shell items-center justify-center px-6 py-16">
-            <div class="w-full max-w-sm">
+            <div class="w-full max-w-lg">
                 <x-revisemy-logo size="lg" />
                 <h1 class="mt-6 text-2xl font-semibold text-foreground">Connect {{ $client->name }}</h1>
                 <p class="mt-2 text-sm leading-relaxed text-pretty text-muted-foreground">
-                    {{ $client->name }} will be able to create reviews and read your marks in the try workspace this browser is connected to.
+                    It works in the try workspace this browser is already connected to.
                 </p>
+
+                <x-connect-scope :name="$client->name" class="mt-6" />
 
                 <div class="mt-8 flex flex-col gap-3">
                     <form method="POST" action="{{ route('passport.authorizations.approve') }}">
@@ -17,7 +19,7 @@
                         <input type="hidden" name="state" value="{{ $request->state }}">
                         <input type="hidden" name="client_id" value="{{ $client->getKey() }}">
                         <input type="hidden" name="auth_token" value="{{ $authToken }}">
-                        <button type="submit" class="btn-lit inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-medium">Connect</button>
+                        <button type="submit" class="btn-lit inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-medium">Connect {{ $client->name }}</button>
                     </form>
                     <form method="POST" action="{{ route('passport.authorizations.deny') }}">
                         @csrf

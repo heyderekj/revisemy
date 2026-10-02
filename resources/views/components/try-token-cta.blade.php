@@ -1,7 +1,7 @@
 @props([
-    'href' => '/#setup',
+    'href' => '/connect',
     'fathomEvent' => 'Try token',
-    'label' => 'Try with your agent',
+    'label' => 'Connect your agent',
 ])
 
 <flux:button

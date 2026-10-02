@@ -29,6 +29,7 @@ class Workspace extends Model
         return [
             'credits_balance' => 'integer',
             'credits_period_start' => 'datetime',
+            'assistant_seen_at' => 'datetime',
         ];
     }
 

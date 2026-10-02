@@ -39,7 +39,7 @@ class TryTokenController extends Controller
             'mcp_url' => $result['mcp_url'],
             'workspace_id' => $result['workspace']->public_id,
             'cursor_config' => $result['cursor_config'],
-            'claude_desktop_config' => $result['claude_desktop_config'],
+            'connect_url' => $result['connect_url'],
             'copilot_config' => $result['copilot_config'],
             'claude_code_command' => $result['claude_code_command'],
             'chatgpt_hint' => $result['chatgpt_hint'],

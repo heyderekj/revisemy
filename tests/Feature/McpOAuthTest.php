@@ -168,7 +168,7 @@ class McpOAuthTest extends TestCase
 
     public function test_connect_without_a_pending_sign_in_explains_itself(): void
     {
-        $this->get('/connect')->assertOk()->assertSee('Connect from your assistant');
+        $this->get('/connect')->assertOk()->assertSee('Connect your assistant')->assertSee('Connect Muse');
         $this->post('/connect')->assertRedirect('/connect');
         $this->assertSame(0, User::count());
     }

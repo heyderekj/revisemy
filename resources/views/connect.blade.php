@@ -1,22 +1,24 @@
 <x-layouts.app title="Connect your assistant — ReviseMy" robots="noindex, nofollow">
     <div class="rm-desk flex min-h-svh flex-col">
-        <main class="rm-shell items-center justify-center px-6 py-16">
-            <div class="w-full max-w-sm">
-                <x-revisemy-logo size="lg" />
-
-                @if ($client)
+        <main class="rm-shell overflow-y-auto px-5 py-10 sm:px-8 sm:py-16">
+            @if ($client)
+                {{-- An assistant is signing in: one screen saying what it will see, then Connect. --}}
+                <div class="mx-auto w-full max-w-lg">
+                    <x-revisemy-logo size="lg" />
                     <h1 class="mt-6 text-2xl font-semibold text-foreground">Connect {{ $client->name }}</h1>
                     <p class="mt-2 text-sm leading-relaxed text-pretty text-muted-foreground">
-                        {{ $client->name }} will be able to create reviews and read your marks. No account — Connect makes a try workspace that’s yours.
+                        No account. Connect makes a try workspace that’s yours, and {{ $client->name }} works in it.
                     </p>
 
-                    <form method="POST" action="{{ route('connect') }}" class="mt-8 space-y-6" x-data="{ existing: {{ $errors->has('token') ? 'true' : 'false' }} }">
+                    <x-connect-scope :name="$client->name" class="mt-6" />
+
+                    <form method="POST" action="{{ route('connect') }}" class="mt-6 space-y-4" x-data="{ existing: {{ $errors->has('token') ? 'true' : 'false' }} }">
                         @csrf
 
-                        <div class="rounded-2xl bg-card p-4">
-                            <button type="button" class="flex w-full items-center justify-between text-left text-sm font-medium text-foreground" x-on:click="existing = ! existing" x-bind:aria-expanded="existing.toString()">
+                        <div>
+                            <button type="button" class="inline-flex items-center gap-1 text-sm font-medium text-zinc-600 hover:text-foreground" x-on:click="existing = ! existing" x-bind:aria-expanded="existing.toString()">
                                 Use a try token you already have
-                                <flux:icon.chevron-down variant="micro" class="size-4 text-zinc-400 transition" x-bind:class="existing && 'rotate-180'" />
+                                <flux:icon.chevron-down variant="micro" class="size-4 transition" x-bind:class="existing && 'rotate-180'" />
                             </button>
                             <div x-show="existing" x-cloak class="mt-3 space-y-2">
                                 <input
@@ -24,32 +26,33 @@
                                     name="token"
                                     autocomplete="off"
                                     placeholder="Paste your try token"
-                                    class="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-zinc-400 focus:border-zinc-400"
+                                    class="w-full rounded-xl bg-well px-3 py-2.5 font-mono text-sm text-foreground outline-none ring-1 ring-transparent placeholder:text-zinc-400 focus:ring-zinc-400"
                                 >
-                                <p class="text-xs text-muted-foreground">Your reviews from that token show up here too.</p>
+                                <p class="text-xs text-muted-foreground">{{ $client->name }} then sees the reviews from that token too.</p>
                             </div>
                             @error('token')
                                 <p class="mt-2 text-sm text-problem-ink">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <div class="space-y-3">
-                            <button type="submit" class="btn-lit inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-medium">Connect</button>
-                            @if ($returnsTo)
-                                <p class="text-center text-xs text-muted-foreground">Returns you to <span class="font-medium text-zinc-700">{{ $returnsTo }}</span></p>
-                            @endif
-                        </div>
+                        <button type="submit" class="btn-lit inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-medium">Connect {{ $client->name }}</button>
+                        @if ($returnsTo)
+                            <p class="text-center text-xs text-muted-foreground">Returns you to <span class="font-medium text-zinc-700">{{ $returnsTo }}</span></p>
+                        @endif
                     </form>
-                @else
-                    <h1 class="mt-6 text-2xl font-semibold text-foreground">Connect from your assistant</h1>
-                    <p class="mt-2 text-sm leading-relaxed text-pretty text-muted-foreground">
-                        Add <span class="font-mono text-zinc-700">{{ url('/mcp/revisemy') }}</span> as a custom connector in Claude or ChatGPT. It sends you back here to connect.
+                </div>
+            @else
+                {{-- Nothing signing in: the one list of ways to connect. --}}
+                <div class="mx-auto w-full max-w-3xl">
+                    <a href="/" aria-label="ReviseMy home"><x-revisemy-logo variant="wordmark" size="md" /></a>
+                    <h1 class="mt-8 text-3xl font-semibold text-foreground">Connect your assistant</h1>
+                    <p class="mt-2 max-w-xl text-[15px] leading-relaxed text-pretty text-muted-foreground">
+                        Pick yours. Most connect by pasting one address and clicking Connect — no account, no token to copy.
                     </p>
-                    <p class="mt-8 text-sm text-zinc-600">Cursor or VS Code? Install it here and sign in the same way:</p>
-                    <x-install-links class="mt-3" />
-                    <a href="/#setup" class="mt-6 inline-flex text-sm font-medium text-zinc-600 underline decoration-zinc-300 underline-offset-2 hover:text-foreground">See every way to connect</a>
-                @endif
-            </div>
+
+                    <div class="mt-8"><livewire:connect-hub /></div>
+                </div>
+            @endif
         </main>
     </div>
 </x-layouts.app>
