@@ -20,7 +20,7 @@
                 <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
                     No charge. Return to your agent — you can call
                     <code class="bg-zinc-100 px-1.5 py-0.5 text-sm text-zinc-800">create_checkout</code>
-                    again whenever you’re ready to upgrade.
+                    again whenever you’re ready.
                 </p>
                 <a
                     href="/"

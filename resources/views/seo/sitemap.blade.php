@@ -48,6 +48,13 @@
         <changefreq>yearly</changefreq>
         <priority>0.3</priority>
     </url>
+    @if (config('billing.pricing_enabled'))
+    <url>
+        <loc>{{ rtrim(config('app.url'), '/') }}/upgrade</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    @endif
     <url>
         <loc>{{ rtrim(config('app.url'), '/') }}/alternatives</loc>
         <changefreq>monthly</changefreq>

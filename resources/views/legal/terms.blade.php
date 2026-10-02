@@ -38,7 +38,7 @@
                 <section>
                     <h2 class="text-lg font-semibold tracking-tight text-zinc-900">Try tokens, credits, and reviews</h2>
                     <p class="mt-3">
-                            Homepage try tokens create a Try workspace so agents can call MCP and REST. Try includes a monthly credit pack (no rollover) while paid pricing is paused. When Plus is offered, it adds a larger monthly grant via Paddle Checkout. Creating a review spends credits by source (images/PDF, email HTML, or URL capture). Rate limits, retention, and expiry may apply (including guest-link and review lifetimes described in product docs). Unused monthly credits do not roll over. Paddle is the merchant of record for paid plans when enabled.
+                            Homepage try tokens create a Try workspace so agents can call MCP and REST. Try includes a monthly credit pack (no rollover). Plus, when offered, is a monthly subscription with a larger monthly grant; one-time credit packs add credits that do not expire while the workspace exists and are spent after monthly credits. Creating a review spends credits by source (images/PDF, email HTML, or URL capture). Rate limits, retention, and expiry may apply (including guest-link and review lifetimes described in product docs). Unused monthly credits do not roll over. Polar (polar.sh) is the merchant of record for paid plans and credit packs and handles payment, tax, receipts, and refunds.
                     </p>
                 </section>
 
