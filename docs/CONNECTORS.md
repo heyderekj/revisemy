@@ -6,13 +6,14 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 | Host | How |
 |------|-----|
-| **ChatGPT** | Custom connector with just the URL → **Connect** (OAuth, makes a try workspace), or REST `/api/reviews` with a try token |
-| **Claude Code** | `claude mcp add --transport http …` — agent shares `review_url` (no inline UI) |
-| **Claude.ai / Claude Desktop** | Settings → Connectors → Add custom connector with the URL → **Connect** — inline review via MCP Apps. A try token still works via `mcp-remote` + Edit Config |
-| **Copilot** | Paste `servers` JSON into MCP settings (homepage tab) — inline review via MCP Apps |
-| **Cursor** | Paste `mcpServers` JSON into Settings → MCP — agent shares `review_url` (no inline UI) |
-| **Grok** | Custom MCP connector at [grok.com/connectors](https://grok.com/connectors) — URL + Bearer; agent shares `review_url` |
-| **Any MCP client** | HTTP MCP at `/mcp/revisemy` |
+| **Claude (web, desktop, phone)** | Customize → Connectors → Add custom connector with the URL → **Connect** (OAuth, makes a try workspace) — inline review via MCP Apps |
+| **ChatGPT** | Settings → Connectors → custom connector with the URL → **Connect** (OAuth only; the app takes no key) |
+| **Cursor / VS Code** | One-click deep links (`App\Support\InstallLinks`), then sign in — VS Code renders the review inline |
+| **Claude Code** | `claude mcp add --transport http revisemy <url>`, then `/mcp` to sign in — agent shares `review_url` |
+| **Grok** | Grok CLI: `grok mcp add … --header "Authorization: Bearer ${REVISEMY_TOKEN}"` with a try token (the grok.com connector form isn't documented to take a header) |
+| **Muse** | Ask Muse to build a custom connector with the URL and a try token (its connector sign-in is still rough) |
+| **Codex** | `[mcp_servers.revisemy]` in `~/.codex/config.toml` with `bearer_token_env_var` |
+| **Any MCP client** | HTTP MCP at `/mcp/revisemy`: OAuth, or a Bearer try token |
 | **REST-only agents** | `/api/reviews` with Sanctum Bearer token |
 
 ## Inline review (MCP Apps)
@@ -83,4 +84,4 @@ For **taste while implementing** (animation easing, press feedback, depth), pair
 
 ## Design rule
 
-Tool names and JSON payloads stay **host-agnostic**. Every connector is: base URL + auth.
+Tool names and JSON payloads stay **host-agnostic**. Every connector is: base URL + auth. The one list of hosts and their steps lives in `config/hosts.php` (`connect`), rendered by the connect hub on `/connect`, the homepage and `/connectors`.

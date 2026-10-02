@@ -105,7 +105,7 @@ return [
                 ],
                 [
                     'command' => 'get_review',
-                    'text' => 'returns pins first;',
+                    'text' => 'returns your marks first;',
                     'after' => [
                         ['type' => 'text', 'value' => ' '],
                         ['type' => 'command', 'value' => 'second_opinion'],
@@ -127,7 +127,7 @@ return [
                 [
                     'icon' => 'cursor-arrow-rays',
                     'title' => 'Human marks stay authoritative',
-                    'body' => 'Solid rose marks are yours. Second opinion never auto-flips status. Overlaps enrich under related_pin — they do not invent a conflicting must-fix.',
+                    'body' => 'Solid yellow marks are yours. Second opinion never auto-flips status. Overlaps enrich under related_pin — they do not invent a conflicting must-fix.',
                 ],
                 [
                     'icon' => 'users',

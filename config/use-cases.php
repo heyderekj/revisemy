@@ -107,7 +107,7 @@ return [
                 ],
                 [
                     'q' => 'Do reviewers need an account?',
-                    'a' => 'No. Open the secret `/r/{token}` link from your agent. Get a try token on the homepage to connect MCP.',
+                    'a' => 'No. Open the secret `/r/{token}` link from your agent. Connecting the agent takes one click on /connect.',
                 ],
             ],
         ],
@@ -184,7 +184,7 @@ return [
                 [
                     'icon' => 'arrow-path',
                     'title' => 'Multi-pass until approved',
-                    'body' => 'Request changes to spawn the next pass with `parent_id`. Agents read structured pins and never claim the site is done while status is pending.',
+                    'body' => 'Request changes to spawn the next pass with `parent_id`. Agents read your marks as structured work and never claim the site is done while status is pending.',
                 ],
             ],
             'checklist' => [

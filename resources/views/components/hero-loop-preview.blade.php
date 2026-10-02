@@ -57,7 +57,7 @@
                     <div class="grid grid-cols-[minmax(0,1fr)_9.5rem] gap-0 border-b border-zinc-200">
                         <div class="relative aspect-[4/3] bg-zinc-100 sm:aspect-[16/11]">
                             <x-hero-wireframe class="inset-3" />
-                            <span class="rm-hero-loop-mark absolute left-[30%] top-[56%] z-[2] flex h-5 min-w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-rose-500 px-0.5 text-[9px] font-semibold text-accent-contrast ring-2 ring-white">M1</span>
+                            <span class="rm-hero-loop-mark absolute left-[30%] top-[56%] z-[2] flex h-5 min-w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-key px-0.5 text-[9px] font-semibold text-accent-contrast ring-2 ring-white">M1</span>
                             <span class="rm-hero-loop-mark rm-hero-loop-mark-delay absolute left-[72%] top-[48%] z-[2] flex h-5 min-w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center border border-dashed border-sky-500 bg-white px-0.5 text-[9px] font-semibold text-sky-700 ring-2 ring-white">S1</span>
                             <div class="pointer-events-none absolute left-[72%] top-[62%] h-8 w-14 -translate-x-1/2 -translate-y-1/2 border border-dashed border-sky-400/70 bg-sky-400/10"></div>
                         </div>
@@ -65,9 +65,9 @@
                         <div class="flex flex-col border-l border-zinc-200 bg-zinc-50/50 p-2">
                             <p class="mb-1.5 text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-400">My marks</p>
                             <div class="flex items-start gap-1.5 bg-white p-1.5 ring-1 ring-zinc-200">
-                                <span class="mt-0.5 flex h-4 min-w-4 shrink-0 items-center justify-center bg-rose-500 text-[8px] font-semibold text-accent-contrast">M1</span>
+                                <span class="mt-0.5 flex h-4 min-w-4 shrink-0 items-center justify-center bg-key text-[8px] font-semibold text-accent-contrast">M1</span>
                                 <div class="min-w-0">
-                                    <p class="text-[9px] font-semibold uppercase tracking-wide text-rose-600">Must fix</p>
+                                    <p class="text-[9px] font-semibold uppercase tracking-wide text-zinc-900">Must fix</p>
                                     <p class="mt-0.5 text-[10px] leading-snug text-zinc-600">Tighten hero hierarchy</p>
                                 </div>
                             </div>
@@ -81,7 +81,7 @@
 
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-zinc-50/90 px-2.5 py-2 text-[10px] text-zinc-500">
                         <span class="inline-flex items-center gap-1.5">
-                            <span class="size-2 bg-rose-500"></span>
+                            <span class="size-2 bg-key"></span>
                             Your marks
                         </span>
                         <span class="inline-flex items-center gap-1.5">

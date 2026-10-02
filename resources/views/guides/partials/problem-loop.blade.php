@@ -20,7 +20,7 @@
                             </span>
                             <p class="min-w-0 text-[15px] leading-relaxed text-zinc-600">
                                 @if (! empty($step['command']))
-                                    <code class="font-mono text-[13px] text-rose-600">{{ $step['command'] }}</code>{{ ! empty($step['text']) ? ' ' : '' }}
+                                    <code class="font-mono text-[13px] text-zinc-900">{{ $step['command'] }}</code>{{ ! empty($step['text']) ? ' ' : '' }}
                                 @endif
                                 @if (! empty($step['text']))
                                     {{ $step['text'] }}
@@ -28,7 +28,7 @@
                                 @if (! empty($step['after']))
                                     @foreach ($step['after'] as $token)
                                         @if (($token['type'] ?? '') === 'command')
-                                            <code class="font-mono text-[13px] text-rose-600">{{ $token['value'] }}</code>
+                                            <code class="font-mono text-[13px] text-zinc-900">{{ $token['value'] }}</code>
                                         @else
                                             {{ $token['value'] }}
                                         @endif
@@ -46,12 +46,12 @@
 
             @if (! empty($page['review_type']) && ! empty($page['inputs']))
                 <p class="mt-4 text-sm text-zinc-500">
-                    Review type: <code class="font-mono text-[13px] text-rose-600">{{ $page['review_type'] }}</code>
+                    Review type: <code class="font-mono text-[13px] text-zinc-900">{{ $page['review_type'] }}</code>
                     · Exactly one ingest source per review
                 </p>
             @elseif (! empty($page['review_type']))
                 <p class="mt-4 text-sm text-zinc-500">
-                    Review type: <code class="font-mono text-[13px] text-rose-600">{{ $page['review_type'] }}</code>
+                    Review type: <code class="font-mono text-[13px] text-zinc-900">{{ $page['review_type'] }}</code>
                 </p>
             @endif
         </div>

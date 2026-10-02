@@ -41,7 +41,7 @@ Repo: https://github.com/heyderekj/revisemy
 7. Optional: `NIGHTWATCH_ENABLED=true` and `NIGHTWATCH_TOKEN` for error tracking (requests are sampled at 10%).
 8. Check the install: `cloud command:run "php artisan revisemy:check"` lists each thing as ready or not, with the one thing to do, and exits 1 while anything is missing.
 9. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
-10. Visit the `*.laravel.cloud` homepage → **Get a try token** → paste MCP config into any project.
+10. Open `/connect` on the `*.laravel.cloud` URL, connect an assistant, and check the page shows its first call.
 11. Contest reply: post that `https://….laravel.cloud` URL.
 
 ## “Still waking up” / 30s deploy timeout

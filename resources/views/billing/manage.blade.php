@@ -26,7 +26,7 @@
                     <p class="mt-4 text-sm text-emerald-700">{{ session('status') }}</p>
                 @endif
                 @if (session('error'))
-                    <p class="mt-4 text-sm text-rose-700">{{ session('error') }}</p>
+                    <p class="mt-4 text-sm text-problem-ink">{{ session('error') }}</p>
                 @endif
 
                 @if ($subscribed)
@@ -57,7 +57,7 @@
 
                 <a
                     href="/"
-                    class="mt-10 inline-flex text-sm font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                    class="mt-10 inline-flex text-sm link"
                 >
                     Back to homepage
                 </a>

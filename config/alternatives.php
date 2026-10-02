@@ -182,7 +182,7 @@ return [
             'headline' => 'Best Pastel alternative when an agent is in the loop',
             'subheadline' => 'Pastel makes share-a-link annotation feel instant for clients. ReviseMy keeps that link simplicity for reviewers — and adds the MCP ship loop Pastel was never built to own.',
             'why_look' => [
-                'Comments need to become structured pins for an agent, not only export to a PM tool.',
+                'Comments need to become structured work for an agent, not only export to a PM tool.',
                 'You review agent UI, slides, or email HTML as often as live marketing sites.',
                 'You want authoritative owner marks vs guest suggestions vs optional AI hints.',
                 'Multi-pass agent work needs before/after evidence and human verification.',
@@ -322,7 +322,7 @@ return [
             'headline' => 'Best MarkUp.io alternative when an agent owns the fix',
             'subheadline' => 'MarkUp.io makes contextual feedback easy across websites, PDFs, images, and video. ReviseMy is for when that feedback must become next_action for a coding agent — with a board that separates resolved from verified.',
             'why_look' => [
-                'Comments need to become structured pins for an agent, not only a collaborative review canvas.',
+                'Comments need to become structured work for an agent, not only a collaborative review canvas.',
                 'You review agent-built UI, email HTML, or slides as often as marketing sites and decks.',
                 'You want authoritative owner marks vs guest suggestions vs optional AI hints.',
                 'Multi-pass agent work needs before/after evidence and a human-only verification gate.',
@@ -539,7 +539,7 @@ return [
             'why_look' => [
                 'Chat critiques vanish; agents re-invent the brief every pass.',
                 'You need human must-fix / keep intent that overrides model confidence.',
-                'Overlapping AI findings should enrich under a pin — not invent conflicting must-fixes.',
+                'Overlapping AI findings should enrich a mark — not invent conflicting must-fixes.',
                 'You want Refresh second opinion without flipping approve / request-changes.',
             ],
             'what_to_look_for' => [

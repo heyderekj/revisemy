@@ -11,7 +11,7 @@
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                         <h3 class="text-sm font-semibold text-zinc-900">{{ $input['label'] }}</h3>
-                        <code class="font-mono text-[12px] text-rose-600">{{ $input['key'] }}</code>
+                        <code class="font-mono text-[12px] text-zinc-900">{{ $input['key'] }}</code>
                         @if (! empty($input['primary']))
                             <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
                                 Recommended

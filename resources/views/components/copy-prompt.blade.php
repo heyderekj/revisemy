@@ -30,7 +30,7 @@
             </p>
             <button
                 type="button"
-                class="shrink-0 text-sm text-rose-600 hover:text-rose-500"
+                class="shrink-0 text-sm text-zinc-900 underline-offset-2 hover:underline"
                 x-data
                 x-on:click="navigator.clipboard.writeText($refs.{{ $ref }}.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
             >Copy</button>

@@ -38,9 +38,9 @@ Talk like a designer explaining their review habit to another designer. Plain, w
 
 ## Where copy lives
 
-- Host setup and connect steps: `config/hosts.php`, `App\Services\TryTokenService::setupPrompts()`.
+- Connect steps for every assistant: `config/hosts.php` (`connect`), rendered by `resources/views/components/⚡connect-hub.blade.php`; the consent screen's lists are `components/connect-scope.blade.php`.
 - Mark labels, statuses and board column copy: `App\Models\Annotation` (`severityLabels()`, `statusLabels()`, `boardColumnMeta()`).
-- Marketing: `resources/views/components/⚡home.blade.php`, `config/use-cases.php`, `config/guides.php`, `config/alternatives.php`, `config/changelog.php`.
+- Marketing: `resources/views/components/⚡home.blade.php`, `config/use-cases.php`, `config/guides.php`, `config/alternatives.php`, `config/changelog.php`. Every public page is listed once in `App\Support\MarketingPages`.
 - Review and board: `resources/views/review/partials/*`, `resources/views/components/⚡review-board.blade.php`.
 - MCP tool descriptions and `next_action` summaries: `app/Mcp/Tools/*`, `App\Services\ReviewService`.
 

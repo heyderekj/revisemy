@@ -16,7 +16,7 @@
                         variant="ghost"
                         size="sm"
                         href="{{ route('billing.cancel') }}"
-                        class="!border !border-zinc-200 !bg-white hover:!border-zinc-300 hover:!bg-zinc-50"
+                        class="btn-quiet"
                     >
                         Nevermind, finish my try
                     </flux:button>
