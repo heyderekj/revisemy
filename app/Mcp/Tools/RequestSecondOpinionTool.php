@@ -12,9 +12,15 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
 #[Name('request_second_opinion')]
 #[Description('Re-queue the Cloud second-opinion job (free checklist + optional OpenAI vision) for a review. Findings are suggestions only and never change review status.')]
+#[IsDestructive(false)]
+#[IsIdempotent]
+#[IsOpenWorld]
 class RequestSecondOpinionTool extends Tool
 {
     use ResolvesWorkspace;

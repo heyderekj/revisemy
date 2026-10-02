@@ -369,7 +369,7 @@
         --radius-3xl: 2.4rem;
     }
 
-    [class*='rounded']:not([class*='rounded-full'], [class*='rounded-none']) {
+    [class*='rounded']:not([class*='rounded-full'], [class*='rounded-none'], [data-flux-button]) {
         corner-shape: squircle;
     }
 }

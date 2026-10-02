@@ -35,19 +35,21 @@ Route::get('/changelog', [GuideController::class, 'show'])
 Route::get('/privacy', [LegalController::class, 'privacy']);
 Route::get('/terms', [LegalController::class, 'terms']);
 
-Route::get('/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');
-Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
-Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
-Route::get('/billing/portal-return', [BillingController::class, 'portalReturn'])->name('billing.portal-return');
-Route::get('/billing/checkout/{workspace}', [BillingController::class, 'checkout'])
-    ->middleware('signed')
-    ->name('billing.checkout');
-Route::get('/billing/manage/{workspace}', [BillingController::class, 'manage'])
-    ->middleware('signed')
-    ->name('billing.manage');
-Route::post('/billing/manage/{workspace}/cancel', [BillingController::class, 'cancelSubscription'])
-    ->middleware('signed')
-    ->name('billing.cancel-subscription');
+Route::middleware('noindex')->group(function () {
+    Route::get('/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');
+    Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
+    Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+    Route::get('/billing/portal-return', [BillingController::class, 'portalReturn'])->name('billing.portal-return');
+    Route::get('/billing/checkout/{workspace}', [BillingController::class, 'checkout'])
+        ->middleware('signed')
+        ->name('billing.checkout');
+    Route::get('/billing/manage/{workspace}', [BillingController::class, 'manage'])
+        ->middleware('signed')
+        ->name('billing.manage');
+    Route::post('/billing/manage/{workspace}/cancel', [BillingController::class, 'cancelSubscription'])
+        ->middleware('signed')
+        ->name('billing.cancel-subscription');
+});
 
 Route::get('/alternatives', [AlternativeController::class, 'index']);
 Route::get('/alternatives/{slug}', [AlternativeController::class, 'show'])
@@ -59,20 +61,20 @@ Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 
 Route::get('/reviews', function () {
     return view('recent-reviews');
-})->name('reviews.index');
+})->middleware('noindex')->name('reviews.index');
 
 Route::get('/r/{token}', function (string $token) {
     return view('review', ['token' => $token]);
-})->name('reviews.show');
+})->middleware('noindex')->name('reviews.show');
 
 Route::get('/r/{token}/board', function (string $token) {
     return view('review-board', ['token' => $token]);
-})->name('reviews.board');
+})->middleware('noindex')->name('reviews.board');
 
 Route::get('/shots/{screenshot}', [ScreenshotController::class, 'show'])
-    ->middleware('signed')
+    ->middleware(['signed', 'noindex'])
     ->name('screenshots.show');
 
 Route::get('/shots/{screenshot}/thumb', [ScreenshotController::class, 'thumb'])
-    ->middleware('signed')
+    ->middleware(['signed', 'noindex'])
     ->name('screenshots.thumb');

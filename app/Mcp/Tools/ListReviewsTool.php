@@ -10,11 +10,13 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('list_reviews')]
 #[Description('List recent design reviews for this try token only. Returns pass #, status, next_action, and outstanding / awaiting-verification counts — not full work packets. Call get_review for pins.')]
 #[IsReadOnly]
+#[IsOpenWorld(false)]
 class ListReviewsTool extends Tool
 {
     use ResolvesWorkspace;
@@ -47,5 +49,21 @@ class ListReviewsTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [];
+    }
+
+    /**
+     * @return array<string, JsonSchema>
+     */
+    public function outputSchema(JsonSchema $schema): array
+    {
+        return [
+            'reviews' => $schema->array()->items($schema->object([
+                'id' => $schema->string()->required(),
+                'title' => $schema->string()->required(),
+                'status' => $schema->string()->required(),
+                'review_url' => $schema->string()->required(),
+            ]))->required(),
+            'count' => $schema->integer()->required(),
+        ];
     }
 }

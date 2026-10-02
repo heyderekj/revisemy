@@ -11,9 +11,13 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
 #[Name('add_screenshot')]
 #[Description('Append another screenshot to an open design review that is still waiting on feedback.')]
+#[IsDestructive(false)]
+#[IsOpenWorld]
 class AddScreenshotTool extends Tool
 {
     use ResolvesWorkspace;

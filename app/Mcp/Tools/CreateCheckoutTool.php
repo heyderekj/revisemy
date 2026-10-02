@@ -12,10 +12,14 @@ use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 use RuntimeException;
 
 #[Name('create_checkout')]
 #[Description('Start Paddle Checkout for Plus when paid pricing is enabled. Often returns [pricing_disabled] — in that case do not ask the human to pay; tell them credits renew monthly and call get_billing. When checkout is available: immediately paste share_markdown / checkout_url into chat (never only say “finish payment in the browser”).')]
+#[IsDestructive(false)]
+#[IsOpenWorld]
 class CreateCheckoutTool extends Tool
 {
     use ResolvesWorkspace;
