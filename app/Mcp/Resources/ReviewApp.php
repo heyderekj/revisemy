@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Attributes\Uri;
 use Laravel\Mcp\Server\Ui\AppMeta;
 use Laravel\Mcp\Server\Ui\Csp;
-use Laravel\Mcp\Server\Ui\Enums\Library;
+use Illuminate\Support\Facades\Vite;
 
 /**
  * The inline review UI rendered by MCP Apps hosts (Claude web/desktop, etc.)
@@ -30,19 +30,54 @@ class ReviewApp extends AppResource
     public function appMeta(): AppMeta
     {
         return AppMeta::make()
-            ->csp(Csp::make()->resourceDomains([
-                ...$this->resourceDomains(),
-                // Instrument Sans, same face the review page loads via Bunny.
-                'https://fonts.bunny.net',
-            ]))
-            ->libraries(Library::Tailwind, Library::Alpine);
+            ->csp(Csp::make()->resourceDomains($this->resourceDomains()));
     }
 
     public function handle(): Response
     {
         return Response::view('mcp.review-app', [
-            'libraryScripts' => $this->libraryScripts(),
+            'styles' => $this->fontFaces().$this->built('resources/css/mcp-app.css'),
+            // A literal `</script` inside the bundle would end the inline tag early.
+            'script' => str_ireplace('</script', '<\\/script', $this->built('resources/js/mcp-app.js')),
         ]);
+    }
+
+    /**
+     * The compiled stylesheet and the bundled Alpine, inlined.
+     *
+     * Same tokens as the site (resources/css/tokens.css), so the inline
+     * review can't drift from the web one, and nothing loads from a CDN a
+     * host's CSP might refuse. A missing build reads as empty rather than
+     * failing the resource: the review still arrives, unstyled.
+     */
+    protected function built(string $entry): string
+    {
+        return (string) rescue(fn () => Vite::content($entry), '', report: false);
+    }
+
+    /**
+     * Figtree at the two weights the review uses, as data URIs: `/fonts/...`
+     * doesn't resolve inside the sandbox. If a host refuses `data:` fonts the
+     * system face takes over, which is harmless.
+     */
+    protected function fontFaces(): string
+    {
+        return once(function () {
+            $css = '';
+
+            foreach ([400, 600] as $weight) {
+                $path = public_path("fonts/figtree-latin-{$weight}.woff2");
+
+                if (! is_file($path)) {
+                    continue;
+                }
+
+                $data = base64_encode((string) file_get_contents($path));
+                $css .= "@font-face{font-family:'Figtree';font-style:normal;font-weight:{$weight};font-display:swap;src:url(data:font/woff2;base64,{$data}) format('woff2');}";
+            }
+
+            return $css;
+        });
     }
 
     /**

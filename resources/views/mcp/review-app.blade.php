@@ -10,70 +10,13 @@
      accept/dismiss, zoom/pan, editable title. When comment_count > 0, link out via
      review_url / board_url.
 
-     Tailwind + Alpine from CSP-allowlisted CDNs; bridge is inline. App-only tools:
-     add_mark / decide_review / verify_mark. --}}
-{!! $libraryScripts !!}
-<link rel="stylesheet" href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600">
-<script>
-    // Mirrors the @theme block in resources/css/app.css. This surface loads the
-    // Tailwind v3 Play CDN and never sees app.css, so the design tokens have to be
-    // restated here — keep the two in sync. `borderRadius.full` is left alone via
-    // `extend` so pills and avatars survive the hard-corner pass.
-    tailwind.config = {
-        theme: {
-            extend: {
-                borderRadius: {
-                    none: '0px', sm: '0px', DEFAULT: '0px', md: '0px',
-                    lg: '0px', xl: '0px', '2xl': '0px', '3xl': '0px', full: '0px',
-                },
-                colors: {
-                    accent: {
-                        DEFAULT: '#ffc53d', hover: '#ffba18',
-                        contrast: '#21201c',
-                    },
-                    ink: '#21201c',
-                    guest: '#82827c',
-                    // zinc -> Radix sand
-                    zinc: {
-                        50: '#f9f9f8', 100: '#f1f0ef', 200: '#dad9d6', 300: '#cfceca',
-                        400: '#8d8d86', 500: '#6b6b65', 600: '#63635e', 700: '#4a4943',
-                        800: '#33322d', 900: '#21201c', 950: '#141310',
-                    },
-                    // rose -> yellow fills at the light end, ink at the dark end
-                    rose: {
-                        50: '#fffbe8', 100: '#fff7c2', 200: '#ffee9c', 300: '#fbe577',
-                        400: '#ffd166', 500: '#ffc53d', 600: '#21201c', 700: '#33322d',
-                        800: '#21201c', 900: '#141310', 950: '#141310',
-                    },
-                    amber: {
-                        50: '#fefbe9', 100: '#fff7c2', 200: '#ffee9c', 300: '#fbe577',
-                        400: '#e9c162', 500: '#ffc53d', 600: '#ffba18', 700: '#4a4943',
-                        800: '#33322d', 900: '#21201c',
-                    },
-                    // emerald -> Radix jade
-                    emerald: {
-                        50: '#f4fbf7', 100: '#e6f7ed', 200: '#c3e9d7', 300: '#8bceb6',
-                        400: '#56ba9f', 500: '#29a383', 600: '#26997b', 700: '#208368',
-                        800: '#1d6a54', 900: '#1d3b31',
-                    },
-                    // red -> Radix tomato
-                    red: {
-                        50: '#fff8f7', 100: '#feebe7', 200: '#ffdcd3', 300: '#fdbdaf',
-                        400: '#ec8e7b', 500: '#e54d2e', 600: '#dd4425', 700: '#d13415',
-                        800: '#a32b12', 900: '#5c271f',
-                    },
-                },
-            },
-        },
-    };
-</script>
-<style>
-    body { font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, sans-serif; }
-    [x-cloak] { display: none !important; }
-    ::selection { background: #ffee9c; color: #21201c; }
-</style>
+     Styles and Alpine are compiled from resources/css/mcp-app.css and
+     resources/js/mcp-app.js (the same tokens as the site) and inlined by
+     App\Mcp\Resources\ReviewApp; nothing loads from a CDN. The bridge is inline.
+     App-only tools: add_mark / decide_review / verify_mark. --}}
+<style>{!! $styles !!}</style>
 
-<div class="bg-[#fdfdfc] text-zinc-900" x-data="reviewApp()" x-init="init()" x-cloak>
+<div class="bg-background text-foreground" x-data="reviewApp()" x-init="init()" x-cloak>
     <div class="mx-auto max-w-5xl px-4 py-4 sm:px-6">
         <template x-if="!payload">
             <p class="text-sm text-zinc-500">Loading review…</p>
@@ -693,17 +636,34 @@
                 return;
             }
 
+            if (msg.method === 'ui/notifications/host-context-changed') {
+                if (msg.params?.theme) { hostTheme = msg.params.theme; applyTheme(); }
+                return;
+            }
+
             // Requests from the host (e.g. teardown) — acknowledge.
             if (msg.id != null && msg.method) {
                 send({ jsonrpc: '2.0', id: msg.id, result: {} });
             }
         });
 
+        // Light or dark: the host's theme when it says, the system's when it doesn't.
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+        let hostTheme = null;
+        function applyTheme() {
+            const dark = hostTheme ? hostTheme === 'dark' : systemDark.matches;
+            document.documentElement.classList.toggle('dark', dark);
+        }
+        systemDark.addEventListener('change', applyTheme);
+        applyTheme();
+
         async function connect() {
-            await request('ui/initialize', {
+            const result = await request('ui/initialize', {
                 appInfo: { name: 'ReviseMy review', version: @json(config('revisemy.version')) },
                 appCapabilities: { availableDisplayModes: ['inline'] },
             });
+            hostTheme = result?.hostContext?.theme || null;
+            applyTheme();
             send({ jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {} });
         }
 
@@ -1079,3 +1039,4 @@
         };
     }
 </script>
+<script type="module">{!! $script !!}</script>

@@ -1,0 +1,33 @@
+/*
+ * The inline review an assistant draws in its own chat (MCP Apps).
+ *
+ * Built from the same tokens as the site, but scanned only for the classes
+ * this one view and the mark colours use, and inlined into the resource by
+ * `App\Mcp\Resources\ReviewApp` — the iframe is sandboxed, so a stylesheet on
+ * our origin or a CDN is one more thing a host's CSP can refuse.
+ */
+@import 'tailwindcss' source(none);
+@import './tokens.css';
+
+@source '../views/mcp/review-app.blade.php';
+@source '../../app/Models/Annotation.php';
+
+@theme {
+    --font-sans: 'Figtree', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+    body {
+        background-color: var(--background);
+        color: var(--foreground);
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']) {
+        cursor: pointer;
+    }
+}
