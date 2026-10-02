@@ -420,8 +420,9 @@ class ReviseMyFlowTest extends TestCase
         $review = Review::query()->where('public_id', $id)->firstOrFail();
 
         Livewire::test('review-page', ['token' => $review->share_token])
-            ->assertDontSee('Second opinion')
-            ->assertSee('Guest feedback');
+            ->assertDontSee('Refresh the second opinion')
+            ->assertDontSee('Your agent fixes the marks')
+            ->assertSee('Suggestions');
     }
 
     public function test_guest_pin_with_invalid_name_shows_validation_error(): void

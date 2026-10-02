@@ -50,9 +50,9 @@ new class extends Component
 
     public bool $editingTitle = false;
 
-    public string $secondOpinionTab = 'all';
+    /** Which hints show: all, one second-opinion category, or guest suggestions. */
+    public string $hintFilter = 'all';
 
-    public string $secondOpinionSourceTab = 'all';
 
     public string $markCommentBody = '';
 
@@ -109,7 +109,7 @@ new class extends Component
             $this->titleDraft = (string) $review->title;
         }
 
-        $this->syncSecondOpinionTab();
+        $this->syncHintFilter();
     }
 
     public function isOwner(): bool
@@ -129,79 +129,55 @@ new class extends Component
 
     public function showStatusCallout(): bool
     {
-        return in_array($this->review->effectiveStatus(), ['changes_requested', 'approved'], true);
+        return $this->isOwner() && in_array($this->review->effectiveStatus(), ['changes_requested', 'approved'], true);
     }
 
     public function selectScreenshot(int $index): void
     {
         $this->activeScreenshotIndex = $index;
-        $this->secondOpinionTab = 'all';
-        $this->secondOpinionSourceTab = 'all';
+        $this->hintFilter = 'all';
         $this->cancelPin();
     }
 
-    public function setSecondOpinionSourceTab(string $tab): void
+    public function setHintFilter(string $filter): void
     {
-        $allowed = ['all', 'checklist', 'vision'];
+        $allowed = ['all', 'guest', Finding::SEVERITY_SUGGESTION, Finding::SEVERITY_A11Y, Finding::SEVERITY_POLISH];
 
-        if (! in_array($tab, $allowed, true)) {
-            return;
+        if (in_array($filter, $allowed, true)) {
+            $this->hintFilter = $filter;
         }
-
-        $this->secondOpinionSourceTab = $tab;
-        $this->secondOpinionTab = 'all';
     }
 
-    public function setSecondOpinionTab(string $tab): void
+    /** Back to All when the chosen kind has no open hints left. */
+    protected function syncHintFilter(): void
     {
-        $allowed = ['all', Finding::SEVERITY_SUGGESTION, Finding::SEVERITY_A11Y, Finding::SEVERITY_POLISH];
-
-        if (! in_array($tab, $allowed, true)) {
-            return;
+        if ($this->hintFilter !== 'all' && $this->visibleHints()->isEmpty()) {
+            $this->hintFilter = 'all';
         }
-
-        $this->secondOpinionTab = $tab;
     }
 
     /**
-     * Fall back to All severity when that category has no open findings left.
-     * Source tabs (Checklist / Vision) stay selected even when empty so Vision
-     * can show its setup empty state.
+     * Open hints on this shot, second opinion first then guests, narrowed by
+     * the filter. Second opinion is the owner's alone.
+     *
+     * @return \Illuminate\Support\Collection<int, Finding>
      */
-    protected function syncSecondOpinionTab(): void
+    public function visibleHints()
     {
-        if ($this->secondOpinionTab === 'all') {
-            return;
-        }
+        $hints = $this->isOwner()
+            ? $this->openSecondOpinion->concat($this->openGuestSuggestions)
+            : $this->openGuestSuggestions;
 
-        $shot = $this->review->screenshots->values()->get($this->activeScreenshotIndex);
-        $findings = ($shot?->findings ?? collect())
-            ->filter(fn (Finding $f) => $f->isOpen() && ! $f->isGuest());
-
-        $sourceFiltered = $this->filterFindingsBySource($findings, $this->secondOpinionSourceTab);
-        $hasTab = $sourceFiltered->contains(fn (Finding $f) => $f->severity === $this->secondOpinionTab);
-
-        if (! $hasTab) {
-            $this->secondOpinionTab = 'all';
-        }
+        return match ($this->hintFilter) {
+            'all' => $hints->values(),
+            'guest' => $hints->filter(fn (Finding $f) => $f->isGuest())->values(),
+            default => $hints->filter(fn (Finding $f) => ! $f->isGuest() && $f->severity === $this->hintFilter)->values(),
+        };
     }
 
     public function visionEnabled(): bool
     {
         return app(SecondOpinionService::class)->visionEnabled();
-    }
-
-    /**
-     * @param  \Illuminate\Support\Collection<int, Finding>  $findings
-     * @return \Illuminate\Support\Collection<int, Finding>
-     */
-    protected function filterFindingsBySource($findings, string $sourceTab)
-    {
-        return match ($sourceTab) {
-            'checklist' => $findings->filter(fn (Finding $f) => $f->isChecklistSource())->values(),
-            'vision' => $findings->filter(fn (Finding $f) => $f->isVisionSource())->values(),
-            default => $findings->values(),
-        };
     }
 
     public function startPin(float $x, float $y, ?float $w = null, ?float $h = null): void
@@ -504,11 +480,13 @@ new class extends Component
     }
 
     /**
-     * Marks on this pass waiting for the human to verify agent fixes.
+     * Marks on this pass and the one before it waiting for the human to
+     * verify the agent's fixes.
      */
     public function awaitingVerificationMarks()
     {
         return $this->review->screenshots
+            ->concat($this->review->parent?->screenshots ?? collect())
             ->flatMap->annotations
             ->filter(fn (Annotation $mark) => $mark->awaitsVerification())
             ->sortBy('number')
@@ -654,7 +632,7 @@ new class extends Component
      * Batch-accept open findings on the active screenshot.
      * $panel: "second" (non-guest) or "guest".
      */
-    public function acceptOpenFindings(string $panel = 'second'): void
+    public function acceptOpenFindings(string $panel = 'all'): void
     {
         if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
             return;
@@ -668,7 +646,7 @@ new class extends Component
 
         $findings = $shot->findings
             ->filter(fn (Finding $finding) => $finding->isOpen())
-            ->filter(fn (Finding $finding) => $panel === 'guest' ? $finding->isGuest() : ! $finding->isGuest())
+            ->filter(fn (Finding $finding) => match ($panel) { 'guest' => $finding->isGuest(), 'all' => true, default => ! $finding->isGuest() })
             ->values();
 
         $pins = $findings->map(fn (Finding $finding) => $this->promoteFinding($finding)?->id)->filter()->values()->all();
@@ -685,7 +663,7 @@ new class extends Component
      * Batch-dismiss open findings on the active screenshot.
      * $panel: "second" (non-guest) or "guest".
      */
-    public function dismissOpenFindings(string $panel = 'second'): void
+    public function dismissOpenFindings(string $panel = 'all'): void
     {
         if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
             return;
@@ -699,7 +677,7 @@ new class extends Component
 
         $findings = $shot->findings
             ->filter(fn (Finding $finding) => $finding->isOpen())
-            ->filter(fn (Finding $finding) => $panel === 'guest' ? $finding->isGuest() : ! $finding->isGuest())
+            ->filter(fn (Finding $finding) => match ($panel) { 'guest' => $finding->isGuest(), 'all' => true, default => ! $finding->isGuest() })
             ->values();
 
         foreach ($findings as $finding) {
@@ -1047,13 +1025,12 @@ new class extends Component
     @include('review.partials.header')
 
     @if ($mode === 'guest' && ! $review->allowsGuestAccess())
-        <div class="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-16 sm:px-6">
-            <flux:callout variant="danger" icon="lock-closed">
-                <flux:callout.heading>This guest link has expired</flux:callout.heading>
-                <flux:callout.text>
-                    Ask the owner for a new share link if you still need to leave suggestions or comments.
-                </flux:callout.text>
-            </flux:callout>
+        <div class="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
+            <div class="hatch flex size-14 items-center justify-center rounded-2xl text-zinc-300">
+                <flux:icon.lock-closed class="size-6 text-zinc-500" />
+            </div>
+            <h2 class="mt-5 text-lg font-semibold text-zinc-900">This guest link has expired</h2>
+            <p class="mt-1.5 text-sm text-muted-foreground">Ask whoever shared it for a new one.</p>
         </div>
     @else
     <div
