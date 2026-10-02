@@ -43,14 +43,13 @@
             </x-home-section>
 
             <x-home-section joined flush-bottom class="!pt-0">
-                <div class="rm-bleed relative mt-10 border-t border-zinc-200 sm:mt-12">
-                    <x-cross-mark left="50%" top="0%" visibility="hidden min-[30rem]:block" />
+                <div class="relative mt-10 sm:mt-12">
 
-                    <div class="grid grid-cols-1 gap-px bg-[var(--color-border)] min-[30rem]:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-3 min-[30rem]:grid-cols-2">
                         @foreach ($pages as $entry)
                             <a
                                 href="{{ url('/alternatives/'.$entry['slug']) }}"
-                                class="group rm-pad block bg-[var(--color-canvas)] py-7 transition hover:bg-zinc-50/80"
+                                class="group block rounded-2xl bg-card px-7 py-7 transition hover:bg-chip"
                             >
                                 <x-use-case-icon
                                     :name="$entry['icon']"

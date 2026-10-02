@@ -80,7 +80,7 @@ new class extends Component
 ?>
 
 <div
-    class="min-h-svh bg-zinc-50"
+    class="min-h-svh bg-background"
     x-data
     x-init="
         const raw = sessionStorage.getItem('revisemy_try_setup');
@@ -93,7 +93,7 @@ new class extends Component
     "
     x-on:revisemy-recent-token-cleared.window="sessionStorage.removeItem('revisemy_try_setup')"
 >
-    <header class="border-b border-zinc-200/80 bg-white/90 backdrop-blur">
+    <header class="border-b border-border bg-background">
         <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <div class="flex items-center gap-2 sm:gap-3">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
@@ -110,7 +110,7 @@ new class extends Component
             Token-scoped memory for this try workspace — no account. Same list your agent sees via <code class="font-mono text-[13px]">list_reviews</code>.
         </p>
 
-        <form wire:submit="loadReviews" class="mt-6 space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
+        <form wire:submit="loadReviews" class="mt-6 space-y-3 rounded-2xl bg-card p-4 sm:p-5">
             <label class="block text-xs font-medium uppercase tracking-wider text-zinc-400" for="try-token">Bearer try token</label>
             <div class="flex flex-col gap-2 sm:flex-row">
                 <input
@@ -120,7 +120,7 @@ new class extends Component
                     autocomplete="off"
                     spellcheck="false"
                     placeholder="Paste your try token"
-                    class="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-sm text-zinc-800 outline-none ring-0 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white"
+                    class="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-zinc-800 outline-none ring-0 placeholder:text-zinc-400 focus:border-zinc-400"
                 />
                 <flux:button type="submit" variant="primary" class="shrink-0">Load reviews</flux:button>
             </div>
@@ -141,11 +141,11 @@ new class extends Component
             @else
                 <ul class="mt-8 space-y-3">
                     @foreach ($reviews as $item)
-                        <li class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                        <li class="rounded-2xl bg-card p-4">
                             <div class="flex flex-wrap items-start justify-between gap-2">
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <span class="rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">Pass {{ $item['pass'] }}</span>
+                                        <span class="rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">Pass {{ $item['pass'] }}</span>
                                         <span @class([
                                             'rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
                                             'border-amber-200 bg-amber-50 text-amber-800' => $item['status'] === 'changes_requested',
@@ -160,7 +160,7 @@ new class extends Component
                                 </div>
                                 <a
                                     href="{{ $item['review_url'] }}"
-                                    class="inline-flex shrink-0 items-center rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
+                                    class="btn-quiet inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium"
                                 >Open review</a>
                             </div>
                             <dl class="mt-3 grid grid-cols-2 gap-2 text-[11px] tabular-nums text-zinc-500 sm:grid-cols-4">

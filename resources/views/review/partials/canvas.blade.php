@@ -362,11 +362,11 @@
                     x-on:keyup.window="onKeyUp($event)"
                 >
                     <div @class([
-                        'relative overflow-hidden border border-zinc-200 bg-zinc-100',
+                        'relative overflow-hidden bg-well',
                         'rounded-t-2xl' => $review->isOpenForFeedback(),
                         'rounded-2xl' => ! $review->isOpenForFeedback(),
                     ])>
-                        <div data-zoom-controls class="absolute bottom-2 left-2 z-30 flex items-center gap-0.5 rounded-lg border border-zinc-200/80 bg-white/95 p-0.5 shadow-sm backdrop-blur">
+                        <div data-zoom-controls class="absolute bottom-2 left-2 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
                             <button
                                 type="button"
                                 class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
@@ -597,7 +597,7 @@
                     </div>
 
                 @if ($review->isOpenForFeedback())
-                    <div class="rounded-b-2xl border-x border-b border-zinc-200/80 bg-zinc-50/90 px-3 py-2.5 sm:px-4 sm:py-3">
+                    <div class="rounded-b-2xl bg-card px-3 py-2.5 sm:px-4 sm:py-3">
                         <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-zinc-600 sm:gap-x-6 sm:text-xs">
                             <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 sm:gap-x-4">
                                 <span class="inline-flex items-center gap-2">
@@ -650,7 +650,7 @@
         )->values())
 
         @if ($shot && ($stripMarks->isNotEmpty() || $stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
-            <div class="shrink-0 overflow-x-auto overscroll-x-contain border-y border-zinc-200/80 bg-zinc-50/90 px-3 py-2 [scrollbar-width:none] md:hidden sm:px-4 [&::-webkit-scrollbar]:hidden">
+            <div class="shrink-0 overflow-x-auto overscroll-x-contain bg-card px-3 py-2 [scrollbar-width:none] md:hidden sm:px-4 [&::-webkit-scrollbar]:hidden">
                 <div class="flex w-max items-center gap-x-3 gap-y-2 text-[11px] text-zinc-600">
                     @if ($stripMarks->isNotEmpty())
                         <div class="inline-flex items-center gap-2">
@@ -850,7 +850,7 @@
             >
                 <button
                     type="button"
-                    class="pointer-events-auto fixed inset-0 z-40 bg-zinc-950/25 md:bg-transparent"
+                    class="pointer-events-auto fixed inset-0 z-40 bg-black/25 md:bg-transparent"
                     wire:click="cancelPin"
                     aria-label="Dismiss note"
                 ></button>
@@ -858,7 +858,7 @@
                 <div
                     x-ref="panel"
                     x-bind:style="panelStyle"
-                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-[0_-12px_40px_-18px_rgba(24,24,27,0.45)] md:inset-x-auto md:bottom-auto md:w-[min(20rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
+                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(20rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
                     role="dialog"
                     aria-label="{{ $mode === 'guest' ? 'Suggest a change' : 'Leave a note' }}"
                     x-on:keydown.escape.window="$wire.cancelPin()"
@@ -900,7 +900,7 @@
                         @if ($mode === 'owner')
                         <div class="flex flex-wrap gap-2">
                             @foreach (\App\Models\Annotation::severityLabels() as $value => $label)
-                                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-sm has-[:checked]:border-zinc-400 has-[:checked]:bg-white has-[:checked]:shadow-sm">
+                                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-chip px-2.5 py-1 text-sm has-[:checked]:bg-raised has-[:checked]:shadow-sm has-[:checked]:ring-1 has-[:checked]:ring-black/[0.08]">
                                     <input type="radio" wire:model.live="draftSeverity" value="{{ $value }}" class="{{ \App\Models\Annotation::accentClass($value) }}">
                                     {{ $label }}
                                 </label>

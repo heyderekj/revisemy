@@ -49,7 +49,7 @@
                         <li class="min-h-0">
                             <a
                                 href="{{ url('/for/'.$entry['slug']) }}"
-                                class="group flex h-full items-start gap-3 border border-zinc-200 bg-white/70 px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
+                                class="group flex h-full items-start gap-3 rounded-xl bg-card px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
                             >
                                 <x-use-case-icon
                                     :name="$entry['icon']"
@@ -112,7 +112,7 @@
                             <li class="min-h-0">
                                 <a
                                     href="{{ url('/for/'.$entry['slug']) }}"
-                                    class="group flex h-full items-start gap-3 border border-zinc-200 bg-white/70 px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
+                                    class="group flex h-full items-start gap-3 rounded-xl bg-card px-3 py-3 transition hover:border-zinc-300 hover:bg-white"
                                 >
                                     <x-use-case-icon
                                         :name="$entry['icon']"

@@ -1,6 +1,4 @@
-        <aside class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t border-zinc-200 px-0.5 pt-4 pb-28 [scroll-padding-top:1rem] sm:pt-5 md:min-h-0 md:border-l md:border-t-0 md:border-zinc-200 md:overflow-y-auto md:pb-6 md:pl-5 md:pt-6 md:[scroll-padding-top:1.5rem] lg:pl-6">
-            <x-cross-mark left="0" top="0" visibility="hidden md:block" />
-            <x-cross-mark left="0" top="100%" visibility="hidden md:block" />
+        <aside class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-0.5 pt-4 pb-28 [scroll-padding-top:1rem] sm:pt-5 md:min-h-0 md:overflow-y-auto md:pb-6 md:pl-5 md:pt-6 md:[scroll-padding-top:1.5rem] lg:pl-6">
             @php($pins = $this->activeMarks)
             @php($secondOpinionFindings = $this->openSecondOpinion)
             @php($guestSuggestions = $this->openGuestSuggestions)
@@ -32,7 +30,7 @@
                 }"
             >
             @if ($awaitingVerify->isNotEmpty() && $this->canManageMarks())
-                <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 sm:px-4" data-panel="verify">
+                <div class="rounded-2xl bg-attention-soft px-3 py-3 sm:px-4" data-panel="verify">
                     <div class="flex flex-wrap items-start justify-between gap-2">
                         <div class="min-w-0">
                             <p class="text-sm font-medium text-amber-950">Awaiting your verify</p>
@@ -43,7 +41,7 @@
                         <button
                             type="button"
                             wire:click="verifyAllResolved"
-                            class="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-500"
+                            class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-500"
                         >
                             Verify all {{ $awaitingVerify->count() }}
                         </button>
@@ -70,7 +68,7 @@
             @endif
 
             @if (count($passLedger) > 1)
-                <div class="border border-zinc-200 bg-white" data-panel="ledger">
+                <div class="rounded-2xl bg-card" data-panel="ledger">
                     <button
                         type="button"
                         class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
@@ -78,10 +76,10 @@
                         x-bind:aria-expanded="panels.ledger.toString()"
                     >
                         <flux:heading size="sm" class="min-w-0 flex-1">Pass ledger</flux:heading>
-                        <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">{{ count($passLedger) }}</span>
+                        <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ count($passLedger) }}</span>
                         <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-zinc-400 transition" x-bind:class="panels.ledger && 'rotate-180'" />
                     </button>
-                    <div class="border-t border-zinc-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.ledger" x-cloak>
+                    <div class="px-3 pb-3 pt-0 sm:px-4 sm:pb-4" x-show="panels.ledger" x-cloak>
                         <ol class="space-y-2">
                             @foreach ($passLedger as $entry)
                                 <li @class([
@@ -117,7 +115,7 @@
                 </div>
             @endif
 
-            <div class="border border-zinc-200 bg-white" data-panel="marks">
+            <div class="rounded-2xl bg-card" data-panel="marks">
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
@@ -125,11 +123,11 @@
                     x-bind:aria-expanded="panels.marks.toString()"
                 >
                     <flux:heading size="sm" class="min-w-0 flex-1">{{ $mode === 'owner' ? 'My marks' : 'Owner marks' }}</flux:heading>
-                    <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">{{ $pins->count() }}</span>
+                    <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ $pins->count() }}</span>
                     <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-zinc-400 transition" x-bind:class="panels.marks && 'rotate-180'" />
                 </button>
 
-                <div class="border-t border-zinc-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.marks">
+                <div class="px-3 pb-3 pt-0 sm:px-4 sm:pb-4" x-show="panels.marks">
 
                 @if ($pins->isEmpty())
                     <p class="text-sm text-zinc-500">
@@ -140,16 +138,16 @@
                         @foreach ($pins as $pin)
                             <li
                                 id="fb-mark-{{ $pin->id }}"
-                                class="rounded-xl border border-zinc-100 p-3 transition"
+                                class="rounded-xl bg-raised p-3 shadow-xs ring-1 ring-black/[0.04] transition"
                                 x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'border-rose-300 ring-2 ring-rose-200/70' : ''"
                             >
                                 <div class="mb-1 flex items-center justify-between gap-2">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $pin->label() }}</span>
-                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $pin->statusBadgeClass() }}">{{ $pin->statusLabel() }}</span>
+                                        <x-signal-tag :tone="$pin->statusTone()">{{ $pin->statusLabel() }}</x-signal-tag>
                                         @if ($pin->source && $pin->source !== \App\Models\Annotation::SOURCE_HUMAN)
-                                            <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">{{ $pin->sourceLabel() }}</span>
+                                            <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium text-zinc-600">{{ $pin->sourceLabel() }}</span>
                                         @endif
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
@@ -257,7 +255,7 @@
                                 @if ($mode === 'owner' && $pin->severity !== \App\Models\Annotation::SEVERITY_KEEP && $this->canManageMarks())
                                     <div class="mt-2 flex items-center gap-2">
                                         @if ($pin->awaitsVerification())
-                                            <button type="button" class="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-emerald-500" wire:click="verifyMark({{ $pin->id }})">Verify</button>
+                                            <button type="button" class="rounded-full bg-emerald-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-emerald-500" wire:click="verifyMark({{ $pin->id }})">Verify</button>
                                         @endif
                                         @if ($pin->status !== \App\Models\Annotation::STATUS_OPEN)
                                             <button type="button" class="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-200" wire:click="reopenMark({{ $pin->id }})">Reopen</button>
@@ -272,7 +270,7 @@
             </div>
 
             @if ($previousMarks->isNotEmpty())
-                    <div class="rounded-2xl border border-zinc-200 bg-white shadow-sm" data-panel="previous">
+                    <div class="rounded-2xl bg-card" data-panel="previous">
                         <button
                             type="button"
                             class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
@@ -280,18 +278,18 @@
                             x-bind:aria-expanded="panels.previous.toString()"
                         >
                             <flux:heading size="sm" class="min-w-0 flex-1">Previous pass marks</flux:heading>
-                            <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">{{ $previousMarks->count() }}</span>
+                            <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ $previousMarks->count() }}</span>
                             <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-zinc-400 transition" x-bind:class="panels.previous && 'rotate-180'" />
                         </button>
-                        <div class="border-t border-zinc-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.previous" x-cloak>
+                        <div class="px-3 pb-3 pt-0 sm:px-4 sm:pb-4" x-show="panels.previous" x-cloak>
                         <p class="mb-3 text-xs leading-snug text-zinc-500">From pass {{ $parent->pass }}. Verify what the agent fixed, or reopen anything still off.</p>
                         <ul class="space-y-3">
                             @foreach ($previousMarks as $pin)
-                                <li class="rounded-xl border border-zinc-100 p-3">
+                                <li class="rounded-xl bg-raised p-3 shadow-xs ring-1 ring-black/[0.04]">
                                     <div class="mb-1 flex flex-wrap items-center gap-2">
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $pin->label() }}</span>
-                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $pin->statusBadgeClass() }}">{{ $pin->statusLabel() }}</span>
+                                        <x-signal-tag :tone="$pin->statusTone()">{{ $pin->statusLabel() }}</x-signal-tag>
                                     </div>
                                     <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
                                     @if ($pin->resolution_note)
@@ -320,7 +318,7 @@
                                     @if ($pin->severity !== \App\Models\Annotation::SEVERITY_KEEP && $this->canManageMarks())
                                         <div class="mt-2 flex items-center gap-2">
                                             @if ($pin->awaitsVerification())
-                                                <button type="button" class="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-emerald-500" wire:click="verifyMark({{ $pin->id }})">Verify</button>
+                                                <button type="button" class="rounded-full bg-emerald-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-emerald-500" wire:click="verifyMark({{ $pin->id }})">Verify</button>
                                             @endif
                                             @if ($pin->status !== \App\Models\Annotation::STATUS_OPEN)
                                                 <button type="button" class="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-200" wire:click="reopenMark({{ $pin->id }})">Reopen</button>
@@ -336,7 +334,7 @@
 
             @if ($mode === 'owner')
             @php($taste = \App\Support\TasteLenses::forType($review->type))
-            <div class="border border-sky-200/80 bg-sky-50/50" data-panel="second">
+            <div class="rounded-2xl bg-sky-50" data-panel="second">
                 <div class="flex items-center gap-1.5 px-3 py-3 sm:px-4">
                     <button
                         type="button"
@@ -370,7 +368,7 @@
                     </button>
                 </div>
 
-                <div class="border-t border-sky-200/60 px-3 pb-3 pt-3 sm:px-4 sm:pb-4" x-show="panels.second" x-cloak>
+                <div class="px-3 pb-3 pt-0 sm:px-4 sm:pb-4" x-show="panels.second" x-cloak>
                 <div class="relative mb-3 flex items-start justify-between gap-2">
                     <p class="min-w-0 text-xs leading-snug text-zinc-500">Hints until you accept — then they become your marks</p>
                     <x-taste-craft-chip :taste="$taste" />
@@ -436,7 +434,7 @@
                     <p class="mb-3 text-sm text-rose-600">Second opinion couldn’t run on this shot. Your marks are unaffected — try Refresh.</p>
                 @endif
 
-                <div class="mb-3 grid grid-cols-3 gap-1 rounded-xl border border-sky-200/80 bg-white/70 p-1">
+                <div class="mb-3 grid grid-cols-3 gap-1 rounded-xl bg-sky-100/60 p-1">
                     @foreach ($sourceTabLabels as $sourceTabId => $sourceTabLabel)
                         <button
                             type="button"
@@ -458,7 +456,7 @@
                 </div>
 
                 @if ($showVisionSetup)
-                    <div class="rounded-xl border border-dashed border-sky-200 bg-white/80 px-3 py-3">
+                    <div class="hatch rounded-xl px-3 py-3 text-sky-300">
                         <p class="text-sm font-medium text-sky-950">Vision marks regions on the capture</p>
                         <p class="mt-1.5 text-xs leading-relaxed text-sky-900/80">
                             Add <span class="font-mono text-[10px]">ANTHROPIC_API_KEY</span> or <span class="font-mono text-[10px]">OPENAI_API_KEY</span> on the server, then refresh this second opinion.
@@ -476,7 +474,7 @@
                         @endif
                     </div>
                 @elseif ($showVisionEmpty)
-                    <div class="rounded-xl border border-dashed border-sky-200 bg-white/80 px-3 py-3">
+                    <div class="hatch rounded-xl px-3 py-3 text-sky-300">
                         <p class="text-sm font-medium text-sky-950">No vision hints yet</p>
                         <p class="mt-1.5 text-xs leading-relaxed text-sky-900/80">
                             Vision is configured. Refresh to critique this shot and draw regions on the capture.
@@ -554,7 +552,7 @@
                                             <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-sky-500 text-[10px] font-semibold text-sky-700">S{{ $findingNumbers[$finding->id] ?? '' }}</span>
                                             <span class="text-xs text-zinc-500">{{ \App\Models\Annotation::allSeverityLabels()[$finding->severity] ?? $finding->severity }}</span>
                                             @if (! $findingHasRegion)
-                                                <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">Text hint</span>
+                                                <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium text-zinc-500">Text hint</span>
                                             @endif
                                             <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">{{ $finding->sourceLabel() }}</span>
                                         </div>
@@ -574,7 +572,7 @@
                                                         x-show="open"
                                                         x-cloak
                                                         x-on:click.outside="open = false"
-                                                        class="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
+                                                        class="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg bg-lift ring-1 ring-black/[0.07] py-1 shadow-lg"
                                                     >
                                                         <button type="button" class="block w-full px-3 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50" wire:click="acceptFinding({{ $finding->id }})" x-on:click="open = false">Default ({{ \App\Models\Annotation::allSeverityLabels()[$finding->pinSeverity()] ?? $finding->pinSeverity() }})</button>
                                                         @foreach (\App\Models\Annotation::severityLabels() as $sev => $sevLabel)
@@ -606,7 +604,7 @@
             </div>
             @endif
 
-            <div class="border border-zinc-200 bg-zinc-50/60" data-panel="guest">
+            <div class="rounded-2xl bg-card" data-panel="guest">
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
@@ -614,7 +612,7 @@
                     x-bind:aria-expanded="panels.guest.toString()"
                 >
                     <flux:heading size="sm" class="min-w-0 flex-1">Guest feedback</flux:heading>
-                    <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-800">{{ $guestSuggestions->count() }}</span>
+                    <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-zinc-800">{{ $guestSuggestions->count() }}</span>
                     <flux:icon.chevron-down variant="micro" class="size-4 shrink-0 text-zinc-700/60 transition" x-bind:class="panels.guest && 'rotate-180'" />
                 </button>
 
@@ -659,7 +657,7 @@
                                     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-zinc-500 text-[10px] font-semibold text-zinc-700">G{{ $suggestionNumbers['g'][$finding->id] ?? ($guestIndex + 1) }}</span>
                                         <span class="text-xs text-zinc-500">{{ \App\Models\Annotation::allSeverityLabels()[$finding->severity] ?? $finding->severity }}</span>
-                                        <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-800">{{ $finding->sourceLabel() }}</span>
+                                        <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium text-zinc-800">{{ $finding->sourceLabel() }}</span>
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
                                         <div class="flex shrink-0 items-center gap-1" x-on:click.stop x-data="{ open: false }">
@@ -677,7 +675,7 @@
                                                     x-show="open"
                                                     x-cloak
                                                     x-on:click.outside="open = false"
-                                                    class="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
+                                                    class="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg bg-lift ring-1 ring-black/[0.07] py-1 shadow-lg"
                                                 >
                                                     <button type="button" class="block w-full px-3 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50" wire:click="acceptFinding({{ $finding->id }})" x-on:click="open = false">Default</button>
                                                     @foreach (\App\Models\Annotation::severityLabels() as $sev => $sevLabel)
@@ -711,7 +709,7 @@
             @if ($this->showDecisionNote() || $this->showDecisionCallout() || $this->showStatusCallout())
                 <div class="mt-auto space-y-3 border-t border-zinc-200 pt-4 pb-4 md:pb-6">
                     @if ($this->showDecisionNote())
-                        <div class="hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 md:block">
+                        <div class="hidden rounded-2xl bg-card p-3 sm:p-4 md:block">
                             <flux:heading size="sm" class="mb-3">Overall note (optional)</flux:heading>
                             <flux:textarea wire:model="decisionNote" rows="2" placeholder="Anything else before you approve or request changes?" />
                         </div>

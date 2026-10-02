@@ -6,7 +6,7 @@
 
     <div class="mt-8 space-y-6">
         @foreach ($page['recommended'] as $option)
-            <article class="rounded-xl border border-zinc-200 bg-white/70 px-4 py-4 sm:px-5 sm:py-5">
+            <article class="rounded-xl bg-card px-4 py-4 sm:px-5 sm:py-5">
                 <div class="flex flex-wrap items-center gap-2">
                     @if (! empty($option['badge']))
                         <span class="rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700 ring-1 ring-rose-100">

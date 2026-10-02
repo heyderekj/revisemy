@@ -18,7 +18,7 @@
     @endif
 
     <div @class([
-        'min-w-0 rounded-xl border border-zinc-200 bg-white p-4',
+        'min-w-0 rounded-xl bg-card p-4',
         'flex-1' => $stepNumber !== null,
     ])>
         <div class="mb-2 flex items-center justify-between gap-2">

@@ -1,4 +1,4 @@
-    <header class="relative z-40 shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
+    <header class="relative z-40 shrink-0 border-b border-border bg-background">
         <div class="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:flex sm:gap-4 sm:px-6">
             <div class="col-start-1 row-start-1 flex shrink-0 items-center gap-2 sm:gap-3">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
@@ -8,13 +8,13 @@
             </div>
 
             <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:col-span-1 sm:row-start-1 sm:flex-1 sm:flex-nowrap">
-                <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
                     Pass {{ $review->pass }}
                 </span>
                 @php($sourceKind = $review->sourceKind())
                 @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
                     <span
-                        class="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
+                        class="inline-flex shrink-0 items-center gap-1 rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
                         title="Snapshot of {{ $review->page_url }}{{ $review->capturedAt() ? ' · '.$review->capturedAt()->timezone(config('app.timezone'))->toDayDateTimeString() : '' }}"
                     >
                         <flux:icon.link variant="micro" class="size-3 text-zinc-400" />
@@ -24,7 +24,7 @@
                         @endif
                     </span>
                 @else
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+                    <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
                         {{ $review->sourceKindLabel() }}
                     </span>
                 @endif
@@ -161,7 +161,7 @@
                                 size="sm"
                                 variant="ghost"
                                 icon="link"
-                                class="!bg-zinc-100 hover:!bg-zinc-200/80"
+                                class="!bg-chip hover:!bg-chip-hover"
                                 aria-label="Share"
                             >
                                 <span class="hidden sm:inline" x-show="! copied">Share</span>
@@ -220,7 +220,7 @@
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 translate-y-1"
-                            class="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[17.5rem] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
+                            class="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[17.5rem] overflow-hidden rounded-2xl bg-lift ring-1 ring-black/[0.07] p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
                             x-on:click.outside="pickingDate = false"
                         >
                             <div class="mb-3 flex items-center justify-between gap-2">
@@ -284,10 +284,10 @@
                             <flux:error name="shareExpiryDate" />
                         </div>
                     </div>
-                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-zinc-100 hover:!bg-zinc-200/80">Board</flux:button>
+                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-chip hover:!bg-chip-hover">Board</flux:button>
                     @if ($review->isOpenForFeedback())
                         <div class="hidden items-center gap-2 md:flex">
-                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="!bg-zinc-100 hover:!bg-zinc-200/80">Changes</flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="!bg-chip hover:!bg-chip-hover">Changes</flux:button>
                             <flux:button size="sm" variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes.">Approve</flux:button>
                         </div>
                     @endif

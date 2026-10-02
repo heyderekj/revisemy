@@ -3,6 +3,7 @@
 namespace App\Mcp\Resources;
 
 use App\Support\BrandAssets;
+use Illuminate\Support\Facades\Vite;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\AppResource;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -12,7 +13,6 @@ use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Attributes\Uri;
 use Laravel\Mcp\Server\Ui\AppMeta;
 use Laravel\Mcp\Server\Ui\Csp;
-use Illuminate\Support\Facades\Vite;
 
 /**
  * The inline review UI rendered by MCP Apps hosts (Claude web/desktop, etc.)

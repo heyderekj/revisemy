@@ -140,7 +140,7 @@ new class extends Component
 ?>
 
     <div
-    class="rm-wash relative min-h-screen"
+    class="relative min-h-screen"
     x-data="{
         mobileNav: false,
         pastHero: false,
@@ -192,20 +192,17 @@ new class extends Component
     {{-- Inset the framed column from the viewport so rails + crosshairs stay
          visible on small screens (and the top rule isn't flush with the edge). --}}
     <div class="relative z-10 mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 sm:pt-12 lg:px-8 lg:pt-16">
-        <div class="rm-rails relative flex min-h-screen border-t border-zinc-200 bg-canvas/60">
-            <x-cross-mark left="0" top="0" />
-            <x-cross-mark left="220px" top="0" visibility="hidden lg:block" />
-            <x-cross-mark left="100%" top="0" />
+        <div class="relative flex min-h-screen gap-6">
 
         {{-- Agentation-style sidebar --}}
-        <aside class="hidden w-[220px] shrink-0 flex-col border-r border-zinc-200 bg-zinc-50/90 px-6 pb-8 pt-10 backdrop-blur lg:flex lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:self-start lg:overflow-y-auto">
+        <aside class="hidden w-[220px] shrink-0 flex-col rounded-2xl bg-card px-6 pb-8 pt-8 lg:flex lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto">
             <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                 <x-revisemy-logo variant="wordmark" size="lg" />
             </a>
 
             <nav class="mt-12 flex flex-1 flex-col gap-8 text-[14px]">
                 <div>
-                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Overview</p>
+                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Overview</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#top" class="transition hover:text-zinc-900">Home</a></li>
                         <li><a href="#how" class="transition hover:text-zinc-900">How it works</a></li>
@@ -215,18 +212,18 @@ new class extends Component
                     </ul>
                 </div>
                 <div>
-                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Tools</p>
+                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Tools</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#setup" class="transition hover:text-zinc-900">Try with your agent</a></li>
                     </ul>
                 </div>
                 <div>
-                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Resources</p>
+                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Resources</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li>
                             <a href="/connectors" class="inline-flex items-center gap-2 transition hover:text-zinc-900">
                                 Connectors
-                                <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-contrast">MCP</span>
+                                <span class="rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">MCP</span>
                             </a>
                         </li>
                         <li>
@@ -365,20 +362,13 @@ new class extends Component
                     From capture to approval, ReviseMy keeps reviews, marks, guest feedback, and lifecycle together — so nothing gets lost between passes.
                 </p>
 
-                <div class="rm-bleed relative mt-10 border-y border-zinc-200">
-                    {{-- Top / bottom column intersections (on the outer border-y). --}}
-                    <x-cross-mark left="33.3333%" top="0%" visibility="hidden lg:block" />
-                    <x-cross-mark left="66.6667%" top="0%" visibility="hidden lg:block" />
-                    <x-cross-mark left="33.3333%" top="100%" visibility="hidden lg:block" />
-                    <x-cross-mark left="66.6667%" top="100%" visibility="hidden lg:block" />
-                    {{-- 2-col midpoint (sm–md only). --}}
-                    <x-cross-mark left="50%" top="50%" visibility="hidden min-[30rem]:block lg:hidden" />
+                <div class="relative mt-10">
 
                     {{-- Below lg: one gap grid. At lg: two content rows + a real 1px
                          middle rule so crosshairs sit on the hairline (not geometric 50%,
                          which drifts when the rows are different heights). --}}
-                    <div class="grid grid-cols-1 gap-px bg-[var(--color-border)] min-[30rem]:grid-cols-2 lg:grid-cols-3 lg:grid-rows-[auto_1px_auto] lg:gap-y-0">
-                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-1">
+                    <div class="grid grid-cols-1 gap-3 min-[30rem]:grid-cols-2 lg:grid-cols-3">
+                        <article class="rounded-2xl bg-card p-7 lg:row-start-1">
                             <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
                                 <flux:icon.photo variant="micro" class="size-[18px]" />
                             </div>
@@ -386,7 +376,7 @@ new class extends Component
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Ask your agent to open a review from screenshots, a page URL (desktop + mobile), PDF slides, or email HTML — each type gets its own checklist and vision lens.</p>
                         </article>
 
-                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-1">
+                        <article class="rounded-2xl bg-card p-7 lg:row-start-1">
                             <x-mark-type-icon type="s" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Optional hints can land first — checklist immediately, optional Claude or OpenAI vision when a key is set. Useful suggestions, never decisions.</p>
@@ -396,23 +386,14 @@ new class extends Component
                             >Learn more</a>
                         </article>
 
-                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-1">
+                        <article class="rounded-2xl bg-card p-7 lg:row-start-1">
                             <x-mark-type-icon type="m" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Precise marks</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Open the review link, point or outline the exact area, set must-fix / nice to have / question / keep. Add suggested copy or answer a question — threads and answers go straight into the agent’s work packet.</p>
                         </article>
 
-                        <div
-                            class="relative col-span-full hidden h-px bg-[var(--color-border)] lg:block lg:row-start-2"
-                            aria-hidden="true"
-                        >
-                            <x-cross-mark left="0" top="50%" />
-                            <x-cross-mark left="33.3333%" top="50%" />
-                            <x-cross-mark left="66.6667%" top="50%" />
-                            <x-cross-mark left="100%" top="50%" />
-                        </div>
 
-                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-3">
+                        <article class="rounded-2xl bg-card p-7 lg:row-start-2">
                             <x-mark-type-icon type="g" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Guest links</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Share a private guest link when you want another set of eyes — no accounts. Your marks stay authoritative.</p>
@@ -422,7 +403,7 @@ new class extends Component
                             >Learn more</a>
                         </article>
 
-                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-3">
+                        <article class="rounded-2xl bg-card p-7 lg:row-start-2">
                             <x-use-case-icon name="queue-list" />
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Board to done</h3>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Track marks from open → resolved → verified. When the agent resolves a batch, the review focuses on verify — with before/after evidence and a pass ledger across rounds.</p>
@@ -432,7 +413,7 @@ new class extends Component
                             >Learn more</a>
                         </article>
 
-                        <article class="bg-[var(--color-canvas)] p-7 lg:row-start-3">
+                        <article class="rounded-2xl bg-card p-7 lg:row-start-2">
                             <div class="flex size-9 items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200">
                                 <flux:icon.arrow-path variant="micro" class="size-[18px]" />
                             </div>
@@ -1125,18 +1106,15 @@ new class extends Component
                     </p>
                 @endif
 
-                <div class="rm-bleed relative mt-10 border-t border-zinc-200">
-                    <x-cross-mark left="0" top="0" />
-                    <x-cross-mark left="100%" top="0" />
+                <div class="relative mt-10">
                     @if ($pricingEnabled)
-                        <x-cross-mark left="50%" top="0" visibility="hidden min-[30rem]:block" />
                     @endif
 
                     <div @class([
-                        'grid grid-cols-1 gap-px bg-[var(--color-border)]',
+                        'grid grid-cols-1 gap-3',
                         'min-[30rem]:grid-cols-2' => $pricingEnabled,
                     ])>
-                        <article class="bg-[var(--color-canvas)] p-7 sm:p-8">
+                        <article class="rounded-2xl bg-card p-7 sm:p-8">
                             <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Try</p>
                             <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
                                 $0
@@ -1160,7 +1138,7 @@ new class extends Component
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
-                                        class="!border !border-zinc-200 !bg-white hover:!border-zinc-300 hover:!bg-zinc-50"
+                                        class="btn-quiet !rounded-full"
                                     >
                                         Credit costs
                                     </flux:button>
@@ -1169,8 +1147,7 @@ new class extends Component
                         </article>
 
                         @if ($pricingEnabled)
-                            <article class="relative overflow-hidden bg-[var(--color-canvas)] p-7 sm:p-8">
-                                <div class="rm-plus-grid" aria-hidden="true"></div>
+                            <article class="relative overflow-hidden rounded-2xl bg-card p-7 sm:p-8">
                                 <div class="relative z-10">
                                     <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Plus</p>
                                     <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
@@ -1190,7 +1167,7 @@ new class extends Component
                                             variant="ghost"
                                             size="sm"
                                             href="#setup"
-                                            class="!border !border-zinc-200 !bg-white hover:!border-zinc-300 hover:!bg-zinc-50"
+                                            class="btn-quiet !rounded-full"
                                         >
                                             Upgrade via your agent
                                         </flux:button>
@@ -1466,7 +1443,7 @@ new class extends Component
                     </p>
 
                     <div class="mt-8">
-                        <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Also by Derek</p>
+                        <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Also by Derek</p>
                         <ul class="flex flex-wrap gap-x-5 gap-y-2 text-[15px] text-zinc-600">
                             <li>
                                 <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
@@ -1496,7 +1473,7 @@ new class extends Component
     {{-- Mobile nav drawer --}}
     <div class="lg:hidden" x-cloak>
         <div
-            class="fixed inset-0 z-50 bg-zinc-900/25 backdrop-blur-[2px]"
+            class="fixed inset-0 z-50 bg-black/25 backdrop-blur-[2px]"
             x-show="mobileNav"
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0"
@@ -1540,7 +1517,7 @@ new class extends Component
 
             <nav class="flex flex-1 flex-col gap-8 overflow-y-auto px-5 py-8 text-[14px]">
                 <div>
-                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Overview</p>
+                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Overview</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#top" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Home</a></li>
                         <li><a href="#how" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">How it works</a></li>
@@ -1550,18 +1527,18 @@ new class extends Component
                     </ul>
                 </div>
                 <div>
-                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Tools</p>
+                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Tools</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li><a href="#setup" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Try with your agent</a></li>
                     </ul>
                 </div>
                 <div>
-                    <p class="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Resources</p>
+                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Resources</p>
                     <ul class="space-y-2.5 text-zinc-600">
                         <li>
                             <a href="/connectors" class="inline-flex items-center gap-2 py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">
                                 Connectors
-                                <span class="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-contrast">MCP</span>
+                                <span class="rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">MCP</span>
                             </a>
                         </li>
                         <li><a href="/guest-links" class="block py-0.5 transition hover:text-zinc-900" x-on:click="mobileNav = false">Guest links</a></li>

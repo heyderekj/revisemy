@@ -59,6 +59,55 @@
 }
 
 /*
+ * Anything you can press is fully round, as in Koati: corner radius is what
+ * tells a control from a label (tags stay `rounded-md`).
+ */
+[data-flux-button] {
+    border-radius: 9999px;
+    corner-shape: round;
+}
+
+/*
+ * Koati's app shell. The review and the board sit on a black desk, in an inset
+ * panel that reads as a card: rounded, lifted a touch, and edged with a faint
+ * ring in the dark where a shadow would vanish. Edge to edge on a phone.
+ */
+.rm-desk {
+    background-color: #000;
+}
+
+.rm-shell {
+    display: flex;
+    flex: 1 1 0%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--background);
+}
+
+@media (min-width: 768px) {
+    .rm-desk {
+        padding: 0.5rem;
+    }
+
+    .rm-shell {
+        border-radius: 1rem;
+        box-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
+    }
+
+    .dark .rm-shell {
+        box-shadow: 0 0 0 1px hsl(0 0% 100% / 0.06);
+    }
+
+    @supports (corner-shape: squircle) {
+        .rm-shell {
+            border-radius: 1.6rem;
+            corner-shape: squircle;
+        }
+    }
+}
+
+/*
  * Flux's primary button, lit. Flux gives the variant no attribute of its own,
  * so it is found by the accent fill it always carries.
  */
@@ -119,59 +168,6 @@
 }
 
 @layer utilities {
-    .rm-wash {
-        background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-surface) 100%);
-    }
-
-    /* Hairline rails framing the centered content column. */
-    .rm-rails {
-        border-left: 1px solid var(--color-border);
-        border-right: 1px solid var(--color-border);
-    }
-
-    /* Break an element out to the edges of the padded content column so structural
-       rules and grid dividers reach the rails. --rm-pad is set on the content
-       column and mirrors its horizontal padding. */
-    .rm-bleed {
-        margin-left: calc(var(--rm-pad, 0px) * -1);
-        margin-right: calc(var(--rm-pad, 0px) * -1);
-    }
-
-    /* Re-pads content inside a bled element so text lines back up with the column. */
-    .rm-pad {
-        padding-left: var(--rm-pad, 0px);
-        padding-right: var(--rm-pad, 0px);
-    }
-
-    /* Decorative plus field (brand crosshair motif). Anchor top-right; fades down + left. */
-    .rm-plus-grid {
-        pointer-events: none;
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: min(18rem, 72%);
-        height: 14rem;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M14 9v10M9 14h10' stroke='%23bcbbb5' stroke-width='1.25' fill='none' stroke-linecap='square'/%3E%3C/svg%3E");
-        background-size: 28px 28px;
-        background-position: top right;
-        opacity: 0.7;
-        -webkit-mask-image: linear-gradient(195deg, black 0%, rgba(0, 0, 0, 0.5) 40%, transparent 72%);
-        mask-image: linear-gradient(195deg, black 0%, rgba(0, 0, 0, 0.5) 40%, transparent 72%);
-    }
-
-    /* Grid whose cells are divided by single hairlines: the parent shows through a
-       1px gap so adjacent cells never double their borders. Children must be opaque
-       and carry their own padding (use rm-pad or p-*). */
-    .rm-split {
-        display: grid;
-        gap: 1px;
-        background: var(--color-border);
-    }
-
-    .rm-split > * {
-        background: var(--color-canvas);
-    }
-
     .rm-hero-mark {
         position: relative;
         display: inline-block;

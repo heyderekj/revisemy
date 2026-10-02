@@ -8,7 +8,7 @@
     $expires = filled($tokenExpiresAt) ? \Illuminate\Support\Carbon::parse($tokenExpiresAt) : null;
 @endphp
 
-<div {{ $attributes->class('overflow-hidden rounded-xl border border-zinc-200 bg-white') }}>
+<div {{ $attributes->class('overflow-hidden rounded-xl bg-card') }}>
     <div class="grid gap-px bg-zinc-200 sm:grid-cols-2">
         <div class="bg-white p-4">
             <div class="mb-2 flex items-center justify-between gap-2">
@@ -61,7 +61,7 @@
         </p>
         <button
             type="button"
-            class="group inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+            class="group inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
             wire:click="getTryToken"
             wire:loading.attr="disabled"
             onclick="if(window.fathom)fathom.trackEvent('Generate new try token')"

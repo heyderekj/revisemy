@@ -1,19 +1,13 @@
 {{-- Stylized dual preview: AI chat (inline MCP review) + review page.
      Decorative only — no photos, no live data. --}}
 <section
-    class="rm-hero-loop rm-bleed relative border-y border-zinc-200 bg-[var(--color-border)]"
+    class="rm-hero-loop relative"
     aria-label="Preview of ReviseMy in AI chat and on the review page"
 >
-    <x-cross-mark left="0" top="0" />
-    <x-cross-mark left="100%" top="0" />
-    <x-cross-mark left="50%" top="0" visibility="hidden sm:block" />
-    <x-cross-mark left="0" top="100%" />
-    <x-cross-mark left="100%" top="100%" />
-    <x-cross-mark left="50%" top="100%" visibility="hidden sm:block" />
 
-    <div class="grid grid-cols-1 gap-px sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {{-- AI chat --}}
-        <div class="rm-hero-loop-panel bg-[var(--color-canvas)] p-4 sm:p-5" aria-hidden="true">
+        <div class="rm-hero-loop-panel rounded-2xl bg-card p-4 sm:p-5" aria-hidden="true">
             <div class="mb-3 flex items-center justify-between gap-2">
                 <span class="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400">Agent chat</span>
                 <span class="text-[11px] text-zinc-400">MCP · inline</span>
@@ -30,7 +24,7 @@
                     </p>
 
                     {{-- Inline review card — capture input only; marks live on the review side --}}
-                    <div class="overflow-hidden bg-[var(--color-canvas)] text-zinc-900 ring-1 ring-zinc-700/40">
+                    <div class="overflow-hidden rounded-2xl bg-card text-zinc-900 ring-1 ring-zinc-700/40">
                         <div class="relative aspect-[16/10] bg-zinc-100">
                             <x-hero-wireframe dashed class="inset-3" />
                         </div>
@@ -40,7 +34,7 @@
         </div>
 
         {{-- Review page — animates in after agent chat --}}
-        <div class="rm-hero-loop-panel bg-[var(--color-canvas)] p-4 sm:p-5" aria-hidden="true">
+        <div class="rm-hero-loop-panel rounded-2xl bg-card p-4 sm:p-5" aria-hidden="true">
             <div class="rm-hero-loop-review mb-3 flex items-center justify-between gap-2">
                 <span class="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400">Review page</span>
                 <span class="text-[11px] text-zinc-400">Browser · marks</span>

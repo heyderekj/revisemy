@@ -10,10 +10,13 @@
 ])
 
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{-- Light or dark before first paint: the visitor's choice, else the system's. --}}
+    @fluxAppearance
 
     <x-seo-head
         :title="$title"
@@ -26,29 +29,15 @@
         :schema="$schema"
     />
 
-    <link rel="icon" href="{{ \App\Support\Seo::faviconUrl('/favicon-v9.ico') }}" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-32x32-v9.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-16x16-v9.png') }}">
-    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::faviconUrl('/images/apple-touch-icon-v9.png') }}">
+    <link rel="icon" href="{{ \App\Support\Seo::faviconUrl('/favicon-v10.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-32x32-v10.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-16x16-v10.png') }}">
+    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::faviconUrl('/images/apple-touch-icon-v10.png') }}">
 
     <link rel="preload" href="/fonts/figtree-latin-400.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/fonts/figtree-latin-500.woff2" as="font" type="font/woff2" crossorigin>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
-        :root {
-            color-scheme: light;
-        }
-    </style>
-    <script>
-        window.Flux = {
-            applyAppearance () {
-                document.documentElement.classList.remove('dark')
-                window.localStorage.setItem('flux.appearance', 'light')
-            }
-        }
-        window.Flux.applyAppearance()
-    </script>
 
     @if (config('seo.fathom_site_id'))
         <!-- Fathom - beautiful, simple website analytics -->

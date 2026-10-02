@@ -27,7 +27,7 @@
                 {{-- header: title + chips, matching the review page header line --}}
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     <h1 class="min-w-0 truncate text-lg font-semibold tracking-tight text-zinc-900" x-text="payload.title"></h1>
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600"
+                    <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600"
                         x-text="'Pass ' + payload.pass"></span>
                     <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700"
                         x-show="payload.type" x-text="payload.type"></span>
@@ -58,7 +58,7 @@
                         x-show="payload.status === 'approved'">Approved</span>
                     <span class="inline-flex shrink-0 items-center rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800"
                         x-show="payload.status === 'expired'">Expired</span>
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
+                    <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
                         x-show="payload.status === 'pending'">Waiting on your eye</span>
                 </div>
                 <p class="mt-1 text-sm text-zinc-500" x-show="payload.context" x-text="payload.context"></p>
@@ -66,7 +66,7 @@
                 {{-- counts row --}}
                 <div class="mt-2 flex flex-wrap items-center gap-1.5">
                     <template x-for="chip in countChips()" :key="chip.label">
-                        <span class="inline-flex items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600"
+                        <span class="inline-flex items-center rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600"
                             x-text="chip.label + ' ' + chip.value"></span>
                     </template>
                 </div>
@@ -88,7 +88,7 @@
                             <div class="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out" :style="'width:' + verifiedPct() + '%'"></div>
                         </div>
                     </div>
-                    <button type="button" class="inline-flex h-8 items-center gap-1 rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80 disabled:opacity-50"
+                    <button type="button" class="inline-flex h-8 items-center gap-1 rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover disabled:opacity-50"
                         :disabled="busy" @click="refresh()">↻ Refresh</button>
                 </div>
 
@@ -175,16 +175,16 @@
                     </div>
 
                     {{-- Mark detail (focus crop + parity with board mark sheet) --}}
-                    <div class="mt-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]" x-show="activePin" x-cloak>
+                    <div class="mt-3 overflow-hidden rounded-2xl bg-card shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]" x-show="activePin" x-cloak>
                         <div class="flex items-start justify-between gap-3 border-b border-zinc-100 px-3 py-3 sm:px-4">
                             <div class="flex min-w-0 flex-wrap items-center gap-2">
                                 <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold"
                                     :class="markerBg(activePin ? activePin.severity : '')"
                                     x-text="activePin && ('M' + activePin.number)"></span>
                                 <span class="text-xs text-zinc-500" x-text="activePin && severityLabel(activePin.severity)"></span>
-                                <span class="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4"
                                     :class="statusBadge(activePin ? activePin.status : '')"
-                                    x-text="activePin && statusLabel(activePin.status)"></span>
+                                    x-show="activePin"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(activePin ? activePin.status : '')" aria-hidden="true"></span><span x-text="activePin && statusLabel(activePin.status)"></span></span>
                                 <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500"
                                     x-show="activePin && activePin._from_parent"
                                     x-text="activePin && ('Pass ' + activePin._pass)"></span>
@@ -242,14 +242,14 @@
                                         <span class="text-xs text-zinc-500"
                                             x-text="activePin.comment_count + (activePin.comment_count === 1 ? ' comment' : ' comments')"></span>
                                         <button type="button"
-                                            class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80"
+                                            class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover"
                                             @click="openComments()">View comments</button>
                                     </div>
                                 </template>
                                 <div class="ml-auto flex flex-wrap gap-2" x-show="activePin && canManagePin(activePin)">
-                                    <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
+                                    <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-xs font-medium disabled:opacity-50"
                                         x-show="activePin && activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')">Verify</button>
-                                    <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80 disabled:opacity-50"
+                                    <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover disabled:opacity-50"
                                         x-show="activePin && activePin.status !== 'open'" :disabled="busy" @click="verifyMark(activePin, 'reopen')">Reopen</button>
                                 </div>
                             </div>
@@ -257,7 +257,7 @@
                     </div>
 
                     {{-- Second-opinion finding note --}}
-                    <div class="mt-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]" x-show="activeFinding" x-cloak>
+                    <div class="mt-3 rounded-2xl bg-card p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]" x-show="activeFinding" x-cloak>
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-1 text-[10px] font-semibold text-sky-700 shadow-sm"
@@ -309,9 +309,9 @@
                         <textarea x-model="composer.body" rows="3" placeholder="What should change here?"
                             class="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30"></textarea>
                         <div class="mt-2 flex flex-wrap items-center gap-2">
-                            <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
+                            <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-sm font-medium disabled:opacity-50"
                                 :disabled="busy || !composer.body.trim()" @click="saveMark()">Add mark</button>
-                            <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/80"
+                            <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-700 transition hover:bg-chip-hover"
                                 @click="closeComposer()">Cancel</button>
                         </div>
                         <p class="mt-2 text-sm text-rose-600" x-show="error" x-text="error"></p>
@@ -320,14 +320,14 @@
                     {{-- linear mark list (current pass) --}}
                     <div class="mt-3 flex flex-col gap-2" x-show="currentPins().length">
                         <template x-for="pin in currentPins()" :key="'l'+pin.id">
-                            <div class="rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:border-zinc-300 hover:shadow-md"
+                            <div class="rounded-xl bg-card p-3 text-left shadow-sm transition hover:border-zinc-300 hover:shadow-md"
                                 :class="activePin && activePin.id === pin.id ? 'border-zinc-400 ring-1 ring-zinc-300' : ''">
                                 <button type="button" class="w-full text-left" @click="showPin(pin)">
                                     <div class="mb-1 flex flex-wrap items-center gap-2">
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
                                             :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
                                         <span class="text-xs text-zinc-500" x-text="severityLabel(pin.severity)"></span>
-                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="statusBadge(pin.status)" x-text="statusLabel(pin.status)"></span>
+                                        <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(pin.status)"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(pin.status)" aria-hidden="true"></span><span x-text="statusLabel(pin.status)"></span></span>
                                         <span class="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600"
                                             x-show="pin.comment_count > 0" x-text="pin.comment_count"></span>
                                     </div>
@@ -352,9 +352,9 @@
                                     </div>
                                 </div>
                                 <div class="mt-2 flex flex-wrap items-center gap-2" x-show="canManagePin(pin)">
-                                    <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
+                                    <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-xs font-medium disabled:opacity-50"
                                         x-show="pin.status === 'resolved'" :disabled="busy" @click.stop="verifyMark(pin, 'verify')">Verify</button>
-                                    <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80 disabled:opacity-50"
+                                    <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover disabled:opacity-50"
                                         x-show="pin.status !== 'open'" :disabled="busy" @click.stop="verifyMark(pin, 'reopen')">Reopen</button>
                                 </div>
                             </div>
@@ -362,7 +362,7 @@
                     </div>
 
                     {{-- Previous pass marks (screenshot view) --}}
-                    <div class="mt-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm" x-show="parentPins().length">
+                    <div class="mt-3 overflow-hidden rounded-2xl bg-card" x-show="parentPins().length">
                         <button type="button" class="flex w-full items-center gap-2 px-3 py-3 text-left sm:px-4"
                             @click="previousOpen = ! previousOpen" :aria-expanded="previousOpen.toString()">
                             <span class="min-w-0 flex-1 text-sm font-semibold text-zinc-900">Previous pass marks</span>
@@ -380,7 +380,7 @@
                                             <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
                                                 :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
                                             <span class="text-xs text-zinc-500" x-text="severityLabel(pin.severity)"></span>
-                                            <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="statusBadge(pin.status)" x-text="statusLabel(pin.status)"></span>
+                                            <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(pin.status)"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(pin.status)" aria-hidden="true"></span><span x-text="statusLabel(pin.status)"></span></span>
                                             <span class="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500"
                                                 x-text="'P' + pin._pass"></span>
                                         </div>
@@ -405,9 +405,9 @@
                                         </div>
                                     </div>
                                     <div class="mt-2 flex flex-wrap items-center gap-2" x-show="canManagePin(pin)">
-                                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
+                                        <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-xs font-medium disabled:opacity-50"
                                             x-show="pin.status === 'resolved'" :disabled="busy" @click.stop="verifyMark(pin, 'verify')">Verify</button>
-                                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80 disabled:opacity-50"
+                                        <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover disabled:opacity-50"
                                             x-show="pin.status !== 'open'" :disabled="busy" @click.stop="verifyMark(pin, 'reopen')">Reopen</button>
                                     </div>
                                 </div>
@@ -456,14 +456,14 @@
                             <div class="flex flex-1 flex-col gap-2">
                                 <template x-for="pin in pinsByStatus(col.status)" :key="'b'+pin.id">
                                     <button type="button"
-                                        class="rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:border-zinc-300 hover:shadow-md"
+                                        class="rounded-xl bg-card p-3 text-left shadow-sm transition hover:border-zinc-300 hover:shadow-md"
                                         :class="activePin && activePin.id === pin.id ? 'border-zinc-400 ring-1 ring-zinc-300' : ''"
                                         @click="showPin(pin)">
                                         <div class="mb-1 flex flex-wrap items-center gap-2">
                                             <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
                                                 :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
                                             <span class="text-xs text-zinc-500" x-text="severityLabel(pin.severity)"></span>
-                                            <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="statusBadge(pin.status)" x-text="statusLabel(pin.status)"></span>
+                                            <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(pin.status)"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(pin.status)" aria-hidden="true"></span><span x-text="statusLabel(pin.status)"></span></span>
                                             <span class="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500"
                                                 x-show="pin._from_parent" x-text="'P' + pin._pass"></span>
                                             <span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600"
@@ -488,13 +488,13 @@
                 {{-- Shared mark detail when opened from board (screenshot view has its own copy above) --}}
                 <div class="mt-3" x-show="view === 'board' && activePin" x-cloak>
                     <template x-if="view === 'board' && activePin">
-                        <div class="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]">
+                        <div class="overflow-hidden rounded-2xl bg-card shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]">
                             <div class="flex items-start justify-between gap-3 border-b border-zinc-100 px-3 py-3 sm:px-4">
                                 <div class="flex min-w-0 flex-wrap items-center gap-2">
                                     <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold"
                                         :class="markerBg(activePin.severity)" x-text="'M' + activePin.number"></span>
                                     <span class="text-xs text-zinc-500" x-text="severityLabel(activePin.severity)"></span>
-                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="statusBadge(activePin.status)" x-text="statusLabel(activePin.status)"></span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(activePin.status)"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(activePin.status)" aria-hidden="true"></span><span x-text="statusLabel(activePin.status)"></span></span>
                                 </div>
                                 <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700" @click="closeDetail()" aria-label="Close">×</button>
                             </div>
@@ -542,13 +542,13 @@
                                     <template x-if="activePin.comment_count > 0">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <span class="text-xs text-zinc-500" x-text="activePin.comment_count + (activePin.comment_count === 1 ? ' comment' : ' comments')"></span>
-                                            <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80" @click="openComments()">View comments</button>
+                                            <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover" @click="openComments()">View comments</button>
                                         </div>
                                     </template>
                                     <div class="ml-auto flex flex-wrap gap-2" x-show="canManagePin(activePin)">
-                                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
+                                        <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-xs font-medium disabled:opacity-50"
                                             x-show="activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')">Verify</button>
-                                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/80 disabled:opacity-50"
+                                        <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover disabled:opacity-50"
                                             x-show="activePin.status !== 'open'" :disabled="busy" @click="verifyMark(activePin, 'reopen')">Reopen</button>
                                     </div>
                                 </div>
@@ -562,9 +562,9 @@
                     <input type="text" x-model="decisionNote" placeholder="Optional note for the agent…"
                         class="h-8 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30">
                     <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-contrast transition hover:bg-accent-hover disabled:opacity-50"
+                        <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-sm font-medium disabled:opacity-50"
                             :disabled="busy" @click="decide('approved')">Approve</button>
-                        <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-sm font-medium text-zinc-800 transition hover:bg-zinc-200/80 disabled:opacity-50"
+                        <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-800 transition hover:bg-chip-hover disabled:opacity-50"
                             :disabled="busy" @click="decide('changes_requested')">Request changes</button>
                         <button type="button" class="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-zinc-500 transition hover:text-zinc-800"
                             @click="openFullReview()">Open full review</button>
@@ -572,22 +572,22 @@
                 </div>
 
                 <div class="mt-4 space-y-3" x-show="!isPending">
-                    <div class="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-zinc-700 sm:px-4"
+                    <div class="rounded-xl bg-card px-3 py-2.5 text-sm leading-relaxed text-zinc-700 sm:px-4"
                         x-show="payload.decision_note">
                         <strong class="font-medium text-zinc-900">Note to the agent:</strong>
                         <span x-text="payload.decision_note"></span>
                     </div>
-                    <div class="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-zinc-700 sm:px-4"
+                    <div class="rounded-xl bg-card px-3 py-2.5 text-sm leading-relaxed text-zinc-700 sm:px-4"
                         x-show="payload.status === 'changes_requested'">
                         <strong class="font-medium text-zinc-900">What’s next:</strong>
                         The agent should apply your marks, then open a new checkup pass with fresh screenshots (linked to this review). You’ll get another link to approve.
                     </div>
-                    <div class="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-zinc-700 sm:px-4"
+                    <div class="rounded-xl bg-card px-3 py-2.5 text-sm leading-relaxed text-zinc-700 sm:px-4"
                         x-show="payload.status === 'approved'">
                         <strong class="font-medium text-zinc-900">Loop complete for this pass.</strong>
                         Ask the agent for another checkup anytime if the UI changes again.
                     </div>
-                    <button type="button" class="inline-flex h-8 items-center rounded-md bg-zinc-100 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/80"
+                    <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-700 transition hover:bg-chip-hover"
                         @click="openFullReview()">Open full review</button>
                 </div>
 
@@ -678,20 +678,16 @@
     })();
 
     function reviewApp() {
-        // Keep in sync with Annotation::markerClass(), severityLabels(), statusBadgeClass(),
+        // Keep in sync with Annotation::severityLabels(),
         // statusLabels(), and boardColumnMeta().
-        const MARKER_BG = {
-            'must-fix': 'bg-accent text-ink', 'nit': 'bg-accent text-ink', 'question': 'bg-accent text-ink', 'keep': 'bg-accent text-ink',
-            'wording': 'bg-accent text-ink', 'spacing': 'bg-accent text-ink', 'size': 'bg-accent text-ink', 'color': 'bg-accent text-ink', 'alignment': 'bg-accent text-ink',
-        };
+        const MARKER = @json(\App\Models\Annotation::make()->markerClass());
         const SEVERITY_LABELS = {
             'must-fix': 'Must fix', 'nit': 'Nice to have', 'question': 'Question', 'keep': 'Keep this',
             'wording': 'Wording', 'spacing': 'Spacing', 'size': 'Size', 'color': 'Color', 'alignment': 'Alignment',
         };
-        const STATUS_BADGE = {
-            'in_progress': 'bg-sky-100 text-sky-800', 'resolved': 'bg-amber-100 text-amber-800',
-            'verified': 'bg-emerald-100 text-emerald-800', 'open': 'bg-zinc-100 text-zinc-600',
-        };
+        // The same tones the web review uses, from Annotation::TONES.
+        const TONES = @json(\App\Models\Annotation::TONES);
+        const STATUS_TONES = @json(\App\Models\Annotation::statusTones());
         const STATUS_LABELS = { 'open': 'Open', 'in_progress': 'In progress', 'resolved': 'Resolved', 'verified': 'Verified' };
 
         return {
@@ -747,9 +743,10 @@
 
             get isPending() { return this.payload && this.payload.status === 'pending'; },
 
-            markerBg(severity) { return MARKER_BG[severity] || 'bg-accent text-ink'; },
+            markerBg() { return MARKER; },
             severityLabel(severity) { return SEVERITY_LABELS[severity] || severity; },
-            statusBadge(status) { return STATUS_BADGE[status] || 'bg-zinc-100 text-zinc-600'; },
+            statusBadge(status) { return TONES[STATUS_TONES[status] || 'neutral'].tag; },
+            statusDot(status) { return TONES[STATUS_TONES[status] || 'neutral'].dot; },
             statusLabel(status) { return STATUS_LABELS[status] || status; },
             isSettled(pin) { return pin.status === 'resolved' || pin.status === 'verified'; },
             canManagePin(pin) { return pin && pin.severity !== 'keep' && pin.status !== 'open'; },

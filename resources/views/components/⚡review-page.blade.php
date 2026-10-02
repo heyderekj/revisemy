@@ -951,13 +951,15 @@ new class extends Component
 ?>
 
 <div
-    class="flex h-svh max-h-svh flex-col overflow-hidden"
+    class="rm-desk flex h-svh max-h-svh flex-col overflow-hidden"
     @if ($this->opinionPending)
         wire:poll.visible.3s="loadReview"
     @else
         wire:poll.visible.30s="loadReview"
     @endif
 >
+    {{-- Koati's shell: the work sits on an inset panel over the desk. --}}
+    <div class="rm-shell">
     @include('review.partials.header')
 
     @if ($mode === 'guest' && ! $review->allowsGuestAccess())
@@ -992,4 +994,5 @@ new class extends Component
         @include('review.partials.mobile-decision-bar')
     @endif
     @endif
+</div>
 </div>
