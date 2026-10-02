@@ -4,6 +4,7 @@ use App\Http\Controllers\AlternativeController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\PolarWebhookController;
 use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\UseCaseController;
@@ -38,16 +39,19 @@ Route::get('/terms', [LegalController::class, 'terms']);
 Route::get('/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');
 Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
 Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
-Route::get('/billing/portal-return', [BillingController::class, 'portalReturn'])->name('billing.portal-return');
 Route::get('/billing/checkout/{workspace}', [BillingController::class, 'checkout'])
     ->middleware('signed')
     ->name('billing.checkout');
 Route::get('/billing/manage/{workspace}', [BillingController::class, 'manage'])
     ->middleware('signed')
     ->name('billing.manage');
+Route::post('/billing/manage/{workspace}/portal', [BillingController::class, 'portal'])
+    ->middleware('signed')
+    ->name('billing.portal');
 Route::post('/billing/manage/{workspace}/cancel', [BillingController::class, 'cancelSubscription'])
     ->middleware('signed')
     ->name('billing.cancel-subscription');
+Route::post('/polar/webhook', PolarWebhookController::class)->name('polar.webhook');
 
 Route::get('/alternatives', [AlternativeController::class, 'index']);
 Route::get('/alternatives/{slug}', [AlternativeController::class, 'show'])

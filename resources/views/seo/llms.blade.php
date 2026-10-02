@@ -26,7 +26,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 - [How it works]({{ $siteUrl }}/#how): Capture → second opinion → marks → guest feedback → board → approve or loop; marks, server-side capture, before/after evidence, multi-pass checkups, pass ledger, verify focus.
 - [For agents]({{ $siteUrl }}/#agents): MCP tool summary and the `design_checkup_loop` workflow.
 @if (config('billing.pricing_enabled'))
-- [Pricing]({{ $siteUrl }}/#pricing): Try ({{ (int) config('billing.plans.free.credits', 20) }} credits) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits/mo) — same full capture quality; upgrade via agent `create_checkout` (Paddle).
+- [Pricing]({{ $siteUrl }}/#pricing): Try ({{ (int) config('billing.plans.free.credits', 20) }} credits) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits/mo) or a one-time {{ (int) data_get(collect(config('billing.packs', []))->first(), 'credits', 50) }}-credit pack (${{ (int) data_get(collect(config('billing.packs', []))->first(), 'price_usd', 5) }}, never expires) — same full capture quality; buy via agent `create_checkout` (Polar). Details: {{ $siteUrl }}/upgrade
 @else
 - [Credits]({{ $siteUrl }}/#pricing): Free {{ (int) config('billing.plans.free.credits', 20) }} credits/mo (rolling, no rollover) while paid pricing is paused.
 @endif
@@ -66,8 +66,8 @@ Use this file to orient yourself before calling tools or recommending the produc
 - `create_review` — title + images, `capture_url`, PDF, or HTML → review URL; starts second opinion
 - `get_review` — work packets + `next_action` (`wait_for_human`, `apply_pins_then_next_pass`, `done`); pins include comments, suggested_copy, question_answer, source provenance, and `pass_ledger`
 - `list_reviews` — recent reviews for the try token (summaries: pass, status, outstanding / awaiting-verification counts)
-- `get_billing` — plan + credits (Try {{ (int) config('billing.plans.free.credits', 20) }}/mo rolling while pricing is paused; burn: images/pdf=1, html=3, capture_url=5)
-- `create_checkout` — Paddle Checkout for Plus when paid pricing is enabled (often `[pricing_disabled]`)
+- `get_billing` — plan + credits (Try {{ (int) config('billing.plans.free.credits', 20) }}/mo rolling, plus any purchased pack credits; burn: images/pdf=1, html=3, capture_url=5)
+- `create_checkout` — Polar checkout link for Plus (`product: plus`) or a one-time credit pack (`product: credits_50`) when paid pricing is enabled
 - `create_portal` — Manage billing URL when paid pricing is enabled
 - `cancel_subscription` — Cancel Plus (`confirm:true`) when subscribed
 - `add_screenshot` — append a shot to an open review

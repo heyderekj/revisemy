@@ -54,7 +54,9 @@ class CreditsService
     }
 
     /**
-     * Ensure the workspace has an initial grant; refill only if the plan renews.
+     * Ensure the workspace has an initial grant; lazily refill Try monthly.
+     * Plus refills when Polar bills the subscription (order.paid webhook), so
+     * its refill follows the real billing cycle instead of this clock.
      */
     public function ensurePeriod(Workspace $workspace): Workspace
     {
@@ -64,7 +66,9 @@ class CreditsService
             return $this->grantPeriod($workspace);
         }
 
-        if ($this->planRenews($workspace) && $workspace->credits_period_start->lte(now()->subMonth())) {
+        if ($workspace->normalizedPlan() === Workspace::PLAN_FREE
+            && $this->planRenews($workspace)
+            && $workspace->credits_period_start->lte(now()->subMonth())) {
             return $this->grantPeriod($workspace);
         }
 
@@ -101,9 +105,39 @@ class CreditsService
         return $workspace->fresh() ?? $workspace;
     }
 
+    /**
+     * Purchased pack credits — never reset by a monthly refill.
+     */
+    public function addPurchasedCredits(Workspace $workspace, int $amount): Workspace
+    {
+        if ($amount > 0) {
+            Workspace::query()->whereKey($workspace->id)->increment('purchased_credits', $amount);
+        }
+
+        return $workspace->fresh() ?? $workspace;
+    }
+
+    /**
+     * Claw back a refunded pack. Clamped at zero: credits already spent stay spent.
+     */
+    public function removePurchasedCredits(Workspace $workspace, int $amount): Workspace
+    {
+        if ($amount > 0) {
+            DB::transaction(function () use ($workspace, $amount): void {
+                $locked = Workspace::query()->whereKey($workspace->id)->lockForUpdate()->firstOrFail();
+                $locked->forceFill([
+                    'purchased_credits' => max(0, (int) $locked->purchased_credits - $amount),
+                ])->save();
+            });
+        }
+
+        return $workspace->fresh() ?? $workspace;
+    }
+
+    /** Monthly grant plus purchased credits. */
     public function remaining(Workspace $workspace): int
     {
-        return (int) $this->ensurePeriod($workspace)->credits_balance;
+        return $this->ensurePeriod($workspace)->totalCredits();
     }
 
     /**
@@ -112,7 +146,7 @@ class CreditsService
     public function assertAffordable(Workspace $workspace, int $cost): void
     {
         $workspace = $this->ensurePeriod($workspace);
-        $remaining = (int) $workspace->credits_balance;
+        $remaining = $workspace->totalCredits();
 
         if ($remaining < $cost) {
             throw new InsufficientCreditsException($workspace, $cost, $remaining);
@@ -120,39 +154,61 @@ class CreditsService
     }
 
     /**
-     * Debit credits after a successful affordability check.
+     * Debit credits — the monthly grant first, then purchased credits.
+     * Returns the split so a refund can put credits back where they came from.
+     *
+     * @return array{monthly: int, purchased: int}
      *
      * @throws InsufficientCreditsException
      */
-    public function debit(Workspace $workspace, int $cost): void
+    public function debit(Workspace $workspace, int $cost): array
     {
         if ($cost <= 0) {
-            return;
+            return ['monthly' => 0, 'purchased' => 0];
         }
 
-        DB::transaction(function () use ($workspace, $cost): void {
+        $split = DB::transaction(function () use ($workspace, $cost): array {
             /** @var Workspace $locked */
             $locked = Workspace::query()->whereKey($workspace->id)->lockForUpdate()->firstOrFail();
             $this->ensurePeriod($locked);
             $locked->refresh();
 
-            if ((int) $locked->credits_balance < $cost) {
-                throw new InsufficientCreditsException($locked, $cost, (int) $locked->credits_balance);
+            if ($locked->totalCredits() < $cost) {
+                throw new InsufficientCreditsException($locked, $cost, $locked->totalCredits());
             }
 
-            $locked->decrement('credits_balance', $cost);
+            $monthly = min($cost, max(0, (int) $locked->credits_balance));
+            $purchased = $cost - $monthly;
+
+            $locked->forceFill([
+                'credits_balance' => (int) $locked->credits_balance - $monthly,
+                'purchased_credits' => (int) $locked->purchased_credits - $purchased,
+            ])->save();
+
+            return ['monthly' => $monthly, 'purchased' => $purchased];
         });
 
         $workspace->refresh();
+
+        return $split;
     }
 
-    public function refund(Workspace $workspace, int $cost): void
+    /**
+     * @param  array{monthly: int, purchased: int}  $split  as returned by debit()
+     */
+    public function refund(Workspace $workspace, array $split): void
     {
-        if ($cost <= 0) {
+        $monthly = max(0, (int) ($split['monthly'] ?? 0));
+        $purchased = max(0, (int) ($split['purchased'] ?? 0));
+
+        if ($monthly + $purchased === 0) {
             return;
         }
 
-        Workspace::query()->whereKey($workspace->id)->increment('credits_balance', $cost);
+        Workspace::query()->whereKey($workspace->id)->update([
+            'credits_balance' => DB::raw('credits_balance + '.$monthly),
+            'purchased_credits' => DB::raw('purchased_credits + '.$purchased),
+        ]);
         $workspace->refresh();
     }
 
@@ -170,7 +226,7 @@ class CreditsService
     }
 
     /**
-     * Downgrade to Try — no immediate grant (leftover balance kept; refills when the plan renews).
+     * Downgrade to Try — no immediate grant (leftover balance kept; Try refills a month after the last grant).
      */
     public function activateFree(Workspace $workspace): Workspace
     {
@@ -189,12 +245,18 @@ class CreditsService
         $grant = $this->planGrant($workspace);
         $renews = $this->planRenews($workspace);
         $periodStart = $workspace->credits_period_start ?? now();
-        $periodEnds = $renews ? $periodStart->copy()->addMonth() : null;
+        $periodEnds = match (true) {
+            ! $renews => null,
+            $plan === Workspace::PLAN_PRO && $workspace->polar_current_period_end !== null => $workspace->polar_current_period_end,
+            default => $periodStart->copy()->addMonth(),
+        };
 
         return [
             'plan' => $plan,
             'plan_name' => config("billing.plans.{$plan}.name", $plan),
-            'credits_remaining' => (int) $workspace->credits_balance,
+            'credits_remaining' => $workspace->totalCredits(),
+            'credits_monthly' => (int) $workspace->credits_balance,
+            'credits_purchased' => (int) $workspace->purchased_credits,
             'credits_grant' => $grant,
             'credits_renew' => $renews,
             'credits_period_start' => $periodStart->toIso8601String(),
@@ -203,6 +265,23 @@ class CreditsService
             'review_retention_days' => $workspace->reviewRetentionDays(),
             'pro_price_usd' => (int) config('billing.plans.pro.price_usd', 9),
             'pro_credits' => (int) config('billing.plans.pro.credits', 100),
+            'packs' => $this->packs(),
         ];
+    }
+
+    /**
+     * @return list<array{product: string, name: string, credits: int, price_usd: int}>
+     */
+    public function packs(): array
+    {
+        return collect(config('billing.packs', []))
+            ->map(fn (array $pack, string $key) => [
+                'product' => $key,
+                'name' => (string) ($pack['name'] ?? $key),
+                'credits' => (int) ($pack['credits'] ?? 0),
+                'price_usd' => (int) ($pack['price_usd'] ?? 0),
+            ])
+            ->values()
+            ->all();
     }
 }

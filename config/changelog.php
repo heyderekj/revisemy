@@ -15,6 +15,23 @@ return [
     'entries' => [
 
         [
+            'version' => '1.3.0',
+            'date' => '2026-10-02',
+            'title' => 'Plus is back, plus credit packs — billing now runs on Polar',
+            'highlights' => [
+                'Plus returns at $9/mo for 100 credits each billing month, sold through Polar as merchant of record',
+                'New one-time credit pack: 50 credits for $5 that never expire, on Try or Plus — spent only after your monthly credits',
+                'create_checkout takes a product (plus or credits_50); get_billing reports monthly and purchased credits separately and offers both when you run out',
+                'Credits are granted by Polar’s payment webhook, once per order — reloading a checkout page can no longer refill credits',
+                'Canceling Plus keeps it through the paid period; purchased pack credits stay after you downgrade',
+            ],
+            'links' => [
+                ['label' => 'Pricing', 'href' => '/upgrade'],
+                ['label' => 'Changelog', 'href' => '/changelog'],
+            ],
+        ],
+
+        [
             'version' => '1.2.0',
             'date' => '2026-07-31',
             'title' => 'Hardened ingestion and a leaner agent payload',

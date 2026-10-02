@@ -1101,6 +1101,7 @@ new class extends Component
                 $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);
                 $plusPrice = (int) config('billing.plans.pro.price_usd', 9);
                 $freeRenews = (bool) config('billing.plans.free.renews', true);
+                $pack = collect(config('billing.packs', []))->first();
             @endphp
             <x-home-section id="pricing" flush-bottom>
                 <x-section-eyebrow number="04" :label="$pricingEnabled ? 'Pricing' : 'Credits'" />
@@ -1109,10 +1110,10 @@ new class extends Component
                         Try it free. Keep it with Plus.
                     </h2>
                     <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-                        Start with a try token — no ReviseMy account. Same capture quality on Try and Plus.
-                        When you like it, your agent opens Paddle Checkout via
+                        Start with a try token — no ReviseMy account. Same capture quality on every plan.
+                        When you like it, your agent opens checkout via
                         <code class="bg-zinc-100 px-1 py-0.5 text-[13px] text-zinc-800">create_checkout</code>
-                        — still without leaving your chat.
+                        — still without leaving your chat. Heavy month? Top up with a credit pack.
                     </p>
                 @else
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
@@ -1129,12 +1130,14 @@ new class extends Component
                     <x-cross-mark left="0" top="0" />
                     <x-cross-mark left="100%" top="0" />
                     @if ($pricingEnabled)
-                        <x-cross-mark left="50%" top="0" visibility="hidden min-[30rem]:block" />
+                        <x-cross-mark left="50%" top="0" visibility="hidden min-[30rem]:block lg:hidden" />
+                        <x-cross-mark left="33.333%" top="0" visibility="hidden lg:block" />
+                        <x-cross-mark left="66.666%" top="0" visibility="hidden lg:block" />
                     @endif
 
                     <div @class([
                         'grid grid-cols-1 gap-px bg-[var(--color-border)]',
-                        'min-[30rem]:grid-cols-2' => $pricingEnabled,
+                        'min-[30rem]:grid-cols-2 lg:grid-cols-3' => $pricingEnabled,
                     ])>
                         <article class="bg-[var(--color-canvas)] p-7 sm:p-8">
                             <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Try</p>
@@ -1197,11 +1200,34 @@ new class extends Component
                                         <p class="mt-3 max-w-xs text-[13px] leading-relaxed text-zinc-500">
                                             After you try it, ask your agent for
                                             <code class="bg-zinc-100 px-1 py-0.5 text-[12px] text-zinc-800">create_checkout</code>
-                                            and open the Paddle link.
+                                            and open the checkout link.
                                         </p>
                                     </div>
                                 </div>
                             </article>
+
+                            @if ($pack)
+                                <article class="bg-[var(--color-canvas)] p-7 sm:p-8 min-[30rem]:col-span-2 lg:col-span-1">
+                                    <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Credit pack</p>
+                                    <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
+                                        ${{ (int) $pack['price_usd'] }}<span class="text-lg font-medium text-zinc-500"> once</span>
+                                    </p>
+                                    <p class="mt-2 text-[15px] leading-relaxed text-pretty text-zinc-600">
+                                        {{ (int) $pack['credits'] }} extra credits.<br>
+                                        They never expire.
+                                    </p>
+                                    <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
+                                        <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Works on Try or Plus</li>
+                                        <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Used after your monthly credits</li>
+                                        <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> No subscription</li>
+                                    </ul>
+                                    <p class="mt-8 max-w-xs text-[13px] leading-relaxed text-zinc-500">
+                                        Ask your agent for
+                                        <code class="bg-zinc-100 px-1 py-0.5 text-[12px] text-zinc-800">create_checkout</code>
+                                        with a credit pack.
+                                    </p>
+                                </article>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -1221,7 +1247,7 @@ new class extends Component
                         <x-billing.credit-costs :compare="$pricingEnabled" :show-label="false" />
                         <p class="mt-4 text-[14px] leading-relaxed text-zinc-500">
                             @if ($pricingEnabled)
-                                Plus credits reset monthly (no rollover).
+                                Monthly credits reset each period (no rollover). Credit packs never expire and are spent last.
                             @else
                                 Credits reset monthly (no rollover). Paid plans are paused.
                             @endif
@@ -1280,7 +1306,7 @@ new class extends Component
                                     </span>
                                 </summary>
                                 <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
-                                    Ask your agent for <code class="font-mono text-[13px]">create_checkout</code> — it opens a Paddle link for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo). For card or receipts, use <code class="font-mono text-[13px]">create_portal</code>. To leave Plus, <code class="font-mono text-[13px]">cancel_subscription</code> with <code class="font-mono text-[13px]">confirm:true</code> — you keep Plus until the period ends, then Try with leftover credits only (no new grant). See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a>.
+                                    Ask your agent for <code class="font-mono text-[13px]">create_checkout</code> — it opens a secure Polar checkout for Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo) or a one-time credit pack. For card or receipts, use <code class="font-mono text-[13px]">create_portal</code>. To leave Plus, <code class="font-mono text-[13px]">cancel_subscription</code> with <code class="font-mono text-[13px]">confirm:true</code> — you keep Plus until the period ends, then Try with leftover credits only (no new grant). See <a href="#pricing" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Pricing</a>.
                                 </p>
                             </details>
                         @endif
@@ -1294,7 +1320,7 @@ new class extends Component
                             </summary>
                             <p class="mt-3 text-[15px] leading-relaxed text-zinc-600">
                                 @if (config('billing.pricing_enabled'))
-                                    On Try, new checkups pause until you upgrade — there’s no monthly refill. On Plus, unused credits don’t roll over; you get a fresh grant next month. Burn is the same (images/PDF&nbsp;=&nbsp;1, HTML&nbsp;=&nbsp;3, live URL&nbsp;=&nbsp;5). Your agent can check with <code class="font-mono text-[13px]">get_billing</code>, or open <code class="font-mono text-[13px]">create_checkout</code> for Plus.
+                                    New checkups pause until your monthly credits refill — or top up right away with a credit pack (never expires) or Plus. Monthly credits don’t roll over. Burn is the same on every plan (images/PDF&nbsp;=&nbsp;1, HTML&nbsp;=&nbsp;3, live URL&nbsp;=&nbsp;5). Your agent can check with <code class="font-mono text-[13px]">get_billing</code>, or open <code class="font-mono text-[13px]">create_checkout</code>.
                                 @else
                                     New checkups pause until your monthly pack refills ({{ (int) config('billing.plans.free.credits', 20) }} credits, no rollover). Burn is images/PDF&nbsp;=&nbsp;1, HTML&nbsp;=&nbsp;3, live URL&nbsp;=&nbsp;5. Your agent can check the refill date with <code class="font-mono text-[13px]">get_billing</code>. Paid plans are paused while we figure out pricing.
                                 @endif

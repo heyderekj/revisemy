@@ -23,11 +23,16 @@ class InsufficientCreditsException extends Exception
         $grant = (int) config('billing.plans.free.credits', 20);
 
         if (config('billing.pricing_enabled')) {
+            $pack = collect(config('billing.packs', []))->map(fn (array $p, string $key) => [...$p, 'key' => $key])->first();
+
             return sprintf(
-                '[insufficient_credits] Need %d credit%s; %d remaining. Call create_checkout and immediately paste share_markdown / checkout_url into the human-visible chat for Plus ($9/mo, 100 credits/mo) — do not only say “finish payment in the browser.”',
+                '[insufficient_credits] Need %d credit%s; %d remaining. Offer the human Plus ($%d/mo, %d credits/mo)%s, call create_checkout with their choice, and immediately paste share_markdown / checkout_url into the human-visible chat — do not only say “finish payment in the browser.”',
                 $this->required,
                 $this->required === 1 ? '' : 's',
                 $this->remaining,
+                (int) config('billing.plans.pro.price_usd', 9),
+                (int) config('billing.plans.pro.credits', 100),
+                $pack ? sprintf(' or a one-time %d-credit pack ($%d, product "%s")', $pack['credits'], $pack['price_usd'], $pack['key']) : '',
             );
         }
 
@@ -55,7 +60,7 @@ class InsufficientCreditsException extends Exception
             'plan' => $this->workspace->plan,
             'next_action' => $pricingEnabled ? 'upgrade' : 'wait_for_refill',
             'hint' => $pricingEnabled
-                ? 'Call create_checkout, then paste share_markdown into chat immediately. Never only say “finish payment in the browser.”'
+                ? 'Call create_checkout (product "plus", or a credit pack if already on Plus), then paste share_markdown into chat immediately. Never only say “finish payment in the browser.”'
                 : 'Call get_billing for remaining credits and when the monthly pack refills. Paid Plus checkout is paused.',
         ];
     }

@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Polar signs its webhooks (Standard Webhooks); there is no session to forge.
+        $middleware->preventRequestForgery(except: ['polar/webhook']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

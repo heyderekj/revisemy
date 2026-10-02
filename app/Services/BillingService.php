@@ -2,35 +2,87 @@
 
 namespace App\Services;
 
+use App\Models\BillingOrder;
 use App\Models\User;
 use App\Models\Workspace;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
-use Laravel\Paddle\Cashier;
-use Laravel\Paddle\Checkout;
 use RuntimeException;
 
 class BillingService
 {
-    public function __construct(protected CreditsService $credits) {}
+    public const PRODUCT_PLUS = 'plus';
+
+    public function __construct(
+        protected CreditsService $credits,
+        protected PolarClient $polar,
+    ) {}
 
     public function pricingEnabled(): bool
     {
         return (bool) config('billing.pricing_enabled', false);
     }
 
-    public function paddleConfigured(): bool
+    public function polarConfigured(): bool
     {
-        return filled(config('cashier.api_key'))
-            && filled(config('cashier.client_side_token'))
-            && filled(config('billing.plans.pro.paddle_price'));
+        return $this->polar->configured();
+    }
+
+    /**
+     * Product keys a checkout can sell: Plus plus every configured pack.
+     *
+     * @return list<string>
+     */
+    public function productKeys(): array
+    {
+        return [self::PRODUCT_PLUS, ...array_keys((array) config('billing.packs', []))];
+    }
+
+    public function isPack(string $product): bool
+    {
+        return array_key_exists($product, (array) config('billing.packs', []));
+    }
+
+    /**
+     * What a checkout for $product sells, for agent payloads.
+     *
+     * @return array<string, mixed>
+     */
+    public function checkoutDetails(string $product): array
+    {
+        if ($product === self::PRODUCT_PLUS) {
+            return [
+                'product' => $product,
+                'plan' => Workspace::PLAN_PRO,
+                'price_usd' => (int) config('billing.plans.pro.price_usd', 9),
+                'credits_grant' => (int) config('billing.plans.pro.credits', 100),
+                'recurring' => 'monthly',
+            ];
+        }
+
+        return [
+            'product' => $product,
+            'price_usd' => (int) config("billing.packs.{$product}.price_usd", 0),
+            'credits_grant' => (int) config("billing.packs.{$product}.credits", 0),
+            'recurring' => false,
+        ];
     }
 
     public function checkoutAvailable(Workspace $workspace): bool
     {
         return $this->pricingEnabled()
-            && $this->paddleConfigured()
-            && $workspace->normalizedPlan() !== Workspace::PLAN_PRO;
+            && $this->polarConfigured()
+            && ! $workspace->isPlusActive();
+    }
+
+    public function packCheckoutAvailable(): bool
+    {
+        return $this->pricingEnabled()
+            && $this->polarConfigured()
+            && collect(array_keys((array) config('billing.packs', [])))
+                ->contains(fn (string $key) => $this->polar->productId($key) !== null);
     }
 
     /**
@@ -40,96 +92,96 @@ class BillingService
     {
         $summary = $this->credits->summary($workspace);
         $summary['pricing_enabled'] = $this->pricingEnabled();
-        $summary['paddle_configured'] = $this->paddleConfigured();
-        $summary['stripe_configured'] = false; // legacy key for older agents
-        $summary['subscribed'] = $workspace->normalizedPlan() === Workspace::PLAN_PRO
-            && $workspace->subscribed('default');
+        $summary['polar_configured'] = $this->polarConfigured();
+        $summary['subscribed'] = $workspace->isPlusActive();
+        $summary['cancel_at_period_end'] = (bool) $workspace->polar_cancel_at_period_end;
         $summary['checkout_available'] = $this->checkoutAvailable($workspace);
+        $summary['pack_checkout_available'] = $this->packCheckoutAvailable();
         $summary['portal_available'] = $this->pricingEnabled()
-            && $this->paddleConfigured()
-            && $workspace->customer !== null;
+            && $this->polarConfigured()
+            && $this->hasPolarCustomer($workspace);
 
         return $summary;
     }
 
     /**
-     * Signed URL to a page that opens Paddle Checkout for the human.
+     * Signed URL that starts a Polar checkout for the human. Signed (not a raw
+     * Polar session URL) so an agent can hold it for hours without it expiring.
      *
      * @throws RuntimeException
      */
-    public function createCheckoutUrl(Workspace $workspace): string
+    public function createCheckoutUrl(Workspace $workspace, string $product = self::PRODUCT_PLUS): string
+    {
+        $this->assertCanCheckout($workspace, $product);
+
+        return URL::temporarySignedRoute(
+            'billing.checkout',
+            now()->addHours(6),
+            ['workspace' => $workspace->public_id, 'product' => $product],
+        );
+    }
+
+    /**
+     * Create the Polar checkout session and return its URL.
+     *
+     * @throws RuntimeException
+     */
+    public function startCheckout(Workspace $workspace, string $product = self::PRODUCT_PLUS): string
+    {
+        $this->assertCanCheckout($workspace, $product);
+
+        $productId = (string) $this->polar->productId($product);
+        $session = $this->polar->createCheckout(
+            productId: $productId,
+            externalCustomerId: $workspace->public_id,
+            successUrl: url('/billing/success').'?checkout_id={CHECKOUT_ID}',
+            returnUrl: url('/billing/cancel'),
+            email: $workspace->billing_email,
+            metadata: [
+                'workspace_public_id' => $workspace->public_id,
+                'product' => $product,
+            ],
+        );
+
+        return $session['url'];
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    protected function assertCanCheckout(Workspace $workspace, string $product): void
     {
         if (! $this->pricingEnabled()) {
             throw new RuntimeException(
-                '[pricing_disabled] Paid Plus checkout is paused. Workspaces get '.
+                '[pricing_disabled] Paid checkout is paused. Workspaces get '.
                 (int) config('billing.plans.free.credits', 20).
                 ' credits that renew monthly — call get_billing for remaining credits and when they refill.',
             );
         }
 
-        if (! $this->paddleConfigured()) {
+        if (! in_array($product, $this->productKeys(), true)) {
             throw new RuntimeException(
-                '[billing_not_configured] Paddle is not configured on this ReviseMy host. Set PADDLE_API_KEY, PADDLE_CLIENT_SIDE_TOKEN, and PADDLE_PRICE_PRO.',
+                '[unknown_product] product must be one of: '.implode(', ', $this->productKeys()).'.',
             );
         }
 
-        if ($workspace->normalizedPlan() === Workspace::PLAN_PRO && $workspace->subscribed('default')) {
+        if (! $this->polarConfigured() || $this->polar->productId($product) === null) {
             throw new RuntimeException(
-                '[already_subscribed] This workspace is already on Plus. Call create_portal to manage billing.',
+                '[billing_not_configured] Polar is not configured on this ReviseMy host. Set POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, and the POLAR_PRODUCT_* IDs.',
             );
         }
 
-        return URL::temporarySignedRoute(
-            'billing.checkout',
-            now()->addHours(6),
-            ['workspace' => $workspace->public_id],
-        );
-    }
-
-    /**
-     * Build a guest Paddle Checkout (email collected in Paddle UI).
-     *
-     * @throws RuntimeException
-     */
-    public function checkoutForWorkspace(Workspace $workspace): Checkout
-    {
-        if (! $this->pricingEnabled()) {
-            throw new RuntimeException('[pricing_disabled] Paid Plus checkout is paused.');
+        if ($product === self::PRODUCT_PLUS && $workspace->isPlusActive()) {
+            throw new RuntimeException(
+                '[already_subscribed] This workspace is already on Plus. Buy a credit pack with product: "'.
+                (array_key_first((array) config('billing.packs', [])) ?? 'credits_50').
+                '" for more credits, or call create_portal to manage billing.',
+            );
         }
-
-        if (! $this->paddleConfigured()) {
-            throw new RuntimeException('[billing_not_configured] Paddle is not configured.');
-        }
-
-        $price = (string) config('billing.plans.pro.paddle_price');
-
-        return Checkout::guest([$price])
-            ->customData([
-                'subscription_type' => 'default',
-                'workspace_public_id' => $workspace->public_id,
-            ])
-            ->returnTo(url('/billing/success').'?workspace='.$workspace->public_id);
     }
 
     /**
-     * Options for Paddle.Checkout.open (overlay).
-     *
-     * @return array<string, mixed>
-     */
-    public function checkoutOpenOptions(Workspace $workspace): array
-    {
-        $options = $this->checkoutForWorkspace($workspace)->options();
-        $options['settings']['displayMode'] = 'inline';
-        $options['settings']['frameTarget'] = 'paddle-checkout';
-        $options['settings']['frameInitialHeight'] = '516';
-        $options['settings']['frameStyle'] = 'width: 100%; min-width: 312px; background-color: transparent; border: none;';
-        $options['settings']['variant'] = 'one-page';
-
-        return $options;
-    }
-
-    /**
-     * Signed URL to manage / cancel Plus.
+     * Signed URL to the billing manage page (receipts, card, cancel Plus).
      *
      * @throws RuntimeException
      */
@@ -141,15 +193,15 @@ class BillingService
             );
         }
 
-        if (! $this->paddleConfigured()) {
+        if (! $this->polarConfigured()) {
             throw new RuntimeException(
-                '[billing_not_configured] Paddle is not configured on this ReviseMy host.',
+                '[billing_not_configured] Polar is not configured on this ReviseMy host.',
             );
         }
 
-        if ($workspace->customer === null && $workspace->normalizedPlan() !== Workspace::PLAN_PRO) {
+        if (! $this->hasPolarCustomer($workspace)) {
             throw new RuntimeException(
-                '[no_customer] No Paddle customer on this workspace yet. Call create_checkout first.',
+                '[no_customer] This workspace has not bought anything yet. Call create_checkout first.',
             );
         }
 
@@ -161,80 +213,235 @@ class BillingService
     }
 
     /**
-     * Link a Paddle customer to a workspace from webhook custom_data (before Cashier runs).
+     * Fresh Polar customer-portal URL (expires quickly, so mint on click).
      *
-     * @param  array<string, mixed>  $data
+     * @throws RuntimeException
      */
-    public function linkWorkspaceFromPaddlePayload(array $data): ?Workspace
+    public function polarPortalUrl(Workspace $workspace): string
     {
-        $publicId = $data['custom_data']['workspace_public_id'] ?? null;
-        $paddleCustomerId = $data['customer_id'] ?? null;
-
-        if (! is_string($publicId) || $publicId === '' || ! is_string($paddleCustomerId) || $paddleCustomerId === '') {
-            return null;
+        if (! $this->hasPolarCustomer($workspace)) {
+            throw new RuntimeException('[no_customer] This workspace has not bought anything yet.');
         }
 
-        $workspace = Workspace::query()->where('public_id', $publicId)->first();
-
-        if (! $workspace) {
-            return null;
-        }
-
-        if ($workspace->customer) {
-            return $workspace;
-        }
-
-        try {
-            $remote = Cashier::api('GET', "customers/{$paddleCustomerId}")['data'] ?? null;
-        } catch (\Throwable $e) {
-            Log::warning('Paddle customer fetch failed', [
-                'paddle_customer' => $paddleCustomerId,
-                'error' => $e->getMessage(),
-            ]);
-            $remote = null;
-        }
-
-        $email = is_array($remote)
-            ? (string) ($remote['email'] ?? '')
-            : '';
-        $name = is_array($remote)
-            ? (string) ($remote['name'] ?? $workspace->name)
-            : (string) $workspace->name;
-
-        if ($email === '') {
-            $email = $workspace->billing_email ?: 'workspace-'.$workspace->public_id.'@revisemy.local';
-        }
-
-        if (Cashier::$customerModel::query()->where('paddle_id', $paddleCustomerId)->exists()) {
-            return $workspace;
-        }
-
-        $workspace->customer()->create([
-            'paddle_id' => $paddleCustomerId,
-            'name' => $name !== '' ? $name : 'ReviseMy workspace',
-            'email' => $email,
-        ]);
-
-        if (! str_ends_with($email, '@revisemy.local')) {
-            $workspace->forceFill(['billing_email' => $email])->save();
-        }
-
-        return $workspace->fresh();
+        return $this->polar->customerPortalUrl($workspace->public_id);
     }
 
-    public function syncSubscriptionState(Workspace $workspace): void
+    public function hasPolarCustomer(Workspace $workspace): bool
     {
-        $workspace->refresh();
+        return $workspace->polar_customer_id !== null || $workspace->billingOrders()->exists();
+    }
 
-        if ($workspace->subscribed('default')) {
-            if ($workspace->normalizedPlan() !== Workspace::PLAN_PRO) {
-                $this->credits->activatePro($workspace, $workspace->billing_email);
-                $this->extendApiTokens($workspace);
-                Log::info('Workspace upgraded to Plus', ['workspace' => $workspace->public_id]);
-            }
+    /**
+     * Stop Plus renewal. Access continues until Polar revokes the subscription
+     * at period end (subscription.revoked webhook).
+     *
+     * @throws RuntimeException
+     */
+    public function cancelPro(Workspace $workspace): void
+    {
+        if (! $workspace->isPlusActive()) {
+            throw new RuntimeException(
+                '[not_subscribed] No active Plus subscription to cancel. Call get_billing to check the plan.',
+            );
+        }
+
+        if ($workspace->polar_cancel_at_period_end) {
+            return;
+        }
+
+        $this->polar->cancelAtPeriodEnd((string) $workspace->polar_subscription_id);
+        $workspace->forceFill(['polar_cancel_at_period_end' => true])->save();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Webhook handling
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Apply one verified Polar webhook event. Unknown events, or events for a
+     * workspace we can't find, are ignored so Polar does not retry them.
+     *
+     * @param  array<string, mixed>  $event
+     */
+    public function handleWebhook(array $event): void
+    {
+        $type = (string) ($event['type'] ?? '');
+        $data = is_array($event['data'] ?? null) ? $event['data'] : [];
+
+        $workspace = $this->workspaceFromPayload($data);
+
+        if (! $workspace) {
+            Log::info('Polar webhook ignored: no matching workspace', ['type' => $type, 'id' => $data['id'] ?? null]);
 
             return;
         }
+
+        match ($type) {
+            'order.paid' => $this->handleOrderPaid($workspace, $data),
+            'order.refunded' => $this->handleOrderRefunded($workspace, $data),
+            'subscription.created',
+            'subscription.active',
+            'subscription.updated',
+            'subscription.canceled',
+            'subscription.uncanceled' => $this->mirrorSubscription($workspace, $data),
+            'subscription.revoked' => $this->handleSubscriptionRevoked($workspace, $data),
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function workspaceFromPayload(array $data): ?Workspace
+    {
+        $publicId = $data['customer']['external_id']
+            ?? $data['metadata']['workspace_public_id']
+            ?? null;
+
+        if (is_string($publicId) && $publicId !== '') {
+            return Workspace::query()->where('public_id', $publicId)->first();
+        }
+
+        $customerId = $data['customer_id'] ?? $data['customer']['id'] ?? null;
+
+        return is_string($customerId) && $customerId !== ''
+            ? Workspace::query()->where('polar_customer_id', $customerId)->first()
+            : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function handleOrderPaid(Workspace $workspace, array $data): void
+    {
+        $orderId = (string) ($data['id'] ?? '');
+        $productKey = $this->polar->productKey($data['product_id'] ?? $data['product']['id'] ?? null);
+
+        if ($orderId === '' || $productKey === null) {
+            Log::warning('Polar order.paid ignored: unknown order or product', ['order' => $orderId]);
+
+            return;
+        }
+
+        $isPlus = $productKey === self::PRODUCT_PLUS;
+        $credits = $isPlus
+            ? (int) config('billing.plans.pro.credits', 100)
+            : (int) config("billing.packs.{$productKey}.credits", 0);
+
+        $granted = DB::transaction(function () use ($workspace, $data, $orderId, $productKey, $isPlus, $credits): bool {
+            $order = BillingOrder::query()->firstOrCreate(
+                ['polar_order_id' => $orderId],
+                [
+                    'workspace_id' => $workspace->id,
+                    'kind' => $isPlus ? BillingOrder::KIND_PLUS : BillingOrder::KIND_PACK,
+                    'product_key' => $productKey,
+                    'billing_reason' => $data['billing_reason'] ?? null,
+                    'credits_granted' => $credits,
+                    'amount_cents' => (int) ($data['total_amount'] ?? $data['amount'] ?? 0),
+                ],
+            );
+
+            // Redelivered webhook: this order already granted its credits.
+            if (! $order->wasRecentlyCreated) {
+                return false;
+            }
+
+            $workspace->forceFill(['polar_customer_id' => $data['customer_id'] ?? $workspace->polar_customer_id])->save();
+
+            if ($isPlus) {
+                $wasPlus = $workspace->isPlusActive();
+                $workspace->forceFill([
+                    'polar_subscription_id' => $data['subscription_id'] ?? $workspace->polar_subscription_id,
+                    'polar_subscription_status' => 'active',
+                ])->save();
+                $this->credits->activatePro($workspace, $data['customer']['email'] ?? null);
+
+                if (! $wasPlus) {
+                    $this->extendApiTokens($workspace->fresh() ?? $workspace);
+                }
+            } else {
+                $this->credits->addPurchasedCredits($workspace, $credits);
+                $this->rememberEmail($workspace, $data['customer']['email'] ?? null);
+            }
+
+            return true;
+        });
+
+        if ($granted) {
+            Log::info('Polar order granted credits', [
+                'workspace' => $workspace->public_id,
+                'order' => $orderId,
+                'product' => $productKey,
+                'credits' => $credits,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function handleOrderRefunded(Workspace $workspace, array $data): void
+    {
+        $order = BillingOrder::query()
+            ->where('polar_order_id', (string) ($data['id'] ?? ''))
+            ->where('workspace_id', $workspace->id)
+            ->first();
+
+        if (! $order || $order->refunded_at !== null) {
+            return;
+        }
+
+        // Partial refunds are a support call; only a full refund claws back a pack.
+        $fullyRefunded = ($data['status'] ?? null) === 'refunded';
+
+        DB::transaction(function () use ($workspace, $order, $fullyRefunded): void {
+            $order->forceFill(['refunded_at' => now()])->save();
+
+            if ($fullyRefunded && $order->kind === BillingOrder::KIND_PACK) {
+                $this->credits->removePurchasedCredits($workspace, $order->credits_granted);
+            }
+        });
+    }
+
+    /**
+     * Mirror Polar's subscription state. Plan changes come from order.paid
+     * (upgrade) and subscription.revoked (downgrade), not from here.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function mirrorSubscription(Workspace $workspace, array $data): void
+    {
+        if ($this->polar->productKey($data['product_id'] ?? $data['product']['id'] ?? null) !== self::PRODUCT_PLUS) {
+            return;
+        }
+
+        $periodEnd = $data['current_period_end'] ?? null;
+
+        $workspace->forceFill([
+            'polar_customer_id' => $data['customer_id'] ?? $workspace->polar_customer_id,
+            'polar_subscription_id' => $data['id'] ?? $workspace->polar_subscription_id,
+            'polar_subscription_status' => $data['status'] ?? $workspace->polar_subscription_status,
+            'polar_current_period_end' => is_string($periodEnd) ? CarbonImmutable::parse($periodEnd) : $workspace->polar_current_period_end,
+            'polar_cancel_at_period_end' => (bool) ($data['cancel_at_period_end'] ?? false),
+        ])->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function handleSubscriptionRevoked(Workspace $workspace, array $data): void
+    {
+        // A revoke for some older subscription must not end the current one.
+        if ($workspace->polar_subscription_id !== null && ($data['id'] ?? null) !== $workspace->polar_subscription_id) {
+            return;
+        }
+
+        $workspace->forceFill([
+            'polar_subscription_status' => $data['status'] ?? 'canceled',
+            'polar_cancel_at_period_end' => false,
+        ])->save();
 
         if ($workspace->normalizedPlan() === Workspace::PLAN_PRO) {
             $this->credits->activateFree($workspace);
@@ -242,28 +449,11 @@ class BillingService
         }
     }
 
-    public function finalizeCheckout(Workspace $workspace, ?string $billingEmail = null): void
+    protected function rememberEmail(Workspace $workspace, mixed $email): void
     {
-        if ($billingEmail) {
-            $workspace->forceFill(['billing_email' => $billingEmail])->save();
+        if (is_string($email) && $email !== '' && blank($workspace->billing_email)) {
+            $workspace->forceFill(['billing_email' => $email])->save();
         }
-
-        $this->credits->activatePro($workspace->fresh() ?? $workspace, $billingEmail);
-        $this->extendApiTokens($workspace->fresh() ?? $workspace);
-    }
-
-    public function cancelPro(Workspace $workspace): void
-    {
-        $subscription = $workspace->subscription('default');
-
-        if (! $subscription || $subscription->canceled()) {
-            throw new RuntimeException(
-                '[not_subscribed] No active Plus subscription to cancel. Call get_billing to check plan, or create_portal if they need Paddle receipts.',
-            );
-        }
-
-        $subscription->cancel();
-        $this->syncSubscriptionState($workspace->fresh() ?? $workspace);
     }
 
     /**

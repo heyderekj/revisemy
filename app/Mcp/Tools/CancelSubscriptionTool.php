@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use RuntimeException;
 
 #[Name('cancel_subscription')]
-#[Description('Cancel Plus for this workspace (stops renewal; keeps Plus until the current period ends, then Try with leftover credits only — no new grant). Requires confirm:true after the human asks to cancel. For payment-method or receipt changes, use create_portal instead (Paddle).')]
+#[Description('Cancel Plus for this workspace (stops renewal; keeps Plus until the current period ends, then Try with leftover credits only — no new grant). Requires confirm:true after the human asks to cancel. Purchased pack credits are kept. For payment-method or receipt changes, use create_portal instead.')]
 class CancelSubscriptionTool extends Tool
 {
     use ResolvesWorkspace;
@@ -48,7 +48,7 @@ class CancelSubscriptionTool extends Tool
             'plan_name' => $status['plan_name'],
             'credits_remaining' => $status['credits_remaining'],
             'next_action' => 'tell_human',
-            'hint' => 'Plus cancellation is scheduled. They keep Plus until the current period ends, then Try (no monthly refill). Payment method changes still go through create_portal / Paddle.',
+            'hint' => 'Plus cancellation is scheduled. They keep Plus until the current period ends, then Try (no monthly refill). Purchased pack credits are kept. Payment method changes still go through create_portal.',
         ];
 
         return Response::make(Response::text(

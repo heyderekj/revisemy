@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Workspace;
 use App\Services\BillingService;
+use App\Services\CreditsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -11,54 +12,37 @@ use RuntimeException;
 
 class BillingController extends Controller
 {
+    /**
+     * Signed link from create_checkout → a fresh Polar checkout session.
+     */
     public function checkout(Request $request, string $workspace, BillingService $billing): View|RedirectResponse
     {
         $model = Workspace::query()->where('public_id', $workspace)->firstOrFail();
+        $product = (string) $request->query('product', BillingService::PRODUCT_PLUS);
 
-        if ($model->normalizedPlan() === Workspace::PLAN_PRO && $model->subscribed('default')) {
-            return redirect()->route('billing.success', ['workspace' => $model->public_id]);
+        if ($product === BillingService::PRODUCT_PLUS && $model->isPlusActive()) {
+            return view('billing.success', [
+                'workspace' => $model,
+                'kind' => 'already_plus',
+            ]);
         }
 
         try {
-            $options = $billing->checkoutOpenOptions($model);
+            $url = $billing->startCheckout($model, $product);
         } catch (RuntimeException $e) {
             abort(503, $e->getMessage());
         }
 
-        return view('billing.checkout', [
-            'workspace' => $model,
-            'options' => $options,
-            'priceUsd' => (int) config('billing.plans.pro.price_usd', 9),
-            'credits' => (int) config('billing.plans.pro.credits', 100),
-        ]);
+        return redirect()->away($url);
     }
 
-    public function success(Request $request, BillingService $billing): View
+    /**
+     * Polar's return page. Display only: credits are granted by the order.paid
+     * webhook, so reloading this page can never grant anything.
+     */
+    public function success(): View
     {
-        $publicId = (string) $request->query('workspace', '');
-        $workspace = $publicId !== ''
-            ? Workspace::query()->where('public_id', $publicId)->first()
-            : null;
-
-        if ($workspace && $workspace->subscribed('default')) {
-            $billing->finalizeCheckout($workspace, $workspace->billing_email);
-            $workspace = $workspace->fresh();
-        }
-
-        $manageUrl = null;
-        if ($workspace) {
-            try {
-                $manageUrl = $billing->createPortalUrl($workspace);
-            } catch (\Throwable) {
-                $manageUrl = null;
-            }
-        }
-
-        return view('billing.success', [
-            'workspace' => $workspace,
-            'email' => $workspace?->billing_email,
-            'manageUrl' => $manageUrl,
-        ]);
+        return view('billing.success', ['workspace' => null, 'kind' => 'paid']);
     }
 
     public function cancel(): View
@@ -67,18 +51,17 @@ class BillingController extends Controller
     }
 
     /**
-     * Default Paddle payment-link page (Checkout settings → Default payment link).
-     * Opens inline checkout when Paddle appends ?_ptxn=.
+     * Public pricing page.
      */
-    public function upgrade(): View
+    public function upgrade(CreditsService $credits): View
     {
-        // Paid Plus is paused and its page is not built yet — 404 rather than
-        // render a view that does not exist.
         abort_unless(config('billing.pricing_enabled'), 404);
 
         return view('billing.upgrade', [
+            'tryCredits' => (int) config('billing.plans.free.credits', 20),
             'priceUsd' => (int) config('billing.plans.pro.price_usd', 9),
             'credits' => (int) config('billing.plans.pro.credits', 100),
+            'packs' => $credits->packs(),
         ]);
     }
 
@@ -88,9 +71,24 @@ class BillingController extends Controller
 
         return view('billing.manage', [
             'workspace' => $model,
-            'subscribed' => $model->subscribed('default'),
+            'subscribed' => $model->isPlusActive(),
             'status' => $billing->status($model),
+            'packUrls' => $this->packUrls($model, $billing),
         ]);
+    }
+
+    /**
+     * Mint a short-lived Polar customer-portal session on click.
+     */
+    public function portal(Request $request, string $workspace, BillingService $billing): RedirectResponse
+    {
+        $model = Workspace::query()->where('public_id', $workspace)->firstOrFail();
+
+        try {
+            return redirect()->away($billing->polarPortalUrl($model));
+        } catch (RuntimeException) {
+            return back()->with('error', 'Could not open billing right now — try again in a moment.');
+        }
     }
 
     public function cancelSubscription(Request $request, string $workspace, BillingService $billing): RedirectResponse
@@ -100,18 +98,27 @@ class BillingController extends Controller
         try {
             $billing->cancelPro($model);
         } catch (\Throwable $e) {
-            return redirect()
-                ->route('billing.manage', ['workspace' => $model->public_id])
-                ->with('error', 'Could not cancel right now — try again or use the link in your Paddle receipt email.');
+            return back()->with('error', 'Could not cancel right now — try again, or cancel from the Polar receipt email.');
         }
 
-        return redirect()
-            ->route('billing.manage', ['workspace' => $model->public_id])
-            ->with('status', 'Plus cancellation scheduled. You’ll keep access until the period ends.');
+        return back()->with('status', 'Plus cancellation scheduled. You’ll keep access until the period ends.');
     }
 
-    public function portalReturn(): View
+    /**
+     * @return array<string, string>
+     */
+    protected function packUrls(Workspace $workspace, BillingService $billing): array
     {
-        return view('billing.portal-return');
+        $urls = [];
+
+        foreach (array_keys((array) config('billing.packs', [])) as $key) {
+            try {
+                $urls[$key] = $billing->createCheckoutUrl($workspace, $key);
+            } catch (RuntimeException) {
+                // Pack not configured on this host — just don't offer it.
+            }
+        }
+
+        return $urls;
     }
 }
