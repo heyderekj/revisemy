@@ -1,0 +1,539 @@
+/*
+ * ReviseMy's tokens: Koati's system, ReviseMy's yellow.
+ *
+ * The two products come from the same studio and are meant to read as
+ * cousins. The neutrals, the three signal colours, the squircle corners, the
+ * lit buttons and the motion rules are Koati's (`resources/css/app.css` on
+ * Koati's main); the key colour is ReviseMy's own yellow.
+ *
+ * Imported by `app.css` (the site, review and board) and `mcp-app.css` (the
+ * inline review inside an assistant), so both draw from one place.
+ *
+ * Light and dark both live here. Every colour is a variable that `.dark`
+ * redefines, and the utilities read it where they are used (`@theme inline`),
+ * so a class written once is right in both themes.
+ */
+
+/*
+ * One `dark:` for everything, and it never matches.
+ *
+ * The views were written in light-theme classes — about 1,300 zinc utilities —
+ * and rather than add a `dark:` twin to each, the zinc ramp itself turns over
+ * under `.dark` (below). Flux writes `dark:` twins of its own, and those would
+ * then turn over a second time: a menu that is dark by the ramp, made light
+ * again by its `dark:bg-zinc-700`. So `dark:` is switched off, and Flux's
+ * light classes are drawn dark by the same ramp as everything else.
+ *
+ * `night:` is the escape hatch for the rare thing the ramp cannot express —
+ * a shadow that should deepen, an image that should dim.
+ */
+@custom-variant dark (&:where(.flux-dark-off, .flux-dark-off *));
+@custom-variant night (&:where(.dark, .dark *));
+
+@theme {
+    /*
+     * Motion, as Koati states it: quick, and decelerating rather than
+     * symmetric. Move transform and opacity only, name the properties, never
+     * ease-in, scale from 0.96 rather than 0, nothing over 300ms, and reduced
+     * motion drops movement but keeps fades.
+     */
+    --default-transition-duration: 120ms;
+    --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    --ease-snap: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+}
+
+@theme inline {
+    /* Koati's semantic layer: preferred for new work. */
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    /* The page's layers, lighter is higher in both themes: lift for the one
+       thing asking something of you, card for the record, well for what's
+       waiting or there for context. */
+    --color-trough: var(--trough);
+    --color-raised: var(--raised);
+    --color-lift: var(--lift);
+    --color-well: var(--well);
+    --color-chip: var(--chip);
+    --color-chip-hover: var(--chip-hover);
+
+    /* Signals: the only hues that say what state something is in. */
+    --color-attention: var(--attention);
+    --color-attention-soft: var(--attention-soft);
+    --color-attention-ink: var(--attention-ink);
+    --color-problem: var(--problem);
+    --color-problem-soft: var(--problem-soft);
+    --color-problem-ink: var(--problem-ink);
+    --color-done: var(--done);
+    --color-done-soft: var(--done-soft);
+    --color-done-ink: var(--done-ink);
+
+    /*
+     * The key: ReviseMy's yellow, and the ink that sits on it. Neither turns
+     * over in the dark — a yellow fill is the same yellow at night, and the
+     * words on it stay dark. `accent` is the name Flux reads.
+     */
+    --color-key: var(--key);
+    --color-key-hover: var(--key-hover);
+    --color-accent: var(--key);
+    --color-accent-hover: var(--key-hover);
+    --color-accent-contrast: var(--key-ink);
+    --color-accent-foreground: var(--key-ink);
+    --color-accent-content: var(--accent-content);
+    --color-ink: var(--key-ink);
+    --color-mark: var(--key);
+
+    /* ReviseMy's older names, kept so nothing written against them breaks. */
+    --color-canvas: var(--background);
+    --color-paper: var(--background);
+    --color-surface: var(--n-50);
+    --color-surface-hover: var(--n-100);
+    --color-border-strong: var(--n-300);
+    --color-mist: var(--n-150);
+    --color-soft: var(--n-500);
+    --color-faint: var(--n-400);
+    --color-highlight: var(--highlight);
+    --color-selection: var(--highlight);
+    --color-guest: var(--n-500);
+    --color-guest-soft: var(--n-150);
+    --color-guest-ink: var(--n-700);
+
+    /*
+     * The palette the views are written in, turned theme-aware.
+     *
+     * zinc and gray are one neutral ramp that mirrors under `.dark`, and white
+     * goes with it: `bg-white` is "the surface", which is dark at night.
+     * Black stays black, for scrims and shadows.
+     */
+    --color-white: var(--n-0);
+    --color-black: #000;
+
+    --color-zinc-50: var(--n-50);
+    --color-zinc-100: var(--n-100);
+    --color-zinc-200: var(--n-200);
+    --color-zinc-300: var(--n-300);
+    --color-zinc-400: var(--n-400);
+    --color-zinc-500: var(--n-500);
+    --color-zinc-600: var(--n-600);
+    --color-zinc-700: var(--n-700);
+    --color-zinc-800: var(--n-800);
+    --color-zinc-900: var(--n-900);
+    --color-zinc-950: var(--n-950);
+
+    --color-gray-50: var(--n-50);
+    --color-gray-100: var(--n-100);
+    --color-gray-200: var(--n-200);
+    --color-gray-300: var(--n-300);
+    --color-gray-400: var(--n-400);
+    --color-gray-500: var(--n-500);
+    --color-gray-600: var(--n-600);
+    --color-gray-700: var(--n-700);
+    --color-gray-800: var(--n-800);
+    --color-gray-900: var(--n-900);
+    --color-gray-950: var(--n-950);
+
+    /* rose is ReviseMy's yellow: washes at the light end, the key at 500, and
+       text steps that are plain foreground, so no brown enters the palette. */
+    --color-rose-50: var(--y-50);
+    --color-rose-100: var(--y-100);
+    --color-rose-200: var(--y-200);
+    --color-rose-300: var(--y-300);
+    --color-rose-400: var(--y-400);
+    --color-rose-500: var(--key);
+    --color-rose-600: var(--n-900);
+    --color-rose-700: var(--n-800);
+    --color-rose-800: var(--n-900);
+    --color-rose-900: var(--n-950);
+    --color-rose-950: var(--n-950);
+
+    /* amber, emerald and red are the three signals. */
+    --color-amber-50: var(--attention-soft);
+    --color-amber-100: var(--attention-soft);
+    --color-amber-200: var(--attention-200);
+    --color-amber-300: var(--attention-300);
+    --color-amber-400: var(--attention);
+    --color-amber-500: var(--attention);
+    --color-amber-600: var(--attention);
+    --color-amber-700: var(--attention-ink);
+    --color-amber-800: var(--attention-ink);
+    --color-amber-900: var(--attention-ink);
+
+    --color-emerald-50: var(--done-soft);
+    --color-emerald-100: var(--done-soft);
+    --color-emerald-200: var(--done-200);
+    --color-emerald-300: var(--done-300);
+    --color-emerald-400: var(--done);
+    --color-emerald-500: var(--done);
+    --color-emerald-600: var(--done);
+    --color-emerald-700: var(--done-ink);
+    --color-emerald-800: var(--done-ink);
+    --color-emerald-900: var(--done-ink);
+
+    --color-red-50: var(--problem-soft);
+    --color-red-100: var(--problem-soft);
+    --color-red-200: var(--problem-200);
+    --color-red-300: var(--problem-300);
+    --color-red-400: var(--problem);
+    --color-red-500: var(--problem);
+    --color-red-600: var(--problem);
+    --color-red-700: var(--problem-ink);
+    --color-red-800: var(--problem-ink);
+    --color-red-900: var(--problem-ink);
+
+    /* sky is "suggested, not yours": the second opinion and the agent. */
+    --color-sky-50: var(--s-50);
+    --color-sky-100: var(--s-100);
+    --color-sky-200: var(--s-200);
+    --color-sky-300: var(--s-300);
+    --color-sky-400: var(--s-400);
+    --color-sky-500: var(--s-500);
+    --color-sky-600: var(--s-600);
+    --color-sky-700: var(--s-700);
+    --color-sky-800: var(--s-800);
+    --color-sky-900: var(--s-900);
+    --color-sky-950: var(--s-950);
+}
+
+:root {
+    --radius: 0.75rem;
+
+    /* Koati's greyscale. Elevation is tonal, not outlined. */
+    --n-0: hsl(0 0% 100%);
+    --n-50: hsl(0 0% 97%);
+    --n-100: hsl(0 0% 94.5%);
+    --n-150: hsl(0 0% 91%);
+    --n-200: hsl(0 0% 86%);
+    --n-300: hsl(0 0% 78%);
+    --n-400: hsl(0 0% 58%);
+    /* Muted text: 4.5:1 on white and on the card. */
+    --n-500: hsl(0 0% 42%);
+    --n-600: hsl(0 0% 34%);
+    --n-700: hsl(0 0% 25%);
+    --n-800: hsl(0 0% 15%);
+    --n-900: hsl(0 0% 7%);
+    --n-950: hsl(0 0% 4%);
+
+    --background: var(--n-0);
+    --foreground: var(--n-900);
+    --card: var(--n-50);
+    --muted-foreground: var(--n-500);
+    --border: var(--n-200);
+    --input: hsl(0 0% 84%);
+    --ring: var(--n-900);
+
+    --trough: hsl(0 0% 94.5%);
+    --raised: hsl(0 0% 100%);
+    --lift: hsl(0 0% 100%);
+    --well: hsl(0 0% 94.5%);
+    --chip: hsl(0 0% 90%);
+    --chip-hover: hsl(0 0% 85%);
+
+    /* ReviseMy's key. */
+    --key: #ffc53d;
+    --key-hover: #ffba18;
+    --key-ink: hsl(36 8% 8%);
+    /* Flux's coloured text — links, the selected item. Ink in the light, the
+       key itself in the dark, where yellow words read well. */
+    --accent-content: var(--n-900);
+    --highlight: #ffe5a8;
+
+    /* Yellow washes. */
+    --y-50: #fffbe8;
+    --y-100: #fff7c2;
+    --y-200: #ffee9c;
+    --y-300: #fbe577;
+    --y-400: #ffd166;
+
+    /* Koati's signals: warm honey, brick, moss. */
+    --attention: hsl(36 92% 50%);
+    --attention-soft: hsl(40 96% 92%);
+    --attention-200: hsl(40 90% 82%);
+    --attention-300: hsl(38 88% 68%);
+    --attention-ink: hsl(28 80% 30%);
+    --problem: hsl(4 74% 52%);
+    --problem-soft: hsl(4 90% 95%);
+    --problem-200: hsl(4 86% 88%);
+    --problem-300: hsl(4 80% 76%);
+    --problem-ink: hsl(2 64% 38%);
+    --done: hsl(148 52% 38%);
+    --done-soft: hsl(140 46% 92%);
+    --done-200: hsl(142 42% 82%);
+    --done-300: hsl(146 40% 66%);
+    --done-ink: hsl(150 56% 22%);
+
+    /* Stock sky. */
+    --s-50: oklch(97.7% 0.013 236.62);
+    --s-100: oklch(95.1% 0.026 236.824);
+    --s-200: oklch(90.1% 0.058 230.902);
+    --s-300: oklch(82.8% 0.111 230.318);
+    --s-400: oklch(74.6% 0.16 232.661);
+    --s-500: oklch(68.5% 0.169 237.323);
+    --s-600: oklch(58.8% 0.158 241.966);
+    --s-700: oklch(50% 0.134 242.749);
+    --s-800: oklch(44.3% 0.11 240.79);
+    --s-900: oklch(39.1% 0.09 240.876);
+    --s-950: oklch(29.3% 0.066 243.157);
+}
+
+.dark {
+    color-scheme: dark;
+
+    /* The same ramp, turned over: white is the page, 950 is the brightest text. */
+    --n-0: hsl(0 0% 5%);
+    --n-50: hsl(0 0% 9%);
+    --n-100: hsl(0 0% 12.5%);
+    --n-150: hsl(0 0% 15%);
+    --n-200: hsl(0 0% 18%);
+    --n-300: hsl(0 0% 26%);
+    --n-400: hsl(0 0% 46%);
+    --n-500: hsl(0 0% 64%);
+    --n-600: hsl(0 0% 72%);
+    --n-700: hsl(0 0% 82%);
+    --n-800: hsl(0 0% 90%);
+    --n-900: hsl(0 0% 97%);
+    --n-950: hsl(0 0% 99%);
+
+    --input: hsl(0 0% 22%);
+    --ring: hsl(0 0% 83%);
+
+    --trough: hsl(0 0% 5%);
+    --raised: hsl(0 0% 12.5%);
+    --lift: hsl(0 0% 14%);
+    --well: hsl(0 0% 7.5%);
+    --chip: hsl(0 0% 19%);
+    --chip-hover: hsl(0 0% 25%);
+
+    --accent-content: var(--key);
+    --highlight: hsl(40 60% 24%);
+
+    --y-50: hsl(42 50% 9%);
+    --y-100: hsl(42 60% 12%);
+    --y-200: hsl(42 65% 17%);
+    --y-300: hsl(42 70% 28%);
+    --y-400: #ffd166;
+
+    --attention: hsl(38 92% 56%);
+    --attention-soft: hsl(34 60% 15%);
+    --attention-200: hsl(34 60% 22%);
+    --attention-300: hsl(36 70% 36%);
+    --attention-ink: hsl(40 96% 76%);
+    --problem: hsl(4 80% 60%);
+    --problem-soft: hsl(4 50% 16%);
+    --problem-200: hsl(4 50% 22%);
+    --problem-300: hsl(4 60% 36%);
+    --problem-ink: hsl(4 92% 80%);
+    --done: hsl(146 50% 48%);
+    --done-soft: hsl(148 36% 13%);
+    --done-200: hsl(148 34% 19%);
+    --done-300: hsl(148 36% 30%);
+    --done-ink: hsl(140 56% 74%);
+
+    --s-50: oklch(22% 0.04 240);
+    --s-100: oklch(26% 0.05 240);
+    --s-200: oklch(32% 0.07 238);
+    --s-300: oklch(45% 0.11 236);
+    --s-400: oklch(62% 0.15 234);
+    --s-500: oklch(68.5% 0.169 237.323);
+    --s-600: oklch(74.6% 0.16 232.661);
+    --s-700: oklch(82.8% 0.111 230.318);
+    --s-800: oklch(90.1% 0.058 230.902);
+    --s-900: oklch(95.1% 0.026 236.824);
+    --s-950: oklch(97.7% 0.013 236.62);
+}
+
+/*
+ * Squircles, Koati's way: native `corner-shape` where the browser has it, an
+ * ordinary radius where it does not. A squircle spends more of its radius on
+ * the curve, so each step is given a bigger one. `rounded-full` is left round:
+ * a circle means a pill, a counter or a mark's badge.
+ */
+@supports (corner-shape: squircle) {
+    :root {
+        --radius-sm: 0.7rem;
+        --radius-md: 0.95rem;
+        --radius-lg: 1.2rem;
+        --radius-xl: 1.2rem;
+        --radius-2xl: 1.6rem;
+        --radius-3xl: 2.4rem;
+    }
+
+    [class*='rounded']:not([class*='rounded-full'], [class*='rounded-none']) {
+        corner-shape: squircle;
+    }
+}
+
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--border);
+    }
+
+    /* Size-specific tracking: large text tightens, body stays neutral. */
+    h1,
+    .text-2xl,
+    .text-3xl,
+    .text-4xl,
+    .text-5xl {
+        letter-spacing: -0.02em;
+    }
+
+    h2,
+    .text-xl,
+    .text-lg {
+        letter-spacing: -0.01em;
+    }
+}
+
+/* Keyboard affordance for hand-rolled controls. */
+@utility focus-ring {
+    @apply focus-visible:ring-ring focus-visible:ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+}
+
+@utility focus-ring-inset {
+    @apply focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset;
+}
+
+/* Diagonal hatching: the drafting convention for "provisional" and "empty". */
+.hatch {
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 3px,
+        color-mix(in srgb, currentColor 18%, transparent) 3px,
+        color-mix(in srgb, currentColor 18%, transparent) 4px
+    );
+}
+
+/*
+ * Chrome that content passes under: solid where the controls sit, and a
+ * blurred fade below the last bar instead of a hard 1px line.
+ */
+.material-chrome::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--background) 88%, transparent);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+}
+
+.material-chrome-edge::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 1.25rem;
+    z-index: -1;
+    pointer-events: none;
+    backdrop-filter: blur(7px) saturate(150%);
+    -webkit-backdrop-filter: blur(7px) saturate(150%);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--background) 78%, transparent), transparent);
+    mask-image: linear-gradient(to bottom, #000 0%, color-mix(in srgb, #000 45%, transparent) 55%, transparent 100%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .material-chrome::before {
+        background: var(--background);
+        backdrop-filter: none;
+    }
+
+    .material-chrome-edge::after {
+        display: none;
+    }
+}
+
+/*
+ * Buttons, lit the way Koati's are: a highlight inside the top edge, a shade
+ * inside the bottom, and a shadow underneath. Hover lifts a pixel; press moves
+ * down into the shadow. `btn-lit` is the solid one in the key colour,
+ * `btn-quiet` the outlined one raised off the page.
+ */
+@layer components {
+    .btn-lit,
+    .btn-quiet {
+        box-shadow:
+            var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000), var(--tw-ring-offset-shadow, 0 0 #0000),
+            var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+        transition-property: translate, box-shadow, background-color, border-color, color;
+    }
+
+    .btn-lit {
+        --btn-key: var(--key);
+        --btn-sheen: 16%;
+        color: var(--btn-ink, var(--key-ink));
+        background-color: var(--btn-key);
+        background-image: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--btn-key), white var(--btn-sheen)),
+            var(--btn-key) 58%,
+            color-mix(in srgb, var(--btn-key), black 8%)
+        );
+        border: 1px solid color-mix(in srgb, var(--btn-key), black 22%);
+        --tw-shadow:
+            inset 0 1px 0 hsl(0 0% 100% / 0.3), inset 0 -2px 0 hsl(0 0% 0% / 0.1), 0 1px 1px hsl(0 0% 0% / 0.16),
+            0 5px 12px -5px hsl(0 0% 0% / 0.3);
+    }
+
+    .btn-lit:hover {
+        --btn-sheen: 26%;
+        translate: 0 -1px;
+    }
+
+    .btn-quiet {
+        color: var(--foreground);
+        background-color: var(--raised);
+        background-image: linear-gradient(180deg, var(--raised), var(--card));
+        border: 1px solid var(--border);
+        --tw-shadow:
+            inset 0 1px 0 hsl(0 0% 100% / 0.9), inset 0 -2px 0 hsl(0 0% 0% / 0.03), 0 1px 1px hsl(0 0% 0% / 0.06),
+            0 4px 10px -4px hsl(0 0% 0% / 0.12);
+    }
+
+    .dark .btn-quiet {
+        --tw-shadow:
+            inset 0 1px 0 hsl(0 0% 100% / 0.06), inset 0 -2px 0 hsl(0 0% 0% / 0.2), 0 1px 1px hsl(0 0% 0% / 0.4),
+            0 4px 10px -4px hsl(0 0% 0% / 0.5);
+    }
+
+    .btn-quiet:hover {
+        translate: 0 -1px;
+        border-color: color-mix(in srgb, var(--border), var(--foreground) 18%);
+    }
+
+    .btn-lit:active,
+    .btn-quiet:active {
+        translate: 0 1px;
+        --tw-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.22);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .btn-lit,
+        .btn-quiet {
+            translate: none !important;
+        }
+    }
+}
+
+/* Selection is a lighter shade of the key, in both themes. Outside any layer:
+   `::selection` ignores layered variables in some browsers. */
+::selection {
+    background-color: var(--highlight);
+    color: var(--foreground);
+}

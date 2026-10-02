@@ -1,157 +1,97 @@
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';
+@import './tokens.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../../app/**/*.php';
 
-@custom-variant dark (&:where(.dark, .dark *));
+/*
+ * The typeface: Figtree, served from here as Koati serves it, rather than from
+ * somebody else's CDN. `swap` on purpose, so nothing waits on a font to be
+ * readable.
+ */
+@font-face {
+    font-family: 'Figtree';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/figtree-latin-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Figtree';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/figtree-latin-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Figtree';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/figtree-latin-600.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Figtree';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/figtree-latin-700.woff2') format('woff2');
+}
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-    --font-display: 'Newsreader', ui-serif, Georgia, serif;
-    --font-mark: 'Caveat', ui-rounded, cursive;
+    --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
 
-    /* Hard corners on every surface. `rounded-full` is hardcoded by Tailwind to
-       calc(infinity * 1px) and is NOT driven by this scale, so pill CTAs, avatars,
-       and drag handles survive while every other rounded-* utility goes square. */
-    --radius: 0px;
-    --radius-xs: 0px;
-    --radius-sm: 0px;
-    --radius-md: 0px;
-    --radius-lg: 0px;
-    --radius-xl: 0px;
-    --radius-2xl: 0px;
-    --radius-3xl: 0px;
-    --radius-4xl: 0px;
+/*
+ * Flux reads its accent from three variables, and flux.css turns them white
+ * under `.dark` inside a layer. Stated here, outside any layer, they win in
+ * both themes: the key fill, dark words on it, and coloured text that is ink
+ * by day and yellow at night.
+ */
+:root,
+.dark {
+    --color-accent: var(--key);
+    --color-accent-foreground: var(--key-ink);
+    --color-accent-content: var(--accent-content);
+}
 
-    /* ---- Semantic roles (preferred API for new work) ---- */
-    --color-canvas: #fdfdfc;
-    --color-surface: #f9f9f8;
-    --color-surface-hover: #f1f0ef;
-    --color-border: #dad9d6;
-    --color-border-strong: #bcbbb5;
-    --color-grid: #20100010;
-    --color-ink: #21201c;
-    --color-muted: #63635e;
-    --color-soft: #6b6b65;
-    --color-faint: #8d8d86;
+/*
+ * Flux's primary button, lit. Flux gives the variant no attribute of its own,
+ * so it is found by the accent fill it always carries.
+ */
+[data-flux-button][class*='bg-[var(--color-accent)]'] {
+    --btn-key: var(--key);
+    background-image: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--btn-key), white 16%),
+        var(--btn-key) 58%,
+        color-mix(in srgb, var(--btn-key), black 8%)
+    );
+    border: 1px solid color-mix(in srgb, var(--btn-key), black 22%);
+    box-shadow:
+        inset 0 1px 0 hsl(0 0% 100% / 0.3),
+        inset 0 -2px 0 hsl(0 0% 0% / 0.1),
+        0 1px 1px hsl(0 0% 0% / 0.16),
+        0 5px 12px -5px hsl(0 0% 0% / 0.3);
+    transition-property: translate, box-shadow, background-color;
+}
 
-    /* Yellow is the only accent, and it is reserved for fills — CTAs, marks,
-       highlights. There is deliberately no dark-amber "accent text" step: amber-11
-       reads brown, so accent-colored text is just ink and the yellow does the
-       signalling. Anything sitting on a yellow fill uses ink. */
-    --color-accent: #ffc53d;
-    --color-accent-hover: #ffba18;
-    --color-accent-contrast: #21201c;
+[data-flux-button][class*='bg-[var(--color-accent)]']:hover {
+    translate: 0 -1px;
+}
 
-    /* Flux reads these three by contract to color its own primitives. */
-    --color-accent-content: #21201c;
-    --color-accent-foreground: #21201c;
+[data-flux-button][class*='bg-[var(--color-accent)]']:active {
+    translate: 0 1px;
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.22);
+}
 
-    --color-paper: #fdfdfc;
-    --color-mist: #e9e8e6;
-    --color-mark: #ffc53d;
-    /* Highlight + selection are a lighter shade of the primary yellow, not a
-       separate paler yellow — one accent hue, two lightnesses. */
-    --color-highlight: #ffe5a8;
-    --color-selection: #ffe5a8;
-
-    /* Guest marks read as neutral so they never compete with your own yellow ones. */
-    --color-guest: #82827c;
-    --color-guest-soft: #e9e8e6;
-    --color-guest-ink: #4a4943;
-
-    /* ---- Scale shim ----
-       Overriding a built-in scale in @theme retargets every existing utility that
-       uses it, so ~1,400 palette classes across the views flip without touching a
-       single Blade file. Mapped by perceptual lightness (Radix runs 1-12, Tailwind
-       50-950), not by number. */
-
-    /* zinc + gray -> Radix sand */
-    --color-zinc-50: #f9f9f8;
-    --color-zinc-100: #f1f0ef;
-    --color-zinc-200: #dad9d6;
-    --color-zinc-300: #cfceca;
-    --color-zinc-400: #8d8d86;
-    /* sand-10 (#82827c) would read lighter than zinc-500 did and drops muted text
-       on a tinted surface below 4.5:1 — nudged darker to hold contrast. */
-    --color-zinc-500: #6b6b65;
-    --color-zinc-600: #63635e;
-    --color-zinc-700: #4a4943;
-    --color-zinc-800: #33322d;
-    --color-zinc-900: #21201c;
-    --color-zinc-950: #141310;
-
-    --color-gray-50: #f9f9f8;
-    --color-gray-100: #f1f0ef;
-    --color-gray-200: #dad9d6;
-    --color-gray-300: #cfceca;
-    --color-gray-400: #8d8d86;
-    --color-gray-500: #82827c;
-    --color-gray-600: #63635e;
-    --color-gray-700: #4a4943;
-    --color-gray-800: #33322d;
-    --color-gray-900: #21201c;
-    --color-gray-950: #141310;
-
-    /* rose -> yellow fills at the light end, ink at the dark end. The 500 step is
-       the accent fill; 600+ are the text steps, and those go to ink rather than a
-       dark amber so no brown enters the palette. Yellow signals through fills
-       only — the same discipline the reference site uses. */
-    --color-rose-50: #fffbe8;
-    --color-rose-100: #fff7c2;
-    --color-rose-200: #ffee9c;
-    --color-rose-300: #fbe577;
-    --color-rose-400: #ffd166;
-    --color-rose-500: #ffc53d;
-    --color-rose-600: #21201c;
-    --color-rose-700: #33322d;
-    --color-rose-800: #21201c;
-    --color-rose-900: #141310;
-    --color-rose-950: #141310;
-
-    /* amber -> Radix amber */
-    --color-amber-50: #fefbe9;
-    --color-amber-100: #fff7c2;
-    --color-amber-200: #ffee9c;
-    --color-amber-300: #fbe577;
-    --color-amber-400: #e9c162;
-    --color-amber-500: #ffc53d;
-    --color-amber-600: #ffba18;
-    /* Text on a yellow tint goes to ink, not a dark amber — the dark end of the
-       amber ramp reads brown, which is out of the palette. */
-    --color-amber-700: #4a4943;
-    --color-amber-800: #33322d;
-    --color-amber-900: #21201c;
-
-    /* sky is left at stock Tailwind — this is the blue the second-opinion panel and
-       the hero mark already used, and it stays the "not yours / suggested" signal. */
-
-    /* emerald -> Radix jade */
-    --color-emerald-50: #f4fbf7;
-    --color-emerald-100: #e6f7ed;
-    --color-emerald-200: #c3e9d7;
-    --color-emerald-300: #8bceb6;
-    --color-emerald-400: #56ba9f;
-    --color-emerald-500: #29a383;
-    --color-emerald-600: #26997b;
-    --color-emerald-700: #208368;
-    --color-emerald-800: #1d6a54;
-    --color-emerald-900: #1d3b31;
-
-    /* red -> Radix tomato (Flux danger variants) */
-    --color-red-50: #fff8f7;
-    --color-red-100: #feebe7;
-    --color-red-200: #ffdcd3;
-    --color-red-300: #fdbdaf;
-    --color-red-400: #ec8e7b;
-    --color-red-500: #e54d2e;
-    --color-red-600: #dd4425;
-    --color-red-700: #d13415;
-    --color-red-800: #a32b12;
-    --color-red-900: #5c271f;
+@media (prefers-reduced-motion: reduce) {
+    [data-flux-button][class*='bg-[var(--color-accent)]'] {
+        translate: none !important;
+    }
 }
 
 @layer base {
@@ -174,26 +114,11 @@
     [data-flux-control]:focus-visible {
         outline: none;
         border-color: var(--color-border-strong);
-        box-shadow: 0 0 0 3px rgb(255 197 61 / 0.35);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--key) 35%, transparent);
     }
 }
 
 @layer utilities {
-    /* `rounded-full` is hardcoded by Tailwind to calc(infinity * 1px) rather than
-       reading the radius scale, so zeroing --radius-* alone leaves ~90 pills behind.
-       Everything is square: buttons, badges, marks, avatars, handles. */
-    .rounded-full {
-        border-radius: 0;
-    }
-
-    .font-display {
-        font-family: var(--font-display);
-    }
-
-    .font-mark {
-        font-family: var(--font-mark);
-    }
-
     .rm-wash {
         background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-surface) 100%);
     }
@@ -466,21 +391,4 @@
     .rm-agent-cycle-item:first-child {
         opacity: 1;
     }
-}
-
-/* Outside @layer — ::selection ignores themed CSS variables in some browsers */
-html ::selection,
-body ::selection,
-*::selection {
-    background: #ffe5a8;
-    background-color: #ffe5a8;
-    color: #21201c;
-}
-
-html ::-moz-selection,
-body ::-moz-selection,
-*::-moz-selection {
-    background: #ffe5a8;
-    background-color: #ffe5a8;
-    color: #21201c;
 }

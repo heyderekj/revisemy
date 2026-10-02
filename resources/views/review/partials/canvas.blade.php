@@ -915,7 +915,7 @@
                         @endif
                         <div class="flex flex-col gap-2 sm:flex-row">
                             @if ($mode === 'guest')
-                                <flux:button variant="primary" icon="chat-bubble-left-ellipsis" wire:click="savePin" class="w-full !bg-yellow-400 !text-zinc-900 hover:!bg-yellow-300 sm:w-auto">Suggest</flux:button>
+                                <flux:button variant="primary" icon="chat-bubble-left-ellipsis" wire:click="savePin" class="w-full !bg-yellow-400 !text-accent-foreground hover:!bg-yellow-300 sm:w-auto">Suggest</flux:button>
                             @else
                                 <flux:button variant="primary" icon="check" wire:click="savePin" class="w-full sm:w-auto">Save mark</flux:button>
                             @endif

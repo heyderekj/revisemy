@@ -31,8 +31,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-16x16-v9.png') }}">
     <link rel="apple-touch-icon" href="{{ \App\Support\Seo::faviconUrl('/images/apple-touch-icon-v9.png') }}">
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=caveat:500,600,700|instrument-sans:400,500,600,700|newsreader:400,500,600" rel="stylesheet" />
+    <link rel="preload" href="/fonts/figtree-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/figtree-latin-500.woff2" as="font" type="font/woff2" crossorigin>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -73,7 +73,7 @@
         <!-- / Fathom -->
     @endif
 </head>
-<body class="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] antialiased">
+<body class="min-h-screen bg-background text-foreground antialiased">
     {{ $slot }}
 
     @fluxScripts
