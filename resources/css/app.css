@@ -142,6 +142,20 @@
     }
 }
 
+/* A link in running text: ink, with a quiet underline that firms up on hover. */
+@utility link {
+    font-weight: 500;
+    color: var(--foreground);
+    text-decoration-line: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 30%, transparent);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 120ms var(--ease-snap);
+
+    &:hover {
+        text-decoration-color: currentColor;
+    }
+}
+
 @layer base {
     html {
         scroll-behavior: smooth;

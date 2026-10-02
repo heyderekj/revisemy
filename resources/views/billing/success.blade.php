@@ -43,7 +43,7 @@
         </x-home-section>
 
         <div class="relative border-t border-zinc-200 px-[var(--rm-pad)] py-12">
-            <x-billing.credit-costs compare tone="confirm" :show-label="false" class="max-w-md" />
+            <x-billing.credit-costs compare tone="confirm" class="max-w-md" />
         </div>
     </x-page-frame>
 </x-layouts.app>
