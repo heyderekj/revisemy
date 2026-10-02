@@ -58,18 +58,17 @@ class AnnotationCommentTest extends TestCase
 
         Livewire::test('review-board', ['token' => $review->token])
             ->call('openMark', $mark->id)
-            ->set('commentAuthor', 'Derek')
-            ->set('commentBody', 'Can we try a darker rose?')
+            ->set('commentBody', 'Can we try a darker yellow?')
             ->call('addComment')
             ->assertHasNoErrors()
-            ->assertSee('Can we try a darker rose?')
-            ->assertSee('Derek');
+            ->assertSee('Can we try a darker yellow?');
 
+        // The board is the owner's, so its comments are the owner's.
         $this->assertDatabaseHas('annotation_comments', [
             'annotation_id' => $mark->id,
-            'author' => 'Derek',
+            'author' => 'Owner',
             'from_owner' => true,
-            'body' => 'Can we try a darker rose?',
+            'body' => 'Can we try a darker yellow?',
         ]);
     }
 

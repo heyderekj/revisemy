@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
 use App\Models\Finding;
 use App\Models\Review;
@@ -14,6 +15,8 @@ use Livewire\Component;
 
 new class extends Component
 {
+    use FindsReviewMarks;
+
     #[Locked]
     public string $token;
 
@@ -501,18 +504,6 @@ new class extends Component
         return $this->review->passLedger();
     }
 
-    /**
-     * A mark reachable from this review or its parent pass (for the previous-pass panel).
-     */
-    protected function ownedAnnotation(int $annotationId): ?Annotation
-    {
-        $reviewIds = array_filter([$this->review->id, $this->review->parent_id]);
-
-        return Annotation::query()
-            ->whereKey($annotationId)
-            ->whereHas('screenshot', fn ($q) => $q->whereIn('review_id', $reviewIds))
-            ->first();
-    }
 
     public function startMarkComment(int $annotationId): void
     {
@@ -1085,6 +1076,21 @@ new class extends Component
                     this.clear();
                     if (! deciding) $wire.undo();
                 },
+                {{-- Keys, Linear-style: A approves, C asks for changes (both keep
+                     the undo window), J/K step through marks. Never while typing. --}}
+                marks: @js($this->activeMarks->sortBy('number')->pluck('id')->values()),
+                key(e) {
+                    if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
+                    const open = @js($review->isOpenForFeedback());
+                    if (open && e.key === 'a') { e.preventDefault(); this.decide('approve'); }
+                    else if (open && e.key === 'c') { e.preventDefault(); this.decide('changes'); }
+                    else if ((e.key === 'j' || e.key === 'k') && this.marks.length) {
+                        e.preventDefault();
+                        const at = this.marks.indexOf($store.rmFocus?.mark);
+                        const next = e.key === 'j' ? Math.min(at + 1, this.marks.length - 1) : Math.max(at - 1, 0);
+                        $store.rmFocus.mark = this.marks[at === -1 ? 0 : next];
+                    }
+                },
                 clear() {
                     clearTimeout(this.timer);
                     clearInterval(this.timer);
@@ -1095,6 +1101,7 @@ new class extends Component
             }"
             x-on:undoable.window="show($event.detail.message)"
             x-on:rm-decide.window="decide($event.detail.kind)"
+            x-on:keydown.window="key($event)"
             x-on:beforeunload.window="if (pending) { $event.preventDefault(); $event.returnValue = ''; }"
             x-show="message || pending"
             x-cloak

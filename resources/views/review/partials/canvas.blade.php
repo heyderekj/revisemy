@@ -858,7 +858,7 @@
                             <flux:error name="guestName" />
                         @endif
                         <div x-ref="note">
-                            <flux:textarea wire:model="draftBody" rows="3" placeholder="Be specific — what feels off, and what would be better?" />
+                            <flux:textarea wire:model="draftBody" rows="3" placeholder="Be specific — what feels off, and what would be better?" x-on:keydown.meta.enter.prevent="$wire.savePin()" x-on:keydown.ctrl.enter.prevent="$wire.savePin()" />
                             <flux:error name="draftBody" />
                         </div>
                         @if ($mode === 'owner')
