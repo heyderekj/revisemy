@@ -9,7 +9,7 @@
 @import 'tailwindcss' source(none);
 @import './tokens.css';
 
-@source '../views/mcp/review-app.blade.php';
+@source '../views/mcp/**/*.blade.php';
 @source '../../app/Models/Annotation.php';
 
 @theme {
