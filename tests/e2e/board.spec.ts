@@ -15,6 +15,7 @@ test('what the agent resolved waits on the board until a person verifies it', as
     await note.getByRole('button', { name: 'Save mark' }).click();
     await expect(note).toBeHidden();
     await page.getByRole('button', { name: 'Changes' }).first().click();
+    await page.getByRole('button', { name: 'Send now' }).click();
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('changes_requested');
 
     // The agent's half: it resolves the mark.

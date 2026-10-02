@@ -287,8 +287,8 @@
                     <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-chip hover:!bg-chip-hover">Board</flux:button>
                     @if ($review->isOpenForFeedback())
                         <div class="hidden items-center gap-2 md:flex">
-                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="!bg-chip hover:!bg-chip-hover">Changes</flux:button>
-                            <flux:button size="sm" variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes.">Approve</flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" x-on:click="$dispatch('rm-decide', { kind: 'changes' })" class="!bg-chip hover:!bg-chip-hover">Changes</flux:button>
+                            <flux:button size="sm" variant="primary" icon="check" x-on:click="$dispatch('rm-decide', { kind: 'approve' })">Approve</flux:button>
                         </div>
                     @endif
                 </div>

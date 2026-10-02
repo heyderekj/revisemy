@@ -58,6 +58,16 @@ new class extends Component
 
     public ?int $activeCommentMarkId = null;
 
+    /**
+     * The last thing that can be taken back, for the toast's Undo: Koati's
+     * way of deleting without asking first. Locked, so the browser can't
+     * write its own.
+     *
+     * @var array{kind: string, at: int, mark?: array<string, mixed>, comments?: list<array<string, mixed>>, findings?: list<int>, pins?: list<int>}|null
+     */
+    #[Locked]
+    public ?array $undoable = null;
+
     public string $questionAnswerDraft = '';
 
     public ?int $answeringMarkId = null;
@@ -326,9 +336,71 @@ new class extends Component
         $annotation = Annotation::query()
             ->whereKey($annotationId)
             ->whereHas('screenshot', fn ($q) => $q->where('review_id', $this->review->id))
+            ->with('comments')
             ->first();
 
-        $annotation?->delete();
+        if (! $annotation) {
+            return;
+        }
+
+        // Kept whole, comments too, so Undo puts back exactly what was there.
+        $this->offerUndo('Removed M'.$annotation->number, [
+            'kind' => 'mark',
+            'mark' => $annotation->getAttributes(),
+            'comments' => $annotation->comments->map->getAttributes()->all(),
+        ]);
+
+        $annotation->delete();
+        $this->loadReview();
+    }
+
+    /**
+     * Remember what just happened and show the toast. Only the latest action
+     * can be undone, and only for a short while (UNDO_SECONDS).
+     *
+     * @param  array<string, mixed>  $state
+     */
+    protected function offerUndo(string $message, array $state): void
+    {
+        $this->undoable = $state + ['at' => now()->timestamp];
+        $this->dispatch('undoable', message: $message);
+    }
+
+    public const UNDO_SECONDS = 15;
+
+    public function undo(): void
+    {
+        $state = $this->undoable;
+        $this->undoable = null;
+
+        if (! $state || ! $this->isOwner() || ! $this->review->isOpenForFeedback()
+            || now()->timestamp - (int) $state['at'] > self::UNDO_SECONDS) {
+            return;
+        }
+
+        $shotIds = $this->review->screenshots()->pluck('id');
+
+        if ($state['kind'] === 'mark' && $shotIds->contains($state['mark']['screenshot_id'] ?? null)) {
+            Annotation::query()->insert($state['mark']);
+
+            foreach ($state['comments'] ?? [] as $comment) {
+                \App\Models\AnnotationComment::query()->insert($comment);
+            }
+        }
+
+        if ($state['kind'] === 'findings') {
+            // Marks made from the hints go; the hints come back open.
+            Annotation::query()
+                ->whereKey($state['pins'] ?? [])
+                ->whereIn('screenshot_id', $shotIds)
+                ->delete();
+
+            Finding::query()
+                ->whereKey($state['findings'] ?? [])
+                ->whereIn('screenshot_id', $shotIds)
+                ->update(['status' => Finding::STATUS_OPEN, 'related_pin' => null]);
+        }
+
         $this->loadReview();
     }
 
@@ -553,7 +625,8 @@ new class extends Component
             return;
         }
 
-        $this->promoteFinding($finding, $asSeverity);
+        $pin = $this->promoteFinding($finding, $asSeverity);
+        $this->offerUndo('Added M'.$pin?->number, ['kind' => 'findings', 'findings' => [$finding->id], 'pins' => array_filter([$pin?->id])]);
         $this->loadReview();
     }
 
@@ -573,6 +646,7 @@ new class extends Component
         }
 
         $finding->update(['status' => Finding::STATUS_DISMISSED]);
+        $this->offerUndo('Dismissed a hint', ['kind' => 'findings', 'findings' => [$finding->id], 'pins' => []]);
         $this->loadReview();
     }
 
@@ -597,8 +671,11 @@ new class extends Component
             ->filter(fn (Finding $finding) => $panel === 'guest' ? $finding->isGuest() : ! $finding->isGuest())
             ->values();
 
-        foreach ($findings as $finding) {
-            $this->promoteFinding($finding);
+        $pins = $findings->map(fn (Finding $finding) => $this->promoteFinding($finding)?->id)->filter()->values()->all();
+
+        if ($findings->isNotEmpty()) {
+            $count = $findings->count();
+            $this->offerUndo("Added {$count} ".($count === 1 ? 'mark' : 'marks'), ['kind' => 'findings', 'findings' => $findings->pluck('id')->all(), 'pins' => $pins]);
         }
 
         $this->loadReview();
@@ -629,13 +706,18 @@ new class extends Component
             $finding->update(['status' => Finding::STATUS_DISMISSED]);
         }
 
+        if ($findings->isNotEmpty()) {
+            $count = $findings->count();
+            $this->offerUndo("Dismissed {$count} ".($count === 1 ? 'hint' : 'hints'), ['kind' => 'findings', 'findings' => $findings->pluck('id')->all(), 'pins' => []]);
+        }
+
         $this->loadReview();
     }
 
-    protected function promoteFinding(Finding $finding, ?string $asSeverity = null): void
+    protected function promoteFinding(Finding $finding, ?string $asSeverity = null): ?Annotation
     {
         if (! $finding->isOpen()) {
-            return;
+            return null;
         }
 
         $severity = $asSeverity && in_array($asSeverity, Annotation::severities(), true)
@@ -669,6 +751,8 @@ new class extends Component
             'status' => Finding::STATUS_ACCEPTED,
             'related_pin' => $pin->number,
         ]);
+
+        return $pin;
     }
 
     public function refreshSecondOpinion(SecondOpinionService $opinions): void
@@ -993,6 +1077,65 @@ new class extends Component
     @if ($this->isOwner() && $review->isOpenForFeedback())
         @include('review.partials.mobile-decision-bar')
     @endif
+    @endif
+    {{-- Koati's way: act at once, offer Undo. A decision waits a few seconds
+         before it reaches the agent, so it can be taken back too. --}}
+    @if ($this->isOwner())
+        <div
+            x-data="{
+                message: '',
+                pending: null,
+                left: 0,
+                timer: null,
+                show(message) {
+                    this.clear();
+                    this.message = message;
+                    this.timer = setTimeout(() => this.clear(), 12000);
+                },
+                decide(kind) {
+                    this.clear();
+                    this.pending = kind;
+                    this.left = 8;
+                    this.timer = setInterval(() => { if (--this.left <= 0) this.commit(); }, 1000);
+                },
+                commit() {
+                    const kind = this.pending;
+                    this.clear();
+                    kind === 'approve' ? $wire.approve() : $wire.requestChanges();
+                },
+                undo() {
+                    const deciding = this.pending;
+                    this.clear();
+                    if (! deciding) $wire.undo();
+                },
+                clear() {
+                    clearTimeout(this.timer);
+                    clearInterval(this.timer);
+                    this.timer = null;
+                    this.message = '';
+                    this.pending = null;
+                },
+            }"
+            x-on:undoable.window="show($event.detail.message)"
+            x-on:rm-decide.window="decide($event.detail.kind)"
+            x-on:beforeunload.window="if (pending) { $event.preventDefault(); $event.returnValue = ''; }"
+            x-show="message || pending"
+            x-cloak
+            x-transition:enter="transition duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+            x-transition:enter-start="translate-y-2 opacity-0"
+            x-transition:leave="transition duration-150"
+            x-transition:leave-end="opacity-0"
+            class="pointer-events-none fixed inset-x-0 bottom-24 z-[70] flex justify-center px-4 md:bottom-6"
+            role="status"
+            aria-live="polite"
+        >
+            <div class="pointer-events-auto flex items-center gap-1 rounded-full bg-zinc-900 py-1.5 pl-4 pr-1.5 text-sm text-white shadow-lg shadow-black/20">
+                <span x-show="! pending" x-text="message"></span>
+                <span x-show="pending" class="tabular-nums" x-text="(pending === 'approve' ? 'Approving' : 'Sending changes to the agent') + ' in ' + left + 's'"></span>
+                <button type="button" class="ml-2 rounded-full px-3 py-1 font-medium text-key transition-colors night:text-white hover:bg-white/10" x-on:click="undo()">Undo</button>
+                <button type="button" x-show="pending" class="rounded-full bg-white/10 px-3 py-1 font-medium transition-colors hover:bg-white/20" x-on:click="commit()">Send now</button>
+            </div>
+        </div>
     @endif
 </div>
 </div>

@@ -236,6 +236,50 @@ class AgentFeedbackLoopTest extends TestCase
         $this->assertSame(Annotation::SOURCE_GUEST, $guestPin['source']);
     }
 
+    public function test_undo_takes_back_accepted_hints_and_a_removed_mark(): void
+    {
+        $token = $this->postJson('/api/try-token')->json('token');
+        $id = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Undo',
+            'images' => [$this->tinyPngDataUrl()],
+        ])->json('id');
+
+        $review = Review::query()->where('public_id', $id)->firstOrFail();
+        $shot = $review->screenshots()->firstOrFail();
+        $hint = $shot->findings()->create([
+            'source' => Finding::SOURCE_GUEST,
+            'author' => 'Alex',
+            'severity' => Annotation::SEVERITY_MUST_FIX,
+            'body' => 'Guest idea',
+            'x' => 0.1,
+            'y' => 0.1,
+            'status' => Finding::STATUS_OPEN,
+        ]);
+
+        $page = Livewire::test('review-page', ['token' => $review->token])
+            ->call('acceptOpenFindings', 'guest')
+            ->assertDispatched('undoable', message: 'Added 1 mark');
+        $this->assertSame(1, Annotation::count());
+
+        $page->call('undo');
+        $this->assertSame(0, Annotation::count());
+        $this->assertSame(Finding::STATUS_OPEN, $hint->fresh()->status);
+
+        $mark = app(MarkLifecycleService::class)->createMark($shot, 0.4, 0.4, null, Annotation::SEVERITY_MUST_FIX, 'Fix padding');
+        $mark->comments()->create(['body' => 'Context', 'author' => 'Owner', 'from_owner' => true]);
+
+        $page->call('deletePin', $mark->id)->assertDispatched('undoable', message: 'Removed M'.$mark->number);
+        $this->assertModelMissing($mark);
+
+        $page->call('undo');
+        $this->assertSame('Fix padding', $mark->fresh()->body);
+        $this->assertSame(1, $mark->fresh()->comments()->count());
+
+        // Only once: a second undo does nothing.
+        $page->call('undo');
+        $this->assertSame(1, Annotation::count());
+    }
+
     public function test_recent_reviews_page_loads_for_try_token(): void
     {
         $token = $this->postJson('/api/try-token')->json('token');

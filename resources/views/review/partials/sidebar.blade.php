@@ -151,7 +151,7 @@
                                         @endif
                                     </div>
                                     @if ($review->isOpenForFeedback() && $mode === 'owner')
-                                        <button type="button" class="text-xs text-zinc-400 hover:text-rose-600" wire:click="deletePin({{ $pin->id }})" wire:confirm="Remove this mark?">Remove</button>
+                                        <button type="button" class="text-xs text-zinc-400 hover:text-rose-600" wire:click="deletePin({{ $pin->id }})">Remove</button>
                                     @endif
                                 </div>
                                 <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
@@ -378,13 +378,11 @@
                         <button
                             type="button"
                             wire:click="acceptOpenFindings('second')"
-                            wire:confirm="Accept all open second-opinion hints on this shot as marks?"
                             class="rounded-md bg-sky-600 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-sky-500"
                         >Accept all</button>
                         <button
                             type="button"
                             wire:click="dismissOpenFindings('second')"
-                            wire:confirm="Dismiss all open second-opinion hints on this shot?"
                             class="rounded-md bg-zinc-100 px-2 py-1 text-[11px] font-medium text-zinc-600 transition hover:bg-zinc-200"
                         >Dismiss all</button>
                     </div>
@@ -625,13 +623,11 @@
                         <button
                             type="button"
                             wire:click="acceptOpenFindings('guest')"
-                            wire:confirm="Accept all guest suggestions on this shot as marks?"
                             class="rounded-md bg-zinc-700 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-zinc-600"
                         >Accept all</button>
                         <button
                             type="button"
                             wire:click="dismissOpenFindings('guest')"
-                            wire:confirm="Dismiss all guest suggestions on this shot?"
                             class="rounded-md bg-zinc-100 px-2 py-1 text-[11px] font-medium text-zinc-600 transition hover:bg-zinc-200"
                         >Dismiss all</button>
                     </div>

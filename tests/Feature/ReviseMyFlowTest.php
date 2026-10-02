@@ -355,11 +355,11 @@ class ReviseMyFlowTest extends TestCase
         $guestPage = $this->get('/r/'.$review->share_token)->assertOk();
         $guestPage->assertSee('Share me');
         $guestPage->assertSee('Guest');
-        $guestPage->assertDontSee('wire:click="approve"', false);
+        $guestPage->assertDontSee('rm-decide', false);
         $guestPage->assertDontSee($review->token);
 
         $ownerPage = $this->get('/r/'.$review->token)->assertOk();
-        $ownerPage->assertSee('wire:click="approve"', false);
+        $ownerPage->assertSee('rm-decide', false);
         // Owner header embeds the guest link for the copy-to-share control.
         $ownerPage->assertSee($review->share_token, false);
     }
