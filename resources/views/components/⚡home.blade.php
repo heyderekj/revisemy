@@ -595,7 +595,7 @@ new class extends Component
                 x-on:revisemy-try-setup-cleared.window="sessionStorage.removeItem('revisemy_try_setup')"
                 x-init="
                     const raw = sessionStorage.getItem('revisemy_try_setup');
-                    if (raw && ! @js((bool) $token)) {
+                    if (raw && ! {{ $token ? 'true' : 'false' }}) {
                         try {
                             const d = JSON.parse(raw);
                             if (d.token) {

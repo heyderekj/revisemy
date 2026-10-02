@@ -9,7 +9,7 @@
     size="sm"
     icon="cursor-arrow-rays"
     href="{{ $href }}"
-    onclick="if(window.fathom)fathom.trackEvent(@js($fathomEvent))"
+    onclick="if(window.fathom)fathom.trackEvent({{ \Illuminate\Support\Js::from($fathomEvent) }})"
     {{ $attributes }}
 >
     {{ $label }}

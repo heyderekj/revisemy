@@ -8,9 +8,9 @@
     $expires = filled($tokenExpiresAt) ? \Illuminate\Support\Carbon::parse($tokenExpiresAt) : null;
 @endphp
 
-<div {{ $attributes->class('overflow-hidden rounded-xl bg-card') }}>
-    <div class="grid gap-px bg-zinc-200 sm:grid-cols-2">
-        <div class="bg-white p-4">
+<div {{ $attributes->class('overflow-hidden rounded-2xl bg-card') }}>
+    <div class="grid gap-2 p-2 sm:grid-cols-2">
+        <div class="rounded-xl bg-raised p-4">
             <div class="mb-2 flex items-center justify-between gap-2">
                 <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">MCP URL</p>
                 <button
@@ -22,7 +22,7 @@
             </div>
             <p x-ref="mcpUrl" class="break-all font-mono text-sm text-zinc-700">{{ $mcpUrl }}</p>
         </div>
-        <div class="bg-white p-4">
+        <div class="rounded-xl bg-raised p-4">
             <div class="mb-2 flex items-center justify-between gap-2">
                 <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Bearer token</p>
                 <button
@@ -45,7 +45,11 @@
             @endif
         </div>
     </div>
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 bg-zinc-50/90 px-4 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 pt-2">
+        <p class="text-[13px] text-zinc-600">Or install it in one click, with this token:</p>
+        <x-install-links :token="$token" />
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <p class="min-w-0 text-[13px] leading-snug text-zinc-500">
             @if ($expires?->isPast())
                 This try token has expired — generate a new one.
@@ -61,7 +65,7 @@
         </p>
         <button
             type="button"
-            class="group inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+            class="group btn-quiet inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium"
             wire:click="getTryToken"
             wire:loading.attr="disabled"
             onclick="if(window.fathom)fathom.trackEvent('Generate new try token')"

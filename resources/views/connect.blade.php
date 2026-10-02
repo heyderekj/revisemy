@@ -45,7 +45,9 @@
                     <p class="mt-2 text-sm leading-relaxed text-pretty text-muted-foreground">
                         Add <span class="font-mono text-zinc-700">{{ url('/mcp/revisemy') }}</span> as a custom connector in Claude or ChatGPT. It sends you back here to connect.
                     </p>
-                    <a href="/#setup" class="btn-quiet mt-8 inline-flex h-9 items-center rounded-full px-4 text-sm font-medium">See every way to connect</a>
+                    <p class="mt-8 text-sm text-zinc-600">Cursor or VS Code? Install it here and sign in the same way:</p>
+                    <x-install-links class="mt-3" />
+                    <a href="/#setup" class="mt-6 inline-flex text-sm font-medium text-zinc-600 underline decoration-zinc-300 underline-offset-2 hover:text-foreground">See every way to connect</a>
                 @endif
             </div>
         </main>
