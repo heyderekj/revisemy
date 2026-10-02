@@ -36,3 +36,27 @@ test('what the agent resolved waits on the board until a person verifies it', as
         .poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).loop.verified_count)
         .toBe(1);
 });
+
+test('a mark moves on the board without dragging', async ({ page }) => {
+    const { review, api } = await seedReview('Sheet buttons');
+
+    await page.goto(path(review.review_url));
+    const box = (await page.getByRole('img', { name: 'Screenshot 1' }).boundingBox())!;
+    await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.3);
+    const note = page.getByRole('dialog', { name: 'Leave a note' });
+    await note.getByPlaceholder(/Be specific/).fill('Logo is blurry.');
+    await note.getByPlaceholder(/Be specific/).press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+    await expect(note).toBeHidden();
+    await page.getByRole('button', { name: 'Changes' }).first().click();
+    await page.getByRole('button', { name: 'Send now' }).click();
+    await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('changes_requested');
+
+    const mark = (await (await api.get(`/api/reviews/${review.id}`)).json()).work_packets.pins[0];
+    await api.post(`/api/reviews/${review.id}/marks/resolve`, { data: { marks: [{ id: mark.id, status: 'resolved', note: 'Swapped in the SVG.' }] } });
+
+    await page.goto(path(review.board_url));
+    await page.getByText('Logo is blurry.').first().click();
+    await page.getByRole('button', { name: 'Verify', exact: true }).click();
+    await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).loop.verified_count).toBe(1);
+});
+

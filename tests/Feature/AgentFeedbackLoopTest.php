@@ -6,6 +6,7 @@ use App\Models\Annotation;
 use App\Models\Finding;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
+use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -292,8 +293,20 @@ class AgentFeedbackLoopTest extends TestCase
             ->set('tryToken', $token)
             ->call('loadReviews')
             ->assertOk()
-            ->assertSet('loaded', true)
-            ->assertCount('reviews', 1);
+            ->assertNotSet('workspaceId', null)
+            ->assertCount('reviews', 1)
+            ->assertSee('Memory')
+            ->assertSee('Connected to this workspace');
+    }
+
+    public function test_recent_reviews_open_by_themselves_after_connecting(): void
+    {
+        $try = app(TryTokenService::class)->create();
+        $this->actingAs($try['user'], 'web');
+
+        Livewire::test('recent-reviews')
+            ->assertSet('workspaceId', $try['workspace']->id)
+            ->assertSee('No reviews yet');
     }
 
     protected function tinyPngDataUrl(): string

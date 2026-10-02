@@ -16,7 +16,7 @@
         <div class="hatch flex size-16 items-center justify-center rounded-2xl text-zinc-300">
             <img src="/images/app-icon-v9.png" alt="ReviseMy" width="40" height="40" class="size-10">
         </div>
-        <p class="mt-6 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">@yield('code')</p>
+        <p class="mt-6 text-sm tabular-nums text-muted-foreground">@yield('code')</p>
         <h1 class="mt-2 text-2xl font-semibold text-foreground">@yield('title')</h1>
         <p class="mt-2 max-w-sm text-sm leading-relaxed text-pretty text-muted-foreground">@yield('message')</p>
         <a href="/" class="btn-quiet mt-8 inline-flex h-9 items-center rounded-full px-4 text-sm font-medium">Back to ReviseMy</a>

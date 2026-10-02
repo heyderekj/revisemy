@@ -106,7 +106,7 @@
                                 draggable="false"
                                 class="pointer-events-none block aspect-[4/5] w-full bg-zinc-100 object-cover object-top"
                             />
-                            <span class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-900/70 to-transparent px-1.5 pb-1 pt-4 text-left text-[10px] font-medium text-white">
+                            <span class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-900/70 to-transparent px-1.5 pb-1 pt-4 text-left text-xs font-medium text-white">
                                 {{ $shotOption->railLabel($index) }}
                             </span>
                         </button>
@@ -374,7 +374,7 @@
                             >−</button>
                             <button
                                 type="button"
-                                class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-[10px] text-zinc-500 transition hover:bg-zinc-100"
+                                class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-xs text-zinc-500 transition hover:bg-zinc-100"
                                 x-on:click="resetZoom()"
                                 x-text="Math.round(zoom * 100) + '%'"
                                 aria-label="Reset zoom"
@@ -443,7 +443,7 @@
                                         ></div>
                                         <button
                                             type="button"
-                                            class="pointer-events-auto absolute {{ $badgePosition }} z-[6] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition"
+                                            class="pointer-events-auto absolute {{ $badgePosition }} z-[6] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-sky-500 bg-white px-0.5 text-xs font-semibold text-sky-700 shadow-sm transition"
                                             title="{{ $finding->body }}"
                                             x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                             x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
@@ -471,7 +471,7 @@
                                         ></div>
                                         <button
                                             type="button"
-                                            class="pointer-events-auto absolute {{ $badgePosition }} z-[8] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
+                                            class="pointer-events-auto absolute {{ $badgePosition }} z-[8] flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-xs font-semibold text-zinc-700 shadow-sm transition"
                                             title="{{ $finding->body }}"
                                             x-on:click.stop="$store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }}"
                                             x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'scale-110 border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"
@@ -483,7 +483,7 @@
                                     <button
                                         type="button"
                                         data-finding
-                                        class="absolute z-[7] flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
+                                        class="absolute z-[7] flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-xs font-semibold text-zinc-700 shadow-sm transition"
                                         style="left: {{ $finding->x * 100 }}%; top: {{ $finding->y * 100 }}%;"
                                         title="{{ $finding->body }}"
                                         x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
@@ -504,7 +504,7 @@
                                         <button
                                             type="button"
                                             data-finding
-                                            class="pointer-events-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition"
+                                            class="pointer-events-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-zinc-500 bg-white px-0.5 text-xs font-semibold text-zinc-700 shadow-sm transition"
                                             title="{{ $finding->body }}"
                                             x-show="! $store.rmFocus?.finding || $store.rmFocus.finding === {{ $finding->id }}"
                                             x-on:click.stop="
@@ -542,7 +542,7 @@
                                             x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'ring-2 ring-key ring-offset-1' : ''"
                                         ></div>
                                         <span
-                                            class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-[10px] font-semibold shadow-sm ring-2 ring-white transition {{ $annotation->markerClass() }}"
+                                            class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-xs font-semibold shadow-sm ring-2 ring-white transition {{ $annotation->markerClass() }}"
                                             x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110' : ''"
                                         >
                                             M{{ $annotation->number }}
@@ -552,7 +552,7 @@
                                     <button
                                         type="button"
                                         data-pin
-                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[10px] font-semibold shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
+                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
                                         style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
                                         title="{{ $annotation->body }}"
                                         x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110 ring-4 ring-key/60' : ''"
@@ -627,7 +627,7 @@
                                 @foreach ($stripMarks as $pin)
                                     <button
                                         type="button"
-                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center bg-accent px-1 text-[10px] font-semibold text-ink ring-1 ring-zinc-200/80 transition hover:ring-zinc-300"
+                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center bg-accent px-1 text-xs font-semibold text-ink ring-1 ring-zinc-200/80 transition hover:ring-zinc-300"
                                         x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'ring-2 ring-key' : ''"
                                         x-on:click="
                                             $store.rmFocus.mark = $store.rmFocus.mark === {{ $pin->id }} ? null : {{ $pin->id }};
@@ -657,7 +657,7 @@
                                 @foreach ($stripSecondOpinion as $finding)
                                     <button
                                         type="button"
-                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-sky-500 bg-white px-1 text-[10px] font-semibold text-sky-700 transition hover:bg-sky-50"
+                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-sky-500 bg-white px-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
                                         x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
                                         x-on:click="
                                             $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
@@ -691,7 +691,7 @@
                                 @foreach ($stripGuest as $finding)
                                     <button
                                         type="button"
-                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-zinc-500 bg-white px-1 text-[10px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-zinc-500 bg-white px-1 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
                                         x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"
                                         x-on:click="
                                             $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};

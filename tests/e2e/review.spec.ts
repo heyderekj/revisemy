@@ -65,6 +65,25 @@ test('a removed mark comes back with Undo, and a decision can be called off', as
     expect((await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('pending');
 });
 
+test('the review answers to the keyboard', async ({ page }) => {
+    const { review, api } = await seedReview('Keys');
+
+    await page.goto(path(review.review_url));
+    await outline(page);
+    const note = page.getByRole('dialog', { name: 'Leave a note' });
+    await note.getByPlaceholder(/Be specific/).fill('Saved with the keyboard.');
+    await note.getByPlaceholder(/Be specific/).press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+    await expect(note).toBeHidden();
+
+    await page.keyboard.press('j');
+    await expect(page.locator('[id^="fb-mark-"]').first()).toHaveClass(/ring-key/);
+
+    await page.keyboard.press('a');
+    await expect(page.getByText(/Approving in \d+s/)).toBeVisible();
+    await page.getByRole('button', { name: 'Send now' }).click();
+    await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('approved');
+});
+
 test('the decision bar sits under the thumb on a phone @phone', async ({ page }) => {
     const { review } = await seedReview('On the go');
     await page.goto(path(review.review_url));
