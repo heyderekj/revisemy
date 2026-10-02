@@ -18,16 +18,16 @@ return [
                 'ReviseMy ChatGPT',
             ],
             'headline' => 'Design checkup inside ChatGPT',
-            'subheadline' => 'Add ReviseMy as a remote MCP connector (or Custom GPT Action for REST). Use the MCP URL and Bearer try token from the homepage — then ask ChatGPT to run create_review and follow next_action.',
+            'subheadline' => 'Add ReviseMy as a custom connector with just its URL and click Connect — no account, no token to paste. Then ask ChatGPT to run create_review and follow next_action.',
             'features_heading' => 'What you get with ChatGPT',
             'checklist_heading' => 'Quick setup',
             'problem' => 'ChatGPT can critique UI in text, but it cannot leave structured marks on pixels or wait for a human approve / request-changes gate. You need a connector that hands off to a real review link.',
-            'loop' => 'Get a try token on the homepage, add the MCP URL and Authorization: Bearer token in ChatGPT Connectors (or Actions for REST), then paste a checkup prompt. When the host supports MCP Apps the review can render inline; otherwise ChatGPT shares the review_url.',
+            'loop' => 'In ChatGPT Connectors, add the MCP URL and click Connect when ReviseMy asks — that makes your try workspace. Then paste a checkup prompt. When the host supports MCP Apps the review can render inline; otherwise ChatGPT shares the review_url.',
             'features' => [
                 [
                     'icon' => 'puzzle-piece',
                     'title' => 'Remote MCP or REST',
-                    'body' => 'ChatGPT’s connector UI takes URL + Bearer — not a full JSON paste. Homepage Ask agent fills those fields into a prompt for you.',
+                    'body' => 'Paste the MCP URL, click Connect, done. A Custom GPT Action can still call the REST API with a try token.',
                 ],
                 [
                     'icon' => 'link',
@@ -41,9 +41,8 @@ return [
                 ],
             ],
             'checklist' => [
-                'Get a free try token on the homepage',
-                'ChatGPT → Settings → Connectors (or Custom GPT → Actions for REST)',
-                'Paste MCP URL + Authorization: Bearer {try_token}',
+                'ChatGPT → Settings → Connectors → add a custom connector',
+                'Paste the MCP URL and click Connect when ReviseMy asks',
                 'Ask it to run create_review and follow next_action',
             ],
             'faq' => [
@@ -65,7 +64,7 @@ return [
             'icon' => 'claude',
             'teaser' => 'Inline on Desktop · review_url on Claude Code.',
             'title' => 'ReviseMy for Claude — Desktop MCP Apps and Claude Code',
-            'description' => 'Connect ReviseMy to Claude Desktop for inline MCP Apps review, or Claude Code via review_url. Paste mcp-remote config or claude mcp add, then run the design checkup loop.',
+            'description' => 'Connect ReviseMy to Claude.ai or Claude Desktop with one click for inline MCP Apps review, or to Claude Code via review_url, then run the design checkup loop.',
             'keywords' => [
                 'Claude MCP',
                 'Claude Desktop MCP Apps',
@@ -77,7 +76,7 @@ return [
             'features_heading' => 'Desktop vs Code',
             'checklist_heading' => 'Quick setup',
             'problem' => 'Claude can describe UI issues, but structured human marks and a multi-pass board need a connector. Desktop and Code need different paste paths for the same MCP server.',
-            'loop' => 'Get a try token. On Desktop, merge mcp-remote JSON under Settings → Developer → Edit Config. On Code, run claude mcp add --transport http. Prefer design_checkup_loop when available; mark inline on Desktop or via review_url on Code.',
+            'loop' => 'On Claude.ai or Desktop, add a custom connector with the MCP URL and click Connect. On Code, run claude mcp add --transport http with a try token. Prefer design_checkup_loop when available; mark inline on Desktop or via review_url on Code.',
             'features' => [
                 [
                     'icon' => 'puzzle-piece',
@@ -91,14 +90,13 @@ return [
                 ],
                 [
                     'icon' => 'link',
-                    'title' => 'Bearer try tokens',
-                    'body' => 'Use Developer → Edit Config (mcp-remote). Connectors → Add custom connector is OAuth-oriented and does not fit Bearer try tokens today.',
+                    'title' => 'One-click Connect',
+                    'body' => 'Connectors → Add custom connector takes just the URL. ReviseMy asks you to Connect once, and that makes your try workspace — no account.',
                 ],
             ],
             'checklist' => [
-                'Get a free try token on the homepage',
-                'Desktop: Settings → Developer → Edit Config, merge mcp-remote JSON, quit and reopen',
-                'Code: claude mcp add --transport http with your MCP URL + Bearer',
+                'Claude.ai or Desktop: Settings → Connectors → Add custom connector, paste the MCP URL, click Connect',
+                'Code: get a try token, then claude mcp add --transport http with your MCP URL + Bearer',
                 'Run create_review (or design_checkup_loop) and follow next_action',
             ],
             'faq' => [

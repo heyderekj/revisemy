@@ -6,9 +6,9 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 | Host | How |
 |------|-----|
-| **ChatGPT** | Remote MCP / connector with URL + Bearer, or REST `/api/reviews` |
+| **ChatGPT** | Custom connector with just the URL → **Connect** (OAuth, makes a try workspace), or REST `/api/reviews` with a try token |
 | **Claude Code** | `claude mcp add --transport http …` — agent shares `review_url` (no inline UI) |
-| **Claude Desktop** | Same `mcpServers` JSON as Cursor — inline review via MCP Apps |
+| **Claude.ai / Claude Desktop** | Settings → Connectors → Add custom connector with the URL → **Connect** — inline review via MCP Apps. A try token still works via `mcp-remote` + Edit Config |
 | **Copilot** | Paste `servers` JSON into MCP settings (homepage tab) — inline review via MCP Apps |
 | **Cursor** | Paste `mcpServers` JSON into Settings → MCP — agent shares `review_url` (no inline UI) |
 | **Grok** | Custom MCP connector at [grok.com/connectors](https://grok.com/connectors) — URL + Bearer; agent shares `review_url` |
@@ -60,10 +60,9 @@ Pass `webhook_url` (https) to `create_review` — over MCP or REST — and Revis
 - Optional: deep link from the homepage “Add to Cursor” button
 - Keep tool names stable so the plugin never forks the protocol
 
-### Claude connector
+### Connect (OAuth)
 
-- Register a remote MCP connector against the web endpoint
-- OAuth can come later; Bearer try tokens are enough for the weekend demo
+Shipped. `routes/ai.php` takes either guard (`auth:sanctum,api`) and serves the OAuth discovery documents and dynamic registration (`Mcp::oauthRoutes()`). An assistant that signs in is sent to `/connect`, which is one button: it makes a try workspace (the same rate limit as Get a try token) or, with a pasted try token, attaches to that workspace. That click is the consent, so Passport's own page is skipped once (`App\Models\OAuthClient::skipsAuthorization`); a later sign-in from the same browser asks on `resources/views/oauth/authorize.blade.php`. Tokens last an hour and refresh for 60 days. Tests: `tests/Feature/McpOAuthTest.php`.
 
 ### ChatGPT Action / custom GPT
 

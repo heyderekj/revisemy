@@ -844,15 +844,14 @@ new class extends Component
                                                 />
                                             </div>
                                             <div x-show="claudePath === 'desktop'" x-cloak class="space-y-4 sm:space-y-5">
-                                                <x-setup-step step="1" label="Edit Claude Desktop config">
+                                                <x-setup-step step="1" label="Add a custom connector">
                                                     <p class="text-[15px] leading-relaxed text-zinc-600">
-                                                        Open <span class="font-medium text-zinc-800">Settings → Developer → Edit Config</span>
-                                                        (<code class="font-mono text-[13px]">claude_desktop_config.json</code>).
-                                                        Merge the JSON below into <code class="font-mono text-[13px]">mcpServers</code>, save, then fully quit and reopen Claude Desktop.
+                                                        In Claude.ai or Claude Desktop, open <span class="font-medium text-zinc-800">Settings → Connectors → Add custom connector</span>,
+                                                        paste <code class="font-mono text-[13px]">{{ url('/mcp/revisemy') }}</code>, and click <span class="font-medium text-zinc-800">Connect</span> when ReviseMy asks. That makes your try workspace — nothing to paste back.
                                                     </p>
-                                                    <div class="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-[13px] leading-relaxed text-amber-950/80">
-                                                        Don’t use <span class="font-medium">Connectors → Add custom connector</span> — that UI is OAuth-oriented and has no Bearer header field. Needs Node.js (<code class="font-mono text-[12px]">npx</code>).
-                                                    </div>
+                                                    <p class="text-[13px] leading-relaxed text-muted-foreground">
+                                                        Or keep using this try token: <span class="font-medium">Settings → Developer → Edit Config</span>, merge the JSON below into <code class="font-mono text-[12px]">mcpServers</code>, then quit and reopen Claude Desktop. Needs Node.js (<code class="font-mono text-[12px]">npx</code>).
+                                                    </p>
                                                     <div>
                                                         <div class="mb-2 flex items-center justify-between">
                                                             <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Claude Desktop config</p>

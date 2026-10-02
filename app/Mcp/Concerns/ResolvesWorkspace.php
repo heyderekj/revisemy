@@ -14,7 +14,7 @@ trait ResolvesWorkspace
         $user = $request->user();
 
         if (! $user instanceof User || ! $user->workspace) {
-            return Response::error('Sign in with your ReviseMy try token (Bearer Authorization header) before calling tools.');
+            return Response::error('Connect ReviseMy first: sign in from your assistant\'s connector settings, or send a try token as a Bearer Authorization header.');
         }
 
         return $user->workspace;

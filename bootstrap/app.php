@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            // MCP clients need the 401 (with WWW-Authenticate) to learn where
+            // to sign in, never a redirect to the Connect page.
+            fn (Request $request) => $request->is('api/*', 'mcp/*') || $request->expectsJson(),
         );
     })->create();

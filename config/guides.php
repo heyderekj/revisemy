@@ -70,11 +70,11 @@ return [
                     'id' => 'claude',
                     'label' => 'Claude',
                     'mode' => 'Inline (Desktop) · Link (Code)',
-                    'body' => 'Claude Desktop can render the review inline via MCP Apps. Use Settings → Developer → Edit Config with the mcp-remote JSON (Bearer try tokens do not fit Connectors → Add custom connector, which is OAuth-oriented). Claude Code is CLI-only and shares a `review_url` instead. Homepage Ask agent generates prompts that include your config.',
+                    'body' => 'Claude.ai and Claude Desktop render the review inline via MCP Apps. Add a custom connector with the MCP URL and click Connect — no try token needed. Claude Code is CLI-only and shares a `review_url` instead. Homepage Ask agent generates prompts that include your config.',
                     'steps' => [
                         [
-                            'label' => 'Claude Desktop — edit config',
-                            'body' => 'Settings → Developer → Edit Config, merge the mcp-remote JSON, then quit and reopen Claude. Or paste the Desktop agent setup prompt from the homepage.',
+                            'label' => 'Claude.ai or Desktop — add a custom connector',
+                            'body' => 'Settings → Connectors → Add custom connector, paste the MCP URL, and click Connect. Prefer a try token? Settings → Developer → Edit Config with the mcp-remote JSON from the homepage still works.',
                         ],
                         [
                             'label' => 'Claude Code — add HTTP MCP',

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AlternativeController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ConnectController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ScreenshotController;
@@ -34,6 +35,15 @@ Route::get('/changelog', [GuideController::class, 'show'])
 
 Route::get('/privacy', [LegalController::class, 'privacy']);
 Route::get('/terms', [LegalController::class, 'terms']);
+
+/*
+ * Where an assistant signing in over OAuth is sent to "log in". Named login
+ * because that is the route Passport looks for.
+ */
+Route::middleware('noindex')->group(function () {
+    Route::get('/connect', [ConnectController::class, 'show'])->name('login');
+    Route::post('/connect', [ConnectController::class, 'store'])->middleware('throttle:10,1')->name('connect');
+});
 
 Route::middleware('noindex')->group(function () {
     Route::get('/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');

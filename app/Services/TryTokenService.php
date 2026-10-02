@@ -31,25 +31,37 @@ class TryTokenService
      *     checkup_prompts: array<string, string>
      * }
      */
-    public function create(): array
+    /**
+     * A try workspace with this month's credits, and the stand-in user that
+     * owns it. No token: the try-token flow mints a Sanctum one, and Connect
+     * (OAuth) has Passport mint its own.
+     */
+    public function createWorkspaceUser(): User
     {
-        return DB::transaction(function (): array {
-            $tokenDays = (int) config('billing.plans.free.token_days', self::TOKEN_DAYS);
-
+        return DB::transaction(function (): User {
             $workspace = Workspace::query()->create([
                 'name' => 'Try workspace',
                 'plan' => Workspace::PLAN_FREE,
             ]);
 
             app(CreditsService::class)->grantPeriod($workspace);
-            $workspace->refresh();
 
-            $user = User::query()->create([
+            return User::query()->create([
                 'workspace_id' => $workspace->id,
                 'name' => 'ReviseMy try user',
                 'email' => 'try-'.Str::lower((string) Str::ulid()).'@revisemy.local',
                 'password' => Str::password(32),
-            ]);
+            ])->setRelation('workspace', $workspace->refresh());
+        });
+    }
+
+    public function create(): array
+    {
+        return DB::transaction(function (): array {
+            $tokenDays = (int) config('billing.plans.free.token_days', self::TOKEN_DAYS);
+
+            $user = $this->createWorkspaceUser();
+            $workspace = $user->workspace;
 
             $expiresAt = now()->addDays($tokenDays);
             $plainTextToken = $user->createToken('revisemy-try', ['*'], $expiresAt)->plainTextToken;
@@ -67,8 +79,9 @@ class TryTokenService
                 ],
             ];
 
-            // Claude Desktop's Connectors UI is OAuth-oriented and won't take a
-            // Bearer header. Bridge the remote HTTP server via mcp-remote + Edit Config.
+            // Claude's Connectors UI signs in over OAuth (see /connect) and has no
+            // Bearer header field. For someone who wants this try token in
+            // Claude Desktop instead, bridge it via mcp-remote + Edit Config.
             $claudeDesktopConfig = [
                 'mcpServers' => [
                     'revisemy' => [
