@@ -1,0 +1,73 @@
+name: e2e
+
+# The browser specs in tests/e2e: what a person does on a review, run against
+# the built assets and a fresh SQLite database. Beside ci.yml rather than
+# inside it, so a slow browser job never holds up the PHP one.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sqlite3, pdo_sqlite, gd, mbstring
+          coverage: none
+
+      - name: Locate Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-e2e-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-e2e-
+
+      - run: composer install --prefer-dist --no-interaction --no-progress
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build assets
+        # --ignore-scripts skips the Puppeteer Chrome download; capture is
+        # driver-based and never runs in the specs.
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser specs
+        run: npm run test:e2e
+
+      # A trace per failed spec, openable with `npx playwright show-trace`.
+      - name: Keep the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
