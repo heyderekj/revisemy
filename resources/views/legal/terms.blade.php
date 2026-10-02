@@ -1,36 +1,20 @@
-<x-layouts.app
+<x-simple-page
     title="Terms — ReviseMy"
     description="Terms of use for ReviseMy — O'Saasy-licensed software, try tokens, review links, and no warranty. Product-truth draft — not formal legal counsel."
-    :keywords="['ReviseMy terms', 'design review terms of use']"
-    schema="page"
+    eyebrow="Legal"
+    heading="Terms"
+    updated="October 2, 2026"
 >
-    <x-page-frame>
-        <x-home-section first>
-            <header>
-                <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                    <x-revisemy-logo variant="wordmark" size="lg" />
-                </a>
-            </header>
+    <p class="text-sm text-muted-foreground">A product-truth draft for an open-source tool, not lawyer-reviewed counsel.</p>
 
-            <article class="mt-10 sm:mt-12">
-                <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Legal</p>
-                <h1 class="mt-3 text-[clamp(2rem,5vw,2.75rem)] font-semibold leading-[1.08] tracking-tight text-zinc-900">
-                    Terms
-                </h1>
-                <p class="mt-4 text-sm text-zinc-500">
-                    Last updated July 14, 2026. This is a product-truth draft for an open-source tool — not lawyer-reviewed counsel.
-                </p>
-            </article>
-        </x-home-section>
-
-        <x-home-section>
-            <div class="space-y-8 text-[15px] leading-relaxed text-zinc-600">
+    <div class="mt-10">
+<div class="space-y-8 text-[15px] leading-relaxed text-zinc-600">
                 <section>
                     <h2 class="text-lg font-semibold tracking-tight text-zinc-900">Software license</h2>
                     <p class="mt-3">
                         The ReviseMy source code is released under the
-                        <a href="https://osaasy.dev/" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700" target="_blank" rel="noreferrer">O’Saasy License</a>
-                        (<a href="https://github.com/heyderekj/revisemy/blob/main/LICENSE" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700" target="_blank" rel="noreferrer">LICENSE in the repo</a>).
+                        <a href="https://osaasy.dev/" class="link" target="_blank" rel="noreferrer">O’Saasy License</a>
+                        (<a href="https://github.com/heyderekj/revisemy/blob/main/LICENSE" class="link" target="_blank" rel="noreferrer">LICENSE in the repo</a>).
                         That license governs the code — including the reservation of hosted SaaS rights. These terms describe how the hosted demo / try-token experience is intended to be used.
                     </p>
                 </section>
@@ -38,7 +22,7 @@
                 <section>
                     <h2 class="text-lg font-semibold tracking-tight text-zinc-900">Try tokens, credits, and reviews</h2>
                     <p class="mt-3">
-                            Homepage try tokens create a Try workspace so agents can call MCP and REST. Try includes a monthly credit pack (no rollover) while paid pricing is paused. When Plus is offered, it adds a larger monthly grant via Paddle Checkout. Creating a review spends credits by source (images/PDF, email HTML, or URL capture). Rate limits, retention, and expiry may apply (including guest-link and review lifetimes described in product docs). Unused monthly credits do not roll over. Paddle is the merchant of record for paid plans when enabled.
+                            Connecting an assistant, or getting a try token, creates a Try workspace so agents can call MCP and REST. Try includes a monthly credit pack with no rollover; paid plans are paused. Creating a review spends credits by source (images and PDFs, email HTML, or a URL capture). Rate limits, retention and expiry apply, including guest-link and review lifetimes.
                     </p>
                 </section>
 
@@ -82,8 +66,7 @@
 
             <p class="mt-12 text-sm text-zinc-500">
                 Also see
-                <a href="/privacy" class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700">Privacy</a>.
+                <a href="/privacy" class="link">Privacy</a>.
             </p>
-        </x-home-section>
-    </x-page-frame>
-</x-layouts.app>
+    </div>
+</x-simple-page>

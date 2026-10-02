@@ -35,6 +35,9 @@ class BillingController extends Controller
 
     public function success(Request $request, BillingService $billing): View
     {
+        // Only Paddle checkout sends anyone here, and checkout is off while Plus is paused.
+        abort_unless(config('billing.pricing_enabled'), 404);
+
         $publicId = (string) $request->query('workspace', '');
         $workspace = $publicId !== ''
             ? Workspace::query()->where('public_id', $publicId)->first()
@@ -63,22 +66,11 @@ class BillingController extends Controller
 
     public function cancel(): View
     {
-        return view('billing.cancel');
-    }
-
-    /**
-     * Default Paddle payment-link page (Checkout settings → Default payment link).
-     * Opens inline checkout when Paddle appends ?_ptxn=.
-     */
-    public function upgrade(): View
-    {
-        // Paid Plus is paused and its page is not built yet — 404 rather than
-        // render a view that does not exist.
         abort_unless(config('billing.pricing_enabled'), 404);
 
-        return view('billing.upgrade', [
-            'priceUsd' => (int) config('billing.plans.pro.price_usd', 9),
-            'credits' => (int) config('billing.plans.pro.credits', 100),
+        return view('billing.status', [
+            'heading' => 'Checkout canceled',
+            'line' => 'Nothing was charged. Ask your agent for create_checkout again whenever you’re ready.',
         ]);
     }
 
@@ -110,8 +102,12 @@ class BillingController extends Controller
             ->with('status', 'Plus cancellation scheduled. You’ll keep access until the period ends.');
     }
 
+    /** Reachable whenever someone has a subscription to manage, paused or not. */
     public function portalReturn(): View
     {
-        return view('billing.portal-return');
+        return view('billing.status', [
+            'heading' => 'Billing updated',
+            'line' => 'You’re all set. Your agent’s get_billing shows the latest plan and credits.',
+        ]);
     }
 }

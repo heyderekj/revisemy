@@ -1,49 +1,13 @@
-<x-layouts.app
-    title="Plus unlocked — ReviseMy"
-    description="Your ReviseMy workspace is on Plus."
-    robots="noindex, nofollow"
-    schema="page"
->
-    <x-page-frame :footer="false">
-        <x-home-section first>
-            <header>
-                <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                    <x-revisemy-logo variant="wordmark" size="lg" />
-                </a>
-            </header>
-
-            <article class="mt-10 sm:mt-12">
-                <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Billing</p>
-                <h1 class="mt-3 text-[clamp(2rem,5vw,2.75rem)] font-semibold leading-[1.08] tracking-tight text-zinc-900">
-                    You’re on Plus
-                </h1>
-                <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                    Thanks{{ $email ? ' — receipt comes from Paddle to '.$email : '' }}.
-                    Your workspace now has {{ (int) config('billing.plans.pro.credits', 100) }} credits for this month (full capture quality).
-                </p>
-                <p class="mt-4 text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                    Return to your agent and continue — call
-                    <code class="bg-zinc-100 px-1.5 py-0.5 text-sm text-zinc-800">create_review</code>
-                    again, or
-                    <code class="bg-zinc-100 px-1.5 py-0.5 text-sm text-zinc-800">get_billing</code>
-                    to confirm credits.
-                </p>
-                @if ($manageUrl)
-                    <p class="mt-4 text-[14px] leading-relaxed text-pretty text-zinc-500">
-                        Need to cancel Plus later?
-                        <a
-                            href="{{ $manageUrl }}"
-                            class="font-medium text-zinc-800 underline decoration-zinc-300 underline-offset-2 transition hover:text-zinc-950 hover:decoration-zinc-500"
-                        >Manage billing</a>
-                        — or ask your agent for
-                        <code class="bg-zinc-100 px-1 py-0.5 text-[13px] text-zinc-800">create_portal</code>.
-                    </p>
-                @endif
-            </article>
-        </x-home-section>
-
-        <div class="relative border-t border-zinc-200 px-[var(--rm-pad)] py-12">
-            <x-billing.credit-costs compare tone="confirm" class="max-w-md" />
-        </div>
-    </x-page-frame>
-</x-layouts.app>
+<x-simple-page title="Plus unlocked — ReviseMy" eyebrow="Billing" heading="You’re on Plus" robots="noindex, nofollow" :footer="false">
+    <p>
+        Thanks{{ $email ? ' — Paddle sends the receipt to '.$email : '' }}.
+        Your workspace has {{ (int) config('billing.plans.pro.credits', 100) }} credits this month at full capture quality.
+        Your agent can carry on, and get_billing shows the balance.
+    </p>
+    @if ($manageUrl)
+        <p class="mt-4 text-sm text-muted-foreground">
+            Cancel or change your card any time: <a href="{{ $manageUrl }}" class="link">Manage billing</a>, or ask your agent for create_portal.
+        </p>
+    @endif
+    <x-billing.credit-costs compare tone="confirm" class="mt-10 max-w-md" />
+</x-simple-page>

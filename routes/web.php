@@ -55,7 +55,6 @@ Route::middleware('noindex')->group(function () {
 });
 
 Route::middleware('noindex')->group(function () {
-    Route::get('/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');
     Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
     Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
     Route::get('/billing/portal-return', [BillingController::class, 'portalReturn'])->name('billing.portal-return');
