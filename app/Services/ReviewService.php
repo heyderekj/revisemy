@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
 use App\Services\Capture\PageCaptureService;
+use App\Support\OutboundUrl;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -167,8 +168,17 @@ class ReviewService
             $context ??= $parent->context;
             $pageUrl ??= $parent->page_url;
             $type ??= $parent->type;
-            // A pipeline sets the webhook once; follow-up passes inherit it.
-            $webhookUrl ??= $parent->webhook_url;
+            // A pipeline sets the webhook once; follow-up passes inherit it,
+            // and its health with it — a paused webhook stays paused until a
+            // pass names a webhook_url again.
+            if ($webhookUrl === null && $parent->webhook_url) {
+                $webhookUrl = $parent->webhook_url;
+                $webhookHealth = [
+                    'webhook_failures' => (int) $parent->webhook_failures,
+                    'webhook_paused_at' => $parent->webhook_paused_at,
+                    'webhook_last_error' => $parent->webhook_last_error,
+                ];
+            }
         }
 
         $retentionDays = $workspace->reviewRetentionDays();
@@ -180,6 +190,7 @@ class ReviewService
             'type' => $type ?? Review::TYPE_UI,
             'page_url' => $pageUrl,
             'webhook_url' => $webhookUrl,
+            ...($webhookHealth ?? []),
             'pass' => $pass,
             'expires_at' => now()->addDays($retentionDays),
         ]);
@@ -270,9 +281,11 @@ class ReviewService
     }
 
     /**
-     * Webhooks must be http(s) — https only outside local/testing. Same trust
-     * stance as page_url capture: the token holder chooses the target, and the
-     * payload only contains data that holder already has.
+     * Webhooks must be http(s) — https only outside local/testing — and must
+     * not point inside our own network. The token holder chooses the target
+     * and the payload only holds data they already have, but the request
+     * still leaves from this container, so the same private-address rules as
+     * every other outbound fetch apply (checked again before each send).
      */
     protected function assertValidWebhookUrl(string $url): void
     {
@@ -282,6 +295,12 @@ class ReviewService
         if (! filter_var($url, FILTER_VALIDATE_URL) || ! in_array($scheme, $allowed, true)) {
             throw ValidationException::withMessages([
                 'webhook_url' => 'webhook_url must be a valid '.implode('/', $allowed).' URL.',
+            ]);
+        }
+
+        if ($reason = OutboundUrl::reasonToReject($url)) {
+            throw ValidationException::withMessages([
+                'webhook_url' => "webhook_url can't be used: {$reason}.",
             ]);
         }
     }

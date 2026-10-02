@@ -37,9 +37,12 @@ Repo: https://github.com/heyderekj/revisemy
    - Support top-up a try workspace: `php artisan revisemy:extend-try {workspace_public_id} --credits=20` (or `--pack` for a full Try pack + token bump).
    - Keep Serverless Postgres **scale-to-zero** (e.g. 10-minute idle) and Flex scale-to-zero for cost; bump migrate wake wait if deploys hit “still waking up”.
 5. Build commands should include `npm ci && npm run build` (Cloud default for Node apps) and `composer install`. Cloud injects database credentials while building Laravel's cached configuration; raw `DB_*` variables may not be available later in the Commands shell.
-6. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
-7. Visit the `*.laravel.cloud` homepage → **Get a try token** → paste MCP config into any project.
-8. Contest reply: post that `https://….laravel.cloud` URL.
+6. Run the scheduler (`php artisan schedule:run` every minute — Cloud's scheduler toggle does this). It prunes reviews 30 days past their retention, with their screenshots, and expired tokens, nightly.
+7. Optional: `NIGHTWATCH_ENABLED=true` and `NIGHTWATCH_TOKEN` for error tracking (requests are sampled at 10%).
+8. Check the install: `cloud command:run "php artisan revisemy:check"` lists each thing as ready or not, with the one thing to do, and exits 1 while anything is missing.
+9. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
+10. Visit the `*.laravel.cloud` homepage → **Get a try token** → paste MCP config into any project.
+11. Contest reply: post that `https://….laravel.cloud` URL.
 
 ## “Still waking up” / 30s deploy timeout
 

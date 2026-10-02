@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Services\ScreenshotStorage;
 use App\Support\MarkFocus;
 use App\Support\TasteLenses;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -17,6 +19,17 @@ use Illuminate\Support\Str;
 
 class Review extends Model
 {
+    use Prunable;
+
+    /**
+     * Days a review is kept past its retention (expires_at) before it and its
+     * files are deleted, so a link opened a little late still loads.
+     */
+    public const PRUNE_GRACE_DAYS = 30;
+
+    /** Deliveries in a row that may fail before the webhook is paused. */
+    public const WEBHOOK_PAUSE_AFTER = 5;
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_CHANGES_REQUESTED = 'changes_requested';
@@ -55,6 +68,9 @@ class Review extends Model
         'type',
         'page_url',
         'webhook_url',
+        'webhook_failures',
+        'webhook_paused_at',
+        'webhook_last_error',
         'dom_path',
         'pass',
         'status',
@@ -80,6 +96,7 @@ class Review extends Model
         return [
             'decision_at' => 'datetime',
             'expires_at' => 'datetime',
+            'webhook_paused_at' => 'datetime',
             'share_expires_at' => 'datetime',
             'comments_enabled' => 'boolean',
             'pass' => 'integer',
@@ -202,6 +219,34 @@ class Review extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    /**
+     * Reviews past their retention plus the grace period, and nothing newer
+     * hanging off them: a later pass that is still kept keeps its parent, so
+     * the pass ledger never loses a step. Run nightly by model:prune.
+     */
+    public function prunable(): Builder
+    {
+        $cutoff = now()->subDays(self::PRUNE_GRACE_DAYS);
+
+        return static::query()
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', $cutoff)
+            ->whereDoesntHave('children', fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', $cutoff));
+    }
+
+    /**
+     * The screenshots go with the review. The rows cascade; the files on the
+     * disk do not, so they are removed here, folder by folder.
+     */
+    protected function pruning(): void
+    {
+        $disks = $this->screenshots()->pluck('disk')->filter()->unique();
+
+        foreach ($disks->isEmpty() ? [config('filesystems.revisemy_disk')] : $disks as $disk) {
+            rescue(fn () => Storage::disk($disk)->deleteDirectory('reviews/'.$this->public_id), report: true);
+        }
     }
 
     public function children(): HasMany
@@ -746,6 +791,12 @@ class Review extends Model
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
+            // Only whether the decision webhook is getting through, never its URL.
+            'webhook' => $this->webhook_url ? [
+                'paused' => $this->webhook_paused_at !== null,
+                'failures' => (int) $this->webhook_failures,
+                'last_error' => $this->webhook_last_error,
+            ] : null,
             // Changes whenever the human does anything — an unchanged value
             // means the poll can be skipped.
             'updated_at' => $this->lastActivityAt()?->toIso8601String(),

@@ -49,8 +49,8 @@ Pass `webhook_url` (https) to `create_review` — over MCP or REST — and Revis
 
 - **Payload**: `{ "event": "review.decided", "decided_at": …, "review": <the get_review agent payload> }` — check `review.status` (`approved` / `changes_requested`) and `review.next_action`.
 - **Headers**: `X-ReviseMy-Event`, `X-ReviseMy-Review` (public id), and `X-ReviseMy-Signature: sha256=<hmac>` — an HMAC-SHA256 of the raw body keyed with the review's owner token (the secret in `review_url`, which the creator already holds). Verify it before trusting the payload.
-- **Delivery**: queued, 10s timeout, 3 attempts with backoff (10s / 60s / 5m); failures are logged, never block the human's decision.
-- **Trust stance**: the token holder chooses the target URL, same as `page_url` capture; the payload contains only data that holder already has. `http://` is allowed only in local/testing environments.
+- **Delivery**: queued, 10s timeout, 3 attempts with backoff (10s / 60s / 5m); redirects aren't followed and count as a failure. Failures are logged and never block the human's decision. After 5 deliveries in a row fail, the webhook pauses; `get_review` shows `webhook: { paused, failures, last_error }` (never the URL). A later pass inherits the pause; passing `webhook_url` again starts fresh.
+- **Trust stance**: the token holder chooses the target URL and the payload contains only data that holder already has, but the request leaves from this container, so the URL must not resolve to a private, loopback or link-local address — checked when it's saved and again before every send (`App\Support\OutboundUrl`). `http://` is allowed only in local/testing environments.
 
 ## Next packaging steps
 

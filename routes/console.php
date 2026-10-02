@@ -1,8 +1,19 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use App\Console\Commands\ReviseMyCheck;
+use App\Models\Review;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+/*
+ * Nightly housekeeping. Retention was only ever checked when a review was
+ * read, so expired reviews and their screenshots stayed in storage for good.
+ */
+Schedule::command('model:prune', ['--model' => [Review::class]])->dailyAt('03:10')->withoutOverlapping()->onOneServer();
+Schedule::command('sanctum:prune-expired', ['--hours' => 24])->dailyAt('03:20')->onOneServer();
+Schedule::command('passport:purge')->dailyAt('03:30')->onOneServer();
+
+// So revisemy:check can tell a scheduler that isn't running.
+Schedule::call(fn () => Cache::put(ReviseMyCheck::HEARTBEAT, now()->toIso8601String(), now()->addHour()))
+    ->everyMinute()
+    ->name('scheduler-heartbeat');
