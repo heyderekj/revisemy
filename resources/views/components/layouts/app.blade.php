@@ -29,10 +29,10 @@
         :schema="$schema"
     />
 
-    <link rel="icon" href="{{ \App\Support\Seo::faviconUrl('/favicon-v10.ico') }}" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-32x32-v10.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-16x16-v10.png') }}">
-    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::faviconUrl('/images/apple-touch-icon-v10.png') }}">
+    <link rel="icon" href="{{ \App\Support\Seo::faviconUrl('/favicon-v9.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-32x32-v9.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-16x16-v9.png') }}">
+    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::faviconUrl('/images/apple-touch-icon-v9.png') }}">
 
     <link rel="preload" href="/fonts/figtree-latin-400.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/fonts/figtree-latin-500.woff2" as="font" type="font/woff2" crossorigin>

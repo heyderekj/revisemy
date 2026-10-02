@@ -8,13 +8,13 @@
     <meta name="robots" content="noindex">
     @fluxAppearance
     <title>@yield('title') · ReviseMy</title>
-    <link rel="icon" href="/favicon-v10.ico" sizes="any">
+    <link rel="icon" href="/favicon-v9.ico" sizes="any">
     @vite(['resources/css/app.css'])
 </head>
 <body class="rm-desk flex min-h-svh flex-col antialiased">
     <main class="rm-shell items-center justify-center px-6 py-16 text-center">
         <div class="hatch flex size-16 items-center justify-center rounded-2xl text-zinc-300">
-            <img src="/images/app-icon-v10.png" alt="ReviseMy" width="40" height="40" class="size-10">
+            <img src="/images/app-icon-v9.png" alt="ReviseMy" width="40" height="40" class="size-10">
         </div>
         <p class="mt-6 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">@yield('code')</p>
         <h1 class="mt-2 text-2xl font-semibold text-foreground">@yield('title')</h1>
