@@ -92,7 +92,7 @@ class UseCasePageTest extends TestCase
         $response = $this->get('/llms.txt');
 
         $response->assertOk()
-            ->assertSee('## Use cases', false)
+            ->assertSee('## Connect', false)
             ->assertSee('/connectors', false)
             ->assertSee('/second-opinion', false)
             ->assertSee('/board', false)
@@ -100,7 +100,7 @@ class UseCasePageTest extends TestCase
             ->assertSee('/changelog', false)
             ->assertSee('/privacy', false)
             ->assertSee('/terms', false)
-            ->assertSee('## Alternatives', false)
+            ->assertSee('## Pages', false)
             ->assertSee('/alternatives', false);
 
         foreach (config('use-cases.pages', []) as $slug => $page) {

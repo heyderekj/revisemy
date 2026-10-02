@@ -1,63 +1,31 @@
 @php echo '<?xml version="1.0" encoding="UTF-8"?>'; @endphp
+@php($base = rtrim(config('app.url'), '/'))
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/</loc>
+        <loc>{{ $base }}/</loc>
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
     </url>
     <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/for</loc>
+        <loc>{{ $base }}/connect</loc>
         <changefreq>monthly</changefreq>
-        <priority>0.85</priority>
+        <priority>0.9</priority>
     </url>
-    @foreach (config('use-cases.pages', []) as $slug => $page)
+    @foreach (\App\Support\MarketingPages::all() as $page)
     <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/for/{{ $slug }}</loc>
+        <loc>{{ $base }}{{ $page['href'] }}</loc>
         <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    @endforeach
-    @foreach (config('use-cases.audiences', []) as $slug => $page)
-    <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/for/{{ $slug }}</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    @endforeach
-    @foreach (config('hosts.pages', []) as $slug => $page)
-    <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/for/{{ $slug }}</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    @endforeach
-    @foreach (config('guides.pages', []) as $slug => $page)
-    <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}{{ $page['path'] }}</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.85</priority>
+        <priority>{{ substr_count($page['href'], '/') > 1 ? '0.8' : '0.85' }}</priority>
     </url>
     @endforeach
     <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/privacy</loc>
+        <loc>{{ $base }}/privacy</loc>
         <changefreq>yearly</changefreq>
         <priority>0.3</priority>
     </url>
     <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/terms</loc>
+        <loc>{{ $base }}/terms</loc>
         <changefreq>yearly</changefreq>
         <priority>0.3</priority>
     </url>
-    <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}/alternatives</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.85</priority>
-    </url>
-    @foreach (config('alternatives.pages', []) as $slug => $page)
-    <url>
-        <loc>{{ rtrim(config('app.url'), '/') }}{{ $page['path'] }}</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    @endforeach
 </urlset>

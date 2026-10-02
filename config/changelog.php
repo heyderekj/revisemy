@@ -15,6 +15,24 @@ return [
     'entries' => [
 
         [
+            'version' => '1.3.0',
+            'date' => '2026-10-02',
+            'title' => 'Connect in one click, a calmer review, and dark mode',
+            'highlights' => [
+                'Claude and ChatGPT connect by pasting one address and clicking Connect — no account and no token to copy; Cursor and VS Code install in one click, and Grok, Muse and Codex take a try token',
+                'The connect page shows the moment your assistant makes its first call, and lists what’s connected so you can disconnect it',
+                'A new look shared with Koati, our studio’s other product, with dark mode that follows your system',
+                'The review sidebar is three panels — your marks, hints, and the decision — and removing a mark or accepting hints can be undone',
+                'Approve and Changes wait a few seconds so you can call them off; A, C, J and K work from the keyboard',
+                'Decision webhooks refuse private addresses, don’t follow redirects, and pause after five failed deliveries',
+            ],
+            'links' => [
+                ['label' => 'Connect', 'href' => '/connect'],
+                ['label' => 'Connectors', 'href' => '/connectors'],
+            ],
+        ],
+
+        [
             'version' => '1.2.0',
             'date' => '2026-07-31',
             'title' => 'Hardened ingestion and a leaner agent payload',

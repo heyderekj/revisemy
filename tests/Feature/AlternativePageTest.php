@@ -58,7 +58,7 @@ class AlternativePageTest extends TestCase
         $response = $this->get('/llms.txt');
 
         $response->assertOk()
-            ->assertSee('## Alternatives', false)
+            ->assertSee('## Pages', false)
             ->assertSee('/alternatives', false);
 
         foreach (config('alternatives.pages', []) as $page) {
