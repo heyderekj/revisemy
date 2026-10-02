@@ -8,7 +8,7 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 
 ## Features
 
-- **Marks, not pins** — product UI speaks in marks (rose rectangles + M1/M2 badges). Human marks are authoritative; API keys stay `pins` for compatibility.
+- **Marks, not pins** — product UI speaks in marks (yellow rectangles + M1/M2 badges). Human marks are authoritative; API keys stay `pins` for compatibility.
 - **Rectangle-first review** — drag to outline a region or click for a point note; zoom with +/− and pan with Space+drag (or middle mouse).
 - **Second opinion (hints only)** — Free type-aware checklist in the sidebar on every screenshot; optional Claude/OpenAI vision when keyed draws dashed regions on the capture. Sky S-markers never override your marks — accept or dismiss them in the review UI.
 - **Review types** — `ui`, `website`, `presentation` (Slide in the UI), or `email`: each gets its own checklist and vision lens (emails get CTA/dark-mode/client checks, slides get slide-density checks, sites get above-the-fold/responsive checks).
