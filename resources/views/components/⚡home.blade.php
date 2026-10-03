@@ -338,59 +338,53 @@ new class extends Component
         </div>
     </x-home-section>
 
-    {{-- Closing: open source, the maker, and how to say hi --}}
+    {{-- Closing: open source, drawn as a marked-up review, then the maker. --}}
     <x-home-section id="open-source">
-        <div class="max-w-xl">
-            <x-section-eyebrow number="06" label="Open source" />
-            <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open source, made by Derek</h2>
-            <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                ReviseMy is open source under the
-                <a href="https://osaasy.dev/" target="_blank" rel="noreferrer" class="link">O’Saasy License</a>.
-                Read the code, run your own copy, file an issue or send a PR.
-            </p>
-            <div class="mt-5 flex flex-wrap gap-2">
-                <a
-                    href="https://github.com/heyderekj/revisemy"
-                    target="_blank"
-                    rel="noreferrer"
-                    class="inline-flex items-center gap-1.5 rounded-full bg-chip px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-chip-hover"
-                >
-                    GitHub ↗
-                </a>
-                <a
-                    href="https://github.com/sponsors/heyderekj"
-                    target="_blank"
-                    rel="noreferrer"
-                    class="inline-flex items-center gap-1.5 rounded-full bg-chip px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-chip-hover"
-                >
-                    <svg class="size-3.5 text-problem" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                        <path d="M8 14.25c-.2 0-.4-.06-.57-.18C5.6 12.7 2 9.72 2 6.4 2 4.3 3.6 2.75 5.7 2.75c1.1 0 2.1.5 2.8 1.35A3.8 3.8 0 0 1 11.3 2.75C13.4 2.75 15 4.3 15 6.4c0 3.32-3.6 6.3-5.43 7.67A.9.9 0 0 1 8 14.25Z"/>
-                    </svg>
-                    Sponsor
-                </a>
-            </div>
-            <p class="mt-6 text-[15px] leading-relaxed text-zinc-600">
-                I’m <a href="https://heyderekj.com" target="_blank" rel="noreferrer" class="link">Derek</a>
-                — I love giving design feedback. Not to be a dick, but to be a Derek. ReviseMy started as a
-                <a href="https://heyderekj.com/projects/revisemy/" target="_blank" rel="noreferrer" class="link">side project</a>
-                in 2024, and
-                <a href="https://x.com/taylorotwell/status/2075667366646858222" target="_blank" rel="noreferrer" class="link">Taylor’s Laravel Cloud weekend challenge</a>
-                was the nudge to ship it.
-            </p>
-            <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                Say hi anytime —
-                <a href="mailto:derekj@hey.com" class="link">derekj@hey.com</a>
-                or
-                <a href="https://x.com/heyderekj" target="_blank" rel="noreferrer" class="link">@heyderekj on X.com</a>.
-            </p>
-            <p class="mt-6 text-sm text-muted-foreground">
-                Also by Derek:
-                <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Harvous ↗</a>
-                <span aria-hidden="true">·</span>
-                <a href="https://dinkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Dinky ↗</a>
-                <span aria-hidden="true">·</span>
-                <a href="https://binkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Binky ↗</a>
-            </p>
+        @php
+            $marks = [
+                ['M1', 'https://osaasy.dev/', 'O’Saasy License', 'Use it, fork it, run your own copy'],
+                ['M2', 'https://github.com/heyderekj/revisemy', 'github.com/heyderekj/revisemy', 'Issues and PRs welcome'],
+                ['M3', 'https://github.com/sponsors/heyderekj', 'Sponsor on GitHub', 'Keeps it going'],
+            ];
+        @endphp
+        <x-section-eyebrow number="06" label="Open source" />
+        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built in the open</h2>
+
+        <div class="rm-grid mt-6 rounded-2xl bg-card px-5 py-7 sm:px-8 sm:py-9">
+            <ul class="space-y-7">
+                @foreach ($marks as [$id, $href, $label, $note])
+                    <li class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                        <a
+                            href="{{ $href }}"
+                            target="_blank"
+                            rel="noreferrer"
+                            class="group relative inline-flex self-start bg-key/15 px-2.5 py-1 font-medium text-zinc-900 outline-2 outline-key transition-colors hover:bg-key/30"
+                        >
+                            <span class="absolute -left-2 -top-2.5 flex h-4 min-w-4 items-center justify-center bg-key px-0.5 text-[9px] font-semibold text-accent-contrast" aria-hidden="true">{{ $id }}</span>
+                            {{ $label }} <span class="ml-1 text-zinc-500 transition-colors group-hover:text-zinc-900" aria-hidden="true">↗</span>
+                        </a>
+                        <span class="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+                            <span class="hidden h-px w-8 border-t border-dashed border-border-strong sm:block" aria-hidden="true"></span>
+                            {{ $note }}
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
         </div>
+
+        <p class="mt-6 max-w-xl text-[15px] leading-relaxed text-zinc-600">
+            Made by <a href="https://heyderekj.com" target="_blank" rel="noreferrer" class="link">Derek</a>
+            — I love giving design feedback. Not to be a dick, but to be a Derek.
+            Say hi at <a href="mailto:derekj@hey.com" class="link">derekj@hey.com</a>
+            or <a href="https://x.com/heyderekj" target="_blank" rel="noreferrer" class="link">@heyderekj</a>.
+        </p>
+        <p class="mt-3 text-sm text-muted-foreground">
+            Also by Derek:
+            <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Harvous ↗</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://dinkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Dinky ↗</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://binkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Binky ↗</a>
+        </p>
     </x-home-section>
 </x-site-shell>
