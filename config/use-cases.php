@@ -439,6 +439,7 @@ return [
 
         'reviewers' => [
             'slug' => 'reviewers',
+            'sample' => 'website',
             'label' => 'Reviewers',
             'icon' => 'users',
             'teaser' => 'Mark and approve on the link — no account.',
@@ -511,6 +512,7 @@ return [
 
         'agencies' => [
             'slug' => 'agencies',
+            'sample' => 'ui',
             'label' => 'Agencies',
             'icon' => 'building-office-2',
             'teaser' => 'Run the agent; clients mark on the link.',
