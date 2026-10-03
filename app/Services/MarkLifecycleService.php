@@ -7,6 +7,8 @@ use App\Models\Annotation;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
+use App\Support\ElementAnchor;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -195,7 +197,7 @@ class MarkLifecycleService
      * add_mark tool. Broadcasts so open review pages refresh live.
      *
      * @param  array{x: float, y: float, w: float, h: float}|null  $area
-     * @param  array{suggested_copy?: ?string, source?: string, promoted_from_finding_id?: ?int}  $options
+     * @param  array{suggested_copy?: ?string, source?: string, promoted_from_finding_id?: ?int, selector?: ?string}  $options
      */
     public function createMark(
         Screenshot $screenshot,
@@ -226,6 +228,15 @@ class MarkLifecycleService
             ? trim($suggestedCopy)
             : null;
 
+        // Snapped to a page element: keep what the capture recorded about it
+        // (never what the browser claims), so the agent gets exact targets.
+        $element = null;
+        $selector = $options['selector'] ?? null;
+
+        if (is_string($selector) && $selector !== '' && $resolved = ElementAnchor::resolve($screenshot, $selector)) {
+            $element = Arr::except($resolved, 'area');
+        }
+
         $annotation = $screenshot->annotations()->create([
             'x' => max(0.0, min(1.0, $x)),
             'y' => max(0.0, min(1.0, $y)),
@@ -235,6 +246,7 @@ class MarkLifecycleService
             'suggested_copy' => $suggestedCopy,
             'source' => $source,
             'promoted_from_finding_id' => $options['promoted_from_finding_id'] ?? null,
+            'element' => $element,
             'number' => $screenshot->review->nextMarkNumber(),
         ]);
 

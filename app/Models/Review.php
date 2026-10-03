@@ -889,6 +889,10 @@ class Review extends Model
             'status' => $annotation->status,
             'resolution_note' => $annotation->resolution_note,
             'after_screenshot_url' => $annotation->afterScreenshot?->url(),
+            // The page element the human snapped the mark to — exact selector
+            // and text from the capture — and where it is on the next pass.
+            'element' => $annotation->element,
+            'carried' => $annotation->carried,
             'comment_count' => (int) ($annotation->comments_count ?? $annotation->comments()->count()),
             // Geometry only. The inline app pairs this with the screenshot url
             // it already has rather than carrying a signed URL on every copy of

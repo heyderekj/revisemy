@@ -139,7 +139,14 @@
                         startY: 0,
                         draft: null,
                         resizeObserver: null,
+                        {{-- Snapping to page elements, from the capture's element map. --}}
+                        elementsUrl: @js($review->isOpenForFeedback() ? $shot->elementsUrl() : null),
+                        snapIndex: null,
+                        snap: true,
+                        hover: -1,
                         init() {
+                            try { this.snap = localStorage.getItem('revisemy_snap') !== 'off'; } catch (e) {}
+                            this.loadElements();
                             this.$nextTick(() => {
                                 this.measureLayout();
                                 const img = this.$refs.shotImg;
@@ -156,6 +163,71 @@
                         },
                         destroy() {
                             this.resizeObserver?.disconnect();
+                        },
+                        async loadElements() {
+                            if (! this.elementsUrl || ! window.rmElementSnap) return;
+                            try {
+                                const response = await fetch(this.elementsUrl, { headers: { Accept: 'application/json' } });
+                                const data = response.ok ? await response.json() : null;
+                                if (data && Array.isArray(data.elements) && data.elements.length) {
+                                    this.snapIndex = window.rmElementSnap.buildIndex(data.elements);
+                                }
+                            } catch (e) {}
+                        },
+                        canSnap() {
+                            return !! (this.snap && this.snapIndex);
+                        },
+                        toggleSnap() {
+                            this.snap = ! this.snap;
+                            this.hover = -1;
+                            try { localStorage.setItem('revisemy_snap', this.snap ? 'on' : 'off'); } catch (e) {}
+                        },
+                        hovered() {
+                            return this.canSnap() && this.hover >= 0 ? this.snapIndex.elements[this.hover] : null;
+                        },
+                        hoverStyle() {
+                            const el = this.hovered();
+                            if (! el) return '';
+                            const [x, y, w, h] = el.b;
+                            return 'left:' + (x * 100) + '%;top:' + (y * 100) + '%;width:' + (w * 100) + '%;height:' + (h * 100) + '%';
+                        },
+                        hoverLabel() {
+                            return window.rmElementSnap?.label(this.hovered()) || '';
+                        },
+                        trackHover(e) {
+                            if (! this.canSnap() || this.drawing || this.panning || this.composerOpen()) return;
+                            if (! this.$refs.canvas?.contains(e.target) || e.target.closest('[data-finding], [data-pin], [data-zoom-controls]')) {
+                                return;
+                            }
+                            const p = this.norm(e);
+                            if (p) this.hover = window.rmElementSnap.hitTest(this.snapIndex, p.x, p.y);
+                        },
+                        walkHover(direction) {
+                            this.hover = window.rmElementSnap.walk(this.snapIndex, this.hover, direction);
+                            this.$nextTick(() => this.$refs.snapOutline?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }));
+                        },
+                        pickHover() {
+                            const el = this.hovered();
+                            if (! el) return false;
+                            const [x, y, w, h] = el.b;
+                            $wire.startPin(x, y, w, h, el.s);
+                            return true;
+                        },
+                        composerOpen() {
+                            return !! document.querySelector('.rm-note-composer');
+                        },
+                        {{-- Escape closes the innermost thing first: the note (which
+                             handles its own Escape), a drag, the focused mark or hint,
+                             then the element outline. --}}
+                        onEscape() {
+                            if (this.composerOpen()) return;
+                            if (this.drawing || this.panning) { this.cancelDraw(); return; }
+                            if ($store.rmFocus?.mark || $store.rmFocus?.finding) {
+                                $store.rmFocus.mark = null;
+                                $store.rmFocus.finding = null;
+                                return;
+                            }
+                            this.hover = -1;
                         },
                         onImageLoad() {
                             const img = this.$refs.shotImg;
@@ -220,6 +292,14 @@
                             this.$refs.viewport?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
                         },
                         onKeyDown(e) {
+                            if (e.key === 'Escape') { this.onEscape(); return; }
+                            const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable;
+                            if (! typing && ! e.metaKey && ! e.ctrlKey && ! e.altKey && this.snapIndex && ! this.composerOpen()) {
+                                if (e.key === 'e') { e.preventDefault(); this.toggleSnap(); return; }
+                                const directions = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'prev', ArrowRight: 'next' };
+                                if (this.canSnap() && this.hover >= 0 && directions[e.key]) { e.preventDefault(); this.walkHover(directions[e.key]); return; }
+                                if (this.canSnap() && this.hover >= 0 && e.key === 'Enter' && ! e.target.closest?.('button, a[href]')) { e.preventDefault(); this.pickHover(); return; }
+                            }
                             if (e.code !== 'Space') return;
                             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
                             // Space presses a focused button or link — only hijack it for panning
@@ -303,6 +383,7 @@
                                 return;
                             }
                             this.moveDraw(e);
+                            this.trackHover(e);
                         },
                         onMouseUp(e) {
                             if (this.panning) {
@@ -347,7 +428,7 @@
                             if (! draft) return;
                             if (draft.w >= 0.01 && draft.h >= 0.01) {
                                 $wire.startPin(draft.x, draft.y, draft.w, draft.h);
-                            } else {
+                            } else if (! this.pickHover()) {
                                 $wire.startPin(this.startX, this.startY);
                             }
                         },
@@ -386,6 +467,19 @@
                                 x-bind:disabled="zoom >= zoomMax"
                                 aria-label="Zoom in"
                             >+</button>
+                            <template x-if="snapIndex">
+                                <button
+                                    type="button"
+                                    class="flex h-7 w-7 items-center justify-center rounded-md transition hover:bg-zinc-100"
+                                    x-bind:class="snap ? 'text-key' : 'text-zinc-400 hover:text-zinc-600'"
+                                    x-on:click="toggleSnap()"
+                                    x-bind:aria-pressed="snap.toString()"
+                                    x-bind:title="snap ? 'Snapping to page elements · E' : 'Snap to page elements · E'"
+                                    aria-label="Snap to page elements"
+                                >
+                                    <flux:icon.cursor-arrow-rays variant="mini" class="size-4" />
+                                </button>
+                            </template>
                         </div>
 
                     <div
@@ -407,7 +501,7 @@
                             @if ($review->isOpenForFeedback())
                                 x-bind:class="(zoom > 1 ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair' : '')"
                                 x-on:mousedown="beginDraw($event)"
-                                x-on:keydown.escape.window="cancelDraw()"
+                                x-on:mouseleave="hover = -1"
                             @else
                                 x-bind:class="zoom > 1 ? '!max-w-none' : ''"
                             @endif
@@ -520,6 +614,7 @@
                                 </div>
                             @endif
 
+                            @php($pinStack = \App\Support\PinStack::offsets($shot->annotations))
                             @foreach ($shot->annotations as $annotation)
                                 @php($region = $annotation->region())
                                 @php($markState = $annotation->status === \App\Models\Annotation::STATUS_VERIFIED ? 'opacity-40' : ($annotation->status === \App\Models\Annotation::STATUS_RESOLVED ? 'opacity-70' : ''))
@@ -539,7 +634,7 @@
                                     >
                                         <div
                                             class="pointer-events-none absolute inset-0 rounded-md border-2 border-key/80 bg-key/10 transition"
-                                            x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'ring-2 ring-key ring-offset-1' : ''"
+                                            x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'ring-2 ring-key ring-offset-1' : ($store.rmFocus?.hover === {{ $annotation->id }} ? 'ring-2 ring-key/60' : '')"
                                         ></div>
                                         <span
                                             class="pointer-events-none absolute {{ $markBadgePosition }} z-[9] flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-xs font-semibold shadow-sm ring-2 ring-white transition {{ $annotation->markerClass() }}"
@@ -553,14 +648,32 @@
                                         type="button"
                                         data-pin
                                         class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
-                                        style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
+                                        style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;{{ ($pinStack[$annotation->id] ?? 0) > 0 ? ' margin-left: '.($pinStack[$annotation->id] * 20).'px;' : '' }}"
                                         title="{{ $annotation->body }}"
-                                        x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110 ring-4 ring-key/60' : ''"
+                                        x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110 ring-4 ring-key/60' : ($store.rmFocus?.hover === {{ $annotation->id }} ? 'scale-110 ring-4 ring-key/40' : '')"
+                                        x-on:click.stop="
+                                            $store.rmFocus.mark = $store.rmFocus.mark === {{ $annotation->id }} ? null : {{ $annotation->id }};
+                                            $store.rmFocus.finding = null;
+                                            document.getElementById('fb-mark-{{ $annotation->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                        "
                                     >
                                         M{{ $annotation->number }}
                                     </button>
                                 @endif
                             @endforeach
+
+                            <template x-if="hovered() && ! drawing">
+                                <div
+                                    x-ref="snapOutline"
+                                    class="pointer-events-none absolute z-[14] rounded-sm outline outline-2 outline-offset-1 {{ $mode === 'guest' ? 'outline-zinc-500 bg-zinc-400/10' : 'outline-key bg-key/10' }}"
+                                    x-bind:style="hoverStyle()"
+                                >
+                                    <span
+                                        class="absolute left-0 top-0 max-w-64 -translate-y-[calc(100%+4px)] truncate rounded-md bg-zinc-900 px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                                        x-text="hoverLabel()"
+                                    ></span>
+                                </div>
+                            </template>
 
                             <template x-if="draft && draft.w > 0 && draft.h > 0">
                                 <div
@@ -596,7 +709,9 @@
 
                 @if ($review->isOpenForFeedback())
                     <p class="mt-2 hidden text-center text-xs text-muted-foreground md:block">
-                        {{ $mode === 'guest' ? 'Drag to suggest a change, or click for a point.' : 'Drag to mark a region, or click for a point.' }} Space+drag pans.
+                        <span x-show="! canSnap()">{{ $mode === 'guest' ? 'Drag to suggest a change, or click for a point.' : 'Drag to mark a region, or click for a point.' }}</span>
+                        <span x-show="canSnap()" x-cloak>Click a part of the page to mark it, or drag a region. Arrow keys move between parts.</span>
+                        Space+drag pans.
                     </p>
                 @endif
                 </div>
@@ -727,6 +842,18 @@
                     placed: false,
                     anchorHeight: null,
                     _placeScheduled: false,
+                    armed: false,
+                    {{-- Ask once before throwing away a typed note: the first
+                         Escape (or click outside) warns, the second discards. --}}
+                    dismiss() {
+                        const unsent = (($wire.draftBody || '') + ($wire.draftSuggestedCopy || '')).trim() !== '';
+                        if (unsent && ! this.armed) {
+                            this.armed = true;
+                            setTimeout(() => this.armed = false, 4000);
+                            return;
+                        }
+                        $wire.cancelPin();
+                    },
                     mobile() {
                         return window.matchMedia('(max-width: 767px)').matches;
                     },
@@ -815,7 +942,7 @@
                 <button
                     type="button"
                     class="pointer-events-auto fixed inset-0 z-40 bg-black/25 md:bg-transparent"
-                    wire:click="cancelPin"
+                    x-on:click="dismiss()"
                     aria-label="Dismiss note"
                 ></button>
 
@@ -825,7 +952,7 @@
                     class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(20rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
                     role="dialog"
                     aria-label="{{ $mode === 'guest' ? 'Suggest a change' : 'Leave a note' }}"
-                    x-on:keydown.escape.window="$wire.cancelPin()"
+                    x-on:keydown.escape.window="dismiss()"
                 >
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-zinc-200 md:hidden" aria-hidden="true"></div>
                     <div class="mb-3 flex items-start justify-between gap-3">
@@ -845,6 +972,12 @@
                             <flux:icon.x-mark class="size-4" />
                         </button>
                     </div>
+                    @if ($pendingElementLabel)
+                        <p class="-mt-2 mb-3 truncate text-xs text-muted-foreground">On {{ $pendingElementLabel }}</p>
+                    @endif
+                    <p class="-mt-1 mb-3 rounded-lg bg-attention-soft px-2.5 py-1.5 text-xs text-attention-ink" x-show="armed" x-cloak>
+                        Press Esc again to discard this note.
+                    </p>
                     <div class="space-y-3">
                         @if ($mode === 'guest')
                             <flux:input

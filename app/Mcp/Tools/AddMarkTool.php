@@ -61,6 +61,7 @@ class AddMarkTool extends Tool
             'severity' => 'required|in:'.implode(',', Annotation::severities()),
             'body' => FeedbackText::bodyRules(),
             'suggested_copy' => ['nullable', 'string', 'max:2000'],
+            'selector' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['review_id']);
@@ -104,6 +105,7 @@ class AddMarkTool extends Tool
             [
                 'suggested_copy' => $suggestedCopy !== '' ? $suggestedCopy : null,
                 'source' => Annotation::SOURCE_HUMAN,
+                'selector' => $data['selector'] ?? null,
             ],
         );
 
@@ -125,6 +127,7 @@ class AddMarkTool extends Tool
             'severity' => $schema->string()->enum(Annotation::severities())->description('must-fix, nit, question, or keep')->required(),
             'body' => $schema->string()->description('The human note for this mark')->required(),
             'suggested_copy' => $schema->string()->description('Optional exact copy string for the agent to apply'),
+            'selector' => $schema->string()->description('Optional selector of the page element the mark snapped to, from get_elements'),
         ];
     }
 }

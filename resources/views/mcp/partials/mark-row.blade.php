@@ -6,7 +6,8 @@
         'bg-raised shadow-xs ring-1 ring-black/[0.04]' => ! $previous,
         'bg-well' => $previous,
     ])
-    :class="activePin && activePin.id === pin.id && '!ring-2 !ring-key'">
+    :class="activePin && activePin.id === pin.id && '!ring-2 !ring-key'"
+    @mouseenter="hoverPin = pin.id" @mouseleave="hoverPin === pin.id && (hoverPin = null)">
     <button type="button" class="w-full text-left" @click="showPin(pin)">
         <div class="mb-1 flex flex-wrap items-center gap-2">
             <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold" :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
@@ -15,12 +16,17 @@
             <span class="text-xs tabular-nums text-zinc-400" x-show="pin.comment_count > 0" x-text="pin.comment_count + (pin.comment_count === 1 ? ' comment' : ' comments')"></span>
         </div>
         <p class="text-sm leading-relaxed text-zinc-700" x-text="pin.body"></p>
+        <p class="mt-1 truncate text-xs text-muted-foreground" x-show="elementLabel(pin)" x-text="'On ' + elementLabel(pin)"></p>
+        <p class="mt-1 text-xs text-attention-ink" x-show="pin.carried && pin.carried.missing">Not on the page any more</p>
     </button>
     <p class="mt-2 rounded-lg bg-done-soft px-2.5 py-1.5 text-xs leading-relaxed text-done-ink" x-show="pin.resolution_note">
         <span class="font-medium">Agent:</span> <span x-text="pin.resolution_note"></span>
     </p>
     @include('mcp.partials.before-after', ['pin' => 'pin'])
     <div class="mt-2 flex flex-wrap items-center gap-1.5" x-show="canManagePin(pin)">
+        <span class="inline-flex h-7 items-center rounded-full px-1.5 text-xs font-medium text-done-ink"
+            x-show="pin.status === 'resolved' && pin.carried && pin.carried.looks_live"
+            title="The suggested copy now shows on the page. Check it, then verify.">Looks live</span>
         <button type="button" class="inline-flex h-7 items-center rounded-full bg-done-soft px-2.5 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200 disabled:opacity-50"
             x-show="pin.status === 'resolved'" :disabled="busy" @click.stop="verifyMark(pin, 'verify')">Verify</button>
         <button type="button" class="inline-flex h-7 items-center rounded-full bg-chip px-2.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover disabled:opacity-50"

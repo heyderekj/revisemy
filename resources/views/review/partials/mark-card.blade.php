@@ -10,6 +10,8 @@
         'bg-well' => $previous,
     ])
     x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} && '!ring-2 !ring-key'"
+    x-on:mouseenter="$store.rmFocus && ($store.rmFocus.hover = {{ $pin->id }})"
+    x-on:mouseleave="$store.rmFocus && $store.rmFocus.hover === {{ $pin->id }} && ($store.rmFocus.hover = null)"
 >
     <div class="mb-1 flex items-center justify-between gap-2">
         <div class="flex min-w-0 flex-wrap items-center gap-2">
@@ -26,6 +28,12 @@
     </div>
 
     <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
+    @if ($elementLabel = $pin->elementLabel())
+        <p class="mt-1 truncate text-xs text-muted-foreground" title="{{ $pin->element['selector'] ?? '' }}">On {{ $elementLabel }}</p>
+    @endif
+    @if ($pin->missingInNextPass())
+        <p class="mt-1 text-xs text-attention-ink">Not on the page any more</p>
+    @endif
 
     @if ($pin->suggested_copy)
         <p class="mt-2 rounded-lg bg-well px-2.5 py-1.5 text-xs leading-relaxed text-zinc-700">
@@ -91,6 +99,9 @@
     @else
         {{-- Quiet controls: the only filled button on the page is Approve. --}}
         <div class="mt-2 flex flex-wrap items-center gap-1.5">
+            @if ($canManage && $pin->awaitsVerification() && $pin->looksLive())
+                <span class="inline-flex h-7 items-center rounded-full px-1.5 text-xs font-medium text-done-ink" title="The suggested copy now shows on the page. Check it, then verify.">Looks live</span>
+            @endif
             @if ($canManage && $pin->awaitsVerification())
                 <button type="button" class="inline-flex h-7 items-center gap-1 rounded-full bg-done-soft px-2.5 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200" wire:click="verifyMark({{ $pin->id }})">
                     <flux:icon.check variant="micro" class="size-3.5" /> Verify

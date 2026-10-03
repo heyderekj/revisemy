@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Screenshot;
+use App\Support\ElementAnchor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -23,6 +25,15 @@ class ScreenshotController extends Controller
         $path = $screenshot->thumb_path ?: $screenshot->path;
 
         return $this->stream($screenshot, $path);
+    }
+
+    /**
+     * The capture's element map, normalized for snapping marks to elements.
+     */
+    public function elements(Request $request, Screenshot $screenshot): JsonResponse
+    {
+        return response()->json(['elements' => ElementAnchor::forCanvas($screenshot)])
+            ->header('Cache-Control', 'private, max-age=86400');
     }
 
     protected function stream(Screenshot $screenshot, string $path): StreamedResponse

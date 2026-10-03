@@ -107,3 +107,7 @@ Route::get('/shots/{screenshot}', [ScreenshotController::class, 'show'])
 Route::get('/shots/{screenshot}/thumb', [ScreenshotController::class, 'thumb'])
     ->middleware(['signed', 'noindex'])
     ->name('screenshots.thumb');
+
+Route::get('/shots/{screenshot}/elements', [ScreenshotController::class, 'elements'])
+    ->middleware(['signed', 'noindex'])
+    ->name('screenshots.elements');

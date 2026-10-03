@@ -127,6 +127,23 @@ class Screenshot extends Model
     }
 
     /**
+     * Signed URL for the element map in canvas form (ElementAnchor::forCanvas),
+     * or null when this capture has none.
+     */
+    public function elementsUrl(): ?string
+    {
+        if (empty($this->meta['elements_path'])) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute(
+            'screenshots.elements',
+            $this->signedUrlExpiry(),
+            ['screenshot' => $this->id],
+        );
+    }
+
+    /**
      * Short label for the thumbnail rail, derived from capture metadata:
      * viewport for URL/HTML captures, page number for PDFs, else the index.
      */

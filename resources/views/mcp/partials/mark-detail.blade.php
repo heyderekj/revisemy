@@ -29,6 +29,8 @@
 
     <div class="space-y-3 px-3 py-3 sm:px-4">
         <p class="text-sm leading-relaxed text-pretty text-zinc-800" x-text="activePin && activePin.body"></p>
+        <p class="truncate text-xs text-muted-foreground" x-show="activePin && elementLabel(activePin)" x-text="activePin && ('On ' + elementLabel(activePin))"></p>
+        <p class="text-xs text-attention-ink" x-show="activePin && activePin.carried && activePin.carried.missing">Not on the page any more</p>
         <p class="rounded-lg bg-done-soft px-3 py-2 text-sm text-done-ink" x-show="activePin && activePin.resolution_note">
             <span class="font-medium">Agent:</span> <span x-text="activePin && activePin.resolution_note"></span>
         </p>
@@ -39,6 +41,9 @@
                     x-text="'View ' + activePin.comment_count + (activePin.comment_count === 1 ? ' comment' : ' comments')"></button>
             </template>
             <div class="ml-auto flex flex-wrap gap-2" x-show="activePin && canManagePin(activePin)">
+                <span class="inline-flex h-8 items-center px-1.5 text-xs font-medium text-done-ink"
+                    x-show="activePin && activePin.status === 'resolved' && activePin.carried && activePin.carried.looks_live"
+                    title="The suggested copy now shows on the page. Check it, then verify.">Looks live</span>
                 <button type="button" class="inline-flex h-8 items-center rounded-full bg-done-soft px-3 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200 disabled:opacity-50"
                     x-show="activePin && activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')">Verify</button>
                 <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover disabled:opacity-50"
