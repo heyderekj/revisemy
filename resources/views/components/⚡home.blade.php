@@ -162,7 +162,10 @@ new class extends Component
                     Your agent captures the work — a screenshot, a page, a PDF or an email — and sends you a review. You mark what matters and approve or ask for changes. It reads your marks and keeps going.
                 </p>
 
-                <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
+                <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12 lg:mt-16">
+                    {{-- Hand notes over the preview, Koati's way of pointing things out. Wide screens only, where there's room above the panels. --}}
+                    <x-scribble text="your agent sends a review" arrow="down-right" :tilt="-4" class="absolute -top-12 left-[9%] z-10 hidden lg:inline-flex" />
+                    <x-scribble text="you mark what matters" arrow="down-left" :tilt="3" class="absolute -top-12 right-[9%] z-10 hidden lg:inline-flex" />
                     <x-hero-loop-preview />
                 </div>
             </x-home-section>
@@ -282,7 +285,7 @@ new class extends Component
                 <x-section-eyebrow number="04" :label="$pricingEnabled ? 'Pricing' : 'Credits'" />
                 @if ($pricingEnabled)
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
-                        Try it free. Keep it with Plus.
+                        Try it <x-ink kind="circle">free</x-ink>. Keep it with Plus.
                     </h2>
                     <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                         No account to start. Same capture quality on every plan.
@@ -381,7 +384,7 @@ new class extends Component
                                         </div>
                                         <div class="mt-3 min-[30rem]:mt-0 lg:mt-2">
                                             <p class="text-[15px] leading-relaxed text-pretty text-zinc-600">
-                                                {{ (int) $pack['credits'] }} extra credits that never expire. Works on Try or Plus, used after your monthly credits. No subscription.
+                                                {{ (int) $pack['credits'] }} extra credits that <x-ink>never expire</x-ink>. Works on Try or Plus, used after your monthly credits. No subscription.
                                             </p>
                                             <p class="mt-2 text-[13px] leading-relaxed text-zinc-500">
                                                 Ask your agent for <span class="font-mono text-[12px] text-zinc-900">create_checkout</span> with a credit pack.

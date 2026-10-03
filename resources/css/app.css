@@ -41,6 +41,18 @@
     src: url('/fonts/figtree-latin-700.woff2') format('woff2');
 }
 
+/*
+ * The marker hand for notes drawn on the page (x-scribble), as on Koati's
+ * site. OFL, licence beside the file.
+ */
+@font-face {
+    font-family: 'Caveat';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('/fonts/caveat-latin.woff2') format('woff2');
+}
+
 @theme {
     --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
@@ -399,5 +411,107 @@
 
     .rm-agent-cycle-item:first-child {
         opacity: 1;
+    }
+}
+
+/*
+ * Hand-drawn notes and marks, Koati's familiar layer on ReviseMy's pages.
+ * x-scribble writes a note with an arrow; x-ink circles or underlines words.
+ * The marker is ReviseMy's yellow, the colour your marks wear in a review.
+ */
+/* In the components layer so utilities (hidden, lg:inline-flex, …) still win. */
+@layer components {
+    .rm-scribble {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-family: 'Caveat', 'Bradley Hand', 'Segoe Print', cursive;
+        font-size: 1.45rem;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--foreground);
+        rotate: var(--tilt);
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .rm-scribble-arrow {
+        flex-shrink: 0;
+        width: 3rem;
+        height: auto;
+    }
+
+    /* The arrow sits on the side it points to. */
+    .rm-scribble:is(.is-down-left, .is-up-left, .is-left) .rm-scribble-arrow {
+        order: -1;
+    }
+
+    .rm-scribble:is(.is-down-right, .is-right) .rm-scribble-arrow {
+        order: 1;
+    }
+
+    .rm-scribble:is(.is-down-left, .is-down-right) {
+        align-items: flex-end;
+    }
+
+    .rm-scribble.is-up {
+        flex-direction: column;
+    }
+
+    .rm-scribble.is-up .rm-scribble-arrow {
+        order: -1;
+        width: 1.6rem;
+    }
+
+    .rm-ink {
+        position: relative;
+        white-space: nowrap;
+    }
+
+    .rm-ink-stroke {
+        position: absolute;
+        overflow: visible;
+        pointer-events: none;
+        color: var(--key);
+    }
+
+    .rm-ink.is-underline .rm-ink-stroke {
+        left: -2%;
+        bottom: -0.3em;
+        width: 104%;
+        height: 0.45em;
+    }
+
+    .rm-ink.is-circle .rm-ink-stroke {
+        left: -0.45em;
+        top: -0.35em;
+        width: calc(100% + 0.9em);
+        height: calc(100% + 0.7em);
+    }
+
+    .rm-ink-stroke path {
+        stroke: currentColor;
+        stroke-width: 2.6px;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 1;
+        stroke-dashoffset: 0;
+        transition: stroke-dashoffset 900ms cubic-bezier(0.65, 0, 0.35, 1) 250ms;
+    }
+
+    /* Waiting to be seen: Alpine sets this, so without script the mark is just there. */
+    .rm-ink[data-pending] .rm-ink-stroke path {
+        stroke-dashoffset: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rm-ink-stroke path {
+        transition: none;
+    }
+
+    .rm-ink[data-pending] .rm-ink-stroke path {
+        stroke-dashoffset: 0;
     }
 }
