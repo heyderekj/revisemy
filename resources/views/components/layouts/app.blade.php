@@ -44,8 +44,9 @@
         <script src="https://cdn.usefathom.com/script.js" data-site="{{ config('seo.fathom_site_id') }}" data-auto="false" defer></script>
         <script>
             (function () {
+                // Review links carry a secret token and billing links a workspace id: not for a third party.
                 function shouldTrackPageview() {
-                    return !/^\/r\//.test(window.location.pathname);
+                    return !/^\/(r|billing\/(manage|checkout))\//.test(window.location.pathname);
                 }
 
                 function trackPageview() {

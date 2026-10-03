@@ -278,7 +278,7 @@ new class extends Component
                 $freeRenews = (bool) config('billing.plans.free.renews', true);
                 $pack = collect(config('billing.packs', []))->first();
             @endphp
-            <x-home-section id="pricing">
+            <x-home-section id="pricing" x-data x-intersect.once.threshold.25="window.fathom && fathom.trackEvent('Pricing viewed')">
                 <x-section-eyebrow number="04" :label="$pricingEnabled ? 'Pricing' : 'Credits'" />
                 @if ($pricingEnabled)
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
@@ -328,6 +328,7 @@ new class extends Component
                                         variant="ghost"
                                         size="sm"
                                         class="btn-quiet !rounded-full"
+                                        onclick="if(window.fathom)fathom.trackEvent('Pricing credit costs')"
                                     >
                                         Credit costs
                                     </flux:button>
@@ -357,6 +358,7 @@ new class extends Component
                                             size="sm"
                                             href="#setup"
                                             class="btn-quiet !rounded-full"
+                                            onclick="if(window.fathom)fathom.trackEvent('Pricing plus cta')"
                                         >
                                             Upgrade via your agent
                                         </flux:button>

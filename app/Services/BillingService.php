@@ -134,7 +134,7 @@ class BillingService
         $session = $this->polar->createCheckout(
             productId: $productId,
             externalCustomerId: $workspace->public_id,
-            successUrl: url('/billing/success').'?checkout_id={CHECKOUT_ID}',
+            successUrl: url('/billing/success').'?checkout_id={CHECKOUT_ID}&product='.$product,
             returnUrl: url('/billing/cancel'),
             email: $workspace->billing_email,
             metadata: [
@@ -144,6 +144,42 @@ class BillingService
         );
 
         return $session['url'];
+    }
+
+    /**
+     * The Fathom event for a purchase, from what Polar's return URL carries.
+     *
+     * The value comes from config, never from the URL, and a missing or
+     * malformed checkout id means no event. This is the page a buyer lands on,
+     * not proof of payment (Polar is the ledger), so it only has to be hard to
+     * trigger by accident.
+     *
+     * @return array{name: string, value: int, once: string}|null
+     */
+    public function purchaseEvent(?string $checkoutId, ?string $product): ?array
+    {
+        if (! is_string($checkoutId) || ! is_string($product)
+            || ! preg_match('/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i', $checkoutId)) {
+            return null;
+        }
+
+        if ($product === self::PRODUCT_PLUS) {
+            return [
+                'name' => 'Plus purchased',
+                'value' => (int) config('billing.plans.pro.price_usd', 9) * 100,
+                'once' => $checkoutId,
+            ];
+        }
+
+        if ($this->isPack($product)) {
+            return [
+                'name' => 'Credit pack purchased',
+                'value' => (int) config("billing.packs.{$product}.price_usd", 0) * 100,
+                'once' => $checkoutId,
+            ];
+        }
+
+        return null;
     }
 
     /**

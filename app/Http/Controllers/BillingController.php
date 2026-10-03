@@ -50,9 +50,16 @@ class BillingController extends Controller
      * Polar's return page. Display only: credits are granted by the order.paid
      * webhook, so reloading this page can never grant anything.
      */
-    public function success(): View
+    public function success(Request $request, BillingService $billing): View
     {
-        return view('billing.success', ['workspace' => null, 'kind' => 'paid']);
+        return view('billing.success', [
+            'workspace' => null,
+            'kind' => 'paid',
+            'purchase' => $billing->purchaseEvent(
+                $request->query('checkout_id'),
+                $request->query('product'),
+            ),
+        ]);
     }
 
     public function cancel(): View
