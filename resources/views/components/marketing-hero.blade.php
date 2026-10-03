@@ -1,4 +1,4 @@
-{{-- The first section of a marketing page: logo, then what the page is about. --}}
+{{-- The first section of a marketing page: what the page is about. --}}
 @props([
     'eyebrow' => null,
     'headline',
@@ -8,16 +8,10 @@
 ])
 
 <x-home-section first>
-    <header class="flex items-center justify-between gap-4">
-        <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-            <x-revisemy-logo variant="wordmark" size="lg" />
-        </a>
-        {{-- Phone: the real button. Desktop: room for the sticky one. --}}
-        <x-try-token-cta id="rm-use-case-hero-cta" fathom-event="Connect header" class="sm:hidden" />
-        <div class="hidden h-8 w-48 shrink-0 sm:block" aria-hidden="true"></div>
-    </header>
+    {{-- Desktop: room for the shell's sticky Connect button. --}}
+    <div class="hidden h-8 lg:block" aria-hidden="true"></div>
 
-    <div class="rm-fade-up mt-10 sm:mt-12">
+    <div class="rm-fade-up lg:mt-6">
         @if ($eyebrow || $icon || $markIcon)
             <div class="flex items-center gap-3">
                 @if ($markIcon)
@@ -34,6 +28,8 @@
         @if ($subheadline)
             <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">{{ $subheadline }}</p>
         @endif
+        {{-- Phone: the page's own Connect. The top bar takes over once it scrolls away. --}}
+        <x-try-token-cta data-rm-hero-cta fathom-event="Connect hero" class="mt-6 lg:hidden" />
         {{ $slot }}
     </div>
 </x-home-section>
