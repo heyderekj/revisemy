@@ -5,7 +5,7 @@
     $isChangelog = ! empty($page['changelog']);
 @endphp
 
-<x-layouts.marketing :title="$page['title']" :description="$page['description']" :keywords="$page['keywords']" fathom="Connect guide" :wide="! empty($page['hosts'])">
+<x-layouts.marketing :title="$page['title']" :description="$page['description']" :keywords="$page['keywords']" fathom="Connect guide">
     <x-marketing-hero :eyebrow="$page['label']" :icon="$page['icon'] ?? null" :mark-icon="$page['mark_icon'] ?? null" :headline="$page['headline']" :subheadline="$page['subheadline']">
         @if ($hasProductShotUi)
             @include('guides.partials.product-shots')

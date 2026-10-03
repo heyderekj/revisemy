@@ -1,4 +1,4 @@
-<x-simple-page title="Payment received — ReviseMy" eyebrow="Billing" :heading="$kind === 'already_plus' ? 'You’re already on Plus' : 'Payment received'" robots="noindex, nofollow" :footer="false">
+<x-simple-page :shell="false" title="Payment received — ReviseMy" eyebrow="Billing" :heading="$kind === 'already_plus' ? 'You’re already on Plus' : 'Payment received'" robots="noindex, nofollow" :footer="false">
     @if ($kind === 'already_plus')
         <p>Nothing to pay. Need more credits this month? Ask your agent for a credit pack: create_checkout with product "credits_50".</p>
     @else

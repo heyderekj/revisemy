@@ -22,7 +22,7 @@
                         <li><span class="font-medium text-zinc-800">Try workspaces</span> — a Sanctum personal access token from the homepage so agents can call MCP/API without a traditional signup.</li>
                         <li><span class="font-medium text-zinc-800">Reviews</span> — titles, status, marks, comments, guest suggestions, second-opinion findings, and related metadata.</li>
                         <li><span class="font-medium text-zinc-800">Captures</span> — screenshot (and optional thumbnail) files on the configured disk (local or object storage).</li>
-                        <li><span class="font-medium text-zinc-800">Connected assistants</span> — when an assistant connects by signing in (Connect), it gets an access token for your try workspace. We keep that token, the app’s name, and the name of the last tool it called, so the connect page can show it worked. Disconnect any time from Recent reviews.</li>
+                        <li><span class="font-medium text-zinc-800">Connected assistants</span> — when an assistant connects by signing in (Connect), it gets an access token for your try workspace. We keep that token, the app’s name, and the name of the last tool it called, so the connect page can show it worked. Disconnect any time from Your reviews.</li>
                         <li><span class="font-medium text-zinc-800">Guest share settings</span> — share tokens and optional expiry for guest links.</li>
                         <li><span class="font-medium text-zinc-800">Optional webhook URL</span> — if you pass <code class="font-mono text-[13px] text-zinc-900">webhook_url</code> on create, we store it to deliver <code class="font-mono text-[13px] text-zinc-900">review.decided</code> events.</li>
                     </ul>
