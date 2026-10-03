@@ -322,15 +322,25 @@ class CaptureIngestionTest extends TestCase
 
     public function test_oversized_capture_is_downscaled_under_the_cap(): void
     {
+        // Decoding a >16MB capture is inherently memory-heavy, and by the time
+        // this runs in the full suite the framework baseline is ~90MB — the
+        // 128MB CLI default left only a few MB of headroom, so the process
+        // intermittently died mid-test. Match Cloud's 256MB worker limit here.
+        $previousLimit = ini_get('memory_limit');
+        ini_set('memory_limit', '256M');
+        $this->beforeApplicationDestroyed(fn () => ini_set('memory_limit', $previousLimit));
+
         $token = $this->setUpEnv();
 
         // An uncompressed PNG (level 0) blows past the 16MB cap without needing
-        // slow noise generation: 2600×2600 truecolor ≈ 17MB on disk.
-        $image = imagecreatetruecolor(2600, 2600);
-        ob_start();
-        imagepng($image, null, 0);
-        $binary = (string) ob_get_clean();
+        // slow noise generation: 2400×2400 truecolor ≈ 17.3MB on disk. Encode
+        // via a temp file so the output buffer doesn't hold extra copies.
+        $image = imagecreatetruecolor(2400, 2400);
+        $path = tempnam(sys_get_temp_dir(), 'oversized-capture');
+        imagepng($image, $path, 0);
         imagedestroy($image);
+        $binary = (string) file_get_contents($path);
+        unlink($path);
 
         $this->assertGreaterThan(16 * 1024 * 1024, strlen($binary));
 

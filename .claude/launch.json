@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "revisemy",
-      "runtimeExecutable": "php",
-      "runtimeArgs": ["artisan", "serve", "--port=8765"],
-      "port": 8765
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "php artisan serve --port=${PORT:-8765}"],
+      "port": 8765,
+      "autoPort": true
     }
   ]
 }

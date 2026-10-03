@@ -73,9 +73,9 @@ class ReviseMyCheck extends Command
             : 'The review and board poll instead of updating live (no Reverb).');
         if (config('billing.pricing_enabled')) {
             $this->check(
-                filled(config('cashier.api_key')) && filled(config('cashier.client_side_token')) && filled(config('cashier.webhook_secret')) && filled(config('billing.plans.pro.paddle_price')),
-                'Plus can be bought through Paddle.',
-                'Pricing is on, but a Paddle key, the webhook secret or PADDLE_PRICE_PRO is blank, so checkout fails.',
+                filled(config('billing.polar.access_token')) && filled(config('billing.polar.webhook_secret')) && filled(config('billing.polar.products.plus')),
+                'Plus can be bought through Polar.',
+                'Pricing is on, but POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET or POLAR_PRODUCT_PLUS is blank, so checkout fails.',
             );
         } else {
             $this->note('Paid Plus is paused (REVISEMY_PRICING_ENABLED=false).');

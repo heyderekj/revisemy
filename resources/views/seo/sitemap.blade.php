@@ -18,6 +18,13 @@
         <priority>{{ substr_count($page['href'], '/') > 1 ? '0.8' : '0.85' }}</priority>
     </url>
     @endforeach
+    @if (config('billing.pricing_enabled'))
+    <url>
+        <loc>{{ $base }}/upgrade</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    @endif
     <url>
         <loc>{{ $base }}/privacy</loc>
         <changefreq>yearly</changefreq>

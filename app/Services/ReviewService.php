@@ -68,7 +68,7 @@ class ReviewService
         }
 
         $cost = $this->credits->costForSources($sources);
-        $this->credits->debit($workspace, $cost);
+        $debited = $this->credits->debit($workspace, $cost);
 
         $type = $data['type'] ?? null;
         $domHtml = null;
@@ -99,7 +99,7 @@ class ReviewService
                 $data['webhook_url'] ?? null,
             );
         } catch (Throwable $e) {
-            $this->credits->refund($workspace, $cost);
+            $this->credits->refund($workspace, $debited);
 
             throw $e;
         }

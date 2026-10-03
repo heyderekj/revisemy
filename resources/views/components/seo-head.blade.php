@@ -91,11 +91,35 @@
                     'operatingSystem' => 'Web',
                     'image' => $pageOgImage,
                     'featureList' => config('seo.features', []),
-                    'offers' => [
-                        '@type' => 'Offer',
-                        'price' => '0',
-                        'priceCurrency' => 'USD',
-                    ],
+                    'offers' => config('billing.pricing_enabled')
+                        ? [
+                            ['@type' => 'Offer', 'name' => 'Try', 'price' => '0', 'priceCurrency' => 'USD'],
+                            [
+                                '@type' => 'Offer',
+                                'name' => 'Plus',
+                                'price' => (string) (int) config('billing.plans.pro.price_usd', 9),
+                                'priceCurrency' => 'USD',
+                                'priceSpecification' => [
+                                    '@type' => 'UnitPriceSpecification',
+                                    'price' => (string) (int) config('billing.plans.pro.price_usd', 9),
+                                    'priceCurrency' => 'USD',
+                                    'billingDuration' => 'P1M',
+                                ],
+                                'url' => $siteUrl.'/upgrade',
+                            ],
+                            ...collect(config('billing.packs', []))->map(fn (array $pack) => [
+                                '@type' => 'Offer',
+                                'name' => $pack['name'],
+                                'price' => (string) (int) $pack['price_usd'],
+                                'priceCurrency' => 'USD',
+                                'url' => $siteUrl.'/upgrade',
+                            ])->values()->all(),
+                        ]
+                        : [
+                            '@type' => 'Offer',
+                            'price' => '0',
+                            'priceCurrency' => 'USD',
+                        ],
                     'author' => [
                         '@type' => 'Person',
                         'name' => config('seo.author'),

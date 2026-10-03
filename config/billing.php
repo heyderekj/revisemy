@@ -4,11 +4,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Paid pricing (Plus / Paddle)
+    | Paid pricing (Plus + credit packs, sold through Polar)
     |--------------------------------------------------------------------------
     |
     | When false, create_checkout is disabled and public/agent copy steers
-    | people to the free monthly credit pack. Flip on when Plus is ready.
+    | people to the free monthly credit pack.
     |
     */
 
@@ -19,9 +19,9 @@ return [
     | Plans & credit grants
     |--------------------------------------------------------------------------
     |
-    | Try (internal key `free`) is the default pack. While pricing is off it
-    | renews monthly (same lazy refill as Plus). Plus stays in config so
-    | existing subscribers and a future re-enable keep working.
+    | Try (internal key `free`) refills lazily each month. Plus refills when
+    | Polar bills the subscription (order.paid webhook), so `renews` only
+    | describes the plan to agents — the refill itself is webhook-driven.
     |
     */
 
@@ -40,7 +40,44 @@ return [
             'review_retention_days' => (int) env('REVISEMY_PRO_RETENTION_DAYS', 90),
             'token_days' => (int) env('REVISEMY_PRO_TOKEN_DAYS', 365),
             'price_usd' => 9,
-            'paddle_price' => env('PADDLE_PRICE_PRO'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Credit packs (one-time Polar purchases)
+    |--------------------------------------------------------------------------
+    |
+    | Any plan can buy one. Purchased credits never expire and are spent only
+    | after the monthly grant runs out. The key is the product key below.
+    |
+    */
+
+    'packs' => [
+        'credits_50' => [
+            'name' => '50 credits',
+            'credits' => 50,
+            'price_usd' => 5,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Polar
+    |--------------------------------------------------------------------------
+    |
+    | Polar is merchant of record. `products` maps our product keys to Polar
+    | product IDs; webhooks arrive at /polar/webhook.
+    |
+    */
+
+    'polar' => [
+        'server' => env('POLAR_SERVER', 'production'), // production | sandbox
+        'access_token' => env('POLAR_ACCESS_TOKEN'),
+        'webhook_secret' => env('POLAR_WEBHOOK_SECRET'),
+        'products' => [
+            'plus' => env('POLAR_PRODUCT_PLUS'),
+            'credits_50' => env('POLAR_PRODUCT_CREDITS_50'),
         ],
     ],
 

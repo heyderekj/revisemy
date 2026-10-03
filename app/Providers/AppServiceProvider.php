@@ -2,13 +2,8 @@
 
 namespace App\Providers;
 
-use App\Listeners\SyncWorkspacePlanFromPaddle;
 use App\Models\OAuthClient;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
-use Laravel\Paddle\Events\SubscriptionCreated;
-use Laravel\Paddle\Events\SubscriptionUpdated;
-use Laravel\Paddle\Events\WebhookReceived;
 use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,11 +29,5 @@ class AppServiceProvider extends ServiceProvider
         // every client that can do OAuth refreshes without asking again.
         Passport::tokensExpireIn(now()->addHour());
         Passport::refreshTokensExpireIn(now()->addDays(60));
-
-        $listener = SyncWorkspacePlanFromPaddle::class;
-
-        Event::listen(WebhookReceived::class, [$listener, 'handleWebhookReceived']);
-        Event::listen(SubscriptionCreated::class, [$listener, 'handleSubscriptionCreated']);
-        Event::listen(SubscriptionUpdated::class, [$listener, 'handleSubscriptionUpdated']);
     }
 }

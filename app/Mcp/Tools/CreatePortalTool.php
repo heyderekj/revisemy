@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use RuntimeException;
 
 #[Name('create_portal')]
-#[Description('Open the billing manage page so the human can update payment method, view receipts, or cancel Plus. Returns portal_url — immediately paste it into chat as the markdown share block (never only say “open the billing page”).')]
+#[Description('Open the billing manage page so the human can view receipts, update their payment method, buy a credit pack, or cancel Plus (billing runs through Polar). Returns portal_url — immediately paste it into chat as the markdown share block (never only say “open the billing page”).')]
 #[IsReadOnly]
 #[IsOpenWorld]
 class CreatePortalTool extends Tool

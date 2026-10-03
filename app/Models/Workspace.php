@@ -5,12 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
-use Laravel\Paddle\Billable;
 
 class Workspace extends Model
 {
-    use Billable;
-
     public const PLAN_FREE = 'free';
 
     public const PLAN_PRO = 'pro';
@@ -21,15 +18,22 @@ class Workspace extends Model
         'plan',
         'billing_email',
         'credits_balance',
+        'purchased_credits',
         'credits_period_start',
     ];
+
+    /** Polar subscription statuses that still grant Plus. */
+    public const PLUS_STATUSES = ['active', 'trialing', 'past_due'];
 
     protected function casts(): array
     {
         return [
             'credits_balance' => 'integer',
+            'purchased_credits' => 'integer',
             'credits_period_start' => 'datetime',
             'assistant_seen_at' => 'datetime',
+            'polar_current_period_end' => 'datetime',
+            'polar_cancel_at_period_end' => 'boolean',
         ];
     }
 
@@ -66,13 +70,22 @@ class Workspace extends Model
         );
     }
 
-    public function paddleName(): ?string
+    public function billingOrders(): HasMany
     {
-        return $this->name ?: 'ReviseMy workspace';
+        return $this->hasMany(BillingOrder::class);
     }
 
-    public function paddleEmail(): ?string
+    /** On Plus with a Polar subscription that still grants access. */
+    public function isPlusActive(): bool
     {
-        return $this->billing_email;
+        return $this->normalizedPlan() === self::PLAN_PRO
+            && $this->polar_subscription_id !== null
+            && in_array($this->polar_subscription_status, self::PLUS_STATUSES, true);
+    }
+
+    /** Monthly grant plus purchased credits. */
+    public function totalCredits(): int
+    {
+        return (int) $this->credits_balance + (int) $this->purchased_credits;
     }
 }
