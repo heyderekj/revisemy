@@ -8,6 +8,8 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -82,14 +84,6 @@ class PolarClient
         return ['id' => (string) $data['id'], 'url' => (string) $data['url']];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function getCheckout(string $checkoutId): array
-    {
-        return $this->send(fn (PendingRequest $http) => $http->get('/v1/checkouts/'.rawurlencode($checkoutId)));
-    }
-
     /** One-off signed URL into Polar's customer portal (receipts, card, cancel). */
     public function customerPortalUrl(string $externalCustomerId): string
     {
@@ -133,15 +127,25 @@ class PolarClient
             return null;
         }
 
-        $expected = base64_encode(hash_hmac('sha256', "{$id}.{$timestamp}.{$body}", $this->signingKey($secret), true));
+        $signedContent = "{$id}.{$timestamp}.{$body}";
+        $expected = array_map(
+            fn (string $key) => base64_encode(hash_hmac('sha256', $signedContent, $key, true)),
+            $this->signingKeys($secret),
+        );
 
         $valid = false;
         foreach (explode(' ', $signatures) as $versioned) {
             [$version, $signature] = array_pad(explode(',', $versioned, 2), 2, '');
 
-            if ($version === 'v1' && hash_equals($expected, $signature)) {
-                $valid = true;
-                break;
+            if ($version !== 'v1') {
+                continue;
+            }
+
+            foreach ($expected as $candidate) {
+                if (hash_equals($candidate, $signature)) {
+                    $valid = true;
+                    break 2;
+                }
             }
         }
 
@@ -155,21 +159,33 @@ class PolarClient
     }
 
     /**
-     * Standard Webhooks secrets are `whsec_<base64 key>`. Polar secrets issued
-     * before Sept 2026 are a raw string that Standard Webhooks libraries take
-     * base64-encoded — i.e. the raw bytes are the key.
+     * Polar signs with one of two keys depending on when the secret was made
+     * (docs: "Handle & monitor webhook deliveries"):
+     *  - on or after 8 Sep 2026 it is Standard Webhooks: the key is the
+     *    base64 payload that follows `whsec_`;
+     *  - older secrets are Polar HMAC: the key is the whole `whsec_…` string
+     *    as UTF-8 bytes.
+     * Polar's own SDKs try both, and so do we — a secret from before the
+     * switch would otherwise fail every delivery, and Polar disables an
+     * endpoint after ten consecutive failures.
+     *
+     * @return list<string>
      */
-    protected function signingKey(string $secret): string
+    protected function signingKeys(string $secret): array
     {
+        $keys = [];
+
         if (str_starts_with($secret, 'whsec_')) {
             $decoded = base64_decode(substr($secret, 6), true);
 
-            if ($decoded !== false) {
-                return $decoded;
+            if ($decoded !== false && $decoded !== '') {
+                $keys[] = $decoded;
             }
         }
 
-        return $secret;
+        $keys[] = $secret;
+
+        return $keys;
     }
 
     /**
@@ -187,16 +203,53 @@ class PolarClient
         try {
             $response = $call($http)->throw();
         } catch (RequestException $e) {
+            $status = $e->response->status();
+
+            // Polar's reason ("Product not found", a bad field) is what tells the
+            // host owner what to fix. Only its words are logged, never our request.
+            Log::warning('Polar API request failed', [
+                'status' => $status,
+                'reason' => $this->describeError($e->response),
+            ]);
+
             throw new RuntimeException(
-                '[billing_provider_error] Polar returned HTTP '.$e->response->status().'. Try again in a moment.',
+                $status >= 500 || $status === 429
+                    ? "[billing_provider_error] Polar returned HTTP {$status}. Try again in a moment."
+                    : "[billing_provider_error] Polar rejected the request (HTTP {$status}). This host's billing setup needs attention — do not retry; tell the person who runs this ReviseMy server.",
                 previous: $e,
             );
         } catch (ConnectionException $e) {
+            Log::warning('Polar API unreachable', ['error' => Str::limit($e->getMessage(), 200)]);
+
             throw new RuntimeException('[billing_provider_error] Could not reach Polar. Try again in a moment.', previous: $e);
         }
 
         $data = $response->json();
 
         return is_array($data) ? $data : [];
+    }
+
+    /**
+     * Polar's error text without echoing back anything we sent (emails, URLs).
+     */
+    protected function describeError(Response $response): string
+    {
+        $json = $response->json();
+
+        if (! is_array($json)) {
+            return Str::limit(trim($response->body()), 200);
+        }
+
+        $detail = $json['detail'] ?? '';
+
+        if (is_array($detail)) {
+            $detail = collect($detail)
+                ->map(fn ($item) => is_array($item)
+                    ? trim(implode('.', (array) ($item['loc'] ?? [])).': '.($item['msg'] ?? ''), ': ')
+                    : (string) $item)
+                ->implode('; ');
+        }
+
+        return Str::limit(trim(($json['error'] ?? '').' '.$detail), 300);
     }
 }

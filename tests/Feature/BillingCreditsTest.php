@@ -16,6 +16,7 @@ use App\Services\CreditsService;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Mcp\Server\Transport\FakeTransporter;
@@ -441,6 +442,33 @@ class BillingCreditsTest extends TestCase
             && $request['metadata']['workspace_public_id'] === $workspace->public_id
             && str_contains($request['success_url'], '{CHECKOUT_ID}')
             && $request->hasHeader('Authorization', 'Bearer polar_oat_test'));
+    }
+
+    public function test_checkout_failure_shows_a_plain_page_and_logs_the_reason(): void
+    {
+        $this->configurePolar();
+        Log::spy();
+        Http::fake([
+            'sandbox-api.polar.sh/v1/checkouts/' => Http::response(['error' => 'ResourceNotFound', 'detail' => 'Product not found'], 404),
+        ]);
+
+        $workspace = app(TryTokenService::class)->create()['workspace'];
+        $url = app(BillingService::class)->createCheckoutUrl($workspace);
+
+        $this->get($url)
+            ->assertStatus(503)
+            ->assertSee('Checkout isn’t available right now')
+            ->assertSee('Nothing was charged')
+            ->assertDontSee('billing_provider_error');
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []) => $message === 'Polar API request failed'
+                && $context['status'] === 404
+                && str_contains($context['reason'], 'Product not found'))
+            ->once();
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message) => $message === 'Checkout unavailable')
+            ->once();
     }
 
     public function test_checkout_link_must_be_signed(): void
