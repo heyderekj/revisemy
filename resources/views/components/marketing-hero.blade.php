@@ -28,8 +28,16 @@
         @if ($subheadline)
             <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">{{ $subheadline }}</p>
         @endif
-        {{-- Phone: the page's own Connect. The top bar takes over once it scrolls away. --}}
-        <x-try-token-cta data-rm-hero-cta fathom-event="Connect hero" class="mt-6 lg:hidden" />
+        {{-- Phone: the page's own Connect. The top bar takes over once it scrolls away.
+             Any `actions` (a secondary link) sit beside it, or alone on desktop. --}}
+        @if (isset($actions) && $actions->hasActualContent())
+            <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <x-try-token-cta data-rm-hero-cta fathom-event="Connect hero" class="lg:hidden" />
+                {{ $actions }}
+            </div>
+        @else
+            <x-try-token-cta data-rm-hero-cta fathom-event="Connect hero" class="mt-6 lg:hidden" />
+        @endif
         {{ $slot }}
     </div>
 </x-home-section>

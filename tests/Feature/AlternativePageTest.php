@@ -36,6 +36,25 @@ class AlternativePageTest extends TestCase
         }
     }
 
+    public function test_each_alternative_page_shows_the_same_note_in_both_tools(): void
+    {
+        foreach (config('alternatives.pages', []) as $slug => $page) {
+            $compare = $page['compare'];
+
+            $this->assertTrue(
+                view()->exists('components.alternative-compare.endings.'.$compare['ending']),
+                "No ending partial for {$slug}: {$compare['ending']}",
+            );
+
+            $this->get('/alternatives/'.$slug)
+                ->assertOk()
+                ->assertSee('With '.e($page['competitor']), false)
+                ->assertSee('With ReviseMy', false)
+                ->assertSee(e($compare['them_end']), false)
+                ->assertSee('get_review', false);
+        }
+    }
+
     public function test_unknown_alternative_slug_returns_not_found(): void
     {
         $this->get('/alternatives/not-a-real-tool')->assertNotFound();
