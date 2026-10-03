@@ -1,4 +1,4 @@
-<x-layouts.app title="Connect your assistant — ReviseMy" robots="noindex, nofollow">
+<x-layouts.app title="Connect your assistant — ReviseMy" description="Connect Claude, ChatGPT, Cursor, VS Code or another assistant to ReviseMy. Most connect by pasting one address and clicking Connect — no account." robots="noindex, nofollow">
     <div class="rm-desk flex min-h-svh flex-col">
         <main class="rm-shell overflow-y-auto px-5 py-10 sm:px-8 sm:py-16">
             @if ($client)

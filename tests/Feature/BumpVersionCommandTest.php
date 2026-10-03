@@ -12,6 +12,8 @@ class BumpVersionCommandTest extends TestCase
         $changelogPath = config_path('changelog.php');
         $versionBefore = file_get_contents($versionPath);
         $changelogBefore = file_get_contents($changelogPath);
+        $manifests = collect(['server.json', 'plugin/.claude-plugin/plugin.json'])
+            ->mapWithKeys(fn (string $path) => [base_path($path) => file_get_contents(base_path($path))]);
 
         $this->assertNotFalse($versionBefore);
         $this->assertNotFalse($changelogBefore);
@@ -34,9 +36,14 @@ class BumpVersionCommandTest extends TestCase
             $this->assertStringContainsString("'version' => '{$expected}'", $changelogAfter);
             $this->assertStringContainsString("'title' => 'Test patch'", $changelogAfter);
             $this->assertStringContainsString("'date' => '2026-07-14'", $changelogAfter);
+
+            foreach ($manifests->keys() as $path) {
+                $this->assertSame($expected, json_decode(file_get_contents($path), true)['version'], basename($path).' keeps step');
+            }
         } finally {
             file_put_contents($versionPath, $versionBefore);
             file_put_contents($changelogPath, $changelogBefore);
+            $manifests->each(fn (string $contents, string $path) => file_put_contents($path, $contents));
         }
     }
 

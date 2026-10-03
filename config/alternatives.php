@@ -31,7 +31,7 @@ return [
             'teaser' => 'Design-file critique vs agent-built UI that needs a ship loop.',
             'icon' => 'figma',
             'title' => 'Best Figma comments alternative for agent design checkups — ReviseMy',
-            'description' => 'Looking for a Figma comments alternative when an AI agent ships the UI? ReviseMy gives humans authoritative marks on captures, a board, and structured next steps back over MCP — without replacing Figma for design files.',
+            'description' => 'A Figma comments alternative for when your AI agent ships the UI: marks on the real captures, a board, and next steps over MCP. Keep Figma for files.',
             'keywords' => [
                 'Figma comments alternative',
                 'design review for AI agents',
@@ -101,7 +101,7 @@ return [
             'teaser' => 'Website bug reports to PM tools vs an agent that owns the fix loop.',
             'icon' => 'marker-io',
             'title' => 'Best Marker.io alternative for AI agent design checkups — ReviseMy',
-            'description' => 'Looking for a Marker.io alternative when a coding agent should fix what you marked? ReviseMy turns human marks into MCP work packets and a verification board — without replacing Marker for classic website bug reporting into Jira or Linear.',
+            'description' => 'A Marker.io alternative for when a coding agent fixes what you mark: marks become MCP work, with a board to verify. Keep Marker for Jira bug reports.',
             'keywords' => [
                 'Marker.io alternative',
                 'website annotation alternative',
@@ -171,7 +171,7 @@ return [
             'teaser' => 'Fast client annotation links vs agent checkups with next_action.',
             'icon' => 'pastel',
             'title' => 'Best Pastel alternative for AI agent design checkups — ReviseMy',
-            'description' => 'Looking for a Pastel alternative when coding agents ship the UI? ReviseMy keeps client-friendly review links while giving agents MCP work packets, a verification board, and type-aware checkups — without replacing Pastel for agency proofing without agents.',
+            'description' => 'A Pastel alternative for when coding agents ship the UI: client-friendly review links, MCP work and a board to verify. Keep Pastel for agent-free proofing.',
             'keywords' => [
                 'Pastel alternative',
                 'usepastel alternative',
@@ -241,7 +241,7 @@ return [
             'teaser' => 'Agency website QA + Kanban vs agent MCP checkup loops.',
             'icon' => 'lucidly',
             'title' => 'Best Lucidly alternative for AI agent design checkups — ReviseMy',
-            'description' => 'Looking for a Lucidly alternative when coding agents ship the work? ReviseMy pairs human marks and a verification board with MCP next_action — without replacing Lucidly for agency website QA and client Kanban workflows.',
+            'description' => 'A Lucidly alternative for when coding agents ship the work: your marks, a board to verify, and next_action over MCP. Keep Lucidly for agency site QA.',
             'keywords' => [
                 'Lucidly alternative',
                 'lucidly.so alternative',
@@ -311,7 +311,7 @@ return [
             'teaser' => 'Annotate 30+ content types vs agent checkups with next_action.',
             'icon' => 'markup-io',
             'title' => 'Best MarkUp.io alternative for AI agent design checkups — ReviseMy',
-            'description' => 'Looking for a MarkUp.io alternative when coding agents ship the UI? ReviseMy turns human marks on captures into MCP work packets and a verification board — without replacing MarkUp for broad creative review across websites, PDFs, images, and video.',
+            'description' => 'A MarkUp.io alternative for when coding agents ship the UI: marks on captures become MCP work, with a board to verify. Keep MarkUp for creative review.',
             'keywords' => [
                 'MarkUp.io alternative',
                 'Markup.io alternative',
@@ -381,7 +381,7 @@ return [
             'teaser' => 'Designer client feedback + versions vs agent MCP ship loops.',
             'icon' => 'workflow-design',
             'title' => 'Best Workflow.design alternative for AI agent design checkups — ReviseMy',
-            'description' => 'Looking for a Workflow.design alternative when coding agents ship the UI? ReviseMy keeps reviewer-friendly links while giving agents MCP work packets and a verification board — without replacing Workflow for designer-led client feedback and versioned creative revisions.',
+            'description' => 'A Workflow.design alternative for when coding agents ship the UI: reviewer-friendly links, MCP work and a board. Keep Workflow for designer-led rounds.',
             'keywords' => [
                 'Workflow.design alternative',
                 'Workflow design feedback alternative',
@@ -451,7 +451,7 @@ return [
             'teaser' => 'Live-site comment widget + MCP vs capture-based checkup loops.',
             'icon' => 'simple-commenter',
             'title' => 'Best Simple Commenter alternative for design checkup loops — ReviseMy',
-            'description' => 'Looking for a Simple Commenter alternative when you need a human-in-the-loop design checkup? ReviseMy uses capture-based marks, a verification board, and MCP next_action — without replacing Simple Commenter for embedded live-site widgets and comment-to-ticket workflows.',
+            'description' => 'A Simple Commenter alternative for a human-in-the-loop checkup: marks on captures, a board and next_action over MCP. Keep it for live-site comment widgets.',
             'keywords' => [
                 'Simple Commenter alternative',
                 'website feedback widget alternative',
@@ -526,7 +526,7 @@ return [
             'teaser' => 'Instant vision opinions vs human marks that decide the loop.',
             'icon' => 'sparkles',
             'title' => 'Best alternative to just using an AI chat app — ReviseMy',
-            'description' => 'Looking past pasting screenshots into ChatGPT, Claude, Copilot, Cursor, or Grok for design feedback? ReviseMy keeps optional AI checklist and vision as second-opinion hints while human marks stay authoritative — with a board and MCP next_action for agents.',
+            'description' => 'Past pasting screenshots into ChatGPT or Claude: AI hints stay a second opinion, your marks decide, and your agent gets a board and next_action over MCP.',
             'keywords' => [
                 'AI chat app alternative',
                 'ChatGPT UI review alternative',

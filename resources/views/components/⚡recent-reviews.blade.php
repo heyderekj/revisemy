@@ -89,7 +89,7 @@ new class extends Component
 ?>
 
 <div
-    class="rm-desk flex min-h-svh flex-col"
+    class="relative"
     x-data="{
         init() {
             let saved = null;
@@ -99,78 +99,72 @@ new class extends Component
     }"
     x-on:revisemy-try-token.window="try { $event.detail.token || sessionStorage.removeItem('revisemy_try_token') } catch (e) {}"
 >
-    <div class="rm-shell overflow-y-auto">
-    <header class="border-b border-border">
-        <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-            <div class="flex items-center gap-2 sm:gap-3">
-                <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
-                    <x-revisemy-logo size="sm" />
-                </a>
-                <h1 class="text-lg font-semibold text-zinc-900">Your reviews</h1>
+    <x-site-shell :cta="false">
+        <x-home-section first>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h1 class="text-[clamp(2rem,5vw,2.75rem)] font-semibold leading-[1.08] tracking-tight text-zinc-900">Your reviews</h1>
+                <a href="/connect" class="link text-sm">Connect an assistant</a>
             </div>
-            <a href="/connect" class="link text-sm">Connect an assistant</a>
-        </div>
-    </header>
+            <div class="mt-8 max-w-3xl">
+                @if (! $workspaceId)
+                    <p class="text-sm text-muted-foreground">Reviews your try token can see — the same list your agent gets.</p>
+                    <form wire:submit="loadReviews" class="mt-5 flex flex-col gap-2 rounded-2xl bg-card p-4 sm:flex-row sm:p-5">
+                        <label class="sr-only" for="try-token">Try token</label>
+                        <input
+                            id="try-token"
+                            type="password"
+                            wire:model="tryToken"
+                            autocomplete="off"
+                            spellcheck="false"
+                            placeholder="Paste your try token"
+                            class="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-zinc-400"
+                        />
+                        <flux:button type="submit" variant="primary" class="shrink-0">Show reviews</flux:button>
+                    </form>
+                    @if ($error)
+                        <p class="mt-3 text-sm text-problem-ink" role="alert">{{ $error }}</p>
+                    @endif
+                @else
+                    @if ($reviews === [])
+                        <div class="hatch rounded-2xl px-6 py-10 text-center text-zinc-300">
+                            <p class="text-base font-semibold text-zinc-900">No reviews yet</p>
+                            <p class="mt-1 text-sm text-muted-foreground">Ask your agent for a design checkup, and it lands here.</p>
+                        </div>
+                    @else
+                        <ul class="space-y-2.5">
+                            @foreach ($reviews as $item)
+                                @php($tone = ['changes_requested' => 'attention', 'approved' => 'done'][$item['status']] ?? 'neutral')
+                                <li class="flex items-center gap-4 rounded-2xl bg-card p-4">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <x-signal-tag :tone="$tone">{{ $item['status_label'] }}</x-signal-tag>
+                                            <span class="text-xs text-muted-foreground">Pass {{ $item['pass'] }}</span>
+                                        </div>
+                                        <h2 class="mt-1.5 truncate text-base font-semibold text-zinc-900">{{ $item['title'] }}</h2>
+                                        <p class="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                                            {{ $item['loop']['outstanding_count'] }} open
+                                            @if ($item['loop']['awaiting_verification_count'] > 0)
+                                                · {{ $item['loop']['awaiting_verification_count'] }} to verify
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <a href="{{ $item['review_url'] }}" class="btn-quiet inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium">Open</a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
 
-    <main class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-        @if (! $workspaceId)
-            <p class="text-sm text-muted-foreground">Reviews your try token can see — the same list your agent gets.</p>
-            <form wire:submit="loadReviews" class="mt-5 flex flex-col gap-2 rounded-2xl bg-card p-4 sm:flex-row sm:p-5">
-                <label class="sr-only" for="try-token">Try token</label>
-                <input
-                    id="try-token"
-                    type="password"
-                    wire:model="tryToken"
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder="Paste your try token"
-                    class="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-zinc-400"
-                />
-                <flux:button type="submit" variant="primary" class="shrink-0">Show reviews</flux:button>
-            </form>
-            @if ($error)
-                <p class="mt-3 text-sm text-problem-ink" role="alert">{{ $error }}</p>
-            @endif
-        @else
-            @if ($reviews === [])
-                <div class="hatch rounded-2xl px-6 py-10 text-center text-zinc-300">
-                    <p class="text-base font-semibold text-zinc-900">No reviews yet</p>
-                    <p class="mt-1 text-sm text-muted-foreground">Ask your agent for a design checkup, and it lands here.</p>
-                </div>
-            @else
-                <ul class="space-y-2.5">
-                    @foreach ($reviews as $item)
-                        @php($tone = ['changes_requested' => 'attention', 'approved' => 'done'][$item['status']] ?? 'neutral')
-                        <li class="flex items-center gap-4 rounded-2xl bg-card p-4">
-                            <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <x-signal-tag :tone="$tone">{{ $item['status_label'] }}</x-signal-tag>
-                                    <span class="text-xs text-muted-foreground">Pass {{ $item['pass'] }}</span>
-                                </div>
-                                <h2 class="mt-1.5 truncate text-base font-semibold text-zinc-900">{{ $item['title'] }}</h2>
-                                <p class="mt-0.5 text-xs tabular-nums text-muted-foreground">
-                                    {{ $item['loop']['outstanding_count'] }} open
-                                    @if ($item['loop']['awaiting_verification_count'] > 0)
-                                        · {{ $item['loop']['awaiting_verification_count'] }} to verify
-                                    @endif
-                                </p>
-                            </div>
-                            <a href="{{ $item['review_url'] }}" class="btn-quiet inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium">Open</a>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
+                    <div class="mt-8">
+                        <livewire:connected-assistants :workspace-id="$workspaceId" :key="'assistants-'.$workspaceId" />
+                    </div>
 
-            <div class="mt-8">
-                <livewire:connected-assistants :workspace-id="$workspaceId" :key="'assistants-'.$workspaceId" />
+                    @if ($tryToken !== '')
+                        <button type="button" wire:click="clearToken" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this token in this browser</button>
+                    @else
+                        <button type="button" wire:click="forgetBrowser" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this browser</button>
+                    @endif
+                @endif
             </div>
-
-            @if ($tryToken !== '')
-                <button type="button" wire:click="clearToken" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this token in this browser</button>
-            @else
-                <button type="button" wire:click="forgetBrowser" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this browser</button>
-            @endif
-        @endif
-    </main>
-    </div>
+        </x-home-section>
+    </x-site-shell>
 </div>

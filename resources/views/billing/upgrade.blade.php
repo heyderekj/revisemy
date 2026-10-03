@@ -2,7 +2,6 @@
     title="Pricing — ReviseMy"
     description="ReviseMy pricing: Try free with {{ $tryCredits }} credits a month, Plus at ${{ $priceUsd }}/mo for {{ $credits }} credits, or a one-time credit pack."
     fathom="Connect pricing"
-    :wide="true"
 >
     <x-marketing-hero eyebrow="Pricing" headline="Pay for checkups, not seats" subheadline="Every plan gets the same full capture quality. Checkout happens from your agent: ask it for create_checkout and open the link it shares. Payments are handled by Polar, our merchant of record." />
 

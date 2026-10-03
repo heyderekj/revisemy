@@ -11,7 +11,7 @@ return [
             'icon' => 'device-phone-mobile',
             'teaser' => 'App screenshots — hierarchy, spacing, and contrast with your agent.',
             'title' => 'UI design review for AI agents — ReviseMy',
-            'description' => 'Human-in-the-loop UI review for AI coding agents. Upload app screenshots, mark hierarchy and spacing issues, track fixes with before/after evidence, and send structured next steps back over MCP.',
+            'description' => 'UI design review with your AI agent. It uploads app screenshots, you mark hierarchy and spacing, and it fixes them with before and after proof.',
             'keywords' => [
                 'UI design review',
                 'app screenshot review',
@@ -119,7 +119,7 @@ return [
             'icon' => 'globe-alt',
             'teaser' => 'Live URL capture — desktop and mobile, above-the-fold and nav.',
             'title' => 'Website design review for AI agents — ReviseMy',
-            'description' => 'Live website review for AI coding agents. Server captures desktop and mobile viewports, humans mark above-the-fold and nav issues, and structured work packets return over MCP.',
+            'description' => 'Website review with your AI agent: desktop and phone captures of a live URL, your marks on the fold and nav, and fixes your agent reads over MCP.',
             'keywords' => [
                 'website design review',
                 'landing page review',
@@ -226,7 +226,7 @@ return [
             'icon' => 'envelope',
             'teaser' => 'HTML at inbox width — CTA, dark mode, and footer checks.',
             'title' => 'Email design review for AI agents — ReviseMy',
-            'description' => 'HTML email design review for AI coding agents. Paste email HTML, review at ~600px width, mark CTA and footer issues, and loop fixes with human sign-off over MCP.',
+            'description' => 'HTML email review with your AI agent. See it at about 600px, mark the call to action and footer, and loop fixes until you sign off.',
             'keywords' => [
                 'email design review',
                 'HTML email review',
@@ -333,7 +333,7 @@ return [
             'icon' => 'presentation-chart-bar',
             'teaser' => 'PDF decks — one frame per slide for density and projection.',
             'title' => 'Slide and deck review for AI agents — ReviseMy',
-            'description' => 'Presentation and PDF slide review for AI coding agents. Upload a deck, one screenshot per page, mark density and readability issues, and loop polish passes until approved.',
+            'description' => 'Slide and PDF deck review with your AI agent. One capture per page, your marks on density and readability, and polish passes until you approve.',
             'keywords' => [
                 'presentation review',
                 'slide deck review',
@@ -444,7 +444,7 @@ return [
             'icon' => 'users',
             'teaser' => 'Mark and approve on the link — no account.',
             'title' => 'Design review for humans — mark, approve, no account required',
-            'description' => 'Open a ReviseMy review link as a designer, PM, or teammate. Mark regions on screenshots, set must-fix or nit, approve or request changes — no MCP install and no account.',
+            'description' => 'Got a ReviseMy link? Mark regions, say must fix or nice to have, then approve or ask for changes. No account and nothing to install.',
             'keywords' => [
                 'design review link',
                 'stakeholder design feedback',
@@ -517,7 +517,7 @@ return [
             'icon' => 'building-office-2',
             'teaser' => 'Run the agent; clients mark on the link.',
             'title' => 'Design review for agencies — client guest links, agent builds, human sign-off',
-            'description' => 'Run agents inside the studio while clients mark on a guest or review link. Keep suggestions non-authoritative until you accept them, and ship multi-pass approvals with before/after proof.',
+            'description' => 'Agents do the work in your studio; clients mark on a guest or review link. Their notes stay suggestions until you accept them.',
             'keywords' => [
                 'agency design review',
                 'client guest feedback link',

@@ -419,6 +419,19 @@ class Review extends Model
     public const POLL_AFTER_SECONDS = 30;
 
     /**
+     * Every next_action get_review can return, with what it asks of the agent.
+     * llms.txt and the MCP server card read this, so a new action belongs here too.
+     */
+    public const NEXT_ACTIONS = [
+        'wait_for_human' => 'Share review_url and poll get_review until the human decides.',
+        'apply_pins_then_next_pass' => 'Fix the human marks in order, calling resolve_marks as each lands, then open the next pass.',
+        'apply_decision_note' => 'Every mark is resolved, but the human left a note with their decision: act on it first.',
+        'open_next_pass' => 'Every mark is resolved: create_review with parent_id and fresh captures so the human can verify.',
+        'done' => 'Approved. Stop.',
+        'expired' => 'The review link expired. Start a fresh create_review if you still need a checkup.',
+    ];
+
+    /**
      * What the agent should do next in the design checkup loop.
      *
      * @return array<string, mixed>

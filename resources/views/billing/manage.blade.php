@@ -1,4 +1,4 @@
-<x-simple-page title="Manage billing — ReviseMy" eyebrow="Billing" heading="Billing" robots="noindex, nofollow">
+<x-simple-page :shell="false" title="Manage billing — ReviseMy" eyebrow="Billing" heading="Billing" robots="noindex, nofollow">
     <p>
         Plan: <span class="font-semibold text-zinc-900">{{ $status['plan_name'] }}</span>
         · Credits: {{ $status['credits_monthly'] }} / {{ $status['credits_grant'] }} this period

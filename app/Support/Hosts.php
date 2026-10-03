@@ -29,6 +29,16 @@ final class Hosts
         return is_array($host) ? self::fill($id, $host, $token) : null;
     }
 
+    /** How a host connects, in a few words: the connect list's badge. */
+    public static function modeLabel(string $mode): string
+    {
+        return match ($mode) {
+            'oauth' => 'Paste and Connect',
+            'deeplink' => 'One click',
+            default => 'With a try token',
+        };
+    }
+
     public static function mcpUrl(): string
     {
         return url('/mcp/revisemy');

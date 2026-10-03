@@ -2,6 +2,24 @@
 
 **Mark feedback for your agent.**
 
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=revisemy&config=eyJ1cmwiOiJodHRwczovL3JldmlzZW15LmNvbS9tY3AvcmV2aXNlbXkifQ%3D%3D)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_ReviseMy-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=revisemy&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Frevisemy.com%2Fmcp%2Frevisemy%22%7D)
+[![License: O'Saasy](https://img.shields.io/badge/license-O'Saasy-ffc53d)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/heyderekj/revisemy?label=release)](https://revisemy.com/changelog)
+
+**Hosted MCP server:** `https://revisemy.com/mcp/revisemy` — Claude and ChatGPT add it as a custom connector and click Connect; no account. Claude Code:
+
+```bash
+claude mcp add --transport http revisemy https://revisemy.com/mcp/revisemy
+```
+
+Or install the Claude Code plugin, which adds the server plus a `design-checkup` skill. In Claude Code:
+
+```text
+/plugin marketplace add heyderekj/revisemy
+/plugin install revisemy@revisemy
+```
+
 ReviseMy is an open-source human-in-the-loop design review tool. Your agent captures **UI, websites, slides, or email** from screenshots, a URL, PDF, or HTML over [Laravel MCP](https://laravel.com/docs/mcp), you open a review link, **mark** what matters like a design critique, then approve or request changes. The agent reads structured work packets and keeps going.
 
 Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel MCP — ready for [Laravel Cloud](https://cloud.laravel.com).
@@ -187,13 +205,16 @@ For free pixel vision without a cloud API key, point `REVISEMY_OPENAI_BASE_URL` 
 - [CONNECTORS.md](docs/CONNECTORS.md) — ChatGPT / Claude / Cursor / Grok setup, MCP Apps inline review, decision webhooks
 - [SECOND-OPINION.md](docs/SECOND-OPINION.md) — second opinion, agent subagent findings, work packets
 - [DEPLOY.md](docs/DEPLOY.md) — Laravel Cloud deploy
-- `/llms.txt` — agent-oriented site index (on your deployed origin)
+- [DISCOVERY.md](docs/DISCOVERY.md) — registry listings, directories and search setup
+- `/llms.txt` and `/llms-full.txt` — agent-oriented site index, and every page in one file (on your deployed origin)
+- `/{page}.md` — any public page as markdown, e.g. `/board.md`
+- `/.well-known/mcp/server-card.json` — endpoint, auth, tools and prompts as JSON
 - `/sitemap.xml` — public pages for search engines
 - `/changelog` — versioned release notes
 
 ### Version bumps
 
-Product SemVer lives in `config/revisemy.php`. To cut a release: `php artisan revisemy:bump {major|minor|patch} [--title=…]` → fill highlights in `config/changelog.php` → commit (and tag if you want). The homepage badge, MCP app, and `/changelog` read that version automatically.
+Product SemVer lives in `config/revisemy.php`. To cut a release: `php artisan revisemy:bump {major|minor|patch} [--title=…]` → fill highlights in `config/changelog.php` → commit (and tag if you want). The homepage badge, MCP app, `/changelog` and the server card read that version automatically; the command also updates `server.json` and the Claude plugin's `plugin.json`.
 
 ## License
 
