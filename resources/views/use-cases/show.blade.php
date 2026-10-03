@@ -1,5 +1,7 @@
 <x-layouts.marketing :title="$page['title']" :description="$page['description']" :keywords="$page['keywords']" fathom="Connect use case">
-    <x-marketing-hero :eyebrow="'Built for '.$page['label']" :icon="$page['icon']" :headline="$page['headline']" :subheadline="$page['subheadline']" />
+    <x-marketing-hero :eyebrow="'Built for '.$page['label']" :icon="$page['icon']" :headline="$page['headline']" :subheadline="$page['subheadline']">
+        <x-review-mock :sample="$page['sample'] ?? $page['review_type'] ?? null" class="mt-10 sm:mt-12 lg:-mx-32" />
+    </x-marketing-hero>
 
     @include('guides.partials.problem-loop')
 

@@ -272,28 +272,16 @@
         animation: rm-hero-loop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.95s both;
     }
 
-    .rm-hero-loop-review-delay {
-        animation-delay: 1.1s;
+    /* The stage under <x-review-mock>: a card with a quiet dot grid. */
+    .rm-dot-grid {
+        background-image: radial-gradient(circle at center, var(--color-border-strong) 1px, transparent 1.2px);
+        background-size: 14px 14px;
+        background-position: 7px 7px;
     }
 
-    .rm-hero-loop-review-delay-2 {
-        animation-delay: 1.7s;
-    }
-
-    .rm-hero-loop-review-delay-3 {
-        animation-delay: 1.85s;
-    }
-
-    .rm-hero-loop-review-delay-4 {
-        animation-delay: 2s;
-    }
-
-    .rm-hero-loop-mark {
-        animation: rm-hero-mark-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 1.35s both;
-    }
-
-    .rm-hero-loop-mark-delay {
-        animation-delay: 1.55s;
+    /* Marks on <x-review-mock>; the delay is set inline, one per mark. */
+    .rm-review-mock-pop {
+        animation: rm-review-mock-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .rm-board-preview-col {
@@ -334,14 +322,10 @@
     }
 }
 
-@keyframes rm-hero-mark-pop {
+@keyframes rm-review-mock-pop {
     from {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(0.72);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
+        transform: scale(0.72);
     }
 }
 
@@ -394,7 +378,7 @@
     .rm-fade-up-delay-2,
     .rm-hero-loop-bubble,
     .rm-hero-loop-review,
-    .rm-hero-loop-mark,
+    .rm-review-mock-pop,
     .rm-board-preview-col,
     .rm-note-composer,
     .rm-agent-cycle-item {

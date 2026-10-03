@@ -12,6 +12,12 @@ new class extends Component
 ?>
 
 <x-site-shell cta-href="#setup" fathom="Try token" sticky-event="Try token sidebar">
+    {{-- Agents the headline cycles through; the hero chat follows the same
+         names on the same clock. Values are x-host-icon names. --}}
+    @php
+        $heroAgents = ['ChatGPT' => 'chatgpt', 'Claude' => 'claude', 'Copilot' => 'copilot', 'Cursor' => 'cursor', 'Grok' => 'grok'];
+    @endphp
+
     {{-- Hero — bottom padding tightened so it reads with How it works below --}}
     <x-home-section first class="rm-fade-up !pb-8 sm:!pb-10">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -26,7 +32,7 @@ new class extends Component
                 <span class="sr-only">with your agent.</span>
                 <span aria-hidden="true">
                     with&nbsp;<span class="rm-agent-cycle">
-                        @foreach (['ChatGPT', 'Claude', 'Copilot', 'Cursor', 'Grok'] as $i => $label)
+                        @foreach (array_keys($heroAgents) as $i => $label)
                             <span class="rm-agent-cycle-item" style="--i: {{ $i }}">{{ $label }}.</span>
                         @endforeach
                     </span>
@@ -46,7 +52,7 @@ new class extends Component
         </p>
 
         <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
-            <x-hero-loop-preview />
+            <x-hero-loop-preview :agents="$heroAgents" />
         </div>
     </x-home-section>
 
