@@ -6,6 +6,7 @@ use App\Support\NormalizedArea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Annotation extends Model
 {
@@ -337,6 +338,8 @@ class Annotation extends Model
         'status',
         'resolution_note',
         'after_screenshot_id',
+        'element',
+        'carried',
         'resolved_at',
         'verified_at',
     ];
@@ -347,6 +350,8 @@ class Annotation extends Model
             'x' => 'float',
             'y' => 'float',
             'area' => 'array',
+            'element' => 'array',
+            'carried' => 'array',
             'resolved_at' => 'datetime',
             'verified_at' => 'datetime',
         ];
@@ -392,6 +397,39 @@ class Annotation extends Model
             'w' => $this->area['w'] ?? $this->area['width'] ?? 0,
             'h' => $this->area['h'] ?? $this->area['height'] ?? 0,
         ]);
+    }
+
+    /**
+     * What the mark is on, as a person would say it: Heading “Pricing”.
+     */
+    public function elementLabel(): ?string
+    {
+        if (! is_array($this->element) || ! is_string($this->element['kind'] ?? null)) {
+            return null;
+        }
+
+        $text = trim((string) ($this->element['text'] ?? ''));
+
+        return $text === ''
+            ? $this->element['kind']
+            : $this->element['kind'].' “'.Str::limit($text, 60).'”';
+    }
+
+    /**
+     * The next pass's capture shows the mark's suggested copy on its element.
+     * A hint for the human, never a verification.
+     */
+    public function looksLive(): bool
+    {
+        return (bool) ($this->carried['looks_live'] ?? false);
+    }
+
+    /**
+     * The mark's element isn't on the next pass's capture any more.
+     */
+    public function missingInNextPass(): bool
+    {
+        return (bool) ($this->carried['missing'] ?? false);
     }
 
     public function screenshot(): BelongsTo

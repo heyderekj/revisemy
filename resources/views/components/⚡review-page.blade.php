@@ -8,6 +8,7 @@ use App\Models\Screenshot;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use App\Services\SecondOpinionService;
+use App\Support\ElementAnchor;
 use App\Support\FeedbackText;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -42,6 +43,12 @@ new class extends Component
     public ?float $pendingW = null;
 
     public ?float $pendingH = null;
+
+    /** Selector of the page element the pending mark snapped to. */
+    public ?string $pendingSelector = null;
+
+    /** What that element is, as the composer names it: Heading “Pricing”. */
+    public ?string $pendingElementLabel = null;
 
     public string $decisionNote = '';
 
@@ -189,7 +196,7 @@ new class extends Component
         return app(SecondOpinionService::class)->visionEnabled();
     }
 
-    public function startPin(float $x, float $y, ?float $w = null, ?float $h = null): void
+    public function startPin(float $x, float $y, ?float $w = null, ?float $h = null, ?string $selector = null): void
     {
         if ($this->mode === 'guest' && ! $this->review->allowsGuestAccess()) {
             return;
@@ -210,6 +217,16 @@ new class extends Component
         $this->pendingY = $hasRegion ? $y + ($h / 2) : $y;
         $this->pendingW = $hasRegion ? $w : null;
         $this->pendingH = $hasRegion ? $h : null;
+        $this->pendingSelector = null;
+        $this->pendingElementLabel = null;
+
+        $screenshot = $this->review->screenshots->values()->get($this->activeScreenshotIndex);
+
+        if ($selector !== null && $screenshot && $element = ElementAnchor::resolve($screenshot, $selector)) {
+            $this->pendingSelector = $selector;
+            $this->pendingElementLabel = (new Annotation(['element' => $element]))->elementLabel();
+        }
+
         $this->draftBody = '';
         $this->draftSuggestedCopy = '';
         $this->draftSeverity = Annotation::SEVERITY_MUST_FIX;
@@ -221,6 +238,8 @@ new class extends Component
         $this->pendingY = null;
         $this->pendingW = null;
         $this->pendingH = null;
+        $this->pendingSelector = null;
+        $this->pendingElementLabel = null;
         $this->draftBody = '';
         $this->draftSuggestedCopy = '';
     }
@@ -293,6 +312,7 @@ new class extends Component
                 [
                     'suggested_copy' => $this->draftSuggestedCopy !== '' ? $this->draftSuggestedCopy : null,
                     'source' => Annotation::SOURCE_HUMAN,
+                    'selector' => $this->pendingSelector,
                 ],
             );
         } else {
@@ -1035,7 +1055,7 @@ new class extends Component
         x-data
         x-init="
             if (! Alpine.store('rmFocus')) {
-                Alpine.store('rmFocus', { finding: null, mark: null });
+                Alpine.store('rmFocus', { finding: null, mark: null, hover: null });
             }
         "
     >

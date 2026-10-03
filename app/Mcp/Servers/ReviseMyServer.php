@@ -13,6 +13,7 @@ use App\Mcp\Tools\CreatePortalTool;
 use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\DecideReviewTool;
 use App\Mcp\Tools\GetBillingTool;
+use App\Mcp\Tools\GetElementsTool;
 use App\Mcp\Tools\GetReviewTool;
 use App\Mcp\Tools\ListReviewsTool;
 use App\Mcp\Tools\RequestSecondOpinionTool;
@@ -62,6 +63,7 @@ class ReviseMyServer extends Server
         AddMarkTool::class,
         DecideReviewTool::class,
         VerifyMarkTool::class,
+        GetElementsTool::class,
     ];
 
     protected array $resources = [

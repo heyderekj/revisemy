@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
 use App\Services\Capture\PageCaptureService;
+use App\Support\ElementAnchor;
 use App\Support\OutboundUrl;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -215,6 +216,10 @@ class ReviewService
             $this->opinions->queue($shot);
         }
 
+        if ($parent) {
+            $this->carryMarksForward($parent, $review);
+        }
+
         return $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent']) ?? $review;
     }
 
@@ -305,6 +310,55 @@ class ReviewService
             throw ValidationException::withMessages([
                 'webhook_url' => "webhook_url can't be used: {$reason}.",
             ]);
+        }
+    }
+
+    /**
+     * Find each element-anchored mark from the pass before on this pass's
+     * capture of the same viewport: where it is now, whether it's gone, and
+     * whether its suggested copy now reads there. Hints for the human only —
+     * verifying stays theirs.
+     */
+    protected function carryMarksForward(Review $parent, Review $review): void
+    {
+        $shots = $review->screenshots()->get();
+
+        if ($shots->isEmpty()) {
+            return;
+        }
+
+        $parent->loadMissing('screenshots.annotations');
+
+        foreach ($parent->screenshots as $index => $parentShot) {
+            $viewport = $parentShot->meta['viewport'] ?? null;
+            $target = $viewport !== null
+                ? $shots->first(fn (Screenshot $shot) => ($shot->meta['viewport'] ?? null) === $viewport)
+                : $shots->get($index);
+
+            if (! $target || $target->elementMap() === null) {
+                continue;
+            }
+
+            foreach ($parentShot->annotations as $annotation) {
+                $selector = $annotation->element['selector'] ?? null;
+
+                if (! is_string($selector) || $selector === '') {
+                    continue;
+                }
+
+                $found = ElementAnchor::resolve($target, $selector);
+
+                $annotation->update(['carried' => $found === null
+                    ? ['screenshot_id' => $target->id, 'missing' => true]
+                    : [
+                        'screenshot_id' => $target->id,
+                        'area' => $found['area'],
+                        'text' => mb_substr($found['text'], 0, 300),
+                        'looks_live' => is_string($annotation->suggested_copy)
+                            && ElementAnchor::showsCopy($found['text'], $annotation->suggested_copy),
+                    ],
+                ]);
+            }
         }
     }
 }

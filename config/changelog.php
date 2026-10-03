@@ -23,6 +23,10 @@ return [
                 'The mobile capture renders as a phone, with touch styles and a phone browser, at 2×; a tablet capture joins desktop and mobile',
                 'Cookie banners are kept out of the shot',
                 'PDF slides keep their colours, and you’re told when a deck runs past five pages',
+                'Click a heading, button or image on a website capture to mark it — the mark knows exactly which part of the page it’s on, and so does your agent',
+                'Arrow keys move the outline to the part around, inside or beside it; E turns snapping off',
+                'On the next pass, marks find their part of the page again: “Looks live” when your suggested copy shows, “Not on the page any more” when it’s gone',
+                'Hovering a mark in the list lights it up on the capture, Escape asks once before dropping a typed note, and marks on the same spot sit side by side',
             ],
         ],
 

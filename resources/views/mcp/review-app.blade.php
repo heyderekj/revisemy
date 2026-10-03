@@ -13,7 +13,10 @@
      Styles and Alpine are compiled from resources/css/mcp-app.css and
      resources/js/mcp-app.js (the same tokens as the site) and inlined by
      App\Mcp\Resources\ReviewApp; nothing loads from a CDN. The bridge is inline.
-     App-only tools: add_mark / decide_review / verify_mark. --}}
+     - Element snapping (outline, ↑↓←→ walk, Enter picks, E toggles), hover linking from
+       the list, layered Escape with an unsent-note guard, side-by-side pins, and the
+       "Looks live" / "Not on the page any more" hints ↔ review canvas + mark card
+     App-only tools: add_mark / decide_review / verify_mark / get_elements. --}}
 <style>{!! $styles !!}</style>
 
 <div class="bg-background text-foreground" x-data="reviewApp()" x-init="init()" x-cloak>
@@ -95,19 +98,19 @@
                         <div class="relative w-full" x-show="activeShot()">
                             <img class="block w-full" :src="activeShot()?.url" :alt="payload.title" draggable="false">
                             <div class="absolute inset-0 cursor-crosshair touch-pan-y" x-ref="overlay"
-                                @pointerdown="startDraw($event)" @pointermove="moveDraw($event)"
-                                @pointerup="endDraw($event)" @pointercancel="cancelDraw()" @pointerleave="cancelDraw()">
+                                @pointerdown="startDraw($event)" @pointermove="moveDraw($event); trackHover($event)"
+                                @pointerup="endDraw($event)" @pointercancel="cancelDraw()" @pointerleave="cancelDraw(); hover = -1">
 
                                 {{-- human marks: key-coloured region + M# badge (review page classes) --}}
                                 <template x-for="pin in (activeShot()?.pins || [])" :key="'p'+pin.id">
                                     <div>
                                         <div class="pointer-events-none absolute rounded-md border-2 border-key/80 bg-key/10"
                                             x-show="pin.area"
-                                            :class="{ 'opacity-50': isSettled(pin) }" :style="pin.area ? rectStyle(pin.area) : ''"></div>
+                                            :class="{ 'opacity-50': isSettled(pin), 'ring-2 ring-key/60': hoverPin === pin.id }" :style="pin.area ? rectStyle(pin.area) : ''"></div>
                                         <button type="button"
                                             class="pointer-events-auto absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition"
-                                            :class="markerBg(pin.severity) + (isSettled(pin) ? ' opacity-60' : '') + (activePin && activePin.id === pin.id ? ' ring-zinc-900' : '')"
-                                            :style="pinStyle(pin)" x-text="'M' + pin.number"
+                                            :class="markerBg(pin.severity) + (isSettled(pin) ? ' opacity-60' : '') + (activePin && activePin.id === pin.id ? ' ring-zinc-900' : '') + (hoverPin === pin.id ? ' scale-110' : '')"
+                                            :style="pinStyle(pin) + stackStyle(pin)" x-text="'M' + pin.number"
                                             @pointerdown.stop @pointerup.stop @click.stop="showPin(pin)"></button>
                                     </div>
                                 </template>
@@ -123,6 +126,13 @@
                                             @pointerdown.stop @pointerup.stop @click.stop="showFinding(item.finding)"></button>
                                     </div>
                                 </template>
+
+                                {{-- the page element under the pointer, when snapping --}}
+                                <div class="pointer-events-none absolute z-[14] rounded-sm bg-key/10 outline outline-2 outline-offset-1 outline-key"
+                                    x-show="hovered() && !draft.drawing && !composer.open" :style="hoverStyle()" x-ref="snapOutline">
+                                    <span class="absolute left-0 top-0 max-w-64 -translate-y-[calc(100%+4px)] truncate rounded-md bg-zinc-900 px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                                        x-text="hoverLabel()"></span>
+                                </div>
 
                                 {{-- draft rectangle / pending composer pin (dashed key, like the page) --}}
                                 <div class="pointer-events-none absolute z-[15] rounded-md border-2 border-dashed border-key bg-key/15"
@@ -155,10 +165,21 @@
                         <p class="mt-1.5 text-sm leading-relaxed text-zinc-700" x-text="activeFinding && activeFinding.body"></p>
                     </div>
 
-                    <p class="mt-2 text-center text-xs text-muted-foreground" x-text="isPending ? 'Drag to mark a region, or click for a point.' : 'Click a numbered mark to read it.'"></p>
+                    <div class="mt-2 flex items-center justify-center gap-2">
+                        <p class="text-center text-xs text-muted-foreground"
+                            x-text="!isPending ? 'Click a numbered mark to read it.' : (canSnap() ? 'Click a part of the page to mark it, or drag a region. Arrow keys move between parts.' : 'Drag to mark a region, or click for a point.')"></p>
+                        <button type="button" class="inline-flex size-7 shrink-0 items-center justify-center rounded-md transition hover:bg-chip"
+                            x-show="isPending && snapIndex" :class="snap ? 'text-key' : 'text-zinc-400 hover:text-zinc-600'"
+                            @click="toggleSnap()" :aria-pressed="snap.toString()" aria-label="Snap to page elements"
+                            :title="snap ? 'Snapping to page elements · E' : 'Snap to page elements · E'">
+                            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1ZM5.05 3.05a.75.75 0 0 1 1.06 0l1.062 1.06A.75.75 0 1 1 6.11 5.173L5.05 4.11a.75.75 0 0 1 0-1.06Zm9.9 0a.75.75 0 0 1 0 1.06l-1.06 1.062a.75.75 0 0 1-1.062-1.061l1.061-1.06a.75.75 0 0 1 1.06 0ZM3 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 3 8Zm11 0a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 14 8Zm-6.828 2.828a.75.75 0 0 1 0 1.061L6.11 12.95a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0Zm3.594-3.317a.75.75 0 0 0-1.37.364l-.492 6.861a.75.75 0 0 0 1.204.65l1.043-.799.985 3.678a.75.75 0 0 0 1.45-.388l-.978-3.646 1.292.204a.75.75 0 0 0 .74-1.16l-3.874-5.764Z" clip-rule="evenodd"/></svg>
+                        </button>
+                    </div>
 
                     {{-- mark composer --}}
-                    <div class="mt-3 rounded-2xl bg-card px-3 py-3 sm:px-4" x-show="composer.open" @keydown.escape="closeComposer()">
+                    <div class="mt-3 rounded-2xl bg-card px-3 py-3 sm:px-4" x-show="composer.open">
+                        <p class="mb-2 truncate text-xs text-muted-foreground" x-show="composer.label" x-text="'On ' + composer.label"></p>
+                        <p class="mb-2 rounded-lg bg-attention-soft px-2.5 py-1.5 text-xs text-attention-ink" x-show="discardArmed">Press Esc again to discard this note.</p>
                         <div class="flex flex-wrap gap-1.5">
                             <template x-for="sev in severities" :key="sev.value">
                                 <button type="button"
@@ -441,7 +462,14 @@
             decisionNote: '',
             previousOpen: false,
             draft: { drawing: false, x0: 0, y0: 0, x: 0, y: 0, w: 0, h: 0 },
-            composer: { open: false, x: 0, y: 0, area: null, severity: 'must-fix', body: '' },
+            composer: { open: false, x: 0, y: 0, area: null, severity: 'must-fix', body: '', selector: null, label: '' },
+            discardArmed: false,
+            // Element snapping, from get_elements for the active capture.
+            snapIndex: null,
+            snapShotId: null,
+            snap: true,
+            hover: -1,
+            hoverPin: null,
             severities: [
                 { value: 'must-fix', label: 'Must fix' },
                 { value: 'nit', label: 'Nice to have' },
@@ -458,6 +486,8 @@
             ],
 
             init() {
+                try { this.snap = localStorage.getItem('revisemy_snap') !== 'off'; } catch (e) {}
+                window.addEventListener('keydown', (e) => this.onKey(e));
                 window.mcpBridge.ontoolresult = (params) => {
                     const data = params.structuredContent;
                     if (data && data.id) this.apply(data);
@@ -479,6 +509,93 @@
                     const refreshed = this.boardPins().find((p) => p.id === this.activePin.id);
                     this.activePin = refreshed || null;
                 }
+                this.loadElements();
+            },
+
+            async loadElements() {
+                const shot = this.activeShot();
+                if (!shot || !this.isPending || !window.rmElementSnap) return;
+                if (this.snapShotId === shot.id) return;
+                this.snapShotId = shot.id;
+                this.snapIndex = null;
+                this.hover = -1;
+                if (!(shot.meta && shot.meta.element_count > 0)) return;
+                try {
+                    const result = await window.mcpBridge.callTool('get_elements', { review_id: this.payload.id, screenshot_id: shot.id });
+                    const elements = result && result.structuredContent && result.structuredContent.elements;
+                    if (this.snapShotId === shot.id && Array.isArray(elements) && elements.length) {
+                        this.snapIndex = window.rmElementSnap.buildIndex(elements);
+                    }
+                } catch (e) {}
+            },
+            canSnap() { return !!(this.snap && this.snapIndex && this.isPending); },
+            toggleSnap() {
+                this.snap = !this.snap;
+                this.hover = -1;
+                try { localStorage.setItem('revisemy_snap', this.snap ? 'on' : 'off'); } catch (e) {}
+            },
+            hovered() { return this.canSnap() && this.hover >= 0 ? this.snapIndex.elements[this.hover] : null; },
+            hoverStyle() {
+                const el = this.hovered();
+                return el ? this.rectStyle({ x: el.b[0], y: el.b[1], w: el.b[2], h: el.b[3] }) : '';
+            },
+            hoverLabel() { return window.rmElementSnap ? window.rmElementSnap.label(this.hovered()) : ''; },
+            trackHover(e) {
+                if (!this.canSnap() || this.draft.drawing || this.composer.open || e.pointerType === 'touch') return;
+                if (e.target.closest && e.target.closest('button')) return;
+                const p = this.norm(e);
+                if (p) this.hover = window.rmElementSnap.hitTest(this.snapIndex, p.x, p.y);
+            },
+            pickHover() {
+                const el = this.hovered();
+                if (!el) return false;
+                const [x, y, w, h] = el.b;
+                const area = w >= 0.01 && h >= 0.01 ? { x, y, w, h } : null;
+                this.openComposer(x + w / 2, y + h / 2, area, el);
+                return true;
+            },
+            // Same order as the web review: the note first (asking once before
+            // dropping typed text), then a drag, the open mark, the outline.
+            onKey(e) {
+                const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable]');
+                if (e.key === 'Escape') {
+                    if (this.composer.open) {
+                        if (this.composer.body.trim() && !this.discardArmed) {
+                            this.discardArmed = true;
+                            setTimeout(() => this.discardArmed = false, 4000);
+                            return;
+                        }
+                        this.closeComposer();
+                    } else if (this.draft.drawing) {
+                        this.cancelDraw();
+                    } else if (this.activePin || this.activeFinding) {
+                        this.closeDetail();
+                    } else {
+                        this.hover = -1;
+                    }
+                    return;
+                }
+                if (typing || e.metaKey || e.ctrlKey || e.altKey || this.composer.open || !this.snapIndex || this.view !== 'screenshot') return;
+                if (e.key === 'e') { e.preventDefault(); this.toggleSnap(); return; }
+                const directions = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'prev', ArrowRight: 'next' };
+                if (this.canSnap() && this.hover >= 0 && directions[e.key]) {
+                    e.preventDefault();
+                    this.hover = window.rmElementSnap.walk(this.snapIndex, this.hover, directions[e.key]);
+                    this.$nextTick(() => this.$refs.snapOutline && this.$refs.snapOutline.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }));
+                } else if (this.canSnap() && this.hover >= 0 && e.key === 'Enter' && !(e.target.closest && e.target.closest('button, a[href]'))) {
+                    e.preventDefault();
+                    this.pickHover();
+                }
+            },
+            stackStyle(pin) {
+                if (pin.area || !window.rmElementSnap) return '';
+                const pins = (this.activeShot()?.pins || []).filter((p) => !p.area);
+                const offset = window.rmElementSnap.stack(pins)[pin.id] || 0;
+                return offset ? `margin-left:${offset * 20}px;` : '';
+            },
+            elementLabel(pin) {
+                const el = pin && pin.element;
+                return el && el.kind ? window.rmElementSnap.label({ k: el.kind, t: el.text }) : '';
             },
 
             get isPending() { return this.payload && this.payload.status === 'pending'; },
@@ -617,7 +734,7 @@
                 return 'Shot ' + (i + 1);
             },
 
-            setActive(i) { this.activeIndex = i; this.closeComposer(); this.closeDetail(); },
+            setActive(i) { this.activeIndex = i; this.closeComposer(); this.closeDetail(); this.loadElements(); },
             activeShot() { return this.payload ? this.payload.screenshots[this.activeIndex] : null; },
 
             pinStyle(p) {
@@ -700,17 +817,22 @@
                 if (w >= 0.01 && h >= 0.01) {
                     const x = Math.min(p.x, this.draft.x0), y = Math.min(p.y, this.draft.y0);
                     this.openComposer(x + w / 2, y + h / 2, { x, y, w, h });
-                } else {
+                } else if (!this.pickHover()) {
                     this.openComposer(p.x, p.y, null);
                 }
             },
             cancelDraw() { this.draft.drawing = false; },
 
-            openComposer(x, y, area) {
+            openComposer(x, y, area, element = null) {
                 this.closeDetail();
-                this.composer = { open: true, x, y, area, severity: 'must-fix', body: '' };
+                this.discardArmed = false;
+                this.composer = {
+                    open: true, x, y, area, severity: 'must-fix', body: '',
+                    selector: element ? element.s : null,
+                    label: element && window.rmElementSnap ? window.rmElementSnap.label(element) : '',
+                };
             },
-            closeComposer() { this.composer.open = false; this.composer.body = ''; },
+            closeComposer() { this.composer.open = false; this.composer.body = ''; this.discardArmed = false; },
 
             async saveMark() {
                 const shot = this.activeShot();
@@ -723,6 +845,7 @@
                     area: this.composer.area || undefined,
                     severity: this.composer.severity,
                     body: this.composer.body.trim(),
+                    selector: this.composer.selector || undefined,
                 }));
                 // Keep the note on screen if the server refused it, so nothing typed is lost.
                 if (ok) this.closeComposer();
