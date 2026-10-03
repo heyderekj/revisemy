@@ -10,7 +10,7 @@ return [
             'label' => 'Connectors',
             'icon' => 'puzzle-piece',
             'title' => 'Connect ReviseMy to Claude, ChatGPT, Cursor, VS Code, Grok, Muse or Codex',
-            'description' => 'Add ReviseMy to the assistant you already use. Claude and ChatGPT connect by pasting one address and clicking Connect; Cursor and VS Code in one click; Grok, Muse and Codex with a free try token.',
+            'description' => 'Add ReviseMy to the assistant you already use. Claude and ChatGPT connect with one address, Cursor and VS Code in one click, others with a try token.',
             'keywords' => [
                 'MCP connectors',
                 'Claude custom connector',
@@ -34,6 +34,15 @@ return [
             'hosts' => true,
             // Folded in from /mcp-apps and /webhooks (both redirect here).
             'sections' => [
+                [
+                    'id' => 'claude-code-plugin',
+                    'heading' => 'A plugin for Claude Code',
+                    'body' => 'The ReviseMy plugin adds the server and a design-checkup skill in one step, so Claude Code knows when to ask you for a review.',
+                    'items' => [
+                        'In Claude Code, run /plugin marketplace add heyderekj/revisemy, then /plugin install revisemy@revisemy.',
+                        'The first checkup signs you in, the same as Connect.',
+                    ],
+                ],
                 [
                     'id' => 'mcp-apps',
                     'heading' => 'Reviews right in the chat',
@@ -77,7 +86,7 @@ return [
             'icon' => 'light-bulb',
             'mark_icon' => 's',
             'title' => 'Second opinion design hints — checklist and vision that never override your marks',
-            'description' => 'ReviseMy second opinion runs a free design checklist and optional Claude or OpenAI vision on each screenshot. Hints only — human marks stay authoritative and never auto-flip approve or request-changes.',
+            'description' => 'A free design checklist, plus optional Claude or OpenAI vision, on every capture. Hints only — your marks decide, and nothing approves itself.',
             'keywords' => [
                 'AI design critique',
                 'second opinion',
@@ -170,7 +179,7 @@ return [
             'label' => 'Board',
             'icon' => 'queue-list',
             'title' => 'Design review board — track marks from open to verified',
-            'description' => 'ReviseMy’s owner board tracks every mark open → in progress → resolved → verified. Agents attach before/after evidence; only humans verify. Multi-pass reviews stay scannable across shots.',
+            'description' => 'Track every mark from open to verified. Your agent attaches before and after shots as it fixes; only you verify. Each pass stays easy to scan.',
             'keywords' => [
                 'design review board',
                 'mark status board',
@@ -267,7 +276,7 @@ return [
             'icon' => 'link',
             'mark_icon' => 'g',
             'title' => 'Guest links — another set of eyes, no accounts',
-            'description' => 'Share a private guest link when you want another set of eyes — no accounts. Guests leave G# suggestions; your M# marks stay authoritative. Set expiry to 7 days, 14 days, never, or a custom date.',
+            'description' => 'Share a private guest link for another set of eyes — no accounts. Guests suggest, your marks decide. Links expire in 7 days, 14, never or on a date.',
             'keywords' => [
                 'guest design review link',
                 'guest share link',

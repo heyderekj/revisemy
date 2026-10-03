@@ -119,9 +119,32 @@ PHP;
             return self::FAILURE;
         }
 
+        // The registry listing and the Claude plugin carry the version too.
+        foreach (['server.json', 'plugin/.claude-plugin/plugin.json'] as $manifest) {
+            $this->bumpManifest(base_path($manifest), $current, $next);
+        }
+
         $this->info("Bumped {$current} → {$next}");
         $this->line('Fill highlights in config/changelog.php, then commit and tag.');
 
         return self::SUCCESS;
+    }
+
+    /** Rewrites a manifest's "version": "x.y.z" line, leaving the rest of the file as written. */
+    protected function bumpManifest(string $path, string $current, string $next): void
+    {
+        $contents = is_file($path) ? file_get_contents($path) : false;
+
+        if ($contents === false) {
+            return;
+        }
+
+        $updated = preg_replace('/"version":\s*"'.preg_quote($current, '/').'"/', '"version": "'.$next.'"', $contents, 1, $count);
+
+        if ($count === 1 && $updated !== null) {
+            file_put_contents($path, $updated);
+        } else {
+            $this->warn('Left '.basename($path).' alone: its version isn’t '.$current.'.');
+        }
     }
 }

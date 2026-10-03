@@ -1,0 +1,13 @@
+{
+  "name": "revisemy",
+  "description": "Visual feedback for your agent: it sends a review, you mark what matters, it fixes the next pass.",
+  "version": "1.4.0",
+  "author": {
+    "name": "Testament Made, LLC",
+    "url": "https://revisemy.com"
+  },
+  "homepage": "https://revisemy.com",
+  "repository": "https://github.com/heyderekj/revisemy",
+  "license": "LicenseRef-OSaaSy",
+  "keywords": ["design-review", "visual-feedback", "mcp", "ui", "human-in-the-loop"]
+}

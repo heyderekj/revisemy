@@ -85,6 +85,10 @@ Route::get('/alternatives/{slug}', [AlternativeController::class, 'show'])
     ->where('slug', '[a-z0-9-]+');
 
 Route::get('/llms.txt', [SeoController::class, 'llms']);
+Route::get('/llms-full.txt', [SeoController::class, 'llmsFull']);
+Route::get('/.well-known/mcp/server-card.json', [SeoController::class, 'serverCard']);
+Route::get('/.well-known/mcp.json', [SeoController::class, 'serverCard']);
+Route::get('/{path}.md', [SeoController::class, 'markdown'])->where('path', 'index|[a-z0-9-]+(/[a-z0-9-]+)?');
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 

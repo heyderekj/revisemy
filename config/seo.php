@@ -46,7 +46,6 @@ return [
 
     'features' => [
         'Rectangle and point marks on screenshots with must-fix, nice to have, question, and keep intents',
-        'Laravel MCP tools: create_review, get_review, list_reviews, add_screenshot, add_findings, request_second_opinion',
         'Review types for UI, websites, slides, and email with tailored checklists',
         'Server-side capture from live URLs, PDF slides, and raw HTML',
         'Second opinion hints from a design checklist with optional vision models',

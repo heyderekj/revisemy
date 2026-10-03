@@ -187,7 +187,7 @@ new class extends Component
                 <span class="min-w-0">
                     <span class="block truncate text-sm font-medium text-zinc-900">{{ $host['name'] }}</span>
                     <span class="block truncate text-xs text-muted-foreground">
-                        {{ match ($host['mode']) { 'oauth' => 'Paste and Connect', 'deeplink' => 'One click', default => 'With a try token' } }}
+                        {{ \App\Support\Hosts::modeLabel($host['mode']) }}
                     </span>
                 </span>
             </button>
