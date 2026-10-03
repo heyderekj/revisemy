@@ -67,6 +67,32 @@ class ScreenshotStorage
     }
 
     /**
+     * Keep a capture's element map (selector, kind, text, box per visible
+     * element) next to its image and point the screenshot's meta at it.
+     * Best-effort: a failed write never blocks the review.
+     *
+     * @param  array<string, mixed>  $elements
+     */
+    public function storeElements(Screenshot $shot, array $elements): void
+    {
+        $path = preg_replace('/\.[a-z]+$/', '', $shot->path).'.elements.json';
+
+        try {
+            Storage::disk($shot->disk)->put($path, json_encode($elements, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return;
+        }
+
+        $shot->update(['meta' => [
+            ...($shot->meta ?? []),
+            'elements_path' => $path,
+            'element_count' => count((array) ($elements['elements'] ?? [])),
+        ]]);
+    }
+
+    /**
      * @param  array<string, mixed>|null  $meta
      */
     protected function persist(Review $review, string $binary, string $extension, int $sortOrder, string $kind, ?array $meta = null): Screenshot

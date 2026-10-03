@@ -50,22 +50,36 @@ class DocumentIngestionService
         try {
             $probe = new \Imagick;
             $probe->pingImageBlob($binary);
-            $pages = min($probe->getNumberImages(), self::MAX_PAGES);
+            $total = $probe->getNumberImages();
+            $pages = min($total, self::MAX_PAGES);
             $probe->clear();
 
             $shots = [];
 
             for ($page = 0; $page < $pages; $page++) {
                 $imagick = new \Imagick;
+                // Before the read: render at the slide's visible (crop) box,
+                // with anti-aliased text and graphics, as a viewer shows it.
                 $imagick->setResolution(150, 150);
+                $imagick->setOption('pdf:use-cropbox', 'true');
+                $imagick->setOption('pdf:use-trimbox', 'false');
+                $imagick->setOption('dither', 'false');
                 $imagick->readImageBlob($binary."[{$page}]");
+
+                // Print-ready decks are often CMYK; browsers show sRGB, and
+                // a CMYK PNG renders with shifted colours.
+                if ($imagick->getImageColorspace() === \Imagick::COLORSPACE_CMYK) {
+                    $imagick->transformImageColorspace(\Imagick::COLORSPACE_SRGB);
+                }
+
                 $imagick->setImageBackgroundColor('white');
                 $imagick = $imagick->flattenImages();
                 $imagick->setImageFormat('png');
 
                 $shots[] = [
                     'binary' => $imagick->getImageBlob(),
-                    'meta' => ['origin' => 'pdf', 'page' => $page + 1],
+                    'meta' => ['origin' => 'pdf', 'page' => $page + 1, 'total_pages' => $total]
+                        + ($total > $pages ? ['truncated' => true] : []),
                 ];
 
                 $imagick->clear();

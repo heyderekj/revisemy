@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -99,6 +100,30 @@ class Screenshot extends Model
         }
 
         return now()->addDays(7);
+    }
+
+    /**
+     * Element map recorded at capture time: {docWidth, docHeight, viewport,
+     * elements: list<{selector, tag, kind, text, src, box: {x, y, w, h}}>},
+     * boxes in CSS px from the top of the document. Null when not captured.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function elementMap(): ?array
+    {
+        $path = $this->meta['elements_path'] ?? null;
+
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        try {
+            $map = json_decode((string) Storage::disk($this->disk)->get($path), true);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return is_array($map) ? $map : null;
     }
 
     /**

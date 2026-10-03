@@ -87,6 +87,8 @@ class McpCreateReviewTest extends TestCase
         $user = $this->setUpUser();
 
         Http::fake([
+            // A host without Browserless /function: shots via /screenshot.
+            'capture.test/function*' => Http::response('Not Found', 404),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
 
@@ -98,15 +100,17 @@ class McpCreateReviewTest extends TestCase
             fn ($json) => $json
                 ->where('type', 'website')
                 ->where('page_url', 'https://example.com')
-                ->has('screenshots', 2)
+                ->has('screenshots', 3)
                 ->where('screenshots.0.meta.viewport', 'desktop-1280')
                 ->where('screenshots.1.meta.viewport', 'mobile-375')
+                ->where('screenshots.2.meta.viewport', 'tablet-768')
                 ->where('screenshots.0.meta.origin', 'capture')
                 ->etc()
         );
 
         Queue::assertNothingPushed();
-        Http::assertSentCount(2);
+        // One /function probe, then /screenshot per viewport.
+        Http::assertSentCount(4);
     }
 
     public function test_create_review_html_source_renders_an_email_review(): void
@@ -114,6 +118,8 @@ class McpCreateReviewTest extends TestCase
         $user = $this->setUpUser();
 
         Http::fake([
+            // A host without Browserless /function: shots via /screenshot.
+            'capture.test/function*' => Http::response('Not Found', 404),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
 
@@ -197,6 +203,8 @@ class McpCreateReviewTest extends TestCase
         $user = $this->setUpUser();
 
         Http::fake([
+            // A host without Browserless /function: shots via /screenshot.
+            'capture.test/function*' => Http::response('Not Found', 404),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
 
@@ -219,7 +227,7 @@ class McpCreateReviewTest extends TestCase
             fn ($json) => $json
                 ->where('pass', 2)
                 ->where('page_url', 'https://example.com/pricing')
-                ->has('screenshots', 2)
+                ->has('screenshots', 3)
                 ->etc()
         );
     }
@@ -257,6 +265,7 @@ class McpCreateReviewTest extends TestCase
         config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
 
         Http::fake([
+            'capture.test/function*' => Http::response('Not Found', 404),
             'capture.test/content*' => Http::response('<html><body><h1>Hero headline</h1></body></html>'),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
@@ -280,6 +289,7 @@ class McpCreateReviewTest extends TestCase
         config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
 
         Http::fake([
+            'capture.test/function*' => Http::response('Not Found', 404),
             'capture.test/content*' => Http::response('nope', 500),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
@@ -300,6 +310,8 @@ class McpCreateReviewTest extends TestCase
         $user = $this->setUpUser();
 
         Http::fake([
+            // A host without Browserless /function: shots via /screenshot.
+            'capture.test/function*' => Http::response('Not Found', 404),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
 
