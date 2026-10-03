@@ -142,6 +142,14 @@ class McpOAuthTest extends TestCase
         $this->assertAuthenticatedAs($try['user']);
     }
 
+    public function test_connecting_remembers_the_browser_for_later_visits(): void
+    {
+        $client = $this->register();
+        $this->authorize($client);
+
+        $this->post('/connect')->assertCookie(auth('web')->getRecallerName());
+    }
+
     public function test_a_bad_try_token_says_so_and_makes_nothing(): void
     {
         $client = $this->register();

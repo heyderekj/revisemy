@@ -14,7 +14,7 @@
         'More' => [
             ['/connectors', 'Connectors'],
             ['/guest-links', 'Guest links'],
-            ['/reviews', 'Recent reviews'],
+            ['/reviews', 'Your reviews'],
             ['/alternatives', 'Alternatives'],
             ['https://github.com/heyderekj/revisemy', 'GitHub ↗'],
         ],

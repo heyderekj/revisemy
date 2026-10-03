@@ -38,7 +38,7 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Mark focus crop | `MarkFocus` → pin `focus_preview` in `Review::markToArray()` |
 | Control height | Web Flux `size="sm"` (`h-8`) |
 
-**Intentionally web-only:** comment threads (inline shows `comment_count` + “View comments” → `board_url` / `review_url`), share/guest link management, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.
+**Intentionally web-only:** comment threads (inline shows `comment_count` + “View comments” → `board_url` / `review_url`), share/guest link management, the “Your reviews” link in the header, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.
 
 The three app tools are marked `Visibility::App`, so the model does not see them in its tool list. Note this is **hiding, not authorization**: any holder of the Sanctum token can still invoke them by name over the same endpoint. That matches ReviseMy's existing trust model — the token owner *is* the human, exactly as the token-gated `/r/{token}` owner link already assumes. Their descriptions say "human-in-the-loop UI only — agents must never call this," mirroring the "never verify a mark yourself" instruction agents already follow.
 
