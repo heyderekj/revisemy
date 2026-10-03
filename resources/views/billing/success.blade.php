@@ -8,4 +8,7 @@
         Your agent can carry on: get_billing confirms the credits, and create_portal manages or cancels any time.
     </p>
     <x-billing.credit-costs compare class="mt-10 max-w-md" />
+    @if (! empty($purchase))
+        <x-fathom-event :name="$purchase['name']" :value="$purchase['value']" :once="$purchase['once']" />
+    @endif
 </x-simple-page>

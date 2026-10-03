@@ -4,4 +4,6 @@
         If it keeps happening, the person who runs this ReviseMy server needs to look at its billing setup.
     </p>
     <a href="/" class="link mt-8 inline-block text-sm">Back to ReviseMy</a>
+    {{-- A buyer who hit a broken checkout: worth seeing on the dashboard, not only in the log. --}}
+    <x-fathom-event name="Checkout unavailable" />
 </x-simple-page>

@@ -278,7 +278,7 @@ new class extends Component
                 $freeRenews = (bool) config('billing.plans.free.renews', true);
                 $pack = collect(config('billing.packs', []))->first();
             @endphp
-            <x-home-section id="pricing">
+            <x-home-section id="pricing" x-data x-intersect.once.threshold.25="window.fathom && fathom.trackEvent('Pricing viewed')">
                 <x-section-eyebrow number="04" :label="$pricingEnabled ? 'Pricing' : 'Credits'" />
                 @if ($pricingEnabled)
                     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
@@ -301,7 +301,7 @@ new class extends Component
 
                     <div @class([
                         'grid grid-cols-1 gap-3',
-                        'min-[30rem]:grid-cols-2 lg:grid-cols-3' => $pricingEnabled,
+                        'min-[30rem]:grid-cols-2' => $pricingEnabled,
                     ])>
                         <article class="rounded-2xl bg-card p-7 sm:p-8">
                             <p class="text-sm font-medium text-muted-foreground">Try</p>
@@ -328,6 +328,7 @@ new class extends Component
                                         variant="ghost"
                                         size="sm"
                                         class="btn-quiet !rounded-full"
+                                        onclick="if(window.fathom)fathom.trackEvent('Pricing credit costs')"
                                     >
                                         Credit costs
                                     </flux:button>
@@ -357,6 +358,7 @@ new class extends Component
                                             size="sm"
                                             href="#setup"
                                             class="btn-quiet !rounded-full"
+                                            onclick="if(window.fathom)fathom.trackEvent('Pricing plus cta')"
                                         >
                                             Upgrade via your agent
                                         </flux:button>
@@ -370,16 +372,16 @@ new class extends Component
                             </article>
 
                             @if ($pack)
-                                {{-- An add-on, not a plan: a slim row when it spans the two-column grid. --}}
-                                <article class="rounded-2xl bg-card p-7 sm:p-8 min-[30rem]:col-span-2 min-[30rem]:py-6 lg:col-span-1 lg:py-8">
-                                    <div class="min-[30rem]:flex min-[30rem]:items-center min-[30rem]:gap-8 lg:block">
+                                {{-- An add-on, not a plan: always a slim row under Try and Plus, which stay two columns. --}}
+                                <article class="rounded-2xl bg-card p-7 sm:p-8 min-[30rem]:col-span-2 min-[30rem]:py-6">
+                                    <div class="min-[30rem]:flex min-[30rem]:items-center min-[30rem]:gap-8">
                                         <div class="shrink-0">
                                             <p class="text-sm font-medium text-muted-foreground">Credit pack</p>
-                                            <p class="mt-1 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900 lg:mt-3">
+                                            <p class="mt-1 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
                                                 ${{ (int) $pack['price_usd'] }}<span class="text-lg font-medium text-zinc-500"> once</span>
                                             </p>
                                         </div>
-                                        <div class="mt-3 min-[30rem]:mt-0 lg:mt-2">
+                                        <div class="mt-3 min-[30rem]:mt-0">
                                             <p class="text-[15px] leading-relaxed text-pretty text-zinc-600">
                                                 {{ (int) $pack['credits'] }} extra credits that never expire. Works on Try or Plus, used after your monthly credits. No subscription.
                                             </p>
