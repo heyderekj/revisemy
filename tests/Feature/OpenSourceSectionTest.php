@@ -14,7 +14,7 @@ class OpenSourceSectionTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('1,234')
-            ->assertSee('stars on GitHub');
+            ->assertSee('stars so far');
     }
 
     public function test_the_page_leaves_the_count_off_when_github_is_unreachable(): void
@@ -23,7 +23,7 @@ class OpenSourceSectionTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('github.com/heyderekj/revisemy')
-            ->assertDontSee('stars on GitHub');
+            ->assertSee('Star on GitHub')
+            ->assertDontSee('stars so far');
     }
 }
