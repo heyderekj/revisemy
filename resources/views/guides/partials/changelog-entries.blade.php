@@ -35,7 +35,7 @@
                             <li>
                                 <a
                                     href="{{ $link['href'] }}"
-                                    class="font-medium text-rose-600 underline decoration-rose-600/30 underline-offset-2 transition hover:text-rose-700"
+                                    class="link"
                                 >{{ $link['label'] }}</a>
                             </li>
                         @endforeach

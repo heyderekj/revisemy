@@ -84,13 +84,13 @@ class TryTokenRateLimitTest extends TestCase
         $this->postJson('/api/try-token')->assertCreated();
         $this->postJson('/api/try-token')->assertCreated();
 
-        Livewire::test('home')
-            ->call('getTryToken')
+        Livewire::test('connect-hub')
+            ->call('mintToken')
             ->assertSet('error', null)
             ->assertNotSet('token', null);
 
-        Livewire::test('home')
-            ->call('getTryToken')
+        Livewire::test('connect-hub')
+            ->call('mintToken')
             ->assertSet('error', TryTokenGate::MESSAGE);
     }
 

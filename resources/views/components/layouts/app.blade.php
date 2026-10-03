@@ -10,10 +10,13 @@
 ])
 
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{-- Light or dark before first paint: the visitor's choice, else the system's. --}}
+    @fluxAppearance
 
     <x-seo-head
         :title="$title"
@@ -31,24 +34,10 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ \App\Support\Seo::faviconUrl('/images/favicon-16x16-v9.png') }}">
     <link rel="apple-touch-icon" href="{{ \App\Support\Seo::faviconUrl('/images/apple-touch-icon-v9.png') }}">
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=caveat:500,600,700|instrument-sans:400,500,600,700|newsreader:400,500,600" rel="stylesheet" />
+    <link rel="preload" href="/fonts/figtree-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/figtree-latin-500.woff2" as="font" type="font/woff2" crossorigin>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
-        :root {
-            color-scheme: light;
-        }
-    </style>
-    <script>
-        window.Flux = {
-            applyAppearance () {
-                document.documentElement.classList.remove('dark')
-                window.localStorage.setItem('flux.appearance', 'light')
-            }
-        }
-        window.Flux.applyAppearance()
-    </script>
 
     @if (config('seo.fathom_site_id'))
         <!-- Fathom - beautiful, simple website analytics -->
@@ -73,7 +62,7 @@
         <!-- / Fathom -->
     @endif
 </head>
-<body class="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] antialiased">
+<body class="min-h-screen bg-background text-foreground antialiased">
     {{ $slot }}
 
     @fluxScripts

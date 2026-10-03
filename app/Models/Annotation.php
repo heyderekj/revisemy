@@ -225,59 +225,93 @@ class Annotation extends Model
                 'droppable' => true,
                 'empty' => 'Drop to reopen',
                 'icon' => 'flag',
-                'icon_bg' => 'bg-zinc-100',
-                'icon_class' => 'text-zinc-600',
+                'icon_bg' => 'bg-chip',
+                'icon_class' => 'text-muted-foreground',
             ],
             self::STATUS_IN_PROGRESS => [
                 'owner' => 'Agent',
                 'droppable' => false,
                 'empty' => 'Agent starts fixes here',
                 'icon' => 'cpu-chip',
-                'icon_bg' => 'bg-zinc-100',
-                'icon_class' => 'text-zinc-600',
+                'icon_bg' => 'bg-chip',
+                'icon_class' => 'text-muted-foreground',
             ],
             self::STATUS_RESOLVED => [
                 'owner' => 'You or agent',
                 'droppable' => true,
                 'empty' => 'Drop to mark resolved',
                 'icon' => 'check-circle',
-                'icon_bg' => 'bg-zinc-100',
-                'icon_class' => 'text-zinc-600',
+                'icon_bg' => 'bg-chip',
+                'icon_class' => 'text-muted-foreground',
             ],
             self::STATUS_VERIFIED => [
                 'owner' => 'You',
                 'droppable' => true,
                 'empty' => 'Drop to verify',
                 'icon' => 'shield-check',
-                'icon_bg' => 'bg-zinc-100',
-                'icon_class' => 'text-zinc-600',
+                'icon_bg' => 'bg-chip',
+                'icon_class' => 'text-muted-foreground',
             ],
         ];
     }
 
     /**
-     * Tailwind classes for the small status badge in the sidebar and board.
+     * Koati's tag idiom: a soft wash with a solid dot, squarer than anything
+     * you can press, never bordered. Three signals say a state — attention
+     * (needs you), problem, done — and sky is the agent at work. Literal
+     * strings so Tailwind's scan of app/ finds every class.
+     *
+     * The inline MCP review reads this same map (`TONES` in review-app), so
+     * the two can't disagree about what colour a status is.
+     *
+     * @var array<string, array{tag: string, dot: string}>
+     */
+    public const TONES = [
+        'neutral' => ['tag' => 'bg-chip text-zinc-700', 'dot' => 'bg-zinc-400'],
+        'agent' => ['tag' => 'bg-sky-50 text-sky-800', 'dot' => 'bg-sky-500'],
+        'attention' => ['tag' => 'bg-attention-soft text-attention-ink', 'dot' => 'bg-attention'],
+        'problem' => ['tag' => 'bg-problem-soft text-problem-ink', 'dot' => 'bg-problem'],
+        'done' => ['tag' => 'bg-done-soft text-done-ink', 'dot' => 'bg-done'],
+    ];
+
+    /**
+     * Which tone each status wears: resolved waits on you, verified is done.
+     *
+     * @return array<string, string>
+     */
+    public static function statusTones(): array
+    {
+        return [
+            self::STATUS_OPEN => 'neutral',
+            self::STATUS_IN_PROGRESS => 'agent',
+            self::STATUS_RESOLVED => 'attention',
+            self::STATUS_VERIFIED => 'done',
+        ];
+    }
+
+    public function statusTone(): string
+    {
+        return self::statusTones()[$this->status] ?? 'neutral';
+    }
+
+    /**
+     * Tailwind classes for the small status tag in the sidebar and board.
      */
     public function statusBadgeClass(): string
     {
-        return match ($this->status) {
-            self::STATUS_IN_PROGRESS => 'bg-sky-100 text-sky-800',
-            self::STATUS_RESOLVED => 'bg-amber-100 text-amber-800',
-            self::STATUS_VERIFIED => 'bg-emerald-100 text-emerald-800',
-            default => 'bg-zinc-100 text-zinc-600',
-        };
+        return self::TONES[$this->statusTone()]['tag'];
     }
 
     /**
      * Tailwind classes for the numbered mark marker.
      *
-     * Your own marks carry the accent yellow, which is why the ink foreground ships
-     * with the fill — white on yellow is unreadable. Guest marks are styled gray at
-     * the call site so the two never compete.
+     * Your own marks carry the key yellow with dark ink on it in both themes —
+     * white on yellow is unreadable. Guest marks are styled gray at the call
+     * site so the two never compete.
      */
     public function markerClass(): string
     {
-        return 'bg-accent text-ink';
+        return 'bg-accent text-accent-foreground';
     }
 
     /**
@@ -285,7 +319,7 @@ class Annotation extends Model
      */
     public static function accentClass(string $severity): string
     {
-        return 'accent-[#ffc53d]';
+        return 'accent-[var(--key)]';
     }
 
     protected $fillable = [

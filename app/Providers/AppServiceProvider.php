@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\OAuthClient;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Assistants that connect by signing in (routes/ai.php). The consent
+        // page is ReviseMy's own, and the first Connect skips it entirely.
+        Passport::useClientModel(OAuthClient::class);
+        Passport::authorizationView('oauth.authorize');
+        // An hour, then a refresh: a stolen token is a short-lived one, and
+        // every client that can do OAuth refreshes without asking again.
+        Passport::tokensExpireIn(now()->addHour());
+        Passport::refreshTokensExpireIn(now()->addDays(60));
     }
 }

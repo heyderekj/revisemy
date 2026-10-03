@@ -18,7 +18,7 @@
     @endif
 
     <div @class([
-        'min-w-0 rounded-xl border border-zinc-200 bg-white p-4',
+        'min-w-0 rounded-xl bg-card p-4',
         'flex-1' => $stepNumber !== null,
     ])>
         <div class="mb-2 flex items-center justify-between gap-2">
@@ -30,7 +30,7 @@
             </p>
             <button
                 type="button"
-                class="shrink-0 text-sm text-rose-600 hover:text-rose-500"
+                class="shrink-0 text-sm text-zinc-900 underline-offset-2 hover:underline"
                 x-data
                 x-on:click="navigator.clipboard.writeText($refs.{{ $ref }}.textContent); $el.textContent='Copied'; setTimeout(() => $el.textContent='Copy', 1600)"
             >Copy</button>

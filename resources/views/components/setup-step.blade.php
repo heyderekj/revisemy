@@ -12,7 +12,7 @@
         {{ $stepNumber }}
     </span>
 
-    <div class="min-w-0 flex-1 space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
+    <div class="min-w-0 flex-1 space-y-3 rounded-xl bg-card p-4">
         @if ($label)
             <p class="text-sm font-medium text-zinc-800">
                 <span class="sr-only">Step {{ $stepNumber }}. </span>

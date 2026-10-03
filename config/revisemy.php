@@ -14,7 +14,14 @@ return [
     |
     */
 
-    'version' => '1.3.0',
+    'version' => '1.4.0',
+
+    /*
+    | Koati, the studio's other product. The footer names it as a sibling and
+    | links it once it has a public address; there's no connection between the
+    | two apps beyond that.
+    */
+    'koati_url' => env('REVISEMY_KOATI_URL'),
 
     /*
     |--------------------------------------------------------------------------

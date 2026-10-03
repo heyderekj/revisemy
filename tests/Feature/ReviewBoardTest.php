@@ -96,7 +96,7 @@ class ReviewBoardTest extends TestCase
             ->assertSee('Comments')
             ->assertSee('Fix the CTA')
             ->assertSee('Bumped contrast to 4.6:1')
-            ->assertSee('View on review');
+            ->assertSee('On the review');
     }
 
     public function test_opening_an_unknown_mark_is_a_noop(): void

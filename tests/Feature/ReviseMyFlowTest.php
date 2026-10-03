@@ -46,15 +46,17 @@ class ReviseMyFlowTest extends TestCase
         $tokenResponse
             ->assertJsonStructure([
                 'token_expires_at',
-                'setup_prompts' => ['chatgpt', 'claude_desktop', 'claude_code', 'copilot', 'cursor', 'grok'],
-                'checkup_prompts' => ['chatgpt', 'cursor'],
+                'connect_url',
+                'setup_prompts' => ['claude', 'chatgpt', 'cursor', 'vscode', 'claude-code', 'grok', 'muse', 'codex'],
+                'checkup_prompts' => ['claude', 'cursor'],
             ]);
         $this->assertNotEmpty($tokenResponse->json('token_expires_at'));
         $this->assertTrue(
             now()->diffInDays(Carbon::parse($tokenResponse->json('token_expires_at')), false) >= 6
         );
-        $this->assertStringContainsString('mcp-remote', (string) data_get($tokenResponse->json(), 'setup_prompts.claude_desktop'));
-        $this->assertStringContainsString('~/.cursor/mcp.json', (string) data_get($tokenResponse->json(), 'setup_prompts.cursor'));
+        // Hosts that need a token get it filled in; nothing teaches mcp-remote any more.
+        $this->assertStringContainsString('export REVISEMY_TOKEN='.$token, (string) data_get($tokenResponse->json(), 'setup_prompts.grok'));
+        $this->assertStringNotContainsString('mcp-remote', (string) json_encode($tokenResponse->json('setup_prompts')));
 
         $reviewResponse = $this->withToken($token)->postJson('/api/reviews', [
             'title' => 'Hero pass',
@@ -355,11 +357,11 @@ class ReviseMyFlowTest extends TestCase
         $guestPage = $this->get('/r/'.$review->share_token)->assertOk();
         $guestPage->assertSee('Share me');
         $guestPage->assertSee('Guest');
-        $guestPage->assertDontSee('wire:click="approve"', false);
+        $guestPage->assertDontSee('rm-decide', false);
         $guestPage->assertDontSee($review->token);
 
         $ownerPage = $this->get('/r/'.$review->token)->assertOk();
-        $ownerPage->assertSee('wire:click="approve"', false);
+        $ownerPage->assertSee('rm-decide', false);
         // Owner header embeds the guest link for the copy-to-share control.
         $ownerPage->assertSee($review->share_token, false);
     }
@@ -418,8 +420,9 @@ class ReviseMyFlowTest extends TestCase
         $review = Review::query()->where('public_id', $id)->firstOrFail();
 
         Livewire::test('review-page', ['token' => $review->share_token])
-            ->assertDontSee('Second opinion')
-            ->assertSee('Guest feedback');
+            ->assertDontSee('Refresh the second opinion')
+            ->assertDontSee('Your agent fixes the marks')
+            ->assertSee('Suggestions');
     }
 
     public function test_guest_pin_with_invalid_name_shows_validation_error(): void
@@ -576,64 +579,47 @@ class ReviseMyFlowTest extends TestCase
         $this->assertSame('Updated title', $review->fresh()->title);
     }
 
-    public function test_home_try_token_includes_agent_setup_prompts(): void
+    public function test_the_connect_hub_mints_a_try_token_for_hosts_that_need_one(): void
     {
-        $component = Livewire::test('home')->call('getTryToken');
+        $component = Livewire::test('connect-hub')
+            ->assertSee('Connect Claude')
+            ->assertSee('Connect Muse')
+            ->call('mintToken')
+            ->assertDispatched('revisemy-try-token');
 
-        $this->assertNotEmpty($component->get('token'));
+        $token = (string) $component->get('token');
+        $this->assertNotEmpty($token);
         $this->assertNotEmpty($component->get('tokenExpiresAt'));
-        $this->assertStringContainsString('~/.cursor/mcp.json', (string) $component->get('setupPromptsJson'));
-        $this->assertStringContainsString('mcp-remote', (string) $component->get('setupPromptsJson'));
+        $component->assertSee('export REVISEMY_TOKEN='.$token, false);
     }
 
-    public function test_home_try_token_setup_can_be_restored_and_cleared(): void
-    {
-        Livewire::test('home')
-            ->call('restoreTryTokenSetup', 'tok_abc', 'https://example.test/mcp', '{}', '{}', '{}', 'claude mcp add', '{"cursor":"setup"}', '{"cursor":"checkup"}', '2030-01-01T00:00:00+00:00')
-            ->assertSet('token', 'tok_abc')
-            ->assertSet('mcpUrl', 'https://example.test/mcp')
-            ->assertSet('setupPromptsJson', '{"cursor":"setup"}')
-            ->assertSet('tokenExpiresAt', '2030-01-01T00:00:00+00:00')
-            ->assertDispatched('revisemy-try-setup-saved')
-            ->call('clearTryTokenSetup')
-            ->assertSet('token', null)
-            ->assertSet('mcpUrl', null)
-            ->assertSet('setupPromptsJson', null)
-            ->assertSet('tokenExpiresAt', null);
-    }
-
-    public function test_home_try_token_restore_backfills_expiry_from_sanctum(): void
+    public function test_the_connect_hub_restores_a_saved_token_and_forgets_it(): void
     {
         $created = app(TryTokenService::class)->create();
 
-        Livewire::test('home')
-            ->call(
-                'restoreTryTokenSetup',
-                $created['token'],
-                $created['mcp_url'],
-                '{}',
-                '{}',
-                '{}',
-                'claude mcp add',
-                '',
-                '',
-                '', // missing from older sessionStorage payloads
-            )
-            ->assertSet('tokenExpiresAt', $created['token_expires_at']);
+        Livewire::test('connect-hub')
+            ->call('restoreToken', $created['token'])
+            ->assertSet('token', $created['token'])
+            ->assertSet('tokenExpiresAt', $created['token_expires_at'])
+            ->call('forgetToken')
+            ->assertSet('token', null)
+            ->assertDispatched('revisemy-try-token', token: null);
+
+        Livewire::test('connect-hub')
+            ->call('restoreToken', 'nope')
+            ->assertSet('token', null);
     }
 
-    public function test_home_try_token_failure_sets_error_instead_of_throwing(): void
+    public function test_the_connect_hub_says_so_when_a_try_cannot_start(): void
     {
         $this->mock(TryTokenService::class, function ($mock) {
-            $mock->shouldReceive('create')
-                ->once()
-                ->andThrow(new \RuntimeException('database missing'));
+            $mock->shouldReceive('create')->once()->andThrow(new \RuntimeException('database missing'));
         });
 
-        Livewire::test('home')
-            ->call('getTryToken')
+        Livewire::test('connect-hub')
+            ->call('mintToken')
             ->assertSet('token', null)
-            ->assertSet('error', 'Could not start a try right now. On Laravel Cloud, attach Postgres and run migrations — SQLite does not persist across deploys.');
+            ->assertSet('error', 'Couldn’t start a try just now. Give it a minute and try again.');
     }
 
     public function test_guest_cannot_perform_owner_actions(): void

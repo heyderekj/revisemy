@@ -16,13 +16,11 @@ class GuidePageTest extends TestCase
             ->assertSee($page['title'], false)
             ->assertSee('The problem', false)
             ->assertSee('How ReviseMy fits', false)
-            ->assertSee('ChatGPT', false)
-            ->assertSee('Cursor', false)
-            ->assertSee('Ask agent', false)
-            ->assertSee('Hosts', false)
-            ->assertSee('Developer → Edit Config', false)
-            ->assertSee('Open Connectors in ChatGPT', false)
-            ->assertSee('Then run a checkup', false);
+            ->assertSee('Connect your assistant', false)
+            ->assertSee('Connect ChatGPT', false)
+            ->assertSee('Connect Muse', false)
+            ->assertSee('Add to Cursor', false)
+            ->assertDontSee('Developer → Edit Config', false);
     }
 
     public function test_second_opinion_page_returns_success(): void
@@ -36,7 +34,7 @@ class GuidePageTest extends TestCase
             ->assertSee('The problem', false)
             ->assertSee('How ReviseMy fits', false)
             ->assertSee('create_review', false)
-            ->assertSee('How it stays non-contradictory', false)
+            ->assertSee('How it stays straight', false)
             ->assertSee('Where the craft lenses come from', false)
             ->assertSee('IIDS', false)
             ->assertSee('Laws of UX', false)
@@ -81,36 +79,15 @@ class GuidePageTest extends TestCase
             ->assertSee('share_token', false);
     }
 
-    public function test_webhooks_page_returns_success(): void
+    public function test_connectors_covers_webhooks_and_inline_review(): void
     {
-        $page = config('guides.pages.webhooks');
-
-        $this->get('/webhooks')
+        $this->get('/connectors')
             ->assertOk()
-            ->assertSee($page['headline'], false)
-            ->assertSee($page['title'], false)
-            ->assertSee('webhook_url', false)
+            ->assertSee('id="webhooks"', false)
             ->assertSee('review.decided', false)
-            ->assertSee('X-ReviseMy-Signature', false);
-    }
-
-    public function test_mcp_apps_page_returns_success(): void
-    {
-        $page = config('guides.pages.mcp-apps');
-
-        $this->get('/mcp-apps')
-            ->assertOk()
-            ->assertSee($page['headline'], false)
-            ->assertSee($page['title'], false)
-            ->assertSee('review_url', false)
-            ->assertSee('add_mark', false)
-            ->assertSee('MCP Apps', false)
-            // Escaped on purpose — Blade renders the apostrophe as &#039;.
-            ->assertSee("Where it's available")
-            ->assertSee('Claude Desktop', false)
-            ->assertSee('Copilot', false)
-            ->assertSee('/for/claude', false)
-            ->assertSee('/for/copilot', false);
+            ->assertSee('X-ReviseMy-Signature', false)
+            ->assertSee('id="mcp-apps"', false)
+            ->assertSee('Reviews right in the chat', false);
     }
 
     public function test_changelog_page_returns_success(): void

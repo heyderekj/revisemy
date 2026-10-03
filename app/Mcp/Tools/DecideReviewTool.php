@@ -15,6 +15,8 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\RendersApp;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 use Laravel\Mcp\Server\Ui\Enums\Visibility;
 
 /**
@@ -26,6 +28,8 @@ use Laravel\Mcp\Server\Ui\Enums\Visibility;
 #[Name('decide_review')]
 #[Description('HUMAN-IN-THE-LOOP UI ONLY — agents must never call this. Records the human approve / request-changes decision from the inline review app.')]
 #[RendersApp(ReviewApp::class, visibility: [Visibility::App])]
+#[IsDestructive(false)]
+#[IsOpenWorld(false)]
 class DecideReviewTool extends Tool
 {
     use ResolvesWorkspace;

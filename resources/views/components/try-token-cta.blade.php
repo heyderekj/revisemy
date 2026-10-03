@@ -1,7 +1,7 @@
 @props([
-    'href' => '/#setup',
+    'href' => '/connect',
     'fathomEvent' => 'Try token',
-    'label' => 'Try with your agent',
+    'label' => 'Connect your agent',
 ])
 
 <flux:button
@@ -9,7 +9,7 @@
     size="sm"
     icon="cursor-arrow-rays"
     href="{{ $href }}"
-    onclick="if(window.fathom)fathom.trackEvent(@js($fathomEvent))"
+    onclick="if(window.fathom)fathom.trackEvent({{ \Illuminate\Support\Js::from($fathomEvent) }})"
     {{ $attributes }}
 >
     {{ $label }}

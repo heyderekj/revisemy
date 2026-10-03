@@ -11,9 +11,13 @@ use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_billing')]
 #[Description('Show this workspace plan, credits remaining, and the burn table (images/pdf=1, html=3, capture_url=5). Try is 20 credits that renew monthly (no rollover); purchased pack credits never expire and are spent last. When credits run out and checkout is available, offer Plus or a credit pack via create_checkout; otherwise wait for the monthly refill.')]
+#[IsReadOnly]
+#[IsOpenWorld(false)]
 class GetBillingTool extends Tool
 {
     use ResolvesWorkspace;
