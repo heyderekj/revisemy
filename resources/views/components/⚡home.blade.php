@@ -51,6 +51,8 @@ new class extends Component
             Your agent captures the work — a screenshot, a page, a PDF or an email — and sends you a review. You mark what matters and approve or ask for changes. It reads your marks and keeps going.
         </p>
 
+        <x-pitch-video class="rm-fade-up-delay mt-6" />
+
         <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
             <x-hero-loop-preview :agents="$heroAgents" />
         </div>
