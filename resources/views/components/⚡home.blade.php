@@ -328,18 +328,22 @@ new class extends Component
     {{-- Closing: open source, drawn as a marked-up review, then the maker. --}}
     <x-home-section id="open-source">
         @php
+            $stars = \App\Support\GitHubStars::count();
             $marks = [
-                ['M1', 'https://osaasy.dev/', 'O’Saasy License', 'Use it, fork it, run your own copy'],
-                ['M2', 'https://github.com/heyderekj/revisemy', 'github.com/heyderekj/revisemy', 'Issues and PRs welcome'],
-                ['M3', 'https://github.com/sponsors/heyderekj', 'Sponsor on GitHub', 'Keeps it going'],
+                ['M1', 'https://osaasy.dev/', 'O’Saasy License', null, 'Use it, fork it, run your own copy'],
+                ['M2', 'https://github.com/heyderekj/revisemy', 'github.com/heyderekj/revisemy', $stars, 'Star it, file an issue, send a PR'],
+                ['M3', 'https://github.com/sponsors/heyderekj', 'Sponsor on GitHub', null, 'Keeps it going'],
             ];
         @endphp
         <x-section-eyebrow number="06" label="Open source" />
         <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built in the open</h2>
+        <p class="mt-4 max-w-xl text-[15px] leading-relaxed text-zinc-600">
+            Agents are getting fast at shipping what we see. ReviseMy keeps a person’s eye in that loop: your marks decide what ships. It’s open source so anyone can read how it works, run their own, and make it better.
+        </p>
 
         <div class="rm-grid mt-6 rounded-2xl bg-card px-5 py-7 sm:px-8 sm:py-9">
             <ul class="space-y-7">
-                @foreach ($marks as [$id, $href, $label, $note])
+                @foreach ($marks as [$id, $href, $label, $count, $note])
                     <li class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                         <a
                             href="{{ $href }}"
@@ -349,6 +353,13 @@ new class extends Component
                         >
                             <span class="absolute -left-2 -top-2.5 flex h-4 min-w-4 items-center justify-center bg-key px-0.5 text-[9px] font-semibold text-accent-contrast" aria-hidden="true">{{ $id }}</span>
                             {{ $label }} <span class="ml-1 text-zinc-500 transition-colors group-hover:text-zinc-900" aria-hidden="true">↗</span>
+                            @if ($count !== null)
+                                <span class="ml-2 inline-flex items-center gap-1 border-l border-key/60 pl-2 text-sm tabular-nums text-zinc-700">
+                                    <flux:icon.star variant="micro" class="size-3.5 text-key" />
+                                    {{ number_format($count) }}
+                                    <span class="sr-only">{{ $count === 1 ? 'star' : 'stars' }} on GitHub</span>
+                                </span>
+                            @endif
                         </a>
                         <span class="flex items-center gap-2 font-mono text-xs text-muted-foreground">
                             <span class="hidden h-px w-8 border-t border-dashed border-border-strong sm:block" aria-hidden="true"></span>
