@@ -373,18 +373,9 @@ new class extends Component
         </div>
 
         <p class="mt-6 max-w-xl text-[15px] leading-relaxed text-zinc-600">
-            Made by <a href="https://heyderekj.com" target="_blank" rel="noreferrer" class="link">Derek</a>
-            — I love giving design feedback. Not to be a dick, but to be a Derek.
+            Made by <a href="https://heyderekj.com" target="_blank" rel="noreferrer" class="link">Derek</a>, who loves giving design feedback.
             Say hi at <a href="mailto:derekj@hey.com" class="link">derekj@hey.com</a>
             or <a href="https://x.com/heyderekj" target="_blank" rel="noreferrer" class="link">@heyderekj</a>.
-        </p>
-        <p class="mt-3 text-sm text-muted-foreground">
-            Also by Derek:
-            <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Harvous ↗</a>
-            <span aria-hidden="true">·</span>
-            <a href="https://dinkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Dinky ↗</a>
-            <span aria-hidden="true">·</span>
-            <a href="https://binkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Binky ↗</a>
         </p>
     </x-home-section>
 </x-site-shell>
