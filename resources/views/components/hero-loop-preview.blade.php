@@ -1,109 +1,45 @@
-{{-- Stylized dual preview: AI chat (inline MCP review) + review page.
-     Decorative only — no photos, no live data. --}}
-<section
-    class="rm-hero-loop relative"
-    aria-label="Preview of ReviseMy in AI chat and on the review page"
->
+{{-- The home hero: a short exchange with your agent on the stage, then the
+     review page it opened, drawn by <x-review-mock> from a fictional sample.
+     The agent's mark uses the headline's rm-agent-cycle classes, so it
+     changes in step with "with ChatGPT / Claude / …" above. --}}
+@props([
+    // Name => x-host-icon name, in the headline's order. Only the icons show.
+    'agents' => ['Claude' => 'claude'],
+])
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {{-- AI chat --}}
-        <div class="rm-hero-loop-panel rounded-2xl bg-card p-4 sm:p-5" aria-hidden="true">
-            <div class="mb-3 flex items-center justify-between gap-2">
-                <span class="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400">Agent chat</span>
-                <span class="text-[11px] text-zinc-400">MCP · inline</span>
+<section class="rm-hero-loop relative" aria-label="Preview of ReviseMy: your agent sends a review, you mark it">
+    <x-review-mock sample="website" animate>
+        <div class="mx-auto mb-6 flex max-w-2xl flex-col gap-4 sm:mb-8" aria-hidden="true">
+            {{-- You --}}
+            <div class="rm-hero-loop-bubble max-w-[85%] self-end rounded-2xl rounded-br-md bg-zinc-900 px-3.5 py-2 text-sm leading-relaxed text-zinc-50 sm:max-w-md">
+                Check the new home page before we ship.
             </div>
 
-            <div class="space-y-3">
-                <div class="rm-hero-loop-bubble max-w-[92%] bg-zinc-100 px-3 py-2 text-[13px] leading-relaxed text-zinc-700">
-                    Run a design checkup on the hero.
-                </div>
-
-                <div class="rm-hero-loop-bubble rm-hero-loop-bubble-delay ml-auto max-w-[94%] space-y-3 bg-zinc-900 px-3 py-2.5 text-[13px] leading-relaxed text-zinc-100">
-                    <p>
-                        Created a review — mark feedback inline, then approve or request changes.
+            {{-- Your agent --}}
+            <div class="rm-hero-loop-bubble rm-hero-loop-bubble-delay flex max-w-[95%] gap-3 self-start sm:max-w-lg">
+                <span class="rm-agent-cycle mt-0.5 size-7 shrink-0 place-items-center rounded-full bg-raised text-zinc-800 shadow-xs ring-1 ring-black/[0.06]">
+                    @foreach (array_values($agents) as $i => $icon)
+                        <span class="rm-agent-cycle-item" style="--i: {{ $i }}"><x-host-icon :name="$icon" size="md" /></span>
+                    @endforeach
+                </span>
+                <div class="min-w-0 space-y-2">
+                    <p class="inline-flex items-center gap-1.5 rounded-md bg-raised/80 px-2 py-1 font-mono text-[11px] text-zinc-500 ring-1 ring-black/[0.05]">
+                        <flux:icon.check variant="micro" class="size-3.5 text-done" />
+                        revisemy · create_review
                     </p>
-
-                    {{-- Inline review card — capture input only; marks live on the review side --}}
-                    <div class="overflow-hidden rounded-2xl bg-card text-zinc-900 ring-1 ring-zinc-700/40">
-                        <div class="relative aspect-[16/10] bg-zinc-100">
-                            <x-hero-wireframe dashed class="inset-3" />
+                    <p class="text-sm leading-relaxed text-zinc-800">Captured fieldnote.coffee on desktop and mobile and opened a review. Mark what matters, and I’ll pick it up from there.</p>
+                    <div class="flex items-center gap-3 rounded-xl bg-raised p-2.5 pr-3 shadow-xs ring-1 ring-black/[0.06]">
+                        <x-revisemy-logo size="sm" />
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-medium text-zinc-900">Fieldnote Coffee home page</p>
+                            <p class="text-xs text-zinc-500">Review · Pass 1<span class="hidden sm:inline"> · waiting on you</span></p>
                         </div>
+                        <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-key px-2.5 py-1 text-xs font-medium text-accent-foreground">
+                            Open <flux:icon.arrow-up-right variant="micro" class="size-3.5" />
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
-
-        {{-- Review page — animates in after agent chat --}}
-        <div class="rm-hero-loop-panel rounded-2xl bg-card p-4 sm:p-5" aria-hidden="true">
-            <div class="rm-hero-loop-review mb-3 flex items-center justify-between gap-2">
-                <span class="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-400">Review page</span>
-                <span class="text-[11px] text-zinc-400">Browser · marks</span>
-            </div>
-
-            <div class="space-y-3">
-                <div class="rm-hero-loop-review rm-hero-loop-review-delay overflow-hidden bg-white ring-1 ring-zinc-200">
-                    <div class="flex items-center justify-between gap-2 border-b border-zinc-200/80 bg-zinc-50/90 px-2.5 py-2">
-                        <div class="flex min-w-0 items-center gap-2">
-                            <img src="{{ \App\Support\BrandAssets::appIconUrl() }}" alt="" width="20" height="20" class="size-5 shrink-0" decoding="async">
-                            <span class="text-[13px] font-semibold tracking-tight text-zinc-900">Review</span>
-                            <span class="bg-white px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-zinc-600 ring-1 ring-zinc-200">Pass 1</span>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-1.5">
-                            <span class="bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 ring-1 ring-zinc-200/80">Share</span>
-                            <span class="bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 ring-1 ring-zinc-200/80">Changes</span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-[minmax(0,1fr)_9.5rem] gap-0 border-b border-zinc-200">
-                        <div class="relative aspect-[4/3] bg-zinc-100 sm:aspect-[16/11]">
-                            <x-hero-wireframe class="inset-3" />
-                            <span class="rm-hero-loop-mark absolute left-[30%] top-[56%] z-[2] flex h-5 min-w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-key px-0.5 text-[9px] font-semibold text-accent-contrast ring-2 ring-white">M1</span>
-                            <span class="rm-hero-loop-mark rm-hero-loop-mark-delay absolute left-[72%] top-[48%] z-[2] flex h-5 min-w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center border border-dashed border-sky-500 bg-white px-0.5 text-[9px] font-semibold text-sky-700 ring-2 ring-white">S1</span>
-                            <div class="pointer-events-none absolute left-[72%] top-[62%] h-8 w-14 -translate-x-1/2 -translate-y-1/2 border border-dashed border-sky-400/70 bg-sky-400/10"></div>
-                        </div>
-
-                        <div class="flex flex-col border-l border-zinc-200 bg-zinc-50/50 p-2">
-                            <p class="mb-1.5 text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-400">My marks</p>
-                            <div class="flex items-start gap-1.5 bg-white p-1.5 ring-1 ring-zinc-200">
-                                <span class="mt-0.5 flex h-4 min-w-4 shrink-0 items-center justify-center bg-key text-[8px] font-semibold text-accent-contrast">M1</span>
-                                <div class="min-w-0">
-                                    <p class="text-[9px] font-semibold uppercase tracking-wide text-zinc-900">Must fix</p>
-                                    <p class="mt-0.5 text-[10px] leading-snug text-zinc-600">Tighten hero hierarchy</p>
-                                </div>
-                            </div>
-                            <p class="mt-2 text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-400">Second opinion</p>
-                            <div class="mt-1 flex items-start gap-1.5 border border-dashed border-sky-200 bg-sky-50/50 p-1.5">
-                                <span class="mt-0.5 flex h-4 min-w-4 shrink-0 items-center justify-center border border-dashed border-sky-500 bg-white text-[8px] font-semibold text-sky-700">S1</span>
-                                <p class="text-[10px] leading-snug text-zinc-500">Hint — not a decision</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-zinc-50/90 px-2.5 py-2 text-[10px] text-zinc-500">
-                        <span class="inline-flex items-center gap-1.5">
-                            <span class="size-2 bg-key"></span>
-                            Your marks
-                        </span>
-                        <span class="inline-flex items-center gap-1.5">
-                            <span class="size-2 border border-dashed border-sky-500 bg-white"></span>
-                            Second opinion
-                        </span>
-                        <span class="ml-auto text-zinc-400">Drag to mark</span>
-                    </div>
-                </div>
-
-                <div class="ml-auto max-w-[94%] space-y-2">
-                    <div class="rm-hero-loop-review rm-hero-loop-review-delay-2 bg-zinc-100 px-3 py-2 text-[13px] leading-relaxed text-zinc-700">
-                        Drag to mark a region, or click for a point.
-                    </div>
-                    <div class="rm-hero-loop-review rm-hero-loop-review-delay-3 bg-zinc-100 px-3 py-2 text-[13px] leading-relaxed text-zinc-700">
-                        Share a guest link for another set of eyes.
-                    </div>
-                    <div class="rm-hero-loop-review rm-hero-loop-review-delay-4 bg-zinc-100 px-3 py-2 text-[13px] leading-relaxed text-zinc-700">
-                        Verify a fix when the next pass looks right.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    </x-review-mock>
 </section>
