@@ -40,12 +40,33 @@ class CaptureIngestionTest extends TestCase
         return $this->postJson('/api/try-token')->json('token');
     }
 
-    public function test_capture_url_renders_mobile_and_desktop_screenshots(): void
+    /**
+     * @return array<string, mixed>
+     */
+    protected function functionResult(?string $html = '<html><body><h1>Hero headline</h1></body></html>'): array
+    {
+        return [
+            'image' => base64_encode($this->tinyPngBinary()),
+            'elements' => [
+                'docWidth' => 1280,
+                'docHeight' => 2400,
+                'viewport' => ['width' => 1280, 'height' => 800],
+                'elements' => [
+                    ['selector' => '#hero > h1', 'tag' => 'h1', 'kind' => 'Heading', 'text' => 'Hero headline', 'src' => null, 'box' => ['x' => 40, 'y' => 120, 'w' => 600, 'h' => 64]],
+                ],
+            ],
+            'html' => $html,
+            'stable' => true,
+        ];
+    }
+
+    public function test_capture_url_settles_each_viewport_in_one_page_session(): void
     {
         $token = $this->setUpEnv();
 
         Http::fake([
-            'capture.test/*' => Http::response($this->tinyPngBinary()),
+            'capture.test/function*' => Http::response($this->functionResult()),
+            'capture.test/*' => Http::response('unexpected', 500),
         ]);
 
         $response = $this->withToken($token)->postJson('/api/reviews', [
@@ -57,29 +78,126 @@ class CaptureIngestionTest extends TestCase
         $response->assertJsonPath('type', 'website');
 
         $shots = $response->json('screenshots');
-        $this->assertCount(2, $shots);
+        $this->assertCount(3, $shots);
         $this->assertSame('desktop-1280', $shots[0]['meta']['viewport']);
         $this->assertSame('mobile-375', $shots[1]['meta']['viewport']);
+        $this->assertSame('tablet-768', $shots[2]['meta']['viewport']);
         $this->assertSame('capture', $shots[0]['meta']['origin']);
+        $this->assertSame('same_load', $shots[0]['meta']['elements_source']);
+        $this->assertTrue($shots[0]['meta']['settled']);
 
         Queue::assertNothingPushed();
-        Http::assertSentCount(2);
+        // One request per viewport; the DOM rides along, no separate /content.
+        Http::assertSentCount(3);
+
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+            $context = $body['context'] ?? [];
+            $settle = (string) ($context['settle'] ?? '');
+
+            return str_contains($request->url(), 'capture.test/function?token=cap-key&timeout=')
+                && str_contains((string) ($body['code'] ?? ''), 'page.screenshot')
+                && ($context['url'] ?? null) === 'https://example.com'
+                && ($context['viewport']['width'] ?? null) === 1280
+                && ($context['viewport']['deviceScaleFactor'] ?? null) === 1
+                && ($context['viewport']['isMobile'] ?? null) === false
+                && array_key_exists('userAgent', $context) && $context['userAgent'] === null
+                && ($context['fullPage'] ?? null) === true
+                && ($context['withHtml'] ?? null) === true
+                && ($context['waitMs'] ?? null) === (int) config('revisemy.capture.wait_ms')
+                && ($context['waitUntil'] ?? null) === (string) config('revisemy.capture.wait_until', 'networkidle2')
+                && str_contains($settle, '__rmSettleDone')
+                && str_contains($settle, 'getAnimations')
+                && str_contains($settle, '"sweep":true')
+                && str_contains($settle, '"freeze":true')
+                && str_contains($settle, '"hideConsent":true')
+                && str_contains($settle, '"collectElements":true');
+        });
+
+        // The phone renders as a phone: touch, isMobile, mobile UA, 2×.
+        Http::assertSent(function ($request) {
+            $context = $request->data()['context'] ?? [];
+
+            return ($context['viewport']['width'] ?? null) === 375
+                && ($context['viewport']['deviceScaleFactor'] ?? null) === 2
+                && ($context['viewport']['isMobile'] ?? null) === true
+                && ($context['viewport']['hasTouch'] ?? null) === true
+                && str_contains((string) ($context['userAgent'] ?? ''), 'iPhone')
+                && ($context['withHtml'] ?? null) === false;
+        });
+
+        $review = Review::query()->firstOrFail();
+        $this->assertStringContainsString('Hero headline', (string) $review->domHtml());
+
+        $desktop = $review->screenshots()->orderBy('sort_order')->firstOrFail();
+        $this->assertSame(1, $desktop->meta['element_count']);
+        Storage::disk('public')->assertExists($desktop->meta['elements_path']);
+        $this->assertSame('#hero > h1', $desktop->elementMap()['elements'][0]['selector']);
+    }
+
+    public function test_capture_url_falls_back_to_screenshot_when_function_is_missing(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake([
+            'capture.test/function*' => Http::response('Not Found', 404),
+            'capture.test/*' => Http::response($this->tinyPngBinary()),
+        ]);
+
+        $response = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $this->assertCount(3, $response->json('screenshots'));
+        // One /function probe, then /screenshot per viewport.
+        Http::assertSentCount(4);
 
         Http::assertSent(function ($request) {
             $body = $request->data();
             $viewport = $body['viewport'] ?? [];
             $goto = $body['gotoOptions'] ?? [];
             $options = $body['options'] ?? [];
-            $waitForFunction = $body['waitForFunction'] ?? null;
-            $fn = is_array($waitForFunction) ? (string) ($waitForFunction['fn'] ?? '') : '';
+            $fn = (string) ($body['waitForFunction']['fn'] ?? '');
 
-            return ($viewport['deviceScaleFactor'] ?? null) === 1
+            return str_contains($request->url(), '/screenshot')
+                && ($viewport['deviceScaleFactor'] ?? null) === 1
+                && ! array_key_exists('isMobile', $viewport)
                 && ($options['fullPage'] ?? null) === true
-                && ($body['waitForTimeout'] ?? null) === (int) config('revisemy.capture.wait_ms', 2500)
+                && ($body['waitForTimeout'] ?? null) === (int) config('revisemy.capture.wait_ms')
                 && ($goto['waitUntil'] ?? null) === (string) config('revisemy.capture.wait_until', 'networkidle2')
-                && str_contains($fn, '__rmScrollRevealDone')
-                && str_contains($fn, 'scrollTo');
+                && str_contains($fn, '__rmSettleDone')
+                && str_contains($fn, 'getAnimations')
+                && str_contains($fn, '"sweep":true')
+                && ($body['waitForFunction']['timeout'] ?? 0) > 45_000;
         });
+
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+
+            return str_contains($request->url(), '/screenshot')
+                && ($body['viewport']['width'] ?? null) === 375
+                && ($body['viewport']['isMobile'] ?? null) === true
+                && ($body['viewport']['deviceScaleFactor'] ?? null) === 2
+                && str_contains((string) ($body['userAgent'] ?? ''), 'iPhone');
+        });
+    }
+
+    public function test_freezing_animations_can_be_turned_off(): void
+    {
+        $token = $this->setUpEnv();
+        config(['revisemy.capture.freeze_animations' => false]);
+
+        Http::fake(['capture.test/function*' => Http::response($this->functionResult())]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        Http::assertSent(fn ($request) => str_contains((string) ($request->data()['context']['settle'] ?? ''), '"freeze":false'));
     }
 
     public function test_html_source_renders_an_email_review(): void
@@ -99,12 +217,18 @@ class CaptureIngestionTest extends TestCase
         $this->assertCount(1, $response->json('screenshots'));
         $this->assertSame('html', $response->json('screenshots.0.meta.origin'));
 
-        // Email HTML has no scroll-triggered reveals — skip the sweep.
+        // Email HTML still settles (fonts, CSS animation) but has no
+        // scroll-triggered reveals or consent banners — no sweep, no hiding.
         Http::assertSent(function ($request) {
             $body = $request->data();
+            $fn = (string) ($body['waitForFunction']['fn'] ?? '');
 
             return ($body['html'] ?? null) !== null
-                && ! array_key_exists('waitForFunction', $body);
+                && str_contains($request->url(), '/screenshot')
+                && str_contains($fn, 'getAnimations')
+                && str_contains($fn, '"sweep":false')
+                && str_contains($fn, '"hideConsent":false')
+                && str_contains($fn, '"collectElements":false');
         });
     }
 
@@ -245,8 +369,15 @@ class CaptureIngestionTest extends TestCase
         $token = $this->setUpEnv();
         config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
 
+        $embedded = json_encode(['docWidth' => 1280, 'docHeight' => 900, 'elements' => [
+            ['selector' => 'h1', 'tag' => 'h1', 'kind' => 'Heading', 'text' => 'Hero headline', 'src' => null, 'box' => ['x' => 0, 'y' => 0, 'w' => 100, 'h' => 40]],
+        ]]);
+
+        // No /function on this host: the DOM and element map come from a
+        // separate, equally settled /content load.
         Http::fake([
-            'capture.test/content*' => Http::response('<html><body><h1>Hero headline</h1></body></html>'),
+            'capture.test/function*' => Http::response('Not Found', 404),
+            'capture.test/content*' => Http::response('<html><head><style data-rm-capture="">*{}</style></head><body><h1>Hero headline</h1><script type="application/json" id="__rm-elements">'.$embedded.'</script></body></html>'),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);
 
@@ -261,6 +392,20 @@ class CaptureIngestionTest extends TestCase
         $this->assertSame(Review::SOURCE_URL, $review->sourceKind());
         $this->assertNotNull($review->dom_path);
         $this->assertStringContainsString('Hero headline', (string) $review->domHtml());
+        $this->assertStringNotContainsString('__rm-elements', (string) $review->domHtml());
+        $this->assertStringNotContainsString('data-rm-capture', (string) $review->domHtml());
+
+        $desktop = $review->screenshots()->orderBy('sort_order')->firstOrFail();
+        $this->assertSame('separate_load', $desktop->meta['elements_source']);
+        $this->assertSame('h1', $desktop->elementMap()['elements'][0]['selector']);
+
+        Http::assertSent(function ($request) {
+            $fn = (string) ($request->data()['waitForFunction']['fn'] ?? '');
+
+            return str_contains($request->url(), '/content')
+                && str_contains($fn, '"embedElements":true')
+                && ($request->data()['viewport']['width'] ?? null) === 1280;
+        });
     }
 
     public function test_dom_capture_failure_still_creates_the_review(): void
@@ -269,6 +414,7 @@ class CaptureIngestionTest extends TestCase
         config(['revisemy.capture.content_endpoint' => 'https://capture.test/content']);
 
         Http::fake([
+            'capture.test/function*' => Http::response('Not Found', 404),
             'capture.test/content*' => Http::response('nope', 500),
             'capture.test/*' => Http::response($this->tinyPngBinary()),
         ]);

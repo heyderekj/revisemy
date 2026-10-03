@@ -68,9 +68,14 @@ class CreateReviewTool extends Tool
         $url = $payload['review_url'];
         $share = BrandAssets::markdownShareLink($url);
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $truncated = collect($payload['screenshots'] ?? [])->first(fn ($shot) => ($shot['meta']['truncated'] ?? false) === true);
+        $pagesNote = $truncated
+            ? 'Only the first '.count($payload['screenshots']).' of '.$truncated['meta']['total_pages'].' PDF pages were rendered — split the deck to review the rest.'."\n\n"
+            : '';
 
         return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
+            $pagesNote.
             "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
             // Yellow mark as markdown image; keep the raw URL in backticks so Cursor does not

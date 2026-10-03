@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.5.0',
+            'date' => '2026-10-03',
+            'title' => 'Captures that match the finished page',
+            'highlights' => [
+                'Website captures wait until the page stops moving — fade-ins land, scroll reveals stay open, fonts and images load',
+                'The mobile capture renders as a phone, with touch styles and a phone browser, at 2×; a tablet capture joins desktop and mobile',
+                'Cookie banners are kept out of the shot',
+                'PDF slides keep their colours, and you’re told when a deck runs past five pages',
+            ],
+        ],
+
+        [
             'version' => '1.4.0',
             'date' => '2026-10-02',
             'title' => 'Connect in one click, a calmer review, and dark mode',

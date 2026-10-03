@@ -75,8 +75,7 @@ class ReviewService
 
         try {
             if (isset($sources['capture_url'])) {
-                $images = $this->capture->captureUrl($pageUrl);
-                $domHtml = $this->capture->captureDom($pageUrl);
+                ['shots' => $images, 'dom' => $domHtml] = $this->capture->capturePage($pageUrl);
                 $type ??= Review::TYPE_WEBSITE;
             } elseif (isset($sources['pdf'])) {
                 $images = $this->documents->pdfToImages((string) $data['pdf']);
@@ -106,7 +105,7 @@ class ReviewService
     }
 
     /**
-     * @param  list<string|UploadedFile|array{binary: string, meta: array<string, mixed>|null}>  $images
+     * @param  list<string|UploadedFile|array{binary: string, meta: array<string, mixed>|null, elements?: array<string, mixed>|null}>  $images
      */
     public function create(
         Workspace $workspace,
@@ -209,6 +208,10 @@ class ReviewService
             $shot = is_array($image)
                 ? $this->screenshots->storeRaw($review, $image['binary'], $index, $image['meta'] ?? null)
                 : $this->screenshots->store($review, $image, $index, binary: $resolved[$index]);
+
+            if (is_array($image) && is_array($image['elements'] ?? null)) {
+                $this->screenshots->storeElements($shot, $image['elements']);
+            }
             $this->opinions->queue($shot);
         }
 
