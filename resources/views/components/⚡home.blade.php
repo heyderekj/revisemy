@@ -338,15 +338,10 @@ new class extends Component
         </div>
     </x-home-section>
 
-    {{-- Closing: open source, drawn as a marked-up review, then the maker. --}}
+    {{-- Closing: open source, with the repo marked up like a review, then the maker. --}}
     <x-home-section id="open-source">
         @php
             $stars = \App\Support\GitHubStars::count();
-            $marks = [
-                ['M1', 'https://osaasy.dev/', 'O’Saasy License', null, 'Use it, fork it, run your own copy'],
-                ['M2', 'https://github.com/heyderekj/revisemy', 'github.com/heyderekj/revisemy', $stars, 'Star it, file an issue, send a PR'],
-                ['M3', 'https://github.com/sponsors/heyderekj', 'Sponsor on GitHub', null, 'Keeps it going'],
-            ];
         @endphp
         <x-section-eyebrow number="06" label="Open source" />
         <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built in the open</h2>
@@ -354,33 +349,39 @@ new class extends Component
             Agents are getting fast at shipping what we see. ReviseMy keeps a person’s eye in that loop: your marks decide what ships. It’s open source so anyone can read how it works, run their own, and make it better.
         </p>
 
-        <div class="rm-grid mt-6 rounded-2xl bg-card px-5 py-7 sm:px-8 sm:py-9">
-            <ul class="space-y-7">
-                @foreach ($marks as [$id, $href, $label, $count, $note])
-                    <li class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                        <a
-                            href="{{ $href }}"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="group relative inline-flex self-start bg-key/15 px-2.5 py-1 font-medium text-zinc-900 outline-2 outline-key transition-colors hover:bg-key/30"
-                        >
-                            <span class="absolute -left-2 -top-2.5 flex h-4 min-w-4 items-center justify-center bg-key px-0.5 text-[9px] font-semibold text-accent-contrast" aria-hidden="true">{{ $id }}</span>
-                            {{ $label }} <span class="ml-1 text-zinc-500 transition-colors group-hover:text-zinc-900" aria-hidden="true">↗</span>
-                            @if ($count !== null)
-                                <span class="ml-2 inline-flex items-center gap-1 border-l border-key/60 pl-2 text-sm tabular-nums text-zinc-700">
-                                    <flux:icon.star variant="micro" class="size-3.5 text-key" />
-                                    {{ number_format($count) }}
-                                    <span class="sr-only">{{ $count === 1 ? 'star' : 'stars' }} on GitHub</span>
-                                </span>
-                            @endif
-                        </a>
-                        <span class="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-                            <span class="hidden h-px w-8 border-t border-dashed border-border-strong sm:block" aria-hidden="true"></span>
-                            {{ $note }}
+        <div class="rm-grid mt-6 flex flex-col items-start gap-5 rounded-2xl bg-card px-6 py-10 sm:flex-row sm:items-center sm:gap-6 sm:px-10 sm:py-12">
+            {{-- The button, outlined as a mark: the M1 badge sits on the frame's corner. --}}
+            <div class="relative shrink-0 border border-dashed border-key p-2">
+                <span class="absolute -left-px -top-4 flex h-4 items-center bg-key px-1 text-[9px] font-semibold text-accent-contrast" aria-hidden="true">M1</span>
+                <a
+                    href="https://github.com/heyderekj/revisemy"
+                    target="_blank"
+                    rel="noreferrer"
+                    onclick="if(window.fathom)fathom.trackEvent('GitHub star')"
+                    class="group inline-flex h-9 items-stretch overflow-hidden rounded-full bg-zinc-900 text-sm font-medium text-white shadow-xs transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                >
+                    <span class="inline-flex items-center gap-2 pl-3.5 pr-3">
+                        <svg class="size-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                        Star on GitHub
+                    </span>
+                    @if ($stars !== null)
+                        <span class="inline-flex items-center gap-1 border-l border-white/20 pl-3 pr-3.5 tabular-nums dark:border-zinc-900/15">
+                            <flux:icon.star variant="micro" class="size-3.5 text-key" />
+                            {{ number_format($stars) }}
+                            <span class="sr-only">{{ $stars === 1 ? 'star' : 'stars' }} so far</span>
                         </span>
-                    </li>
-                @endforeach
-            </ul>
+                    @endif
+                </a>
+            </div>
+
+            {{-- The note on the mark. --}}
+            <p class="flex items-center gap-3 font-mono text-xs leading-relaxed text-muted-foreground">
+                <span class="hidden h-px w-10 shrink-0 border-t border-dashed border-border-strong sm:block" aria-hidden="true"></span>
+                <span>
+                    <a href="https://osaasy.dev/" target="_blank" rel="noreferrer" class="text-zinc-700 underline decoration-border-strong underline-offset-2 transition-colors hover:text-zinc-900">O’Saasy License</a>.
+                    Use it, fork it, run your own copy. Issues and PRs welcome.
+                </span>
+            </p>
         </div>
 
         <p class="mt-6 max-w-xl text-[15px] leading-relaxed text-zinc-600">
