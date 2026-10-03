@@ -126,7 +126,8 @@ new class extends Component
             <div class="relative">
                 <div class="pointer-events-none sticky top-10 z-30 hidden h-0 lg:block">
                     <div class="flex justify-end px-[var(--rm-pad)]">
-                        <div class="pointer-events-auto">
+                        <div class="pointer-events-auto flex items-center gap-2">
+                            <x-your-reviews-button />
                             <x-try-token-button fathom-event="Try token sidebar" />
                         </div>
                     </div>
@@ -153,7 +154,10 @@ new class extends Component
                         </span>
                     </h1>
                     {{-- Mobile: hero CTA while in view. Header picks it up once this scrolls away. --}}
-                    <x-try-token-button id="rm-hero-cta" fathom-event="Try token hero" class="self-start lg:hidden" />
+                    <div class="flex flex-wrap items-center gap-2 self-start lg:hidden">
+                        <x-try-token-button id="rm-hero-cta" fathom-event="Try token hero" />
+                        <x-your-reviews-button />
+                    </div>
                     {{-- Holds the room the sticky Connect button takes on desktop. --}}
                     <div class="hidden h-8 w-48 shrink-0 lg:block" aria-hidden="true"></div>
                 </div>
@@ -226,7 +230,7 @@ new class extends Component
                                 <flux:icon.arrow-path variant="micro" class="size-[18px]" />
                             </div>
                             <h3 class="mt-3 text-sm font-semibold text-zinc-900">Approve and loop</h3>
-                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or ask for changes. Your agent reads what’s next and keeps going. <a href="/reviews" class="link">Recent reviews</a> lists every one.</p>
+                            <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or ask for changes. Your agent reads what’s next and keeps going. <a href="/reviews" class="link">Your reviews</a> lists every one.</p>
                         </article>
                     </div>
                 </div>
@@ -456,84 +460,59 @@ new class extends Component
                 </div>
             </x-home-section>
 
-            {{-- Closing: maker + why + contact --}}
-            <x-home-section id="feedback">
+            {{-- Closing: open source, the maker, and how to say hi --}}
+            <x-home-section id="open-source">
                 <div class="max-w-xl">
-                    <x-section-eyebrow number="06" label="Maker" />
-                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Why I made ReviseMy</h2>
+                    <x-section-eyebrow number="06" label="Open source" />
+                    <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open source, made by Derek</h2>
                     <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                        I’m
-                        <a
-                            href="https://heyderekj.com"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="link"
-                        >Derek</a>
-                        — I love giving design feedback. Not to be a dick, but to be a Derek. Agents are getting fast at shipping UI; what’s still missing is a clear place for a human to mark what matters and send the next pass back without leaving the chat.
+                        ReviseMy is open source under the
+                        <a href="https://osaasy.dev/" target="_blank" rel="noreferrer" class="link">O’Saasy License</a>.
+                        Read the code, run your own copy, file an issue or send a PR.
                     </p>
-                    <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
-                        ReviseMy started as a
+                    <div class="mt-5 flex flex-wrap gap-2">
                         <a
-                            href="https://heyderekj.com/projects/revisemy/"
+                            href="https://github.com/heyderekj/revisemy"
                             target="_blank"
                             rel="noreferrer"
-                            class="link"
-                        >side project</a>
-                        in 2024 — an idea and a Figma file — then
-                        <a
-                            href="https://x.com/taylorotwell/status/2075667366646858222"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="link"
-                        >Taylor’s Laravel Cloud weekend challenge</a>
-                        was the nudge to ship it as an MCP on Laravel. Built in a weekend on the side; it works, it passes tests, and there’s plenty left to improve.
+                            class="inline-flex items-center gap-1.5 rounded-full bg-chip px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-chip-hover"
+                        >
+                            GitHub ↗
+                        </a>
                         <a
                             href="https://github.com/sponsors/heyderekj"
                             target="_blank"
                             rel="noreferrer"
-                            class="ml-1.5 inline-flex translate-y-[-1px] items-center gap-1 rounded-full bg-chip px-2.5 py-0.5 text-[12px] font-medium text-zinc-700 transition-colors hover:bg-chip-hover"
+                            class="inline-flex items-center gap-1.5 rounded-full bg-chip px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-chip-hover"
                         >
-                            <svg class="size-3 text-problem" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <svg class="size-3.5 text-problem" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                 <path d="M8 14.25c-.2 0-.4-.06-.57-.18C5.6 12.7 2 9.72 2 6.4 2 4.3 3.6 2.75 5.7 2.75c1.1 0 2.1.5 2.8 1.35A3.8 3.8 0 0 1 11.3 2.75C13.4 2.75 15 4.3 15 6.4c0 3.32-3.6 6.3-5.43 7.67A.9.9 0 0 1 8 14.25Z"/>
                             </svg>
-                            Sponsor on GitHub
+                            Sponsor
                         </a>
-                    </p>
-                    <p class="mt-6 text-[15px] leading-relaxed text-zinc-600">
-                        Say hi anytime —
-                        <a
-                            href="mailto:derekj@hey.com"
-                            class="link"
-                        >derekj@hey.com</a>
-                        or
-                        <a
-                            href="https://x.com/heyderekj"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="link"
-                        >@heyderekj on X.com</a>.
-                    </p>
-
-                    <div class="mt-8">
-                        <p class="mb-2 text-sm font-medium text-muted-foreground">Also by Derek</p>
-                        <ul class="flex flex-wrap gap-x-5 gap-y-2 text-[15px] text-zinc-600">
-                            <li>
-                                <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
-                                    Harvous ↗
-                                </a>
-                            </li>
-                            <li>
-                                <a href="https://dinkyfiles.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
-                                    Dinky ↗
-                                </a>
-                            </li>
-                            <li>
-                                <a href="https://binkyfiles.com" target="_blank" rel="noreferrer" class="transition hover:text-zinc-900">
-                                    Binky ↗
-                                </a>
-                            </li>
-                        </ul>
                     </div>
+                    <p class="mt-6 text-[15px] leading-relaxed text-zinc-600">
+                        I’m <a href="https://heyderekj.com" target="_blank" rel="noreferrer" class="link">Derek</a>
+                        — I love giving design feedback. Not to be a dick, but to be a Derek. ReviseMy started as a
+                        <a href="https://heyderekj.com/projects/revisemy/" target="_blank" rel="noreferrer" class="link">side project</a>
+                        in 2024, and
+                        <a href="https://x.com/taylorotwell/status/2075667366646858222" target="_blank" rel="noreferrer" class="link">Taylor’s Laravel Cloud weekend challenge</a>
+                        was the nudge to ship it.
+                    </p>
+                    <p class="mt-4 text-[15px] leading-relaxed text-zinc-600">
+                        Say hi anytime —
+                        <a href="mailto:derekj@hey.com" class="link">derekj@hey.com</a>
+                        or
+                        <a href="https://x.com/heyderekj" target="_blank" rel="noreferrer" class="link">@heyderekj on X.com</a>.
+                    </p>
+                    <p class="mt-6 text-sm text-muted-foreground">
+                        Also by Derek:
+                        <a href="https://harvous.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Harvous ↗</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="https://dinkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Dinky ↗</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="https://binkyfiles.com" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">Binky ↗</a>
+                    </p>
                 </div>
             </x-home-section>
 

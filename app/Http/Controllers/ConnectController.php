@@ -62,7 +62,8 @@ class ConnectController extends Controller
             $user = $tryTokens->createWorkspaceUser();
         }
 
-        Auth::guard('web')->login($user);
+        // Remembered, so the homepage and /reviews still know this browser on a later visit.
+        Auth::guard('web')->login($user, remember: true);
         $request->session()->regenerate();
         $request->session()->put(OAuthClient::CONNECTED_KEY, [
             'client_id' => (string) $client->getKey(),

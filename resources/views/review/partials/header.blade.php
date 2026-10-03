@@ -4,6 +4,13 @@
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                     <x-revisemy-logo size="sm" />
                 </a>
+                @if ($this->canListReviews())
+                    <a href="/reviews" class="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-zinc-900" aria-label="Your reviews">
+                        <flux:icon.queue-list variant="micro" class="size-4 sm:hidden" />
+                        <span class="hidden sm:inline">Your reviews</span>
+                    </a>
+                    <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">/</span>
+                @endif
                 <h1 class="sr-only shrink-0 text-lg font-semibold tracking-tight text-zinc-900 sm:not-sr-only">Review</h1>
             </div>
 

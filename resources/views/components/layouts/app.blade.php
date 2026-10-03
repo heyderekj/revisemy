@@ -15,7 +15,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Light or dark before first paint: the visitor's choice, else the system's. --}}
+    {{-- Light or dark before first paint, always the system's. Clears any choice
+         saved by the old footer toggle so nobody is stuck on it. --}}
+    <script>try { localStorage.removeItem('flux.appearance') } catch (e) {}</script>
     @fluxAppearance
 
     <x-seo-head

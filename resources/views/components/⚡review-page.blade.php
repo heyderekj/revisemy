@@ -120,6 +120,12 @@ new class extends Component
         return $this->mode === 'owner';
     }
 
+    /** This browser connected the workspace behind the review, so it can jump to the rest. */
+    public function canListReviews(): bool
+    {
+        return $this->isOwner() && auth('web')->user()?->workspace_id === $this->review->workspace_id;
+    }
+
     public function showDecisionNote(): bool
     {
         return $this->review->isOpenForFeedback() && $this->isOwner();

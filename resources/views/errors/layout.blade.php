@@ -6,6 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
+    <script>try { localStorage.removeItem('flux.appearance') } catch (e) {}</script>
     @fluxAppearance
     <title>@yield('title') · ReviseMy</title>
     <link rel="icon" href="/favicon-v9.ico" sizes="any">

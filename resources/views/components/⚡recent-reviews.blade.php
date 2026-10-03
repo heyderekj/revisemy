@@ -67,6 +67,16 @@ new class extends Component
             ->all();
     }
 
+    /** Signs out a browser that Connect remembered, so it stops opening this list. */
+    public function forgetBrowser(): void
+    {
+        Auth::guard('web')->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        $this->redirect('/reviews');
+    }
+
     public function clearToken(): void
     {
         $this->tryToken = '';
@@ -96,7 +106,7 @@ new class extends Component
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                     <x-revisemy-logo size="sm" />
                 </a>
-                <h1 class="text-lg font-semibold text-zinc-900">Recent reviews</h1>
+                <h1 class="text-lg font-semibold text-zinc-900">Your reviews</h1>
             </div>
             <a href="/connect" class="link text-sm">Connect an assistant</a>
         </div>
@@ -157,6 +167,8 @@ new class extends Component
 
             @if ($tryToken !== '')
                 <button type="button" wire:click="clearToken" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this token in this browser</button>
+            @else
+                <button type="button" wire:click="forgetBrowser" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this browser</button>
             @endif
         @endif
     </main>

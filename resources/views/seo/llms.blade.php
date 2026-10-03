@@ -14,7 +14,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 ## Connect
 
 - [Connect]({{ $siteUrl }}/connect): One list of assistants with exact steps. Claude and ChatGPT add a custom connector with {{ $mcpUrl }} and click Connect (OAuth, no account); Cursor and VS Code install in one click; Claude Code is `claude mcp add --transport http revisemy {{ $mcpUrl }}`; Grok, Muse and Codex use a free try token as a Bearer header.
-- [Recent reviews]({{ $siteUrl }}/reviews): The reviews a workspace can see, and the assistants connected to it, with Disconnect.
+- [Your reviews]({{ $siteUrl }}/reviews): The reviews a workspace can see, and the assistants connected to it, with Disconnect.
 
 ## Pages
 
@@ -27,7 +27,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 @else
 - [Credits]({{ $siteUrl }}/#pricing): {{ (int) config('billing.plans.free.credits', 20) }} free credits a month, no rollover. Paid plans are paused.
 @endif
-- [Why I made ReviseMy]({{ $siteUrl }}/#feedback): The story, contact, and GitHub.
+- [Open source]({{ $siteUrl }}/#open-source): Source, license, sponsor, and contact.
 - [Privacy]({{ $siteUrl }}/privacy) · [Terms]({{ $siteUrl }}/terms)
 
 ## MCP and API

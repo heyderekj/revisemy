@@ -79,7 +79,7 @@ return [
             ],
             'links' => [
                 ['label' => 'Changelog', 'href' => '/changelog'],
-                ['label' => 'Recent reviews', 'href' => '/reviews'],
+                ['label' => 'Your reviews', 'href' => '/reviews'],
                 ['label' => 'Board', 'href' => '/board'],
             ],
         ],
