@@ -11,7 +11,7 @@ class AlternativePageTest extends TestCase
         $response = $this->get('/alternatives');
 
         $response->assertOk()
-            ->assertSee('Thoughtful comparisons', false);
+            ->assertSee('Fair comparisons', false);
 
         foreach (config('alternatives.pages', []) as $page) {
             $response->assertSee($page['label'], false)
@@ -26,22 +26,12 @@ class AlternativePageTest extends TestCase
                 ->assertOk()
                 ->assertSee($page['headline'], false)
                 ->assertSee($page['title'], false)
-                ->assertSee('Recommended', false)
+                ->assertSee('This one', false)
                 ->assertSee('ReviseMy', false)
-                ->assertSee('Competitor alternative', false);
+                ->assertSee(e($page['competitor']).' alternatives', false);
 
-            $links = $page['competitor_links'] ?? [];
-            if ($links === [] && ! empty($page['competitor_url']) && ! empty($page['competitor_link'])) {
-                $links = [[
-                    'label' => $page['competitor_link'],
-                    'url' => $page['competitor_url'],
-                ]];
-            }
-
-            foreach ($links as $link) {
-                $response
-                    ->assertSee($link['url'], false)
-                    ->assertSee('>'.$link['label'].'</a>', false);
+            if (! empty($page['competitor_url'])) {
+                $response->assertSee($page['competitor_url'], false)->assertSee('Visit '.e($page['competitor']), false);
             }
         }
     }
@@ -68,7 +58,7 @@ class AlternativePageTest extends TestCase
         $response = $this->get('/llms.txt');
 
         $response->assertOk()
-            ->assertSee('## Alternatives', false)
+            ->assertSee('## Pages', false)
             ->assertSee('/alternatives', false);
 
         foreach (config('alternatives.pages', []) as $page) {

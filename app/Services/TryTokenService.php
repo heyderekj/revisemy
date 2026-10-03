@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\Hosts;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -24,32 +25,43 @@ class TryTokenService
      *     mcp_url: string,
      *     cursor_config: array<string, mixed>,
      *     copilot_config: array<string, mixed>,
-     *     claude_desktop_config: array<string, mixed>,
      *     claude_code_command: string,
      *     chatgpt_hint: string,
      *     setup_prompts: array<string, string>,
      *     checkup_prompts: array<string, string>
      * }
      */
-    public function create(): array
+    /**
+     * A try workspace with this month's credits, and the stand-in user that
+     * owns it. No token: the try-token flow mints a Sanctum one, and Connect
+     * (OAuth) has Passport mint its own.
+     */
+    public function createWorkspaceUser(): User
     {
-        return DB::transaction(function (): array {
-            $tokenDays = (int) config('billing.plans.free.token_days', self::TOKEN_DAYS);
-
+        return DB::transaction(function (): User {
             $workspace = Workspace::query()->create([
                 'name' => 'Try workspace',
                 'plan' => Workspace::PLAN_FREE,
             ]);
 
             app(CreditsService::class)->grantPeriod($workspace);
-            $workspace->refresh();
 
-            $user = User::query()->create([
+            return User::query()->create([
                 'workspace_id' => $workspace->id,
                 'name' => 'ReviseMy try user',
                 'email' => 'try-'.Str::lower((string) Str::ulid()).'@revisemy.local',
                 'password' => Str::password(32),
-            ]);
+            ])->setRelation('workspace', $workspace->refresh());
+        });
+    }
+
+    public function create(): array
+    {
+        return DB::transaction(function (): array {
+            $tokenDays = (int) config('billing.plans.free.token_days', self::TOKEN_DAYS);
+
+            $user = $this->createWorkspaceUser();
+            $workspace = $user->workspace;
 
             $expiresAt = now()->addDays($tokenDays);
             $plainTextToken = $user->createToken('revisemy-try', ['*'], $expiresAt)->plainTextToken;
@@ -62,26 +74,6 @@ class TryTokenService
                         'url' => $mcpUrl,
                         'headers' => [
                             'Authorization' => $authHeader,
-                        ],
-                    ],
-                ],
-            ];
-
-            // Claude Desktop's Connectors UI is OAuth-oriented and won't take a
-            // Bearer header. Bridge the remote HTTP server via mcp-remote + Edit Config.
-            $claudeDesktopConfig = [
-                'mcpServers' => [
-                    'revisemy' => [
-                        'command' => 'npx',
-                        'args' => [
-                            '-y',
-                            'mcp-remote',
-                            $mcpUrl,
-                            '--header',
-                            'Authorization:${AUTH_HEADER}',
-                        ],
-                        'env' => [
-                            'AUTH_HEADER' => $authHeader,
                         ],
                     ],
                 ],
@@ -112,140 +104,56 @@ class TryTokenService
                 'token_expires_at' => $expiresAt->toIso8601String(),
                 'mcp_url' => $mcpUrl,
                 'cursor_config' => $cursorConfig,
-                'claude_desktop_config' => $claudeDesktopConfig,
                 'copilot_config' => $copilotConfig,
                 'claude_code_command' => $claudeCodeCommand,
-                'chatgpt_hint' => 'Add a remote MCP connector with this URL and Authorization: Bearer <token> (ChatGPT, Grok custom connector, etc.). Or call the REST API at /api/reviews with the same Bearer token.',
-                'setup_prompts' => $this->setupPrompts(
-                    mcpUrl: $mcpUrl,
-                    authHeader: $authHeader,
-                    cursorConfig: $cursorConfig,
-                    claudeDesktopConfig: $claudeDesktopConfig,
-                    copilotConfig: $copilotConfig,
-                    claudeCodeCommand: $claudeCodeCommand,
-                ),
+                'chatgpt_hint' => 'Claude and ChatGPT need no token: add a custom connector with mcp_url and click Connect when ReviseMy asks. Everything else can send Authorization: Bearer <token>, including the REST API at /api/reviews.',
+                'connect_url' => url('/connect'),
+                'setup_prompts' => $this->setupPrompts($plainTextToken),
                 'checkup_prompts' => self::checkupPrompts(),
             ];
         });
     }
 
     /**
-     * Prompts an agent can follow to wire ReviseMy MCP into the host.
+     * What to tell an agent to set ReviseMy up for itself, one per way in,
+     * from the same list the connect hub shows (config/hosts.php `connect`).
      *
-     * @param  array<string, mixed>  $cursorConfig
-     * @param  array<string, mixed>  $claudeDesktopConfig
-     * @param  array<string, mixed>  $copilotConfig
      * @return array<string, string>
      */
-    public function setupPrompts(
-        string $mcpUrl,
-        string $authHeader,
-        array $cursorConfig,
-        array $claudeDesktopConfig,
-        array $copilotConfig,
-        string $claudeCodeCommand,
-    ): array {
-        $cursorJson = $this->prettyJson($cursorConfig);
-        $claudeDesktopJson = $this->prettyJson($claudeDesktopConfig);
-        $copilotJson = $this->prettyJson($copilotConfig);
+    public function setupPrompts(string $token): array
+    {
+        return collect(Hosts::all($token))->map(function (array $host) use ($token) {
+            $lines = ["Set up the ReviseMy MCP server in {$host['name']}.", ''];
 
-        return [
-            'chatgpt' => <<<PROMPT
-Help me connect ReviseMy as a remote MCP connector in ChatGPT (or as a Custom GPT Action if MCP connectors aren’t available on my plan).
+            foreach ($host['steps'] as $i => $step) {
+                $lines[] = ($i + 1).'. '.$step;
+            }
 
-Use these exact values:
-- Name: revisemy
-- MCP URL: {$mcpUrl}
-- Authorization header: {$authHeader}
+            if ($host['command']) {
+                $lines[] = '';
+                if ($host['needs_token']) {
+                    $lines[] = "export REVISEMY_TOKEN={$token}";
+                }
+                $lines[] = $host['command'];
+            } elseif ($host['mode'] !== 'deeplink') {
+                $lines[] = '';
+                $lines[] = 'Address: '.Hosts::mcpUrl();
+            }
 
-Walk me through Settings → Connectors (or Custom GPT → Actions for REST). After it’s connected, confirm you can see ReviseMy tools like create_review. Then stop — I’ll ask for a design checkup next.
-PROMPT,
-            'claude_desktop' => <<<PROMPT
-Set up the ReviseMy MCP server for Claude Desktop. Do this carefully:
+            $lines[] = '';
+            $lines[] = 'Then confirm the revisemy tools (create_review, get_review) are available, and stop — I’ll ask for a design checkup next.';
 
-1. Open (or create) the Claude Desktop config file:
-   - macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
-   - Windows: %APPDATA%\\Claude\\claude_desktop_config.json
-2. Merge the JSON below into the top-level "mcpServers" object. Preserve any existing servers.
-3. Tell me to fully quit and reopen Claude Desktop (MCP loads at startup only).
-4. Do NOT use Connectors → Add custom connector — that UI is OAuth-only and cannot take this Bearer try token.
-5. This bridge needs Node.js (npx) available on my machine.
-
-Config to merge:
-
-{$claudeDesktopJson}
-
-When the file is saved correctly, confirm what I should do next (quit/reopen, then verify revisemy tools).
-PROMPT,
-            'claude_code' => <<<PROMPT
-Set up the ReviseMy MCP server for Claude Code.
-
-Run this exact command in the project terminal:
-
-{$claudeCodeCommand}
-
-Then confirm the revisemy MCP tools are available (create_review, get_review, etc.). When setup works, say so briefly — I’ll ask for a design checkup next.
-PROMPT,
-            'copilot' => <<<PROMPT
-Set up the ReviseMy MCP server for GitHub Copilot.
-
-1. Open Copilot → MCP (user or workspace mcp.json).
-2. Merge the JSON below under "servers". Preserve any existing servers.
-3. Reload Copilot / the window if tools don’t appear.
-4. Confirm revisemy tools are available (create_review, get_review, etc.).
-
-Config to merge:
-
-{$copilotJson}
-
-When setup works, say so briefly — I’ll ask for a design checkup next.
-PROMPT,
-            'cursor' => <<<PROMPT
-Set up the ReviseMy MCP server for Cursor.
-
-1. Merge the JSON below into ~/.cursor/mcp.json (create the file if needed). Preserve any existing servers under "mcpServers".
-2. Enable "revisemy" in Cursor Settings → MCP if it isn’t already on.
-3. Confirm the revisemy tools are available (create_review, get_review, etc.).
-
-Config to merge:
-
-{$cursorJson}
-
-When setup works, say so briefly — I’ll ask for a design checkup next.
-PROMPT,
-            'grok' => <<<PROMPT
-Help me connect ReviseMy as a custom MCP connector on Grok.
-
-Use these exact values:
-- Name: revisemy
-- MCP URL: {$mcpUrl}
-- Authorization header: {$authHeader}
-
-Walk me through https://grok.com/connectors → New Connector → Custom. After it’s connected, confirm you can see ReviseMy tools like create_review. Then stop — I’ll ask for a design checkup next.
-PROMPT,
-        ];
+            return implode("\n", $lines);
+        })->all();
     }
 
     /**
+     * The first thing to ask once connected, per way in.
+     *
      * @return array<string, string>
      */
     public static function checkupPrompts(): array
     {
-        return [
-            'chatgpt' => 'Run a ReviseMy design checkup on the work I just changed. Use create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF), share the review_url if you get one, wait for my marks, then poll get_review and follow next_action until I approve.',
-            'claude_desktop' => 'Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF). Open the review inline so I can mark and approve, then follow next_action until I’m done. Prefer the design_checkup_loop prompt if available.',
-            'claude_code' => 'Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source, give me the review_url to mark and approve, then poll get_review and follow next_action until I approve. Prefer the design_checkup_loop prompt if available.',
-            'copilot' => 'Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots, public URL + capture_url, email HTML, or PDF). Open the review inline so I can mark and approve, then follow next_action until I’m done. Prefer the design_checkup_loop prompt if available.',
-            'cursor' => 'Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source (screenshots as data URLs for localhost, or public URL + capture_url). Give me the review_url to mark and approve, then poll get_review and follow next_action until I approve. Prefer the design_checkup_loop prompt if available.',
-            'grok' => 'Run a ReviseMy design checkup on the work I just changed. Call create_review with the right source, give me the review_url to mark and approve, then poll get_review and follow next_action until I approve.',
-        ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $value
-     */
-    protected function prettyJson(array $value): string
-    {
-        return (string) json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return collect(config('hosts.connect', []))->map(fn () => Hosts::firstPrompt())->all();
     }
 }

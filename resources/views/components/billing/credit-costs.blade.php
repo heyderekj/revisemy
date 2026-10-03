@@ -1,6 +1,5 @@
 {{-- Credit burn + Try vs Plus comparison for upgrade / success. --}}
 @props([
-    'showLabel' => true,
     /** When true, show Try and Plus value columns (upgrade + confirm). */
     'compare' => false,
     /** Confirm page copy: Was Try / Now Plus. Upgrade: Try vs Plus. */
@@ -16,7 +15,6 @@
     $tryRenews = (bool) config('billing.plans.free.renews', true);
     $tryLabel = $tone === 'confirm' ? 'Was Try' : 'Try';
     $plusLabel = $tone === 'confirm' ? 'Now Plus' : 'Plus';
-    $heading = 'Credit Cost Breakdown';
 
     $rows = [
         [
@@ -58,14 +56,8 @@
 @endphp
 
 <div {{ $attributes }}>
-    @if ($showLabel)
-        <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
-            {{ $compare ? $heading : 'Credit costs' }}
-        </p>
-    @endif
-
     @if ($compare)
-        <div @class(['overflow-hidden ring-1 ring-zinc-200', 'mt-4' => $showLabel])>
+        <div class="overflow-hidden rounded-xl bg-card">
             <table class="w-full border-collapse text-left text-[13px] sm:text-[14px]">
                 <thead>
                     <tr class="border-b border-zinc-200 bg-zinc-50/80">
@@ -109,7 +101,7 @@
             </table>
         </div>
     @else
-        <dl @class(['space-y-3 text-[14px]', 'mt-4' => $showLabel])>
+        <dl class="space-y-3 text-[14px]">
             @foreach ($rows as $row)
                 @continue($row['label'] === 'Credits')
                 <div class="flex items-center justify-between gap-4">
@@ -117,7 +109,8 @@
                         <x-use-case-icon :name="$row['icon']" size="sm" bare />
                         <span>{{ $row['label'] }}</span>
                     </dt>
-                    <dd class="shrink-0 font-medium tabular-nums text-zinc-900">{{ $row['plus'] }}</dd>
+                    {{-- Without the comparison this is the Try pack, so Try's values. --}}
+                    <dd class="shrink-0 font-medium tabular-nums text-zinc-900">{{ $row['free'] }}</dd>
                 </div>
             @endforeach
         </dl>

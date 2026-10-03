@@ -31,6 +31,7 @@ class Workspace extends Model
             'credits_balance' => 'integer',
             'purchased_credits' => 'integer',
             'credits_period_start' => 'datetime',
+            'assistant_seen_at' => 'datetime',
             'polar_current_period_end' => 'datetime',
             'polar_cancel_at_period_end' => 'boolean',
         ];

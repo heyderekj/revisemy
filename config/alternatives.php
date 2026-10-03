@@ -2,6 +2,23 @@
 
 return [
 
+    /*
+    | ReviseMy's own entry, shown first in every comparison's recommendations.
+    */
+    'revisemy' => [
+        'label' => 'ReviseMy',
+        'href' => '/connect',
+        'badge' => 'This one',
+        'summary' => 'Visual feedback for your agent. It captures UI, a page, an email or slides; you mark what matters and decide; it reads your marks and keeps going.',
+        'best_for' => 'Teams where an agent builds the work and a person approves it before the loop stops.',
+        'bullets' => [
+            'Your marks are the brief the agent works from',
+            'Every mark from open to resolved to verified',
+            'Second opinion stays a suggestion',
+            'No account — reviewers only need the link',
+        ],
+    ],
+
     'pages' => [
 
         'figma-comments' => [
@@ -24,7 +41,6 @@ return [
             ],
             'headline' => 'Best Figma comments alternative when your agent ships the UI',
             'subheadline' => 'Figma comments are excellent on design files. ReviseMy is for the pixels your agent actually built — marks that drive next_action, not another thread in the canvas.',
-            'intro' => 'People search for a Figma comments alternative for different reasons: the UI already exists in staging or screenshots, the builder is a coding agent that needs structured work packets, or design-file comments never map cleanly to “what to change next” in the repo. Figma remains the right place to critique components and systems in the design file. ReviseMy is the stronger alternative when the real problem is human-in-the-loop review of agent-built UI — with authoritative marks, a status board, and MCP handoff — without asking everyone to live in Figma for every pass.',
             'why_look' => [
                 'The screen already shipped from an agent — feedback belongs on the capture, not only on a Figma frame that may be out of date.',
                 'You need a clear next_action for the agent (wait, apply marks, open another pass), not a comment that dies in a design tool.',
@@ -38,20 +54,6 @@ return [
                 'Whether multi-pass reviews stay scannable on a board',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/#setup',
-                    'badge' => 'Recommended',
-                    'summary' => 'Human-in-the-loop design checkup for AI agents. Capture UI, websites, email, or slides; mark with intent; track the board; send next_action back over MCP.',
-                    'best_for' => 'Teams where an agent builds UI and a human must approve before the loop stops.',
-                    'bullets' => [
-                        'Authoritative rose marks → work_packets.pins',
-                        'Board: open → resolved → verified',
-                        'Second opinion stays suggestions only',
-                        'Free try token — no account for reviewers',
-                    ],
-                ],
                 [
                     'id' => 'pastel',
                     'label' => 'Pastel',
@@ -72,7 +74,6 @@ return [
                 'You can run both: Figma for craft in the file, ReviseMy for the agent ship loop.',
                 'If there is no coding agent and all work stays in Figma, stay in Figma.',
             ],
-            'verdict' => 'Choose ReviseMy if an agent ships UI and you need human marks that drive the next pass over MCP. Choose Figma comments if the artifact is still the design file and the builder is a human in Figma — not an agent waiting on next_action.',
             'faq' => [
                 [
                     'q' => 'Is ReviseMy a Figma replacement?',
@@ -110,7 +111,6 @@ return [
             ],
             'headline' => 'Best Marker.io alternative when the fixer is an agent',
             'subheadline' => 'Marker.io shines at capturing live-site bugs with browser context into your PM stack. ReviseMy is for when the implementer is an AI agent that needs next_action — not another ticket queue.',
-            'intro' => 'People look for a Marker.io alternative when tickets pile up, when the “developer” is a coding agent that never opens Jira, or when they want design intent (must-fix vs keep) and multi-pass verification — not only a screenshot-backed bug. Marker.io remains a strong fit for human QA teams filing into Linear, Jira, or Asana. ReviseMy is the stronger alternative when feedback must close the loop with an agent over MCP: mark on the capture, resolve with notes and after shots, verify on the board, approve or open the next pass.',
             'why_look' => [
                 'The person fixing the UI is an agent that polls get_review — not a human watching a PM board.',
                 'You need must-fix / nice to have / keep intent on the mark, not only a generic bug description.',
@@ -124,20 +124,6 @@ return [
                 'Whether you review screenshots, URLs, email HTML, and slides — not only live sites',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/#setup',
-                    'badge' => 'Recommended',
-                    'summary' => 'Marks become work packets for your agent. The board tracks status until a human verifies. Optional vision hints never flip the decision.',
-                    'best_for' => 'Agent-driven UI ship loops where humans still approve.',
-                    'bullets' => [
-                        'MCP create_review / get_review / resolve_marks',
-                        'Owner board with verification gate',
-                        'Guest links for non-authoritative suggestions',
-                        'Webhook on review.decided for CI gates',
-                    ],
-                ],
                 [
                     'id' => 'lucidly',
                     'label' => 'Lucidly',
@@ -158,7 +144,6 @@ return [
                 'A pragmatic split: Marker for classic production bug reports; ReviseMy for agent-built feature checkups.',
                 'Do not force-fit Marker into an MCP agent workflow — the handoff shapes are different.',
             ],
-            'verdict' => 'Choose ReviseMy if the fixer is an AI agent and you need marks, a verification board, and MCP next_action. Choose Marker.io if your workflow is human QA → ticket tracker and you do not need an agent design checkup loop.',
             'faq' => [
                 [
                     'q' => 'Does ReviseMy replace Marker.io integrations?',
@@ -196,9 +181,8 @@ return [
             ],
             'headline' => 'Best Pastel alternative when an agent is in the loop',
             'subheadline' => 'Pastel makes share-a-link annotation feel instant for clients. ReviseMy keeps that link simplicity for reviewers — and adds the MCP ship loop Pastel was never built to own.',
-            'intro' => 'People search for a Pastel alternative when client comments need to become agent work, when reviews include app screenshots or email HTML — not only live sites — or when “inbox zero” comments still leave the coding agent guessing. Pastel is excellent for low-friction visual feedback and approvals on websites and assets. ReviseMy is the stronger alternative when a human must mark intent on captures and an agent must follow next_action until approve — with a board that separates resolved from verified.',
             'why_look' => [
-                'Comments need to become structured pins for an agent, not only export to a PM tool.',
+                'Comments need to become structured work for an agent, not only export to a PM tool.',
                 'You review agent UI, slides, or email HTML as often as live marketing sites.',
                 'You want authoritative owner marks vs guest suggestions vs optional AI hints.',
                 'Multi-pass agent work needs before/after evidence and human verification.',
@@ -210,20 +194,6 @@ return [
                 'Clear separation of suggestions vs decisions',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/#setup',
-                    'badge' => 'Recommended',
-                    'summary' => 'Secret review links for humans; MCP for agents. Same checkup loop across UI, websites, email, and slides.',
-                    'best_for' => 'Teams shipping with coding agents who still want client or designer eyes on the pixels.',
-                    'bullets' => [
-                        'No account required for reviewers',
-                        'Guest links for suggestions only',
-                        'Board + resolve_marks for the agent',
-                        'Connectors for ChatGPT, Claude, Copilot, Cursor, Grok',
-                    ],
-                ],
                 [
                     'id' => 'marker-io',
                     'label' => 'Marker.io',
@@ -244,7 +214,6 @@ return [
                 'You can keep Pastel for marketing-site client rounds and ReviseMy for agent-built product UI.',
                 'If export-to-Asana/Jira is the success metric and agents are out of scope, Pastel (or Marker/Lucidly) may fit better.',
             ],
-            'verdict' => 'Choose ReviseMy if reviewers need a simple link and agents need structured next_action. Choose Pastel if the workflow is human client annotation on sites/assets with no agent ship loop.',
             'faq' => [
                 [
                     'q' => 'Is ReviseMy as easy for clients as Pastel?',
@@ -282,7 +251,6 @@ return [
             ],
             'headline' => 'Best Lucidly alternative when agents ship the site',
             'subheadline' => 'Lucidly organizes website QA comments into a Kanban for agencies and clients. ReviseMy organizes marks for an agent that must fix, prove, and wait for human verify.',
-            'intro' => 'People look for a Lucidly alternative when the “dev team” is increasingly an AI agent, when feedback spans app UI and email — not only marketing sites — or when status needs a human verification gate after the agent claims done. Lucidly is a strong, focused website QA and collaboration product (comments, guests, Kanban). ReviseMy is the stronger alternative when the consumer of feedback is an agent over MCP and “done” means a human verified the pixels on the board — not only a card moved on a Kanban.',
             'why_look' => [
                 'Implementers are agents that need resolve_marks and next_action, not only assigned Kanban cards.',
                 'You need before/after evidence and human-only verified status.',
@@ -296,20 +264,6 @@ return [
                 'Whether MCP connectors matter more than unlimited collaborators',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/#setup',
-                    'badge' => 'Recommended',
-                    'summary' => 'Open-source human-in-the-loop design review for agents. Marks, board, second opinion, connectors — built for the MCP checkup loop.',
-                    'best_for' => 'Product and eng teams (and agencies) where agents build and humans approve.',
-                    'bullets' => [
-                        'MCP Apps or review_url workflows',
-                        'Owner board with verify gate',
-                        'Type-aware checkups (UI, website, email, slides)',
-                        'Guest suggestions without giving away authority',
-                    ],
-                ],
                 [
                     'id' => 'pastel',
                     'label' => 'Pastel',
@@ -330,7 +284,6 @@ return [
                 'Agencies can keep Lucidly for client marketing sites and ReviseMy for agent-built product work.',
                 'If unlimited collaborators and agency pricing are the buying criteria and agents are irrelevant, Lucidly may be the better fit.',
             ],
-            'verdict' => 'Choose ReviseMy if agents implement feedback and humans must verify on a board. Choose Lucidly if your core product is collaborative website QA with Kanban for human teams and clients.',
             'faq' => [
                 [
                     'q' => 'Does ReviseMy have a Kanban like Lucidly?',
@@ -368,9 +321,8 @@ return [
             ],
             'headline' => 'Best MarkUp.io alternative when an agent owns the fix',
             'subheadline' => 'MarkUp.io makes contextual feedback easy across websites, PDFs, images, and video. ReviseMy is for when that feedback must become next_action for a coding agent — with a board that separates resolved from verified.',
-            'intro' => 'People search for a MarkUp.io alternative when creative review rounds need to become agent work, when the implementer never opens a comment inbox, or when “done” should mean a human verified the pixels — not only a thread closed on a markup. MarkUp.io remains excellent for broad, share-link annotation across many file types and agency-style review loops. ReviseMy is the stronger alternative when the consumer of feedback is an agent over MCP: mark intent on captures (screenshots, URL capture, PDF, HTML), follow work packets, prove fixes, and wait for human verify before the loop stops.',
             'why_look' => [
-                'Comments need to become structured pins for an agent, not only a collaborative review canvas.',
+                'Comments need to become structured work for an agent, not only a collaborative review canvas.',
                 'You review agent-built UI, email HTML, or slides as often as marketing sites and decks.',
                 'You want authoritative owner marks vs guest suggestions vs optional AI hints.',
                 'Multi-pass agent work needs before/after evidence and a human-only verification gate.',
@@ -382,20 +334,6 @@ return [
                 'Share-link friction for non-technical reviewers without seats',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/#setup',
-                    'badge' => 'Recommended',
-                    'summary' => 'Secret review links for humans; MCP for agents. Same checkup loop across UI, websites, email, and slides.',
-                    'best_for' => 'Teams where an agent builds and a human must approve before the loop stops.',
-                    'bullets' => [
-                        'Authoritative marks → work_packets.pins',
-                        'Board: open → resolved → verified',
-                        'Guest links for suggestions only',
-                        'Connectors for ChatGPT, Claude, Copilot, Cursor, Grok',
-                    ],
-                ],
                 [
                     'id' => 'pastel',
                     'label' => 'Pastel',
@@ -416,7 +354,6 @@ return [
                 'You can keep MarkUp for broad asset review rounds and ReviseMy for agent-built product UI.',
                 'If unlimited collaborators and multi-format creative review are the product — and agents are out of scope — MarkUp may fit better.',
             ],
-            'verdict' => 'Choose ReviseMy if reviewers need a simple link and agents need structured next_action. Choose MarkUp.io if the workflow is human visual review across many file types with no agent ship loop.',
             'faq' => [
                 [
                     'q' => 'Is ReviseMy a MarkUp.io replacement?',
@@ -454,7 +391,6 @@ return [
             ],
             'headline' => 'Best Workflow alternative when the fixer is an agent',
             'subheadline' => 'Workflow makes design feedback easy for clients — zero-signup links, versions, and clear revision rounds. ReviseMy is for when the implementer is a coding agent that needs next_action, not another creative inbox.',
-            'intro' => 'People look for a Workflow alternative when client comments need to become agent work, when the “designer” shipping pixels is increasingly Cursor or Claude, or when status needs a human verification gate after the agent claims done. Workflow is excellent for designer–client review: share links, guided reviewers, version history, and feedback on designs, sites, PDFs, and more. ReviseMy is the stronger alternative when feedback must close the loop with an agent over MCP — mark intent on captures, resolve with notes and after shots, verify on the board, approve or open the next pass.',
             'why_look' => [
                 'The person fixing the UI is an agent that polls get_review — not a designer ticking comments in a revision tool.',
                 'You need must-fix / nice to have / keep intent that becomes work_packets.pins.',
@@ -468,20 +404,6 @@ return [
                 'Whether MCP connectors matter more than version history for humans',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/#setup',
-                    'badge' => 'Recommended',
-                    'summary' => 'Marks become work packets for your agent. The board tracks status until a human verifies. Optional vision hints never flip the decision.',
-                    'best_for' => 'Agent-driven UI ship loops where humans still approve.',
-                    'bullets' => [
-                        'MCP create_review / get_review / resolve_marks',
-                        'Owner board with verification gate',
-                        'Guest links for non-authoritative suggestions',
-                        'Type-aware checkups (UI, website, email, slides)',
-                    ],
-                ],
                 [
                     'id' => 'pastel',
                     'label' => 'Pastel',
@@ -502,7 +424,6 @@ return [
                 'You can keep Workflow for design/client rounds and ReviseMy for agent-built product UI.',
                 'If zero-signup creative review and version history are the buying criteria and agents are irrelevant, Workflow may fit better.',
             ],
-            'verdict' => 'Choose ReviseMy if agents implement feedback and humans must verify on a board. Choose Workflow if your core product is designer–client visual feedback and versioned revisions without an agent ship loop.',
             'faq' => [
                 [
                     'q' => 'Is ReviseMy as easy for clients as Workflow?',
@@ -540,7 +461,6 @@ return [
             ],
             'headline' => 'Best Simple Commenter alternative for capture-based agent checkups',
             'subheadline' => 'Simple Commenter embeds a live-site feedback widget and can hand comments to agents over MCP. ReviseMy is a design checkup loop on captures — authoritative human marks, a verify gate, and next_action across UI, websites, email, and slides.',
-            'intro' => 'People look for a Simple Commenter alternative when feedback must live on screenshots and multi-type captures — not only a scripted live page — when owner marks must stay authoritative over guests and AI hints, or when “done” means human-verified pixels after an agent pass. Simple Commenter is strong for agencies and teams that want an on-page widget, PM integrations, and an MCP path that pulls open comments for coding agents. ReviseMy is the stronger alternative when you want a dedicated checkup surface: create_review from images, URL capture, PDF, or HTML; human pins as work_packets; board lifecycle with verify; second opinion that never decides; and next_action that tells the agent to wait, apply, or stop.',
             'why_look' => [
                 'You need review on captures and artifact types beyond an embedded live-site widget.',
                 'Owner marks, guest suggestions, and AI hints must stay clearly separated.',
@@ -554,20 +474,6 @@ return [
                 'Whether second-opinion AI stays non-authoritative',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/#setup',
-                    'badge' => 'Recommended',
-                    'summary' => 'Human-in-the-loop design checkup for AI agents. Capture, mark with intent, verify on the board, send next_action back over MCP.',
-                    'best_for' => 'Teams that want a review loop with authority and verification — not only a live-site comment inbox.',
-                    'bullets' => [
-                        'Capture-based marks → work_packets.pins',
-                        'Board: open → resolved → verified (human-only verify)',
-                        'Second opinion stays suggestions only',
-                        'Free try token — no account for reviewers',
-                    ],
-                ],
                 [
                     'id' => 'marker-io',
                     'label' => 'Marker.io',
@@ -588,7 +494,6 @@ return [
                 'A pragmatic split: Simple Commenter for ongoing on-page client feedback; ReviseMy for agent-built feature passes and multi-artifact checkups.',
                 'ReviseMy is not “the only MCP visual feedback tool” — Simple Commenter’s MCP is real; the products optimize for different loops.',
             ],
-            'verdict' => 'Choose ReviseMy if you need capture-based design checkups with authoritative marks, a verification board, and next_action. Choose Simple Commenter if your core product is a live-site feedback widget (with optional agent MCP) into the tools your team already uses.',
             'faq' => [
                 [
                     'q' => 'Doesn’t Simple Commenter already have MCP?',
@@ -631,11 +536,10 @@ return [
             ],
             'headline' => 'Best alternative to just using an AI chat app',
             'subheadline' => 'Paste a screenshot into ChatGPT, Claude, Copilot, Cursor, or Grok and you get opinions. ReviseMy keeps AI as second opinion — humans mark, approve, and own the agent’s next_action.',
-            'intro' => 'People look for an alternative to just using an AI chat app when the model sounds decisive, when agents treat a chat reply as a ship decision, or when feedback never sticks to regions across passes. Instant vision critique in chat is useful for brainstorming and taste prompts. ReviseMy is the stronger alternative when you need a durable loop: type-aware free checklist, optional BYOK vision regions as dashed hints, solid human marks as authority, a board for verification, and MCP tools so agents wait, apply, or stop for real.',
             'why_look' => [
                 'Chat critiques vanish; agents re-invent the brief every pass.',
                 'You need human must-fix / keep intent that overrides model confidence.',
-                'Overlapping AI findings should enrich under a pin — not invent conflicting must-fixes.',
+                'Overlapping AI findings should enrich a mark — not invent conflicting must-fixes.',
                 'You want Refresh second opinion without flipping approve / request-changes.',
             ],
             'what_to_look_for' => [
@@ -645,20 +549,6 @@ return [
                 'Whether checklist runs without an API key and vision is optional BYOK',
             ],
             'recommended' => [
-                [
-                    'id' => 'revisemy',
-                    'label' => 'ReviseMy',
-                    'href' => '/second-opinion',
-                    'badge' => 'Recommended',
-                    'summary' => 'Second opinion is built-in and deliberately non-authoritative. Your marks decide; the board and MCP close the loop.',
-                    'best_for' => 'Anyone who likes AI hints but refuses to let them ship the product.',
-                    'bullets' => [
-                        'Free checklist on every upload',
-                        'Optional Claude/OpenAI vision regions',
-                        'Human marks = work_packets.pins',
-                        'See /second-opinion for the full model',
-                    ],
-                ],
                 [
                     'id' => 'figma-comments',
                     'label' => 'Figma comments',
@@ -679,7 +569,6 @@ return [
                 'You can paste a screenshot for a quick opinion, then open a ReviseMy review for the real pass.',
                 'If you only ever want ephemeral chat advice and no ship gate, stick with an AI chat app.',
             ],
-            'verdict' => 'Choose ReviseMy if AI should hint and humans should decide — with a board and MCP loop. Stick with an AI chat app if you only need disposable opinions and no structured agent handoff.',
             'faq' => [
                 [
                     'q' => 'Does ReviseMy still use AI?',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\KeepOutOfSearch;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,11 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'noindex' => KeepOutOfSearch::class,
+        ]);
         // Polar signs its webhooks (Standard Webhooks); there is no session to forge.
         $middleware->preventRequestForgery(except: ['polar/webhook']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            // MCP clients need the 401 (with WWW-Authenticate) to learn where
+            // to sign in, never a redirect to the Connect page.
+            fn (Request $request) => $request->is('api/*', 'mcp/*') || $request->expectsJson(),
         );
     })->create();

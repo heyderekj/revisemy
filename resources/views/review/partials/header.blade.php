@@ -1,39 +1,39 @@
-    <header class="relative z-40 shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
+    <header class="relative z-40 shrink-0 border-b border-border bg-background">
         <div class="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:flex sm:gap-4 sm:px-6">
             <div class="col-start-1 row-start-1 flex shrink-0 items-center gap-2 sm:gap-3">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                     <x-revisemy-logo size="sm" />
                 </a>
-                <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Review</h1>
+                <h1 class="sr-only shrink-0 text-lg font-semibold tracking-tight text-zinc-900 sm:not-sr-only">Review</h1>
             </div>
 
             <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:col-span-1 sm:row-start-1 sm:flex-1 sm:flex-nowrap">
-                <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600">
                     Pass {{ $review->pass }}
                 </span>
                 @php($sourceKind = $review->sourceKind())
                 @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
                     <span
-                        class="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
+                        class="inline-flex shrink-0 items-center gap-1 rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium text-zinc-600"
                         title="Snapshot of {{ $review->page_url }}{{ $review->capturedAt() ? ' · '.$review->capturedAt()->timezone(config('app.timezone'))->toDayDateTimeString() : '' }}"
                     >
                         <flux:icon.link variant="micro" class="size-3 text-zinc-400" />
                         <span class="max-w-40 truncate">{{ $review->sourceDomain() }}</span>
                         @if ($review->capturedAt())
-                            <span class="font-normal text-zinc-400">· captured {{ $review->capturedAt()->diffForHumans() }}</span>
+                            <span class="hidden font-normal text-zinc-400 sm:inline">· captured {{ $review->capturedAt()->diffForHumans() }}</span>
                         @endif
                     </span>
                 @else
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+                    <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium text-zinc-600">
                         {{ $review->sourceKindLabel() }}
                     </span>
                 @endif
                 @if ($review->effectiveStatus() === 'changes_requested')
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Changes requested</span>
+                    <x-signal-tag tone="attention" class="shrink-0">Changes requested</x-signal-tag>
                 @elseif ($review->effectiveStatus() === 'approved')
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Approved</span>
+                    <x-signal-tag tone="done" class="shrink-0">Approved</x-signal-tag>
                 @elseif ($review->effectiveStatus() === 'expired')
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800">Expired</span>
+                    <x-signal-tag class="shrink-0">Expired</x-signal-tag>
                 @endif
                 <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
                 @if ($this->isOwner() && $review->isOpenForFeedback())
@@ -68,7 +68,7 @@
                                     type="button"
                                     wire:click="saveTitle"
                                     x-on:mousedown.prevent
-                                    class="inline-flex size-6 items-center justify-center rounded-md text-rose-600 transition hover:bg-rose-50"
+                                    class="inline-flex size-6 items-center justify-center rounded-md text-zinc-900 transition hover:bg-chip"
                                     aria-label="Save title"
                                     title="Save"
                                 >
@@ -94,14 +94,8 @@
 
             @if ($mode === 'guest')
                 <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-self-end">
-                    @if (! $review->allowsGuestAccess())
-                        <span class="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-800">
-                            Guest link expired
-                        </span>
-                    @else
-                        <span class="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-[11px] font-medium text-zinc-800">
-                            Guest
-                        </span>
+                    @if ($review->allowsGuestAccess())
+                        <x-signal-tag>Guest</x-signal-tag>
                     @endif
                 </div>
             @elseif ($this->isOwner())
@@ -161,7 +155,7 @@
                                 size="sm"
                                 variant="ghost"
                                 icon="link"
-                                class="!bg-zinc-100 hover:!bg-zinc-200/80"
+                                class="!bg-chip hover:!bg-chip-hover"
                                 aria-label="Share"
                             >
                                 <span class="hidden sm:inline" x-show="! copied">Share</span>
@@ -184,7 +178,7 @@
                                 <div class="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Guest link expires</div>
                                 <flux:menu.item wire:click="setShareExpiry('7d')">
                                     In 7 days
-                                    <span class="ms-auto text-[10px] font-medium text-zinc-400">Default</span>
+                                    <span class="ms-auto text-xs font-medium text-zinc-400">Default</span>
                                 </flux:menu.item>
                                 <flux:menu.item wire:click="setShareExpiry('14d')">In 14 days</flux:menu.item>
                                 <flux:menu.item wire:click="setShareExpiry('never')">Never</flux:menu.item>
@@ -220,7 +214,7 @@
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 translate-y-1"
-                            class="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[17.5rem] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
+                            class="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[17.5rem] overflow-hidden rounded-2xl bg-lift ring-1 ring-black/[0.07] p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]"
                             x-on:click.outside="pickingDate = false"
                         >
                             <div class="mb-3 flex items-center justify-between gap-2">
@@ -245,7 +239,7 @@
 
                             <div class="mb-1 grid grid-cols-7 gap-0.5">
                                 <template x-for="label in weekdays" :key="label">
-                                    <div class="py-1 text-center text-[10px] font-medium uppercase tracking-wide text-zinc-400" x-text="label"></div>
+                                    <div class="py-1 text-center text-xs font-medium uppercase tracking-wide text-zinc-400" x-text="label"></div>
                                 </template>
                             </div>
 
@@ -259,9 +253,9 @@
                                             x-on:click="pick(cell.iso)"
                                             class="flex size-full items-center justify-center rounded-full text-sm transition disabled:cursor-not-allowed disabled:opacity-30"
                                             x-bind:class="cell && cell.iso === selected
-                                                ? 'bg-rose-500 font-semibold text-accent-contrast shadow-sm'
+                                                ? 'bg-key font-semibold text-accent-foreground shadow-sm'
                                                 : (cell && cell.iso === today
-                                                    ? 'font-semibold text-rose-600 ring-1 ring-inset ring-rose-200 hover:bg-rose-50'
+                                                    ? 'font-semibold text-zinc-900 ring-1 ring-inset ring-key/60 hover:bg-chip'
                                                     : 'text-zinc-700 hover:bg-zinc-100')"
                                             x-text="cell?.day"
                                         ></button>
@@ -284,11 +278,11 @@
                             <flux:error name="shareExpiryDate" />
                         </div>
                     </div>
-                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-zinc-100 hover:!bg-zinc-200/80">Board</flux:button>
+                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-chip hover:!bg-chip-hover" aria-label="Board"><span class="hidden sm:inline">Board</span></flux:button>
                     @if ($review->isOpenForFeedback())
                         <div class="hidden items-center gap-2 md:flex">
-                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" wire:click="requestChanges" wire:confirm="Request changes and send marks back to the agent?" class="!bg-zinc-100 hover:!bg-zinc-200/80">Changes</flux:button>
-                            <flux:button size="sm" variant="primary" icon="check" wire:click="approve" wire:confirm="Approve this pass? Resolved marks will be verified and the loop closes.">Approve</flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" x-on:click="$dispatch('rm-decide', { kind: 'changes' })" class="!bg-chip hover:!bg-chip-hover">Changes</flux:button>
+                            <flux:button size="sm" variant="primary" icon="check" x-on:click="$dispatch('rm-decide', { kind: 'approve' })">Approve</flux:button>
                         </div>
                     @endif
                 </div>

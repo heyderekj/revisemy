@@ -8,7 +8,7 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 
 ## Features
 
-- **Marks, not pins** — product UI speaks in marks (rose rectangles + M1/M2 badges). Human marks are authoritative; API keys stay `pins` for compatibility.
+- **Marks, not pins** — product UI speaks in marks (yellow rectangles + M1/M2 badges). Human marks are authoritative; API keys stay `pins` for compatibility.
 - **Rectangle-first review** — drag to outline a region or click for a point note; zoom with +/− and pan with Space+drag (or middle mouse).
 - **Second opinion (hints only)** — Free type-aware checklist in the sidebar on every screenshot; optional Claude/OpenAI vision when keyed draws dashed regions on the capture. Sky S-markers never override your marks — accept or dismiss them in the review UI.
 - **Review types** — `ui`, `website`, `presentation` (Slide in the UI), or `email`: each gets its own checklist and vision lens (emails get CTA/dark-mode/client checks, slides get slide-density checks, sites get above-the-fold/responsive checks).
@@ -25,15 +25,15 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 - **Guest share links** — `guest_share_url` lets stakeholders leave suggestions (not authoritative marks); the owner accepts or dismisses them.
 - **Token-scoped recent reviews** — `/reviews` and enriched `list_reviews` show pass #, outstanding counts, and awaiting-verification without an account (same try token).
 - **MCP Apps inline review** — in hosts that support [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview) (Claude web/desktop, Copilot, …), `create_review` / `get_review` render the review inline so humans can mark and decide without leaving chat. Cursor and Claude Code use the `review_url` link instead.
-- **Try token, no account** — one-click token on the homepage; paste MCP config for ChatGPT, Claude, Copilot, Cursor, or Grok.
+- **Connect, no account** — Claude and ChatGPT sign in with one click (OAuth); Cursor and VS Code install from a link; Grok, Muse, Codex and scripts use a free try token.
 - **Secret review links** — humans open `/r/{token}` without signing up.
 - **Live updates (optional)** — Laravel Reverb for realtime board/mark updates; without it the UI polls gracefully.
 
 ## Try it on any project (~2 minutes)
 
-1. Open the hosted app (your `*.laravel.cloud` URL after deploy).
-2. Click **Get a try token**.
-3. Copy the MCP config for your client (ChatGPT, Claude, Copilot, Cursor, or Grok).
+1. Open `/connect` on the hosted app and pick your assistant.
+2. Claude and ChatGPT: add a custom connector with the address and click **Connect** (no account, no token). Cursor and VS Code: one click. Claude Code: one command. Grok, Muse and Codex: a free try token the page makes for you.
+3. The page shows when your assistant makes its first call.
 4. Ask your agent to capture the work (screenshot, URL, PDF slides, or email HTML) and call `create_review`.
 5. Open the review link (or use inline MCP Apps if your host supports it), mark feedback, approve or request changes.
 6. Ask the agent to call `get_review` and follow `next_action` — or listen on your `webhook_url` if you set one.

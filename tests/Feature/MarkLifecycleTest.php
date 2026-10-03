@@ -325,7 +325,7 @@ class MarkLifecycleTest extends TestCase
         $childReview = Review::query()->where('public_id', $child['id'])->firstOrFail();
         Livewire::test('review-page', ['token' => $childReview->token])
             ->assertOk()
-            ->assertSee('Previous pass marks')
+            ->assertSee('From pass 1')
             ->assertSee('Done.');
     }
 

@@ -111,10 +111,10 @@ class McpAppTest extends TestCase
 
         $meta = $resource->resolvedAppMeta();
         $this->assertArrayHasKey('csp', $meta);
-        // Alpine + Tailwind CDNs (Library enum) and the review page's webfont host.
-        $this->assertContains('https://cdn.jsdelivr.net', $meta['csp']['resourceDomains']);
-        $this->assertContains('https://cdn.tailwindcss.com', $meta['csp']['resourceDomains']);
-        $this->assertContains('https://fonts.bunny.net', $meta['csp']['resourceDomains']);
+        // Styles and Alpine are inlined from the build, so no CDN is allowlisted.
+        $this->assertNotContains('https://cdn.jsdelivr.net', $meta['csp']['resourceDomains']);
+        $this->assertNotContains('https://cdn.tailwindcss.com', $meta['csp']['resourceDomains']);
+        $this->assertNotContains('https://fonts.bunny.net', $meta['csp']['resourceDomains']);
 
         ReviseMyServer::resource(ReviewApp::class)
             ->assertOk()
@@ -123,15 +123,20 @@ class McpAppTest extends TestCase
                 'mcpBridge',
                 'add_mark',
                 'focus_preview',
-                'View comments',
+                'openComments()',
                 'boardPins',
                 'regionFindings',
                 'numberedRegionFindings',
                 'allFindings',
-                'Second opinion',
+                'Hints',
                 'max-h-[min(70dvh,36rem)]',
                 'touch-pan-y',
-            ]);
+                // The site's tokens, inlined: ReviseMy's key and the dark ramp.
+                '--key:#ffc53d',
+                '.dark{',
+                "font-family:'Figtree'",
+            ])
+            ->assertDontSee(['cdn.tailwindcss.com', 'fonts.bunny.net', 'tailwind.config']);
     }
 
     public function test_add_mark_creates_a_human_mark_and_returns_fresh_payload(): void

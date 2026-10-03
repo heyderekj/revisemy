@@ -4,7 +4,7 @@
         {{ $page['sources_intro'] ?? 'Type-aware second opinion draws on published craft principles. Hints are ReviseMy distillations — not quotes, reviews, or endorsements from the people behind these works.' }}
     </p>
 
-    <div class="mt-10 divide-y divide-zinc-200/80 border-y border-zinc-200/80">
+    <div class="mt-10 space-y-2">
         @foreach ($sources as $group)
             @php
                 $icon = match ($group['type'] ?? '') {
@@ -15,7 +15,7 @@
                     default => 'swatch',
                 };
             @endphp
-            <div class="grid gap-6 py-8 first:pt-8 last:pb-8 sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:gap-8">
+            <div class="grid gap-6 rounded-2xl bg-card p-5 sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:gap-8 sm:p-6">
                 <div class="sm:pt-0.5">
                     <div class="flex items-center gap-2.5 sm:flex-col sm:items-start sm:gap-2">
                         <x-use-case-icon :name="$icon" size="sm" />
@@ -36,10 +36,10 @@
                                     href="{{ $lens['source_url'] }}"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="group inline-flex max-w-full items-baseline gap-1.5 text-[15px] font-semibold tracking-tight text-zinc-900 transition hover:text-rose-600"
+                                    class="group inline-flex max-w-full items-baseline gap-1.5 text-[15px] font-semibold tracking-tight text-zinc-900 transition hover:text-zinc-900"
                                 >
                                     <span class="truncate">{{ $lens['name'] }}</span>
-                                    <span class="shrink-0 text-zinc-300 transition group-hover:text-rose-400" aria-hidden="true">↗</span>
+                                    <span class="shrink-0 text-zinc-300 transition group-hover:text-zinc-900" aria-hidden="true">↗</span>
                                 </a>
                                 @if (! empty($lens['source_label']))
                                     <p class="mt-0.5 truncate text-[11px] text-zinc-400">{{ $lens['source_label'] }}</p>

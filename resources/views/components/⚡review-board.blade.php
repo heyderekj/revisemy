@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
@@ -9,6 +10,8 @@ use Livewire\Component;
 
 new class extends Component
 {
+    use FindsReviewMarks;
+
     #[Locked]
     public string $token;
 
@@ -19,8 +22,6 @@ new class extends Component
     public ?int $selectedMarkId = null;
 
     public string $commentBody = '';
-
-    public string $commentAuthor = '';
 
     public function mount(string $token): void
     {
@@ -99,15 +100,13 @@ new class extends Component
         $this->showMarkSheet = false;
         $this->selectedMarkId = null;
         $this->commentBody = '';
-        $this->resetValidation(['commentBody', 'commentAuthor']);
+        $this->resetValidation(['commentBody']);
     }
 
     public function updatedShowMarkSheet(bool $open): void
     {
         if (! $open) {
-            $this->selectedMarkId = null;
-            $this->commentBody = '';
-            $this->resetValidation(['commentBody', 'commentAuthor']);
+            $this->closeMarkSheet();
         }
     }
 
@@ -121,10 +120,7 @@ new class extends Component
             ?->loadMissing(['screenshot.review', 'afterScreenshot', 'comments']);
     }
 
-    /**
-     * Board comments are anonymous-friendly: blank name posts as Owner,
-     * otherwise the typed name is stored (same spirit as guest links).
-     */
+    /** The board is the owner's, so its comments are the owner's: same rule as the review page. */
     public function addComment(): void
     {
         if (! $this->review->allowsComments() || ! $this->selectedMarkId) {
@@ -138,17 +134,11 @@ new class extends Component
         }
 
         $this->commentBody = FeedbackText::sanitizeBody($this->commentBody);
-        $this->commentAuthor = FeedbackText::sanitizeName($this->commentAuthor);
 
-        $this->validate([
-            'commentBody' => FeedbackText::bodyRules(),
-            'commentAuthor' => FeedbackText::nameRules(required: false),
-        ], FeedbackText::nameMessages('commentAuthor'));
-
-        $author = $this->commentAuthor;
+        $this->validate(['commentBody' => FeedbackText::bodyRules()]);
 
         $annotation->comments()->create([
-            'author' => $author !== '' ? $author : 'Owner',
+            'author' => 'Owner',
             'from_owner' => true,
             'body' => $this->commentBody,
         ]);
@@ -184,15 +174,6 @@ new class extends Component
         $this->loadBoard();
     }
 
-    protected function ownedAnnotation(int $annotationId): ?Annotation
-    {
-        $reviewIds = array_filter([$this->review->id, $this->review->parent_id]);
-
-        return Annotation::query()
-            ->whereKey($annotationId)
-            ->whereHas('screenshot', fn ($q) => $q->whereIn('review_id', $reviewIds))
-            ->first();
-    }
 
     /**
      * Cards move live over the review's public channel; the view keeps a slow
@@ -212,7 +193,7 @@ new class extends Component
 ?>
 
 <div
-    class="flex min-h-svh flex-col"
+    class="rm-desk flex min-h-svh flex-col"
     x-data="{
         dragging: null,
         didDrag: false,
@@ -339,7 +320,9 @@ new class extends Component
     @php($verified = $grouped[\App\Models\Annotation::STATUS_VERIFIED]->count())
     @php($verifiedPct = $total > 0 ? (int) round(($verified / $total) * 100) : 0)
 
-    <header class="shrink-0 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
+    {{-- Koati's shell: the work sits on an inset panel over the desk. --}}
+    <div class="rm-shell">
+    <header class="shrink-0 border-b border-border bg-background">
         <div class="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:flex sm:gap-4 sm:px-6">
             <div class="col-start-1 row-start-1 flex shrink-0 items-center gap-2 sm:gap-3">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
@@ -349,10 +332,10 @@ new class extends Component
             </div>
 
             <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:col-span-1 sm:row-start-1 sm:flex-1 sm:flex-nowrap">
-                <span class="inline-flex shrink-0 items-center rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600">
                     Pass {{ $review->pass }}
                 </span>
-                <span class="inline-flex shrink-0 items-center rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700" title="{{ $review->typeGuidance() }}">
+                <span class="inline-flex shrink-0 items-center rounded-md bg-sky-50 px-1.5 py-0.5 text-xs font-medium text-sky-700" title="{{ $review->typeGuidance() }}">
                     {{ $review->typeLabel() }}
                 </span>
                 <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
@@ -362,13 +345,13 @@ new class extends Component
             @if ($total > 0)
                 <div class="hidden min-w-0 items-center gap-2 sm:flex sm:w-40 md:w-48">
                     <span class="shrink-0 text-xs tabular-nums text-zinc-500">{{ $verified }}/{{ $total }}</span>
-                    <div class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-200/80" role="progressbar" aria-valuenow="{{ $verified }}" aria-valuemin="0" aria-valuemax="{{ $total }}" aria-label="Marks verified">
+                    <div class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-chip" role="progressbar" aria-valuenow="{{ $verified }}" aria-valuemin="0" aria-valuemax="{{ $total }}" aria-label="Marks verified">
                         <div class="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out" style="width: {{ $verifiedPct }}%"></div>
                     </div>
                 </div>
             @endif
 
-            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ $review->reviewUrl() }}" class="col-start-3 row-start-1 shrink-0 justify-self-end !bg-zinc-100 hover:!bg-zinc-200/80">
+            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ $review->reviewUrl() }}" class="col-start-3 row-start-1 shrink-0 justify-self-end !bg-chip hover:!bg-chip-hover">
                 Review
             </flux:button>
         </div>
@@ -383,7 +366,10 @@ new class extends Component
     <div class="mx-auto w-full max-w-7xl flex-1 py-4 sm:py-5">
         @if ($total === 0)
             <div class="px-4 sm:px-6">
-                <flux:callout>No marks yet. Add must-fix, nice-to-have, question, or keep marks on the review.</flux:callout>
+                <div class="hatch rounded-2xl px-6 py-10 text-center text-zinc-300">
+                    <p class="text-base font-semibold text-zinc-900">No marks yet</p>
+                    <p class="mt-1 text-sm text-muted-foreground">Marks you make on the review land here.</p>
+                </div>
             </div>
         @else
             <div
@@ -400,11 +386,11 @@ new class extends Component
                     <div
                         data-col
                         data-droppable="{{ $column['droppable'] ? 'true' : 'false' }}"
-                        class="flex min-h-[8rem] w-[min(82vw,20rem)] shrink-0 snap-start flex-col rounded-2xl border p-3 transition sm:w-[min(60vw,20rem)] md:w-[min(45vw,20rem)] xl:w-auto xl:max-w-none xl:shrink {{ $column['droppable'] ? 'border-zinc-200 bg-white/70' : 'border-dashed border-zinc-200/90 bg-zinc-50/80' }}"
+                        class="flex min-h-[8rem] w-[min(82vw,20rem)] shrink-0 snap-start flex-col rounded-2xl p-3 ring-2 ring-transparent transition sm:w-[min(60vw,20rem)] md:w-[min(45vw,20rem)] xl:w-auto xl:max-w-none xl:shrink bg-well"
                         @if ($column['droppable'])
-                            x-on:dragover.prevent="$el.classList.remove('border-zinc-200'); $el.classList.add('border-rose-400')"
-                            x-on:dragleave="$el.classList.remove('border-rose-400'); $el.classList.add('border-zinc-200')"
-                            x-on:drop.prevent="$el.classList.remove('border-rose-400'); $el.classList.add('border-zinc-200'); if (dragging !== null) { $wire.moveMark(dragging, '{{ $status }}'); dragging = null }"
+                            x-on:dragover.prevent="$el.classList.remove('ring-transparent'); $el.classList.add('ring-key')"
+                            x-on:dragleave="$el.classList.remove('ring-key'); $el.classList.add('ring-transparent')"
+                            x-on:drop.prevent="$el.classList.remove('ring-key'); $el.classList.add('ring-transparent'); if (dragging !== null) { $wire.moveMark(dragging, '{{ $status }}'); dragging = null }"
                         @else
                             x-on:dragover.prevent
                             x-on:drop.prevent="dragging = null"
@@ -418,10 +404,10 @@ new class extends Component
                                     </span>
                                     <div class="min-w-0">
                                         <flux:heading size="sm">{{ $label }}</flux:heading>
-                                        <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide {{ $column['droppable'] ? 'text-zinc-400' : 'text-zinc-400/80' }}">{{ $column['owner'] }}</p>
+                                        <p class="mt-0.5 text-xs text-muted-foreground">{{ $column['owner'] }}</p>
                                     </div>
                                 </div>
-                                <span class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 px-2 text-sm font-semibold tabular-nums text-zinc-700">{{ $grouped[$status]->count() }}</span>
+                                <span class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-chip px-2 text-sm font-semibold tabular-nums text-zinc-700">{{ $grouped[$status]->count() }}</span>
                             </div>
                         </div>
 
@@ -437,14 +423,14 @@ new class extends Component
                                     x-on:click="if (didDrag) { didDrag = false; return } $wire.openMark({{ $mark->id }})"
                                     x-on:keydown.enter.prevent="$wire.openMark({{ $mark->id }})"
                                     x-on:keydown.space.prevent="$wire.openMark({{ $mark->id }})"
-                                    class="cursor-pointer rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition hover:border-zinc-300 hover:shadow-md active:cursor-grabbing"
+                                    class="cursor-pointer rounded-xl bg-lift p-3 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] transition-[translate,box-shadow] hover:-translate-y-px hover:shadow-lg active:cursor-grabbing"
                                 >
                                     <div class="mb-1 flex flex-wrap items-center gap-2">
-                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-semibold {{ $mark->markerClass() }}">M{{ $mark->number }}</span>
+                                        <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold {{ $mark->markerClass() }}">M{{ $mark->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $mark->label() }}</span>
-                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $mark->statusBadgeClass() }}">{{ $mark->statusLabel() }}</span>
+                                        <x-signal-tag :tone="$mark->statusTone()">{{ $mark->statusLabel() }}</x-signal-tag>
                                         @if ($mark->comments->isNotEmpty())
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600">
+                                            <span class="inline-flex items-center gap-1 rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600">
                                                 <flux:icon name="chat-bubble-left-right" class="size-3" />
                                                 {{ $mark->comments->count() }}
                                             </span>
@@ -458,7 +444,7 @@ new class extends Component
                                     @endif
                                 </div>
                             @empty
-                                <p class="rounded-xl border border-dashed border-zinc-200 px-3 py-6 text-center text-xs text-zinc-400">{{ $column['empty'] }}</p>
+                                <p class="hatch rounded-xl px-3 py-6 text-center text-xs text-zinc-300"><span class="rounded-md bg-well px-1.5 py-0.5 text-muted-foreground">{{ $column['empty'] }}</span></p>
                             @endforelse
                         </div>
                     </div>
@@ -472,7 +458,7 @@ new class extends Component
             >
                 <button
                     type="button"
-                    class="inline-flex size-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900 disabled:pointer-events-none disabled:opacity-35"
+                    class="inline-flex size-8 items-center justify-center btn-quiet rounded-full text-zinc-600 hover:text-zinc-900 disabled:pointer-events-none disabled:opacity-35"
                     x-on:click="go(-1)"
                     x-bind:disabled="active <= 0"
                     aria-label="Previous columns"
@@ -486,7 +472,7 @@ new class extends Component
                             type="button"
                             x-on:click="goTo(i - 1)"
                             class="h-2 rounded-full transition-all"
-                            x-bind:class="active === i - 1 ? 'w-5 bg-rose-500' : 'w-2 bg-zinc-300 hover:bg-zinc-400'"
+                            x-bind:class="active === i - 1 ? 'w-5 bg-key' : 'w-2 bg-zinc-300 hover:bg-zinc-400'"
                             x-bind:aria-label="'Go to board page ' + i"
                         ></button>
                     </template>
@@ -494,7 +480,7 @@ new class extends Component
 
                 <button
                     type="button"
-                    class="inline-flex size-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900 disabled:pointer-events-none disabled:opacity-35"
+                    class="inline-flex size-8 items-center justify-center btn-quiet rounded-full text-zinc-600 hover:text-zinc-900 disabled:pointer-events-none disabled:opacity-35"
                     x-on:click="go(1)"
                     x-bind:disabled="active >= pages - 1"
                     aria-label="Next columns"
@@ -518,21 +504,34 @@ new class extends Component
 
             <div class="grid min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] lg:items-stretch">
                 {{-- Mini review: screenshot + mark context --}}
-                <div class="flex min-w-0 flex-col gap-4 border-zinc-100 p-5 sm:p-6 lg:border-r lg:pr-7">
+                <div class="flex min-w-0 flex-col gap-4 p-5 sm:p-6 lg:pr-7">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold {{ $selectedMark->markerClass() }}">M{{ $selectedMark->number }}</span>
+                                <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold {{ $selectedMark->markerClass() }}">M{{ $selectedMark->number }}</span>
                                 <span class="text-xs text-zinc-500">{{ $selectedMark->label() }}</span>
-                                <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $selectedMark->statusBadgeClass() }}">{{ $selectedMark->statusLabel() }}</span>
+                                <x-signal-tag :tone="$selectedMark->statusTone()">{{ $selectedMark->statusLabel() }}</x-signal-tag>
                             </div>
                             @if ($markReview)
                                 <p class="mt-2 text-xs text-zinc-400">Pass {{ $markReview->pass }} · {{ $markReview->title }}</p>
                             @endif
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <flux:button size="sm" variant="ghost" icon="eye" href="{{ $review->reviewUrl() }}" class="!bg-zinc-100 hover:!bg-zinc-200/80">
-                                View on review
+                            {{-- Move without dragging: the same steps the columns take. --}}
+                            @if ($review->allowsMarkManagement() && $selectedMark->severity !== \App\Models\Annotation::SEVERITY_KEEP)
+                                @if ($selectedMark->awaitsVerification())
+                                    <button type="button" wire:click="moveMark({{ $selectedMark->id }}, 'verified')" class="inline-flex h-8 items-center gap-1 rounded-full bg-done-soft px-3 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200">
+                                        <flux:icon.check variant="micro" class="size-3.5" /> Verify
+                                    </button>
+                                @elseif ($selectedMark->canOwnerResolve())
+                                    <button type="button" wire:click="moveMark({{ $selectedMark->id }}, 'resolved')" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover">Mark resolved</button>
+                                @endif
+                                @if ($selectedMark->status !== \App\Models\Annotation::STATUS_OPEN)
+                                    <button type="button" wire:click="moveMark({{ $selectedMark->id }}, 'open')" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover">Reopen</button>
+                                @endif
+                            @endif
+                            <flux:button size="sm" variant="ghost" icon="eye" href="{{ $review->reviewUrl() }}" class="!bg-chip hover:!bg-chip-hover">
+                                On the review
                             </flux:button>
                         </div>
                     </div>
@@ -540,40 +539,40 @@ new class extends Component
                     @if ($shot)
                         <x-mark-focus-preview :mark="$selectedMark" />
                     @else
-                        <div class="rounded-xl border border-dashed border-zinc-200 px-4 py-10 text-center text-sm text-zinc-400">
+                        <div class="hatch rounded-xl bg-well px-4 py-10 text-center text-sm text-muted-foreground">
                             No screenshot for this mark.
                         </div>
                     @endif
 
-                    <div class="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
+                    <div class="rounded-xl bg-card p-4 sm:p-5">
                         <dl class="space-y-4 text-sm">
                             <div>
-                                <dt class="text-xs font-medium uppercase tracking-wide text-zinc-400">Feedback</dt>
+                                <dt class="text-xs text-muted-foreground">Feedback</dt>
                                 <dd class="mt-1 leading-relaxed text-pretty text-zinc-800 sm:text-[15px]">{{ $selectedMark->body }}</dd>
                             </div>
                             @if ($markReview?->context)
-                                <div class="border-t border-zinc-100 pt-4">
-                                    <dt class="text-xs font-medium uppercase tracking-wide text-zinc-400">What to look at</dt>
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">What to look at</dt>
                                     <dd class="mt-1 whitespace-pre-wrap text-pretty text-zinc-700">{{ $markReview->context }}</dd>
                                 </div>
                             @endif
                             @if ($selectedMark->resolution_note)
-                                <div class="border-t border-zinc-100 pt-4">
-                                    <dt class="text-xs font-medium uppercase tracking-wide text-zinc-400">Agent note</dt>
-                                    <dd class="mt-1 rounded-lg bg-emerald-50/80 px-3 py-2 text-emerald-950">{{ $selectedMark->resolution_note }}</dd>
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">Agent note</dt>
+                                    <dd class="mt-1 rounded-lg bg-done-soft px-3 py-2 text-done-ink">{{ $selectedMark->resolution_note }}</dd>
                                 </div>
                             @endif
                             @if ($selectedMark->afterScreenshot)
-                                <div class="border-t border-zinc-100 pt-4">
-                                    <dt class="text-xs font-medium uppercase tracking-wide text-zinc-400">Before / after</dt>
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">Before / after</dt>
                                     <dd class="mt-1"><x-mark-before-after :mark="$selectedMark" /></dd>
                                 </div>
                             @endif
                             @if ($selectedMark->resolved_at || $selectedMark->verified_at)
-                                <div class="grid gap-3 border-t border-zinc-100 pt-4 sm:grid-cols-2">
+                                <div class="grid gap-3 sm:grid-cols-2">
                                     @if ($selectedMark->resolved_at)
                                         <div>
-                                            <dt class="text-xs font-medium uppercase tracking-wide text-zinc-400">Resolved</dt>
+                                            <dt class="text-xs text-muted-foreground">Resolved</dt>
                                             <dd class="mt-0.5 text-zinc-700">
                                                 <time datetime="{{ $selectedMark->resolved_at->toIso8601String() }}" title="{{ $selectedMark->resolved_at->timezone(config('app.timezone'))->toDayDateTimeString() }}">
                                                     {{ $selectedMark->resolved_at->diffForHumans() }}
@@ -583,7 +582,7 @@ new class extends Component
                                     @endif
                                     @if ($selectedMark->verified_at)
                                         <div>
-                                            <dt class="text-xs font-medium uppercase tracking-wide text-zinc-400">Verified</dt>
+                                            <dt class="text-xs text-muted-foreground">Verified</dt>
                                             <dd class="mt-0.5 text-zinc-700">
                                                 <time datetime="{{ $selectedMark->verified_at->toIso8601String() }}" title="{{ $selectedMark->verified_at->timezone(config('app.timezone'))->toDayDateTimeString() }}">
                                                     {{ $selectedMark->verified_at->diffForHumans() }}
@@ -598,22 +597,17 @@ new class extends Component
                 </div>
 
                 {{-- Comments column: stretch to left column height on desktop; composer sticks to bottom --}}
-                <div class="flex min-h-0 flex-col border-t border-zinc-100 bg-zinc-50/60 p-5 sm:p-6 lg:h-full lg:border-t-0">
+                <div class="flex min-h-0 flex-col bg-well p-5 sm:p-6 lg:h-full">
                     <div class="mb-3 flex shrink-0 items-center gap-2">
                         <flux:heading size="sm">Comments</flux:heading>
-                        <span class="flex h-5 min-w-5 items-center justify-center rounded-full bg-zinc-100 px-1.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ $selectedMark->comments->count() }}</span>
+                        <span class="flex h-5 min-w-5 items-center justify-center rounded-md bg-chip px-1.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ $selectedMark->comments->count() }}</span>
                     </div>
 
                     <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                         @forelse ($selectedMark->comments as $comment)
-                            <div wire:key="mark-comment-{{ $comment->id }}" class="rounded-xl border border-zinc-200/80 bg-white px-3 py-2.5 shadow-sm">
+                            <div wire:key="mark-comment-{{ $comment->id }}" class="rounded-xl bg-raised px-3 py-2.5 shadow-xs ring-1 ring-black/[0.04]">
                                 <div class="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                                    <p class="text-xs font-medium text-zinc-800">
-                                        {{ $comment->author }}
-                                        @if ($comment->from_owner)
-                                            <span class="ml-1 rounded-full bg-zinc-200/80 px-1.5 py-px text-[10px] font-medium text-zinc-600">Owner</span>
-                                        @endif
-                                    </p>
+                                    <p class="text-xs font-medium text-zinc-800">{{ $comment->author }}</p>
                                     <time
                                         class="text-[11px] text-zinc-400"
                                         datetime="{{ $comment->created_at->toIso8601String() }}"
@@ -623,9 +617,9 @@ new class extends Component
                                 <p class="text-sm leading-relaxed text-pretty text-zinc-700">{{ $comment->body }}</p>
                             </div>
                         @empty
-                            <p class="rounded-xl border border-dashed border-zinc-200 bg-white/70 px-3 py-8 text-center text-xs text-zinc-400">
+                            <p class="rounded-xl px-3 py-8 text-center text-xs text-muted-foreground">
                                 @if ($review->allowsComments())
-                                    No comments yet. Share the guest link so teammates can weigh in.
+                                    No comments yet.
                                 @else
                                     Commenting is turned off for this review.
                                 @endif
@@ -634,20 +628,13 @@ new class extends Component
                     </div>
 
                     @if ($review->allowsComments())
-                        <div class="mt-4 shrink-0 space-y-2 border-t border-zinc-200/80 pt-4 lg:mt-auto">
-                            <flux:input
-                                wire:model="commentAuthor"
-                                placeholder="Your name (optional)"
-                                maxlength="40"
-                                size="sm"
-                                x-data
-                                x-init="if (! $wire.commentAuthor) { $wire.commentAuthor = localStorage.getItem('revisemy_guest_name') || '' }"
-                                x-on:change="if ($event.target.value) localStorage.setItem('revisemy_guest_name', $event.target.value)"
-                            />
+                        <div class="mt-4 shrink-0 space-y-2 lg:mt-auto">
                             <flux:textarea
                                 wire:model="commentBody"
                                 rows="3"
-                                placeholder="Add context, a question, or a note…"
+                                placeholder="Add a comment…"
+                                x-on:keydown.meta.enter.prevent="$wire.addComment()"
+                                x-on:keydown.ctrl.enter.prevent="$wire.addComment()"
                             />
                             <flux:error name="commentBody" />
                             <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="!h-8 w-full">
@@ -655,7 +642,7 @@ new class extends Component
                             </flux:button>
                         </div>
                     @else
-                        <p class="mt-4 shrink-0 border-t border-zinc-200/80 pt-4 text-center text-xs text-zinc-400 lg:mt-auto">
+                        <p class="mt-4 shrink-0 text-center text-xs text-muted-foreground lg:mt-auto">
                             Commenting is disabled. Turn it back on from Share on the review.
                         </p>
                     @endif
@@ -663,4 +650,5 @@ new class extends Component
             </div>
         @endif
     </flux:modal>
+</div>
 </div>

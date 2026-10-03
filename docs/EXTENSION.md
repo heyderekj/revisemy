@@ -44,23 +44,15 @@ It captures the same shape Koati's snippet captures, because both use one picker
 
 ## Where it sends
 
-Three destinations, from least setup to most:
+Two destinations, from least setup to most:
 
 - **Copy as prompt.** No account and no network. It copies a plain-text work packet to the clipboard, in the same field order as `work_packets.pins`, ready to paste into any agent. This is the free floor that matches the existing tools.
 - **Send to ReviseMy.** This uses the try token the person pastes into the extension once.
   - It calls `POST /api/reviews` with the screenshots and `type: website`, and places the human's marks on them.
   - It returns the review URL, and the agent picks it up with `get_review` as usual.
   - Review type, second opinion, passes and the board all work unchanged.
-- **Send to a team's Koati.** Nothing new is needed.
-  - Create the review with the team's `webhook_url` pointed at Koati's `POST /inbound/revisemy`.
-  - When the human requests changes, each mark lands in Koati's inbox as a line to sort (Koati's `docs/inbound.md` § ReviseMy).
-  - This is the path for work that needs someone to agree to it before any agent touches it.
 
-**The split with Koati is deliberate.**
-
-- **ReviseMy goes straight to the maker's own agent.** That fits somebody fixing their own work.
-- **Koati sends everything through an inbox that a person sorts.** A colleague's or client's click must never reach an agent unreviewed.
-- **Koati's own snippet covers people who install nothing.** That is its Website view. This extension is for the person who makes the work.
+ReviseMy and Koati are separate products from the same studio, with no connection between them: no linked reviews, no webhook, nothing sent either way. Koati has its own Website view for people who install nothing; this extension is for the person who makes the work, and it sends straight to that person's own agent.
 
 ## New in the code
 

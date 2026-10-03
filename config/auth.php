@@ -42,6 +42,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // An assistant connected by signing in (OAuth) rather than a pasted
+        // try token. Beside Sanctum, not instead of it: tokens stay for
+        // Cursor, Claude Code, scripts and anything that can't do OAuth.
+        'api' => [
+            'driver' => 'passport',
+            'provider' => 'users',
+        ],
     ],
 
     /*

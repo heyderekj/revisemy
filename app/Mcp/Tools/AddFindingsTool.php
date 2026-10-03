@@ -12,9 +12,13 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
 #[Name('add_findings')]
 #[Description('Act as a design-reviewer subagent: push suggestion/a11y/polish findings into an open review for the human to see alongside their marks. Never use must-fix — human marks stay authoritative.')]
+#[IsDestructive(false)]
+#[IsOpenWorld(false)]
 class AddFindingsTool extends Tool
 {
     use ResolvesWorkspace;

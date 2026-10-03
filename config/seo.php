@@ -8,7 +8,7 @@ return [
 
     'tagline' => 'Visual feedback. With your agent.',
 
-    'description' => 'Human-in-the-loop design review for AI agents. Capture UI, websites, slides, or email from screenshots, URLs, PDFs, or HTML; mark what matters; track fixes; and send structured next steps back over Laravel MCP.',
+    'description' => 'Visual feedback for your AI agent. It captures UI, a website, slides or an email; you mark what matters and approve or ask for changes; it reads your marks and keeps going. Connect Claude, ChatGPT, Cursor and more in one click.',
 
     'keywords' => [
         'design review',

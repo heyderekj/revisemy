@@ -14,9 +14,15 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
 #[Name('resolve_marks')]
 #[Description('Report progress on human marks while fixing them: set each mark to in_progress or resolved (with a short note on what you changed). When resolving, optionally attach after_image — a screenshot of the fixed area — so the human sees a before/after. Verifying stays the human\'s job — never claim a mark is done for them.')]
+#[IsDestructive(false)]
+#[IsIdempotent]
+#[IsOpenWorld(false)]
 class ResolveMarksTool extends Tool
 {
     use ResolvesWorkspace;

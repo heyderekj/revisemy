@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AlternativeController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ConnectController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PolarWebhookController;
@@ -13,6 +14,19 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('home');
 });
+
+/*
+ * Pages folded into others, kept as permanent redirects so old links and
+ * search results land on the same content.
+ */
+foreach (['chatgpt' => 'chatgpt', 'claude' => 'claude', 'copilot' => 'vscode', 'cursor' => 'cursor', 'grok' => 'grok'] as $from => $host) {
+    Route::permanentRedirect("/for/{$from}", "/connectors#{$host}");
+}
+foreach (['designers', 'product', 'engineers', 'founders'] as $audience) {
+    Route::permanentRedirect("/for/{$audience}", "/for#{$audience}");
+}
+Route::permanentRedirect('/mcp-apps', '/connectors#mcp-apps');
+Route::permanentRedirect('/webhooks', '/connectors#webhooks');
 
 Route::get('/for', [UseCaseController::class, 'index']);
 Route::get('/for/{slug}', [UseCaseController::class, 'show'])
@@ -26,31 +40,40 @@ Route::get('/board', [GuideController::class, 'show'])
     ->defaults('slug', 'board');
 Route::get('/guest-links', [GuideController::class, 'show'])
     ->defaults('slug', 'guest-links');
-Route::get('/webhooks', [GuideController::class, 'show'])
-    ->defaults('slug', 'webhooks');
-Route::get('/mcp-apps', [GuideController::class, 'show'])
-    ->defaults('slug', 'mcp-apps');
 Route::get('/changelog', [GuideController::class, 'show'])
     ->defaults('slug', 'changelog');
 
 Route::get('/privacy', [LegalController::class, 'privacy']);
 Route::get('/terms', [LegalController::class, 'terms']);
 
+/*
+ * Where an assistant signing in over OAuth is sent to "log in". Named login
+ * because that is the route Passport looks for.
+ */
+Route::middleware('noindex')->group(function () {
+    Route::get('/connect', [ConnectController::class, 'show'])->name('login');
+    Route::post('/connect', [ConnectController::class, 'store'])->middleware('throttle:10,1')->name('connect');
+});
+
 Route::get('/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');
-Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
-Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
-Route::get('/billing/checkout/{workspace}', [BillingController::class, 'checkout'])
-    ->middleware('signed')
-    ->name('billing.checkout');
-Route::get('/billing/manage/{workspace}', [BillingController::class, 'manage'])
-    ->middleware('signed')
-    ->name('billing.manage');
-Route::post('/billing/manage/{workspace}/portal', [BillingController::class, 'portal'])
-    ->middleware('signed')
-    ->name('billing.portal');
-Route::post('/billing/manage/{workspace}/cancel', [BillingController::class, 'cancelSubscription'])
-    ->middleware('signed')
-    ->name('billing.cancel-subscription');
+
+// Checkout and billing pages are secret or signed: keep them out of search.
+Route::middleware('noindex')->group(function () {
+    Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
+    Route::get('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+    Route::get('/billing/checkout/{workspace}', [BillingController::class, 'checkout'])
+        ->middleware('signed')
+        ->name('billing.checkout');
+    Route::get('/billing/manage/{workspace}', [BillingController::class, 'manage'])
+        ->middleware('signed')
+        ->name('billing.manage');
+    Route::post('/billing/manage/{workspace}/portal', [BillingController::class, 'portal'])
+        ->middleware('signed')
+        ->name('billing.portal');
+    Route::post('/billing/manage/{workspace}/cancel', [BillingController::class, 'cancelSubscription'])
+        ->middleware('signed')
+        ->name('billing.cancel-subscription');
+});
 Route::post('/polar/webhook', PolarWebhookController::class)->name('polar.webhook');
 
 Route::get('/alternatives', [AlternativeController::class, 'index']);
@@ -63,20 +86,20 @@ Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 
 Route::get('/reviews', function () {
     return view('recent-reviews');
-})->name('reviews.index');
+})->middleware('noindex')->name('reviews.index');
 
 Route::get('/r/{token}', function (string $token) {
     return view('review', ['token' => $token]);
-})->name('reviews.show');
+})->middleware('noindex')->name('reviews.show');
 
 Route::get('/r/{token}/board', function (string $token) {
     return view('review-board', ['token' => $token]);
-})->name('reviews.board');
+})->middleware('noindex')->name('reviews.board');
 
 Route::get('/shots/{screenshot}', [ScreenshotController::class, 'show'])
-    ->middleware('signed')
+    ->middleware(['signed', 'noindex'])
     ->name('screenshots.show');
 
 Route::get('/shots/{screenshot}/thumb', [ScreenshotController::class, 'thumb'])
-    ->middleware('signed')
+    ->middleware(['signed', 'noindex'])
     ->name('screenshots.thumb');

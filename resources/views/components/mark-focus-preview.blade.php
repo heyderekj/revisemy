@@ -20,7 +20,7 @@
     >
         @if ($overlay)
             <div
-                class="pointer-events-none absolute rounded-md border-2 border-rose-500 bg-rose-500/15"
+                class="pointer-events-none absolute rounded-md border-2 border-key bg-key/15"
                 style="left: {{ $overlay['x'] * 100 }}%; top: {{ $overlay['y'] * 100 }}%; width: {{ $overlay['w'] * 100 }}%; height: {{ $overlay['h'] * 100 }}%;"
             ></div>
         @elseif ($point)

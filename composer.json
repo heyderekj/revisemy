@@ -14,7 +14,9 @@
     "require": {
         "php": "^8.4",
         "laravel/framework": "^13.8",
-        "laravel/mcp": "^0.8.2",
+        "laravel/mcp": "^0.9.4",
+        "laravel/nightwatch": "^1.30",
+        "laravel/passport": "^13",
         "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",

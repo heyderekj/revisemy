@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
 use App\Models\Finding;
 use App\Models\Review;
@@ -14,6 +15,8 @@ use Livewire\Component;
 
 new class extends Component
 {
+    use FindsReviewMarks;
+
     #[Locked]
     public string $token;
 
@@ -50,13 +53,23 @@ new class extends Component
 
     public bool $editingTitle = false;
 
-    public string $secondOpinionTab = 'all';
+    /** Which hints show: all, one second-opinion category, or guest suggestions. */
+    public string $hintFilter = 'all';
 
-    public string $secondOpinionSourceTab = 'all';
 
     public string $markCommentBody = '';
 
     public ?int $activeCommentMarkId = null;
+
+    /**
+     * The last thing that can be taken back, for the toast's Undo: Koati's
+     * way of deleting without asking first. Locked, so the browser can't
+     * write its own.
+     *
+     * @var array{kind: string, at: int, mark?: array<string, mixed>, comments?: list<array<string, mixed>>, findings?: list<int>, pins?: list<int>}|null
+     */
+    #[Locked]
+    public ?array $undoable = null;
 
     public string $questionAnswerDraft = '';
 
@@ -99,7 +112,7 @@ new class extends Component
             $this->titleDraft = (string) $review->title;
         }
 
-        $this->syncSecondOpinionTab();
+        $this->syncHintFilter();
     }
 
     public function isOwner(): bool
@@ -119,79 +132,55 @@ new class extends Component
 
     public function showStatusCallout(): bool
     {
-        return in_array($this->review->effectiveStatus(), ['changes_requested', 'approved'], true);
+        return $this->isOwner() && in_array($this->review->effectiveStatus(), ['changes_requested', 'approved'], true);
     }
 
     public function selectScreenshot(int $index): void
     {
         $this->activeScreenshotIndex = $index;
-        $this->secondOpinionTab = 'all';
-        $this->secondOpinionSourceTab = 'all';
+        $this->hintFilter = 'all';
         $this->cancelPin();
     }
 
-    public function setSecondOpinionSourceTab(string $tab): void
+    public function setHintFilter(string $filter): void
     {
-        $allowed = ['all', 'checklist', 'vision'];
+        $allowed = ['all', 'guest', Finding::SEVERITY_SUGGESTION, Finding::SEVERITY_A11Y, Finding::SEVERITY_POLISH];
 
-        if (! in_array($tab, $allowed, true)) {
-            return;
+        if (in_array($filter, $allowed, true)) {
+            $this->hintFilter = $filter;
         }
-
-        $this->secondOpinionSourceTab = $tab;
-        $this->secondOpinionTab = 'all';
     }
 
-    public function setSecondOpinionTab(string $tab): void
+    /** Back to All when the chosen kind has no open hints left. */
+    protected function syncHintFilter(): void
     {
-        $allowed = ['all', Finding::SEVERITY_SUGGESTION, Finding::SEVERITY_A11Y, Finding::SEVERITY_POLISH];
-
-        if (! in_array($tab, $allowed, true)) {
-            return;
+        if ($this->hintFilter !== 'all' && $this->visibleHints()->isEmpty()) {
+            $this->hintFilter = 'all';
         }
-
-        $this->secondOpinionTab = $tab;
     }
 
     /**
-     * Fall back to All severity when that category has no open findings left.
-     * Source tabs (Checklist / Vision) stay selected even when empty so Vision
-     * can show its setup empty state.
+     * Open hints on this shot, second opinion first then guests, narrowed by
+     * the filter. Second opinion is the owner's alone.
+     *
+     * @return \Illuminate\Support\Collection<int, Finding>
      */
-    protected function syncSecondOpinionTab(): void
+    public function visibleHints()
     {
-        if ($this->secondOpinionTab === 'all') {
-            return;
-        }
+        $hints = $this->isOwner()
+            ? $this->openSecondOpinion->concat($this->openGuestSuggestions)
+            : $this->openGuestSuggestions;
 
-        $shot = $this->review->screenshots->values()->get($this->activeScreenshotIndex);
-        $findings = ($shot?->findings ?? collect())
-            ->filter(fn (Finding $f) => $f->isOpen() && ! $f->isGuest());
-
-        $sourceFiltered = $this->filterFindingsBySource($findings, $this->secondOpinionSourceTab);
-        $hasTab = $sourceFiltered->contains(fn (Finding $f) => $f->severity === $this->secondOpinionTab);
-
-        if (! $hasTab) {
-            $this->secondOpinionTab = 'all';
-        }
+        return match ($this->hintFilter) {
+            'all' => $hints->values(),
+            'guest' => $hints->filter(fn (Finding $f) => $f->isGuest())->values(),
+            default => $hints->filter(fn (Finding $f) => ! $f->isGuest() && $f->severity === $this->hintFilter)->values(),
+        };
     }
 
     public function visionEnabled(): bool
     {
         return app(SecondOpinionService::class)->visionEnabled();
-    }
-
-    /**
-     * @param  \Illuminate\Support\Collection<int, Finding>  $findings
-     * @return \Illuminate\Support\Collection<int, Finding>
-     */
-    protected function filterFindingsBySource($findings, string $sourceTab)
-    {
-        return match ($sourceTab) {
-            'checklist' => $findings->filter(fn (Finding $f) => $f->isChecklistSource())->values(),
-            'vision' => $findings->filter(fn (Finding $f) => $f->isVisionSource())->values(),
-            default => $findings->values(),
-        };
     }
 
     public function startPin(float $x, float $y, ?float $w = null, ?float $h = null): void
@@ -326,9 +315,71 @@ new class extends Component
         $annotation = Annotation::query()
             ->whereKey($annotationId)
             ->whereHas('screenshot', fn ($q) => $q->where('review_id', $this->review->id))
+            ->with('comments')
             ->first();
 
-        $annotation?->delete();
+        if (! $annotation) {
+            return;
+        }
+
+        // Kept whole, comments too, so Undo puts back exactly what was there.
+        $this->offerUndo('Removed M'.$annotation->number, [
+            'kind' => 'mark',
+            'mark' => $annotation->getAttributes(),
+            'comments' => $annotation->comments->map->getAttributes()->all(),
+        ]);
+
+        $annotation->delete();
+        $this->loadReview();
+    }
+
+    /**
+     * Remember what just happened and show the toast. Only the latest action
+     * can be undone, and only for a short while (UNDO_SECONDS).
+     *
+     * @param  array<string, mixed>  $state
+     */
+    protected function offerUndo(string $message, array $state): void
+    {
+        $this->undoable = $state + ['at' => now()->timestamp];
+        $this->dispatch('undoable', message: $message);
+    }
+
+    public const UNDO_SECONDS = 15;
+
+    public function undo(): void
+    {
+        $state = $this->undoable;
+        $this->undoable = null;
+
+        if (! $state || ! $this->isOwner() || ! $this->review->isOpenForFeedback()
+            || now()->timestamp - (int) $state['at'] > self::UNDO_SECONDS) {
+            return;
+        }
+
+        $shotIds = $this->review->screenshots()->pluck('id');
+
+        if ($state['kind'] === 'mark' && $shotIds->contains($state['mark']['screenshot_id'] ?? null)) {
+            Annotation::query()->insert($state['mark']);
+
+            foreach ($state['comments'] ?? [] as $comment) {
+                \App\Models\AnnotationComment::query()->insert($comment);
+            }
+        }
+
+        if ($state['kind'] === 'findings') {
+            // Marks made from the hints go; the hints come back open.
+            Annotation::query()
+                ->whereKey($state['pins'] ?? [])
+                ->whereIn('screenshot_id', $shotIds)
+                ->delete();
+
+            Finding::query()
+                ->whereKey($state['findings'] ?? [])
+                ->whereIn('screenshot_id', $shotIds)
+                ->update(['status' => Finding::STATUS_OPEN, 'related_pin' => null]);
+        }
+
         $this->loadReview();
     }
 
@@ -432,11 +483,13 @@ new class extends Component
     }
 
     /**
-     * Marks on this pass waiting for the human to verify agent fixes.
+     * Marks on this pass and the one before it waiting for the human to
+     * verify the agent's fixes.
      */
     public function awaitingVerificationMarks()
     {
         return $this->review->screenshots
+            ->concat($this->review->parent?->screenshots ?? collect())
             ->flatMap->annotations
             ->filter(fn (Annotation $mark) => $mark->awaitsVerification())
             ->sortBy('number')
@@ -451,18 +504,6 @@ new class extends Component
         return $this->review->passLedger();
     }
 
-    /**
-     * A mark reachable from this review or its parent pass (for the previous-pass panel).
-     */
-    protected function ownedAnnotation(int $annotationId): ?Annotation
-    {
-        $reviewIds = array_filter([$this->review->id, $this->review->parent_id]);
-
-        return Annotation::query()
-            ->whereKey($annotationId)
-            ->whereHas('screenshot', fn ($q) => $q->whereIn('review_id', $reviewIds))
-            ->first();
-    }
 
     public function startMarkComment(int $annotationId): void
     {
@@ -553,7 +594,8 @@ new class extends Component
             return;
         }
 
-        $this->promoteFinding($finding, $asSeverity);
+        $pin = $this->promoteFinding($finding, $asSeverity);
+        $this->offerUndo('Added M'.$pin?->number, ['kind' => 'findings', 'findings' => [$finding->id], 'pins' => array_filter([$pin?->id])]);
         $this->loadReview();
     }
 
@@ -573,6 +615,7 @@ new class extends Component
         }
 
         $finding->update(['status' => Finding::STATUS_DISMISSED]);
+        $this->offerUndo('Dismissed a hint', ['kind' => 'findings', 'findings' => [$finding->id], 'pins' => []]);
         $this->loadReview();
     }
 
@@ -580,7 +623,7 @@ new class extends Component
      * Batch-accept open findings on the active screenshot.
      * $panel: "second" (non-guest) or "guest".
      */
-    public function acceptOpenFindings(string $panel = 'second'): void
+    public function acceptOpenFindings(string $panel = 'all'): void
     {
         if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
             return;
@@ -594,11 +637,14 @@ new class extends Component
 
         $findings = $shot->findings
             ->filter(fn (Finding $finding) => $finding->isOpen())
-            ->filter(fn (Finding $finding) => $panel === 'guest' ? $finding->isGuest() : ! $finding->isGuest())
+            ->filter(fn (Finding $finding) => match ($panel) { 'guest' => $finding->isGuest(), 'all' => true, default => ! $finding->isGuest() })
             ->values();
 
-        foreach ($findings as $finding) {
-            $this->promoteFinding($finding);
+        $pins = $findings->map(fn (Finding $finding) => $this->promoteFinding($finding)?->id)->filter()->values()->all();
+
+        if ($findings->isNotEmpty()) {
+            $count = $findings->count();
+            $this->offerUndo("Added {$count} ".($count === 1 ? 'mark' : 'marks'), ['kind' => 'findings', 'findings' => $findings->pluck('id')->all(), 'pins' => $pins]);
         }
 
         $this->loadReview();
@@ -608,7 +654,7 @@ new class extends Component
      * Batch-dismiss open findings on the active screenshot.
      * $panel: "second" (non-guest) or "guest".
      */
-    public function dismissOpenFindings(string $panel = 'second'): void
+    public function dismissOpenFindings(string $panel = 'all'): void
     {
         if (! $this->isOwner() || ! $this->review->isOpenForFeedback()) {
             return;
@@ -622,20 +668,25 @@ new class extends Component
 
         $findings = $shot->findings
             ->filter(fn (Finding $finding) => $finding->isOpen())
-            ->filter(fn (Finding $finding) => $panel === 'guest' ? $finding->isGuest() : ! $finding->isGuest())
+            ->filter(fn (Finding $finding) => match ($panel) { 'guest' => $finding->isGuest(), 'all' => true, default => ! $finding->isGuest() })
             ->values();
 
         foreach ($findings as $finding) {
             $finding->update(['status' => Finding::STATUS_DISMISSED]);
         }
 
+        if ($findings->isNotEmpty()) {
+            $count = $findings->count();
+            $this->offerUndo("Dismissed {$count} ".($count === 1 ? 'hint' : 'hints'), ['kind' => 'findings', 'findings' => $findings->pluck('id')->all(), 'pins' => []]);
+        }
+
         $this->loadReview();
     }
 
-    protected function promoteFinding(Finding $finding, ?string $asSeverity = null): void
+    protected function promoteFinding(Finding $finding, ?string $asSeverity = null): ?Annotation
     {
         if (! $finding->isOpen()) {
-            return;
+            return null;
         }
 
         $severity = $asSeverity && in_array($asSeverity, Annotation::severities(), true)
@@ -669,6 +720,8 @@ new class extends Component
             'status' => Finding::STATUS_ACCEPTED,
             'related_pin' => $pin->number,
         ]);
+
+        return $pin;
     }
 
     public function refreshSecondOpinion(SecondOpinionService $opinions): void
@@ -951,23 +1004,24 @@ new class extends Component
 ?>
 
 <div
-    class="flex h-svh max-h-svh flex-col overflow-hidden"
+    class="rm-desk flex h-svh max-h-svh flex-col overflow-hidden"
     @if ($this->opinionPending)
         wire:poll.visible.3s="loadReview"
     @else
         wire:poll.visible.30s="loadReview"
     @endif
 >
+    {{-- Koati's shell: the work sits on an inset panel over the desk. --}}
+    <div class="rm-shell">
     @include('review.partials.header')
 
     @if ($mode === 'guest' && ! $review->allowsGuestAccess())
-        <div class="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-16 sm:px-6">
-            <flux:callout variant="danger" icon="lock-closed">
-                <flux:callout.heading>This guest link has expired</flux:callout.heading>
-                <flux:callout.text>
-                    Ask the owner for a new share link if you still need to leave suggestions or comments.
-                </flux:callout.text>
-            </flux:callout>
+        <div class="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
+            <div class="hatch flex size-14 items-center justify-center rounded-2xl text-zinc-300">
+                <flux:icon.lock-closed class="size-6 text-zinc-500" />
+            </div>
+            <h2 class="mt-5 text-lg font-semibold text-zinc-900">This guest link has expired</h2>
+            <p class="mt-1.5 text-sm text-muted-foreground">Ask whoever shared it for a new one.</p>
         </div>
     @else
     <div
@@ -992,4 +1046,80 @@ new class extends Component
         @include('review.partials.mobile-decision-bar')
     @endif
     @endif
+    {{-- Koati's way: act at once, offer Undo. A decision waits a few seconds
+         before it reaches the agent, so it can be taken back too. --}}
+    @if ($this->isOwner())
+        <div
+            x-data="{
+                message: '',
+                pending: null,
+                left: 0,
+                timer: null,
+                show(message) {
+                    this.clear();
+                    this.message = message;
+                    this.timer = setTimeout(() => this.clear(), 12000);
+                },
+                decide(kind) {
+                    this.clear();
+                    this.pending = kind;
+                    this.left = 8;
+                    this.timer = setInterval(() => { if (--this.left <= 0) this.commit(); }, 1000);
+                },
+                commit() {
+                    const kind = this.pending;
+                    this.clear();
+                    kind === 'approve' ? $wire.approve() : $wire.requestChanges();
+                },
+                undo() {
+                    const deciding = this.pending;
+                    this.clear();
+                    if (! deciding) $wire.undo();
+                },
+                {{-- Keys, Linear-style: A approves, C asks for changes (both keep
+                     the undo window), J/K step through marks. Never while typing. --}}
+                marks: @js($this->activeMarks->sortBy('number')->pluck('id')->values()),
+                key(e) {
+                    if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
+                    const open = @js($review->isOpenForFeedback());
+                    if (open && e.key === 'a') { e.preventDefault(); this.decide('approve'); }
+                    else if (open && e.key === 'c') { e.preventDefault(); this.decide('changes'); }
+                    else if ((e.key === 'j' || e.key === 'k') && this.marks.length) {
+                        e.preventDefault();
+                        const at = this.marks.indexOf($store.rmFocus?.mark);
+                        const next = e.key === 'j' ? Math.min(at + 1, this.marks.length - 1) : Math.max(at - 1, 0);
+                        $store.rmFocus.mark = this.marks[at === -1 ? 0 : next];
+                    }
+                },
+                clear() {
+                    clearTimeout(this.timer);
+                    clearInterval(this.timer);
+                    this.timer = null;
+                    this.message = '';
+                    this.pending = null;
+                },
+            }"
+            x-on:undoable.window="show($event.detail.message)"
+            x-on:rm-decide.window="decide($event.detail.kind)"
+            x-on:keydown.window="key($event)"
+            x-on:beforeunload.window="if (pending) { $event.preventDefault(); $event.returnValue = ''; }"
+            x-show="message || pending"
+            x-cloak
+            x-transition:enter="transition duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+            x-transition:enter-start="translate-y-2 opacity-0"
+            x-transition:leave="transition duration-150"
+            x-transition:leave-end="opacity-0"
+            class="pointer-events-none fixed inset-x-0 bottom-24 z-[70] flex justify-center px-4 md:bottom-6"
+            role="status"
+            aria-live="polite"
+        >
+            <div class="pointer-events-auto flex items-center gap-1 rounded-full bg-zinc-900 py-1.5 pl-4 pr-1.5 text-sm text-white shadow-lg shadow-black/20">
+                <span x-show="! pending" x-text="message"></span>
+                <span x-show="pending" class="tabular-nums" x-text="(pending === 'approve' ? 'Approving' : 'Sending changes to the agent') + ' in ' + left + 's'"></span>
+                <button type="button" class="ml-2 rounded-full px-3 py-1 font-medium text-key transition-colors night:text-white hover:bg-white/10" x-on:click="undo()">Undo</button>
+                <button type="button" x-show="pending" class="rounded-full bg-white/10 px-3 py-1 font-medium transition-colors hover:bg-white/20" x-on:click="commit()">Send now</button>
+            </div>
+        </div>
+    @endif
+</div>
 </div>

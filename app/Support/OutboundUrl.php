@@ -15,10 +15,10 @@ use Illuminate\Support\Facades\Http;
  * reachability check; it says nothing about whether the bytes are an image
  * (ScreenshotStorage still decides that).
  *
- * Not covered on purpose: page_url capture (rendered by the external
- * Browserless host, not this container) and webhook_url (a blind push of data
- * the token holder already has). If that stance changes, route both through
- * assertFetchable() rather than adding a second set of rules.
+ * webhook_url is checked with reasonToReject() when it is saved and again
+ * before every send (App\Listeners\SendReviewWebhook), which doesn't follow
+ * redirects. Not covered on purpose: page_url capture, which the external
+ * Browserless host renders, not this container.
  */
 class OutboundUrl
 {

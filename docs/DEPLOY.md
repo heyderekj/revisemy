@@ -33,12 +33,16 @@ Repo: https://github.com/heyderekj/revisemy
    - Credits: Try = 20/mo rolling by default (`REVISEMY_FREE_CREDITS_RENEW=true`). Paid Plus is off until you set `REVISEMY_PRICING_ENABLED=true`.
    - Hosted billing (Polar, when pricing is on): `POLAR_ACCESS_TOKEN` (organization access token with `checkouts:write`, `customer_sessions:write`, `subscriptions:write`, `orders:read`), `POLAR_WEBHOOK_SECRET`, `POLAR_PRODUCT_PLUS` (Plus, $9/mo recurring), `POLAR_PRODUCT_CREDITS_50` (50 credits, $5 one-time). `POLAR_SERVER=sandbox` for testing; defaults to production. Webhook endpoint: `https://revisemy.com/polar/webhook` with events `order.paid`, `order.refunded`, `subscription.created`, `subscription.active`, `subscription.updated`, `subscription.canceled`, `subscription.uncanceled`, `subscription.revoked`. Agents call `create_checkout` (optional `product`) → human opens signed `/billing/checkout/{workspace}` → redirect to Polar. Credits are granted only by the `order.paid` webhook (idempotent per order).
    - Try mint limits (shared homepage + `POST /api/try-token`): 3/hour and 3/day per client IP (`REVISEMY_TRY_TOKEN_PER_HOUR` / `REVISEMY_TRY_TOKEN_PER_DAY`). Prefer a Cloudflare rate rule on `POST /api/try-token` as defense-in-depth.
+   - Connect (OAuth, for Claude.ai / Claude Desktop / ChatGPT custom connectors): set `PASSPORT_PRIVATE_KEY` and `PASSPORT_PUBLIC_KEY` to the contents of a key pair made once with `php artisan passport:keys` (`storage/oauth-*.key`). Without them, Connect fails at the token step; try tokens keep working either way.
    - Support top-up a try workspace: `php artisan revisemy:extend-try {workspace_public_id} --credits=20` (or `--pack` for a full Try pack + token bump).
    - Keep Serverless Postgres **scale-to-zero** (e.g. 10-minute idle) and Flex scale-to-zero for cost; bump migrate wake wait if deploys hit “still waking up”.
 5. Build commands should include `npm ci && npm run build` (Cloud default for Node apps) and `composer install`. Cloud injects database credentials while building Laravel's cached configuration; raw `DB_*` variables may not be available later in the Commands shell.
-6. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
-7. Visit the `*.laravel.cloud` homepage → **Get a try token** → paste MCP config into any project.
-8. Contest reply: post that `https://….laravel.cloud` URL.
+6. Run the scheduler (`php artisan schedule:run` every minute — Cloud's scheduler toggle does this). It prunes reviews 30 days past their retention, with their screenshots, and expired tokens, nightly.
+7. Optional: `NIGHTWATCH_ENABLED=true` and `NIGHTWATCH_TOKEN` for error tracking (requests are sampled at 10%).
+8. Check the install: `cloud command:run "php artisan revisemy:check"` lists each thing as ready or not, with the one thing to do, and exits 1 while anything is missing.
+9. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
+10. Open `/connect` on the `*.laravel.cloud` URL, connect an assistant, and check the page shows its first call.
+11. Contest reply: post that `https://….laravel.cloud` URL.
 
 ## “Still waking up” / 30s deploy timeout
 

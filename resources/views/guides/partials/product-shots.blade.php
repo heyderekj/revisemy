@@ -31,7 +31,7 @@
 @endphp
 
 @if ($stylized === 'board')
-    <div class="rm-bleed rm-fade-up mt-8 sm:mt-10">
+    <div class="rm-fade-up mt-8 sm:mt-10">
         <x-board-preview />
     </div>
 @elseif ($desktop['url'] || $mobile['url'])

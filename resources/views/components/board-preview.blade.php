@@ -46,14 +46,14 @@
 @endphp
 
 <section
-    class="rm-board-preview flex h-[320px] flex-col overflow-hidden border-t border-zinc-200 bg-[var(--color-canvas)]"
+    class="rm-board-preview flex h-[320px] flex-col overflow-hidden border-t border-zinc-200 rounded-2xl bg-card"
     aria-label="Preview of the ReviseMy owner board"
 >
     {{-- Header — mirrors review-board chrome at ~0.75 scale --}}
     <div class="flex shrink-0 items-center gap-1.5 border-b border-zinc-200/80 bg-zinc-50/90 px-2.5 py-1.5" aria-hidden="true">
         <img src="{{ \App\Support\BrandAssets::appIconUrl() }}" alt="" width="16" height="16" class="size-4 shrink-0" decoding="async">
         <span class="text-[12px] font-semibold tracking-tight text-zinc-900">Board</span>
-        <span class="inline-flex items-center rounded-md border border-zinc-200 bg-white px-1 py-px text-[7px] font-medium tabular-nums text-zinc-600">Pass 1</span>
+        <span class="inline-flex items-center rounded-md bg-chip px-1 py-px text-[7px] font-medium tabular-nums text-zinc-600">Pass 1</span>
         <span class="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-1 py-px text-[7px] font-medium uppercase tracking-wide text-sky-700">Website</span>
         <span class="min-w-0 flex-1 truncate text-[8px] text-zinc-500">ReviseMy hero — simplify header tabs</span>
         <span class="hidden shrink-0 text-[7px] tabular-nums text-zinc-500 sm:inline">1/3</span>

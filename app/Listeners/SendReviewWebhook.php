@@ -3,10 +3,15 @@
 namespace App\Listeners;
 
 use App\Events\ReviewDecided;
+use App\Models\Review;
+use App\Support\OutboundUrl;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 /**
  * Event-driven side of the checkup loop: when the human decides, POST the
@@ -14,6 +19,12 @@ use Illuminate\Support\Facades\Log;
  * instead of polling get_review. The body is HMAC-signed with the review's
  * owner token — the same secret the creator already received — so receivers
  * can verify authenticity without extra key exchange.
+ *
+ * Hardened the way Koati's doorbells are: the address is checked against
+ * private networks again before every send (DNS can change after it was
+ * saved), redirects are a failure rather than followed, and a webhook that
+ * fails Review::WEBHOOK_PAUSE_AFTER deliveries in a row is paused, with the
+ * reason kept, instead of being retried forever.
  */
 class SendReviewWebhook implements ShouldQueue
 {
@@ -26,9 +37,17 @@ class SendReviewWebhook implements ShouldQueue
 
     public function handle(ReviewDecided $event): void
     {
-        $review = $event->review;
+        $review = $event->review->fresh() ?? $event->review;
 
-        if (! $review->webhook_url) {
+        if (! $review->webhook_url || $review->webhook_paused_at) {
+            return;
+        }
+
+        if ($reason = OutboundUrl::reasonToReject($review->webhook_url)) {
+            // Not worth a retry: the address itself is refused.
+            $this->recordFailure($review, "Refused: {$reason}.");
+            $this->delete();
+
             return;
         }
 
@@ -39,6 +58,7 @@ class SendReviewWebhook implements ShouldQueue
         ], JSON_UNESCAPED_SLASHES);
 
         $response = Http::timeout(10)
+            ->withoutRedirecting()
             ->withHeaders([
                 'Content-Type' => 'application/json',
                 'X-ReviseMy-Event' => 'review.decided',
@@ -48,14 +68,40 @@ class SendReviewWebhook implements ShouldQueue
             ->withBody((string) $body, 'application/json')
             ->post($review->webhook_url);
 
-        if ($response->failed()) {
-            Log::warning('Review webhook delivery failed', [
-                'review' => $review->public_id,
-                'status' => $response->status(),
-            ]);
+        if ($response->successful()) {
+            $review->forceFill(['webhook_failures' => 0, 'webhook_last_error' => null])->save();
 
-            // Let the queue retry with backoff; give up after $tries.
-            $response->throw();
+            return;
         }
+
+        Log::warning('Review webhook delivery failed', [
+            'review' => $review->public_id,
+            'status' => $response->status(),
+        ]);
+
+        // Let the queue retry with backoff; failed() counts it once retries run out.
+        throw new RuntimeException($response->redirect()
+            ? "Answered with a redirect ({$response->status()}), which isn't followed."
+            : "Answered {$response->status()}.");
+    }
+
+    public function failed(ReviewDecided $event, Throwable $e): void
+    {
+        $review = $event->review->fresh();
+
+        if ($review) {
+            $this->recordFailure($review, $e->getMessage());
+        }
+    }
+
+    protected function recordFailure(Review $review, string $error): void
+    {
+        $failures = (int) $review->webhook_failures + 1;
+
+        $review->forceFill([
+            'webhook_failures' => $failures,
+            'webhook_last_error' => Str::limit($error, 250),
+            'webhook_paused_at' => $failures >= Review::WEBHOOK_PAUSE_AFTER ? now() : $review->webhook_paused_at,
+        ])->save();
     }
 }

@@ -6,13 +6,14 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 | Host | How |
 |------|-----|
-| **ChatGPT** | Remote MCP / connector with URL + Bearer, or REST `/api/reviews` |
-| **Claude Code** | `claude mcp add --transport http …` — agent shares `review_url` (no inline UI) |
-| **Claude Desktop** | Same `mcpServers` JSON as Cursor — inline review via MCP Apps |
-| **Copilot** | Paste `servers` JSON into MCP settings (homepage tab) — inline review via MCP Apps |
-| **Cursor** | Paste `mcpServers` JSON into Settings → MCP — agent shares `review_url` (no inline UI) |
-| **Grok** | Custom MCP connector at [grok.com/connectors](https://grok.com/connectors) — URL + Bearer; agent shares `review_url` |
-| **Any MCP client** | HTTP MCP at `/mcp/revisemy` |
+| **Claude (web, desktop, phone)** | Customize → Connectors → Add custom connector with the URL → **Connect** (OAuth, makes a try workspace) — inline review via MCP Apps |
+| **ChatGPT** | Settings → Connectors → custom connector with the URL → **Connect** (OAuth only; the app takes no key) |
+| **Cursor / VS Code** | One-click deep links (`App\Support\InstallLinks`), then sign in — VS Code renders the review inline |
+| **Claude Code** | `claude mcp add --transport http revisemy <url>`, then `/mcp` to sign in — agent shares `review_url` |
+| **Grok** | Grok CLI: `grok mcp add … --header "Authorization: Bearer ${REVISEMY_TOKEN}"` with a try token (the grok.com connector form isn't documented to take a header) |
+| **Muse** | Ask Muse to build a custom connector with the URL and a try token (its connector sign-in is still rough) |
+| **Codex** | `[mcp_servers.revisemy]` in `~/.codex/config.toml` with `bearer_token_env_var` |
+| **Any MCP client** | HTTP MCP at `/mcp/revisemy`: OAuth, or a Bearer try token |
 | **REST-only agents** | `/api/reviews` with Sanctum Bearer token |
 
 ## Inline review (MCP Apps)
@@ -49,8 +50,8 @@ Pass `webhook_url` (https) to `create_review` — over MCP or REST — and Revis
 
 - **Payload**: `{ "event": "review.decided", "decided_at": …, "review": <the get_review agent payload> }` — check `review.status` (`approved` / `changes_requested`) and `review.next_action`.
 - **Headers**: `X-ReviseMy-Event`, `X-ReviseMy-Review` (public id), and `X-ReviseMy-Signature: sha256=<hmac>` — an HMAC-SHA256 of the raw body keyed with the review's owner token (the secret in `review_url`, which the creator already holds). Verify it before trusting the payload.
-- **Delivery**: queued, 10s timeout, 3 attempts with backoff (10s / 60s / 5m); failures are logged, never block the human's decision.
-- **Trust stance**: the token holder chooses the target URL, same as `page_url` capture; the payload contains only data that holder already has. `http://` is allowed only in local/testing environments.
+- **Delivery**: queued, 10s timeout, 3 attempts with backoff (10s / 60s / 5m); redirects aren't followed and count as a failure. Failures are logged and never block the human's decision. After 5 deliveries in a row fail, the webhook pauses; `get_review` shows `webhook: { paused, failures, last_error }` (never the URL). A later pass inherits the pause; passing `webhook_url` again starts fresh.
+- **Trust stance**: the token holder chooses the target URL and the payload contains only data that holder already has, but the request leaves from this container, so the URL must not resolve to a private, loopback or link-local address — checked when it's saved and again before every send (`App\Support\OutboundUrl`). `http://` is allowed only in local/testing environments.
 
 ## Next packaging steps
 
@@ -60,10 +61,9 @@ Pass `webhook_url` (https) to `create_review` — over MCP or REST — and Revis
 - Optional: deep link from the homepage “Add to Cursor” button
 - Keep tool names stable so the plugin never forks the protocol
 
-### Claude connector
+### Connect (OAuth)
 
-- Register a remote MCP connector against the web endpoint
-- OAuth can come later; Bearer try tokens are enough for the weekend demo
+Shipped. `routes/ai.php` takes either guard (`auth:sanctum,api`) and serves the OAuth discovery documents and dynamic registration (`Mcp::oauthRoutes()`). An assistant that signs in is sent to `/connect`, which is one button: it makes a try workspace (the same rate limit as Get a try token) or, with a pasted try token, attaches to that workspace. That click is the consent, so Passport's own page is skipped once (`App\Models\OAuthClient::skipsAuthorization`); a later sign-in from the same browser asks on `resources/views/oauth/authorize.blade.php`. Tokens last an hour and refresh for 60 days. Tests: `tests/Feature/McpOAuthTest.php`.
 
 ### ChatGPT Action / custom GPT
 
@@ -84,4 +84,4 @@ For **taste while implementing** (animation easing, press feedback, depth), pair
 
 ## Design rule
 
-Tool names and JSON payloads stay **host-agnostic**. Every connector is: base URL + auth.
+Tool names and JSON payloads stay **host-agnostic**. Every connector is: base URL + auth. The one list of hosts and their steps lives in `config/hosts.php` (`connect`), rendered by the connect hub on `/connect`, the homepage and `/connectors`.

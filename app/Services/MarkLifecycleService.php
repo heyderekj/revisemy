@@ -272,9 +272,10 @@ class MarkLifecycleService
     {
         $count = 0;
 
-        $review->annotations()
-            ->where('status', Annotation::STATUS_RESOLVED)
-            ->get()
+        // This pass and the one before it: the review shows both, so "Verify all" means both.
+        collect([$review, $review->parent])
+            ->filter()
+            ->flatMap(fn (Review $pass) => $pass->annotations()->where('status', Annotation::STATUS_RESOLVED)->get())
             ->each(function (Annotation $annotation) use (&$count): void {
                 if ($this->verify($annotation)) {
                     $count++;

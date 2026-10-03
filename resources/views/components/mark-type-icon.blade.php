@@ -7,9 +7,9 @@ $type = strtolower($type);
 
 $styles = [
     'm' => [
-        'wrap' => 'bg-rose-50 ring-rose-100',
-        'box' => 'rounded border-2 border-rose-500/80 bg-rose-500/10',
-        'badge' => 'rounded-full bg-rose-500 font-semibold text-accent-contrast',
+        'wrap' => 'bg-key/10 ring-key/30',
+        'box' => 'rounded border-2 border-key/80 bg-key/10',
+        'badge' => 'rounded-full bg-key font-semibold text-accent-contrast',
         'label' => 'M',
     ],
     's' => [
