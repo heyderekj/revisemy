@@ -370,23 +370,24 @@ new class extends Component
                             </article>
 
                             @if ($pack)
-                                <article class="rounded-2xl bg-card p-7 sm:p-8 min-[30rem]:col-span-2 lg:col-span-1">
-                                    <p class="text-sm font-medium text-muted-foreground">Credit pack</p>
-                                    <p class="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900">
-                                        ${{ (int) $pack['price_usd'] }}<span class="text-lg font-medium text-zinc-500"> once</span>
-                                    </p>
-                                    <p class="mt-2 text-[15px] leading-relaxed text-pretty text-zinc-600">
-                                        {{ (int) $pack['credits'] }} extra credits.<br>
-                                        They never expire.
-                                    </p>
-                                    <ul class="mt-6 space-y-2 text-[14px] text-zinc-600">
-                                        <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Works on Try or Plus</li>
-                                        <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> Used after your monthly credits</li>
-                                        <li class="flex gap-2"><span class="text-zinc-400" aria-hidden="true">—</span> No subscription</li>
-                                    </ul>
-                                    <p class="mt-8 max-w-xs text-[13px] leading-relaxed text-zinc-500">
-                                        Ask your agent for <span class="font-mono text-[12px] text-zinc-900">create_checkout</span> with a credit pack.
-                                    </p>
+                                {{-- An add-on, not a plan: a slim row when it spans the two-column grid. --}}
+                                <article class="rounded-2xl bg-card p-7 sm:p-8 min-[30rem]:col-span-2 min-[30rem]:py-6 lg:col-span-1 lg:py-8">
+                                    <div class="min-[30rem]:flex min-[30rem]:items-center min-[30rem]:gap-8 lg:block">
+                                        <div class="shrink-0">
+                                            <p class="text-sm font-medium text-muted-foreground">Credit pack</p>
+                                            <p class="mt-1 text-[clamp(1.75rem,4vw,2.25rem)] font-semibold tracking-tight text-zinc-900 lg:mt-3">
+                                                ${{ (int) $pack['price_usd'] }}<span class="text-lg font-medium text-zinc-500"> once</span>
+                                            </p>
+                                        </div>
+                                        <div class="mt-3 min-[30rem]:mt-0 lg:mt-2">
+                                            <p class="text-[15px] leading-relaxed text-pretty text-zinc-600">
+                                                {{ (int) $pack['credits'] }} extra credits that never expire. Works on Try or Plus, used after your monthly credits. No subscription.
+                                            </p>
+                                            <p class="mt-2 text-[13px] leading-relaxed text-zinc-500">
+                                                Ask your agent for <span class="font-mono text-[12px] text-zinc-900">create_checkout</span> with a credit pack.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </article>
                             @endif
                         @endif
