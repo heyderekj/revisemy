@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.heyderekj/revisemy",
+  "title": "ReviseMy",
+  "description": "Visual feedback for your agent: it sends a review, you mark what matters, it fixes the next pass.",
+  "version": "1.4.0",
+  "websiteUrl": "https://revisemy.com",
+  "repository": {
+    "url": "https://github.com/heyderekj/revisemy",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://revisemy.com/images/app-icon-v9.png",
+      "mimeType": "image/png",
+      "sizes": ["64x64"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://revisemy.com/mcp/revisemy"
+    }
+  ]
+}

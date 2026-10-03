@@ -1,0 +1,14 @@
+{
+  "name": "revisemy",
+  "description": "ReviseMy for Claude Code: design checkups your agent runs and you mark up.",
+  "owner": {
+    "name": "Testament Made, LLC"
+  },
+  "plugins": [
+    {
+      "name": "revisemy",
+      "source": "./plugin",
+      "description": "Visual feedback for your agent: it sends a review, you mark what matters, it fixes the next pass."
+    }
+  ]
+}

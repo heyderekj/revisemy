@@ -1,6 +1,6 @@
 {{-- Passport's consent page, for a browser that's already connected once. The
      first Connect skips it (App\Models\OAuthClient::skipsAuthorization). --}}
-<x-layouts.app title="Connect {{ $client->name }} — ReviseMy" robots="noindex, nofollow">
+<x-layouts.app title="Connect {{ $client->name }} — ReviseMy" description="Let {{ $client->name }} send work to ReviseMy for review and read your marks. Approving stays with you, and you can disconnect it any time." robots="noindex, nofollow">
     @php($returnsTo = parse_url((string) $request->redirect_uri, PHP_URL_HOST) ?: (string) $request->redirect_uri)
     <div class="rm-desk flex min-h-svh flex-col">
         <main class="rm-shell items-center justify-center px-6 py-16">

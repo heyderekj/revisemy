@@ -17,10 +17,43 @@
     $pageTitle = $title ?? $siteName;
     $pageDescription = $description ?? config('seo.description');
     $pageOgImage = Seo::ogImageUrl($ogImage);
-    $pageOgUrl = $ogUrl ?? url()->current();
+    // Always the main host, so a preview or *.laravel.cloud copy never claims to be the page.
+    $path = '/'.trim(request()->path(), '/');
+    $pageOgUrl = $ogUrl ?? $siteUrl.($path === '/' ? '/' : $path);
     $pageCanonical = $canonical ?? $pageOgUrl;
     $keywords = implode(', ', $keywords ?? config('seo.keywords', []));
-    $mcpUrl = $siteUrl.config('seo.mcp_path');
+    $mcpUrl = \App\Support\McpCatalog::endpoint();
+    $markdownTwin = in_array($path, \App\Support\PageMarkdown::paths(), true) ? \App\Support\PageMarkdown::url($path) : null;
+    $faq = $schema === 'none' ? [] : \App\Support\PageSchema::faq($path);
+    $faqNode = $faq === [] ? null : [
+        '@type' => 'FAQPage',
+        '@id' => $pageOgUrl.'#faq',
+        'mainEntity' => array_map(fn (array $item) => [
+            '@type' => 'Question',
+            'name' => $item['q'],
+            'acceptedAnswer' => ['@type' => 'Answer', 'text' => $item['a']],
+        ], $faq),
+    ];
+    $website = [
+        '@type' => 'WebSite',
+        '@id' => $siteUrl.'/#website',
+        'url' => $siteUrl.'/',
+        'name' => $siteName,
+        'description' => config('seo.description'),
+        'inLanguage' => 'en-US',
+        'publisher' => ['@id' => $siteUrl.'/#organization'],
+    ];
+    $organization = [
+        '@type' => 'Organization',
+        '@id' => $siteUrl.'/#organization',
+        'name' => $siteName,
+        'url' => $siteUrl.'/',
+        'logo' => [
+            '@type' => 'ImageObject',
+            'url' => \App\Support\BrandAssets::appIconUrl(),
+        ],
+        'sameAs' => config('seo.same_as', []),
+    ];
 @endphp
 
 <title>{{ $pageTitle }}</title>
@@ -30,9 +63,12 @@
 <meta name="application-name" content="{{ $siteName }}">
 <meta name="robots" content="{{ $robots }}">
 <meta name="theme-color" content="{{ config('seo.theme_color') }}">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <link rel="canonical" href="{{ $pageCanonical }}">
 <link rel="alternate" type="text/plain" href="{{ $siteUrl }}/llms.txt" title="LLM site index">
+@if ($markdownTwin)
+<link rel="alternate" type="text/markdown" href="{{ $markdownTwin }}" title="This page as markdown">
+@endif
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{{ $siteName }}">
@@ -61,26 +97,8 @@
         $jsonLd = [
             '@context' => 'https://schema.org',
             '@graph' => [
-                [
-                    '@type' => 'WebSite',
-                    '@id' => $siteUrl.'/#website',
-                    'url' => $siteUrl.'/',
-                    'name' => $siteName,
-                    'description' => config('seo.description'),
-                    'inLanguage' => 'en-US',
-                    'publisher' => ['@id' => $siteUrl.'/#organization'],
-                ],
-                [
-                    '@type' => 'Organization',
-                    '@id' => $siteUrl.'/#organization',
-                    'name' => $siteName,
-                    'url' => $siteUrl.'/',
-                    'logo' => [
-                        '@type' => 'ImageObject',
-                        'url' => \App\Support\BrandAssets::appIconUrl(),
-                    ],
-                    'sameAs' => config('seo.same_as', []),
-                ],
+                $website,
+                $organization,
                 [
                     '@type' => 'SoftwareApplication',
                     '@id' => $siteUrl.'/#software',
@@ -90,7 +108,11 @@
                     'applicationCategory' => config('seo.application_category'),
                     'operatingSystem' => 'Web',
                     'image' => $pageOgImage,
-                    'featureList' => config('seo.features', []),
+                    'featureList' => [
+                        ...config('seo.features', []),
+                        'MCP tools: '.implode(', ', \App\Support\McpCatalog::toolNames()),
+                    ],
+                    'license' => 'https://osaasy.dev/',
                     'offers' => config('billing.pricing_enabled')
                         ? [
                             ['@type' => 'Offer', 'name' => 'Try', 'price' => '0', 'priceCurrency' => 'USD'],
@@ -141,7 +163,8 @@
                     'name' => $siteName.' MCP Server',
                     'description' => 'Laravel MCP endpoint for agents to create design reviews, fetch work packets, and continue human-in-the-loop checkups.',
                     'url' => $mcpUrl,
-                    'documentation' => config('seo.github').'/blob/main/README.md',
+                    'documentation' => $siteUrl.'/llms-full.txt',
+                    'termsOfService' => $siteUrl.'/terms',
                 ],
                 [
                     '@type' => 'WebPage',
@@ -153,24 +176,43 @@
                     'about' => ['@id' => $siteUrl.'/#software'],
                     'inLanguage' => 'en-US',
                 ],
+                ...array_filter([$faqNode]),
             ],
         ];
     @endphp
     <script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 @elseif ($schema === 'page')
     @php
+        $crumbs = \App\Support\PageSchema::breadcrumbs($path);
         $jsonLd = [
             '@context' => 'https://schema.org',
-            '@type' => 'WebPage',
-            'name' => $pageTitle,
-            'description' => $pageDescription,
-            'url' => $pageOgUrl,
-            'isPartOf' => [
-                '@type' => 'WebSite',
-                'name' => $siteName,
-                'url' => $siteUrl.'/',
-            ],
-            'inLanguage' => 'en-US',
+            '@graph' => array_values(array_filter([
+                $website,
+                $organization,
+                [
+                    '@type' => 'WebPage',
+                    '@id' => $pageOgUrl.'#webpage',
+                    'url' => $pageOgUrl,
+                    'name' => $pageTitle,
+                    'description' => $pageDescription,
+                    'isPartOf' => ['@id' => $siteUrl.'/#website'],
+                    'about' => ['@id' => $siteUrl.'/#software'],
+                    'publisher' => ['@id' => $siteUrl.'/#organization'],
+                    'inLanguage' => 'en-US',
+                    ...($crumbs === [] ? [] : ['breadcrumb' => ['@id' => $pageOgUrl.'#breadcrumb']]),
+                ],
+                $crumbs === [] ? null : [
+                    '@type' => 'BreadcrumbList',
+                    '@id' => $pageOgUrl.'#breadcrumb',
+                    'itemListElement' => array_map(fn (array $crumb, int $i) => [
+                        '@type' => 'ListItem',
+                        'position' => $i + 1,
+                        'name' => $crumb['name'],
+                        'item' => $crumb['url'],
+                    ], $crumbs, array_keys($crumbs)),
+                ],
+                $faqNode,
+            ])),
         ];
     @endphp
     <script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
