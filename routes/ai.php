@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateMcp;
 use App\Http\Middleware\RecordAssistantCall;
+use App\Http\Middleware\StreamMcpResponse;
 use App\Mcp\Servers\ReviseMyServer;
 use Illuminate\Support\Facades\Route;
 use Laravel\Mcp\Facades\Mcp;
@@ -12,7 +13,7 @@ use Laravel\Mcp\Facades\Mcp;
  * ChatGPT and Grok add a custom connector from just a URL.
  */
 Mcp::web('/mcp/revisemy', ReviseMyServer::class)
-    ->middleware([AuthenticateMcp::class, 'throttle:120,1', RecordAssistantCall::class]);
+    ->middleware([AuthenticateMcp::class, StreamMcpResponse::class, 'throttle:120,1', RecordAssistantCall::class]);
 
 /*
  * Some clients fetch the origin discovery document instead of the path-inserted

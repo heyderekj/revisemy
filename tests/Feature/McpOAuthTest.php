@@ -226,4 +226,17 @@ class McpOAuthTest extends TestCase
             ->assertOk()
             ->assertJsonPath('result.structuredContent.count', 0);
     }
+
+    /** Grok drops a JSON tool list. It keeps SSE. */
+    public function test_a_tool_list_is_streamed_when_the_host_asks_for_events(): void
+    {
+        $try = app(TryTokenService::class)->create();
+
+        $this->withToken($try['token'])
+            ->postJson('/mcp/revisemy', $this->rpc('tools/list'), [
+                'Accept' => 'application/json, text/event-stream',
+            ])
+            ->assertOk()
+            ->assertHeader('content-type', 'text/event-stream; charset=UTF-8');
+    }
 }
