@@ -4,6 +4,7 @@ use App\Http\Middleware\KeepOutOfSearch;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Throwable;
@@ -64,5 +65,18 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->view('errors.403', [], 403);
+        });
+
+        // Reconnecting a removed connector reuses this browser. Passport then
+        // rejects the old approve token as a 403, which looked like the review
+        // was locked. Send them back to Connect so the next click can finish.
+        $exceptions->render(function (AuthorizationException $e, Request $request) {
+            if (! $request->is('oauth/*')) {
+                return null;
+            }
+
+            return redirect()->route('login')->withErrors([
+                'token' => 'That connect attempt expired. Start Connect again from the assistant, then click Connect here.',
+            ]);
         });
     })->create();
