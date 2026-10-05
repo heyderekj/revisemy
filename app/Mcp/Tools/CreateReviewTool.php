@@ -75,12 +75,12 @@ class CreateReviewTool extends Tool
 
         return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
+            "Review link (always share this with the human, even if the board also rendered inline):\n{$url}\n\n".
             $pagesNote.
+            "Hosts that support MCP Apps also render the board in this chat. Hosts that do not — including Grok — only have this link. Do not finish the turn without it.\n\n".
             "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
-            // Yellow mark as markdown image; keep the raw URL in backticks so Cursor does not
-            // attach Google's stale domain favicon chip (gstatic still caches the old pink mark).
-            "Open this link:\n{$share}\n\n".
+            "{$share}\n\n".
             "Then poll get_review with id `{$payload['id']}`.\n\n".
             "```json\n{$json}\n```"
         ))->withStructuredContent($payload);

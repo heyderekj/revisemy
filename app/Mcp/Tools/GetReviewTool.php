@@ -50,7 +50,8 @@ class GetReviewTool extends Tool
 
         return Response::make(Response::text(
             "Status: {$payload['status_label']}\n".
-            "Next action: {$next['action']} — {$next['summary']}\n\n".
+            "Next action: {$next['action']} — {$next['summary']}\n".
+            "Review link: {$payload['review_url']}\n\n".
             json_encode($payload, JSON_UNESCAPED_SLASHES)
         ))->withStructuredContent($payload);
     }

@@ -10,7 +10,7 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 | **ChatGPT** | Settings → Connectors → custom connector with the URL → **Connect** (OAuth only; the app takes no key) |
 | **Cursor / VS Code** | One-click deep links (`App\Support\InstallLinks`), then sign in — VS Code renders the review inline |
 | **Claude Code** | `claude mcp add --transport http revisemy <url>`, then `/mcp` to sign in — agent shares `review_url` |
-| **Grok** | grok.com/connectors → New Connector → Custom, paste the URL, click Connect (OAuth; the form has no token field). The CLI can still send a try token as a Bearer header |
+| **Grok** | grok.com/connectors → New Connector → Custom, paste the URL, click Connect (OAuth; the form has no token field). Grok does not render MCP Apps, so the agent must paste `review_url` in the chat. The CLI can still send a try token as a Bearer header |
 | **Muse** | Ask Muse to build a custom connector with the URL and a try token (its connector sign-in is still rough) |
 | **Codex** | `[mcp_servers.revisemy]` in `~/.codex/config.toml` with `bearer_token_env_var` |
 | **Any MCP client** | HTTP MCP at `/mcp/revisemy`: OAuth, or a Bearer try token |
@@ -25,7 +25,7 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 - **Decision bar**: approve / request changes with an optional note (`h-8` controls aligned with web Flux `size="sm"`).
 - A **Refresh** control plus a slow auto-poll while the review is `pending` or `changes_requested`, so the board updates as the agent resolves marks.
 
-These are backed by the app-only `add_mark`, `decide_review`, and `verify_mark` tools. Hosts without MCP Apps (e.g. Claude Code CLI) ignore the UI metadata and use the `review_url` link — the loop is unchanged.
+These are backed by the app-only `add_mark`, `decide_review`, and `verify_mark` tools. Hosts without MCP Apps (Grok, Claude Code CLI, ChatGPT) ignore the UI metadata. `create_review` and `get_review` still return `review_url` as plain text, and the agent must paste that link. The loop is unchanged.
 
 ### MCP ↔ web parity checklist
 
