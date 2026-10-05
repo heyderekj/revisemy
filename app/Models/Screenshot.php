@@ -65,6 +65,12 @@ class Screenshot extends Model
      */
     public function url(): string
     {
+        $this->loadMissing('review');
+
+        if ($this->review?->token) {
+            return url('/r/'.$this->review->token.'/shots/'.$this->id);
+        }
+
         return URL::temporarySignedRoute(
             'screenshots.show',
             $this->signedUrlExpiry(),
@@ -80,6 +86,12 @@ class Screenshot extends Model
     {
         if (! $this->thumb_path) {
             return $this->url();
+        }
+
+        $this->loadMissing('review');
+
+        if ($this->review?->token) {
+            return url('/r/'.$this->review->token.'/shots/'.$this->id.'/thumb');
         }
 
         return URL::temporarySignedRoute(

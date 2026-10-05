@@ -104,6 +104,14 @@ Route::get('/r/{token}/board', function (string $token) {
     return view('review-board', ['token' => $token]);
 })->middleware('noindex')->name('reviews.board');
 
+Route::get('/r/{token}/shots/{screenshot}', [ScreenshotController::class, 'showForReview'])
+    ->middleware('noindex')
+    ->name('reviews.screenshot');
+
+Route::get('/r/{token}/shots/{screenshot}/thumb', [ScreenshotController::class, 'thumbForReview'])
+    ->middleware('noindex')
+    ->name('reviews.screenshot.thumb');
+
 Route::get('/shots/{screenshot}', [ScreenshotController::class, 'show'])
     ->middleware(['signed', 'noindex'])
     ->name('screenshots.show');

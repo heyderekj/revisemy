@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -47,5 +48,25 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response($body, 503);
+        });
+
+        // A truncated or expired signed image link used to look like the
+        // review itself was forbidden. Send them to the review when we can.
+        $exceptions->render(function (InvalidSignatureException $e, Request $request) {
+            if (! $request->is('shots/*')) {
+                return null;
+            }
+
+            $id = $request->segment(2);
+
+            if (is_numeric($id)) {
+                $shot = \App\Models\Screenshot::query()->with('review')->find($id);
+
+                if ($shot?->review?->token) {
+                    return redirect('/r/'.$shot->review->token);
+                }
+            }
+
+            return null;
         });
     })->create();

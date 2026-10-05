@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\OAuthClient;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
 
@@ -29,5 +30,9 @@ class AppServiceProvider extends ServiceProvider
         // every client that can do OAuth refreshes without asking again.
         Passport::tokensExpireIn(now()->addHour());
         Passport::refreshTokensExpireIn(now()->addDays(60));
+
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
     }
 }

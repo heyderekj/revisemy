@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Review;
 use App\Models\Screenshot;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,41 @@ class ScreenshotController extends Controller
         $path = $screenshot->thumb_path ?: $screenshot->path;
 
         return $this->stream($screenshot, $path);
+    }
+
+    /**
+     * Review-token gate. The board uses these so an image does not 403 when a
+     * signed URL is truncated, expired, or signed for a different host.
+     */
+    public function showForReview(string $token, Screenshot $screenshot): StreamedResponse
+    {
+        $this->assertReviewToken($token, $screenshot);
+
+        return $this->stream($screenshot, $screenshot->path);
+    }
+
+    public function thumbForReview(string $token, Screenshot $screenshot): StreamedResponse
+    {
+        $this->assertReviewToken($token, $screenshot);
+
+        return $this->stream($screenshot, $screenshot->thumb_path ?: $screenshot->path);
+    }
+
+    protected function assertReviewToken(string $token, Screenshot $screenshot): void
+    {
+        $screenshot->loadMissing('review');
+        $review = $screenshot->review;
+
+        if (! $review instanceof Review) {
+            abort(404);
+        }
+
+        $matches = hash_equals((string) $review->token, $token)
+            || hash_equals((string) $review->share_token, $token);
+
+        if (! $matches) {
+            abort(404);
+        }
     }
 
     protected function stream(Screenshot $screenshot, string $path): StreamedResponse
