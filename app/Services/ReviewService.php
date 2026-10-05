@@ -97,11 +97,42 @@ class ReviewService
                 $domHtml,
                 $data['webhook_url'] ?? null,
             );
+        } catch (ValidationException $e) {
+            $this->credits->refund($workspace, $debited);
+
+            if (! isset($sources['capture_url']) || ! $this->captureCanFallOpen($e)) {
+                throw $e;
+            }
+
+            $reason = collect($e->errors())->flatten()->first() ?? 'Capture failed.';
+
+            return $this->create(
+                $workspace,
+                $data['title'],
+                trim("Capture failed, so this board has no page shot yet. Add a screenshot, or open the page from the link. {$reason}\n\n".($data['context'] ?? '')),
+                [[
+                    'binary' => base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
+                    'meta' => ['origin' => 'capture_failed', 'page_url' => $pageUrl],
+                ]],
+                $pageUrl !== '' ? $pageUrl : null,
+                $data['parent_id'] ?? null,
+                $type ?? Review::TYPE_WEBSITE,
+                null,
+                $data['webhook_url'] ?? null,
+            );
         } catch (Throwable $e) {
             $this->credits->refund($workspace, $debited);
 
             throw $e;
         }
+    }
+
+    protected function captureCanFallOpen(ValidationException $e): bool
+    {
+        $message = (string) (collect($e->errors())->flatten()->first() ?? '');
+
+        return str_contains($message, 'capture_provider_failed')
+            || str_contains($message, 'capture_not_configured');
     }
 
     /**

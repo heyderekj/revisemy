@@ -77,7 +77,7 @@ class CreateReviewTool extends Tool
             "Review created{$passLabel} — waiting on the human.\n\n".
             "Review link (always share this with the human, even if the board also rendered inline):\n{$url}\n\n".
             $pagesNote.
-            "Hosts that support MCP Apps also render the board in this chat. Hosts that do not — including Grok — only have this link. Do not finish the turn without it.\n\n".
+            "Hosts that support MCP Apps also render the board in this chat. Every other host only has this link. Do not finish the turn without it.\n\n".
             "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
             "Optional: call add_findings (suggestion/a11y/polish) before sharing.\n\n".
             "{$share}\n\n".
