@@ -34,7 +34,7 @@ class StreamMcpResponse
             return $response;
         }
 
-        $body = $response->getContent();
+        $body = str_replace(["\r", "\n"], '', $response->getContent());
 
         if ($body === '' || $body === 'null') {
             return $response;
