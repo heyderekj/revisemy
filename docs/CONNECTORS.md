@@ -11,7 +11,7 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 | **Cursor / VS Code** | One-click deep links (`App\Support\InstallLinks`), then sign in — VS Code renders the review inline |
 | **Claude Code** | `claude mcp add --transport http revisemy <url>`, then `/mcp` to sign in — agent shares `review_url` |
 | **Grok** | grok.com/connectors → New Connector → Custom, paste the URL, click Connect (OAuth; the form has no token field). Grok does not render MCP Apps, so the agent must paste `review_url` in the chat. The CLI can still send a try token as a Bearer header |
-| **Muse** | Ask Muse to build a custom connector with the URL and a try token (its connector sign-in is still rough) |
+| **Muse** | Get a try token, then paste the full prompt on the connect page. It includes the address, bearer token, and the checkup loop. Signing in inside Muse is still rough |
 | **Codex** | `[mcp_servers.revisemy]` in `~/.codex/config.toml` with `bearer_token_env_var` |
 | **Any MCP client** | HTTP MCP at `/mcp/revisemy`: OAuth, or a Bearer try token |
 | **REST-only agents** | `/api/reviews` with Sanctum Bearer token |

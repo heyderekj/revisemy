@@ -244,6 +244,10 @@ new class extends Component
                     <x-copy-field :value="$host['command']" :label="$id === 'muse' ? 'Paste to Muse' : 'Then run'" :mono="$id !== 'muse'" />
                 @endif
 
+                @if (! empty($host['prompt']) && $id !== 'muse' && (! $host['needs_token'] || $token))
+                    <x-copy-field :value="$host['prompt']" label="Then paste this" :mono="false" />
+                @endif
+
                 @if ($host['note'])
                     <p class="text-sm text-muted-foreground">{{ $host['note'] }}</p>
                 @endif

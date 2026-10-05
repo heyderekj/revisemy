@@ -61,6 +61,7 @@ final class Hosts
             'id' => $id,
             'needs_token' => ($host['mode'] ?? null) === 'token',
             'command' => isset($host['command']) ? strtr((string) $host['command'], $replace) : null,
+            'prompt' => isset($host['prompt']) ? strtr((string) $host['prompt'], $replace) : null,
         ] + $host + ['steps' => [], 'note' => null, 'inline' => false];
     }
 }

@@ -123,6 +123,10 @@ class TryTokenService
     public function setupPrompts(string $token): array
     {
         return collect(Hosts::all($token))->map(function (array $host) use ($token) {
+            if (! empty($host['prompt'])) {
+                return $host['prompt'];
+            }
+
             $lines = ["Set up the ReviseMy MCP server in {$host['name']}.", ''];
 
             foreach ($host['steps'] as $i => $step) {

@@ -32,6 +32,7 @@ return [
                 'Claude opens ReviseMy. Click Connect, and you’re done.',
             ],
             'inline' => true,
+            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. The review board renders inline here. Also paste review_url in your reply. Poll get_review and follow next_action until I approve. Do not mark your own work verified.",
         ],
         'chatgpt' => [
             'name' => 'ChatGPT',
@@ -44,6 +45,7 @@ return [
                 'ChatGPT opens ReviseMy. Click Connect, and you’re done.',
             ],
             'note' => 'The ChatGPT app only connects by signing in, so there’s no token to paste.',
+            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. ChatGPT does not render the inline board, so paste review_url in your reply and wait. Poll get_review and follow next_action until I approve.",
         ],
         'cursor' => [
             'name' => 'Cursor',
@@ -54,6 +56,7 @@ return [
                 'Click Add to Cursor and confirm in Cursor.',
                 'Cursor opens ReviseMy to sign in. Click Connect.',
             ],
+            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for the local UI, or capture_url true and page_url for a public page. Paste review_url in your reply. Poll get_review and follow next_action until I approve. Human marks in work_packets.pins are authoritative.",
         ],
         'vscode' => [
             'name' => 'VS Code',
@@ -65,6 +68,7 @@ return [
                 'VS Code opens ReviseMy to sign in. Click Connect.',
             ],
             'inline' => true,
+            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for the local UI, or capture_url true and page_url for a public page. The review can render inline. Also paste review_url. Poll get_review and follow next_action until I approve.",
         ],
         'claude-code' => [
             'name' => 'Claude Code',
@@ -76,6 +80,7 @@ return [
                 'Run the command in your project.',
                 'Run /mcp, choose revisemy, and sign in. Click Connect.',
             ],
+            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for local UI, or capture_url true and page_url for a public page. Paste review_url in your reply — this host has no inline board. Poll get_review and follow next_action until I approve.",
         ],
         'grok' => [
             'name' => 'Grok',
@@ -88,13 +93,14 @@ return [
                 'Grok opens ReviseMy. Click Connect, and you’re done.',
             ],
             'note' => 'The custom connector signs in. It has no field for a try token. The command line can still send one as a Bearer header.',
+            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. Grok does not render the inline board, so the reply must include the review_url on its own line. Poll get_review and follow next_action until I approve.",
         ],
         'muse' => [
             'name' => 'Muse',
             'icon' => 'muse',
             'mode' => 'token',
             'where' => 'Meta’s agent',
-            'command' => "Build a custom connector to ReviseMy.\nAddress: {url}\nAuthorization: Bearer {token}",
+            'command' => "Build a custom connector to ReviseMy and save this credential. Do not ask me for another key.\n\nName: ReviseMy\nMCP address: {url}\nTransport: HTTP\nAuthorization: Bearer {token}\n\nAfter it is connected, confirm the tools create_review and get_review are available, then stop.\n\nWhen I ask for a design checkup: call create_review with exactly one source. Use capture_url true plus page_url for a public site. Use images as data URLs for local UI. Never put a page URL in images. Muse does not render an inline review board, so paste review_url in the reply on its own line. Then poll get_review and follow next_action until I approve. Human marks are authoritative. Do not mark your own work verified.",
             'steps' => [
                 'Get a try token.',
                 'Paste the message below to Muse. It keeps the token in its own credential store.',
@@ -109,8 +115,10 @@ return [
             'command' => "[mcp_servers.revisemy]\nurl = \"{url}\"\nbearer_token_env_var = \"REVISEMY_TOKEN\"",
             'steps' => [
                 'Get a try token, and keep it in a variable with the line below.',
-                'Add this to ~/.codex/config.toml.',
+                'Add the block to ~/.codex/config.toml.',
+                'Paste the prompt to Codex once the server is listed.',
             ],
+            'prompt' => "ReviseMy is connected at {url} with bearer token {token}. Confirm create_review and get_review are available. When I ask for a checkup, call create_review with exactly one source: images as data URLs for local UI, or capture_url true and page_url for a public page. Paste review_url in your reply. Poll get_review and follow next_action until I approve.",
         ],
     ],
 
@@ -118,6 +126,6 @@ return [
     | The first thing to ask, once it's connected. Proves the connection and
     | starts the loop. {host} is the host's name.
     */
-    'first_prompt' => 'Run a ReviseMy design checkup on the work I just changed: create a review with the right source, share the review link with me, wait for my marks, then follow next_action until I approve.',
+    'first_prompt' => 'Run a ReviseMy design checkup on the work I just changed. Call create_review with exactly one source (capture_url true and page_url for a public page, or images as data URLs for local UI). Paste the review_url in your reply even if the board also renders inline. Poll get_review and follow next_action until I approve.',
 
 ];
