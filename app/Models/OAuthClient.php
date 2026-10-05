@@ -9,9 +9,9 @@ use Laravel\Passport\Client;
  * An assistant that registered itself to connect over OAuth.
  *
  * The Connect page is the consent: whoever clicked Connect there has already
- * said yes to this client, so Passport's own "Authorize?" page is skipped for
- * it, once, within a few minutes. A later sign-in from the same browser still
- * asks (resources/views/oauth/authorize.blade.php).
+ * said yes, and a browser that is still signed in can reconnect without
+ * Passport's one-time approve token. That token was failing after a connector
+ * was removed and rendering the 403 page.
  */
 class OAuthClient extends Client
 {
@@ -21,9 +21,17 @@ class OAuthClient extends Client
     {
         $approved = session()->pull(self::CONNECTED_KEY);
 
-        return is_array($approved)
+        if (is_array($approved)
             && ($approved['client_id'] ?? null) === (string) $this->getKey()
             && ($approved['user_id'] ?? null) === $user->getAuthIdentifier()
-            && now()->timestamp - (int) ($approved['at'] ?? 0) < 300;
+            && now()->timestamp - (int) ($approved['at'] ?? 0) < 300) {
+            return true;
+        }
+
+        // Re-adding a connector reuses this browser's remembered sign-in.
+        // Passport's consent form then fails its one-time auth token and
+        // rendered the 403 page. The Connect click already was the consent.
+        return auth('web')->check()
+            && (string) auth('web')->id() === (string) $user->getAuthIdentifier();
     }
 }

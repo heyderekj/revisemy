@@ -198,7 +198,7 @@ class McpOAuthTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_a_second_sign_in_from_a_connected_browser_asks_first(): void
+    public function test_a_second_sign_in_from_a_connected_browser_finishes(): void
     {
         $client = $this->register();
         $this->authorize($client);
@@ -206,7 +206,7 @@ class McpOAuthTest extends TestCase
         $this->authorize($client); // the first one, skipped
 
         [$again] = $this->authorize($client);
-        $again->assertOk()->assertSee('Connect Claude')->assertSee('Not now');
+        $again->assertRedirect();
     }
 
     public function test_connect_without_a_pending_sign_in_explains_itself(): void

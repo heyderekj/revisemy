@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -67,16 +68,27 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->view('errors.403', [], 403);
         });
 
-        // Reconnecting a removed connector reuses this browser. Passport then
-        // rejects the old approve token as a 403, which looked like the review
-        // was locked. Send them back to Connect so the next click can finish.
-        $exceptions->render(function (AuthorizationException $e, Request $request) {
-            if (! $request->is('oauth/*')) {
+        // Reconnecting a removed connector reuses this browser. Passport rejects
+        // the old approve token, and other authorize failures, as a 403. The
+        // human should land on Connect, never the error page.
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (! $request->is('oauth/*') || $request->expectsJson() || $request->is('oauth/token', 'oauth/register')) {
                 return null;
             }
 
+            $forbidden = $e instanceof AuthorizationException
+                || ($e instanceof HttpExceptionInterface && $e->getStatusCode() === 403);
+
+            if (! $forbidden) {
+                return null;
+            }
+
+            if (! $request->session()->has('url.intended') && $request->is('oauth/authorize')) {
+                $request->session()->put('url.intended', $request->fullUrl());
+            }
+
             return redirect()->route('login')->withErrors([
-                'token' => 'That connect attempt expired. Start Connect again from the assistant, then click Connect here.',
+                'token' => 'That connect attempt expired. Click Connect here, then start it again from the assistant if it does not return.',
             ]);
         });
     })->create();
