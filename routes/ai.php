@@ -11,7 +11,17 @@ use Laravel\Mcp\Facades\Mcp;
  * Two ways in, one door. A try token pasted as a Bearer header (Sanctum), or
  * an assistant that connected by signing in (Passport) — the way Claude,
  * ChatGPT and Grok add a custom connector from just a URL.
+ *
+ * GET must be an empty 405, not an HTML error page. Laravel's default empty
+ * response is text/html, and a host that opens the URL then drops the tools.
  */
+Route::get('/mcp/revisemy', function () {
+    return response('', 405, [
+        'Allow' => 'POST',
+        'Content-Type' => 'application/json',
+    ]);
+});
+
 Mcp::web('/mcp/revisemy', ReviseMyServer::class)
     ->middleware([AuthenticateMcp::class, StreamMcpResponse::class, 'throttle:120,1', RecordAssistantCall::class]);
 

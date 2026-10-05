@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -30,6 +31,18 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*', 'mcp/*', 'oauth/token', 'oauth/register') || $request->expectsJson(),
         );
 
+        // A GET of the MCP URL used to render an HTML error page. Hosts that
+        // open the address before POST then treat the connector as broken.
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
+            if (! $request->is('mcp/*')) {
+                return null;
+            }
+
+            return response('', 405, [
+                'Allow' => 'POST',
+                'Content-Type' => 'application/json',
+            ]);
+        });
         // A missing Passport key pair used to surface as "Server Error" on
         // /oauth/authorize and /oauth/token, so Connect looked broken.
         $exceptions->render(function (Throwable $e, Request $request) {
