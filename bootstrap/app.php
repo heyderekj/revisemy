@@ -53,13 +53,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // A truncated or expired signed image link used to look like the
         // review itself was forbidden. Send them to the review when we can.
         $exceptions->render(function (InvalidSignatureException $e, Request $request) {
-            if (! $request->is('shots/*')) {
-                return null;
-            }
-
             $id = $request->segment(2);
 
-            if (is_numeric($id)) {
+            if ($request->is('shots/*') && is_numeric($id)) {
                 $shot = \App\Models\Screenshot::query()->with('review')->find($id);
 
                 if ($shot?->review?->token) {
@@ -67,6 +63,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
             }
 
-            return null;
+            return response()->view('errors.403', [], 403);
         });
     })->create();
