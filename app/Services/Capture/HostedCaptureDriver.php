@@ -177,7 +177,16 @@ JS;
 
         $response = $this->send($target, ['code' => self::FUNCTION_CODE, 'context' => $context], $httpTimeout, $label);
 
-        if (in_array($response->status(), [404, 405], true)) {
+        // 404/405: this host has no /function. 400: Browserless rejected the
+        // function payload (bad code, timeout, or plan). Either way /screenshot
+        // can still render the page, so fall back instead of failing the review.
+        if (in_array($response->status(), [400, 404, 405], true)) {
+            Log::info('Hosted capture: /function rejected, falling back to /screenshot', [
+                'label' => $label,
+                'status' => $response->status(),
+                'body' => $this->providerSnippet($response),
+            ]);
+
             return null;
         }
 
@@ -186,7 +195,7 @@ JS;
 
         if ($binary === false || $binary === '') {
             throw ValidationException::withMessages([
-                'capture' => "[capture_provider_failed] Could not capture at {$label} (HTTP {$response->status()}). Check Browserless token/quota/endpoint, or fall back to create_review with images as data URLs.",
+                'capture' => $this->failureMessage($label, $response),
             ]);
         }
 
@@ -249,7 +258,7 @@ JS;
 
             if (! $response->successful() || $response->body() === '') {
                 throw ValidationException::withMessages([
-                    'capture' => "[capture_provider_failed] Could not capture at {$label} (HTTP {$response->status()}). Check Browserless token/quota/endpoint, or fall back to create_review with images as data URLs.",
+                    'capture' => $this->failureMessage($label, $response),
                 ]);
             }
 
@@ -284,6 +293,21 @@ JS;
                 'capture' => "[capture_provider_failed] Capture timed out or could not reach the screenshot provider at {$label}. Raise REVISEMY_CAPTURE_TIMEOUT, check the Browserless endpoint/key, or fall back to create_review with images as data URLs.",
             ]);
         }
+    }
+
+    protected function failureMessage(string $label, Response $response): string
+    {
+        $snippet = $this->providerSnippet($response);
+        $detail = $snippet !== '' ? " Provider said: {$snippet}." : '';
+
+        return "[capture_provider_failed] Could not capture at {$label} (HTTP {$response->status()}).{$detail} Check Browserless token/quota/endpoint, or fall back to create_review with images as data URLs.";
+    }
+
+    protected function providerSnippet(Response $response): string
+    {
+        $body = trim(preg_replace('/\s+/', ' ', $response->body()) ?? '');
+
+        return $body === '' ? '' : mb_substr($body, 0, 180);
     }
 
     /**

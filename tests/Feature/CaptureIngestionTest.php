@@ -184,6 +184,25 @@ class CaptureIngestionTest extends TestCase
         });
     }
 
+    public function test_capture_url_falls_back_to_screenshot_when_function_rejects_the_payload(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake([
+            'capture.test/function*' => Http::response('{"error":"Invalid function code"}', 400),
+            'capture.test/*' => Http::response($this->tinyPngBinary()),
+        ]);
+
+        $response = $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $this->assertCount(3, $response->json('screenshots'));
+        Http::assertSentCount(4);
+    }
+
     public function test_freezing_animations_can_be_turned_off(): void
     {
         $token = $this->setUpEnv();
@@ -295,6 +314,7 @@ class CaptureIngestionTest extends TestCase
         $message = (string) data_get($response->json(), 'errors.capture.0');
         $this->assertStringContainsString('[capture_provider_failed]', $message);
         $this->assertStringContainsString('HTTP 502', $message);
+        $this->assertStringContainsString('Provider said: nope', $message);
     }
 
     public function test_plain_image_uploads_still_work(): void
