@@ -22,9 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            // MCP clients need the 401 (with WWW-Authenticate) to learn where
-            // to sign in, never a redirect to the Connect page.
-            fn (Request $request) => $request->is('api/*', 'mcp/*', 'oauth/*') || $request->expectsJson(),
+            // MCP clients and the token endpoint need JSON. /oauth/authorize is a
+            // browser redirect to Connect, so it must not be forced to JSON.
+            fn (Request $request) => $request->is('api/*', 'mcp/*', 'oauth/token', 'oauth/register') || $request->expectsJson(),
         );
 
         // A missing Passport key pair used to surface as "Server Error" on
