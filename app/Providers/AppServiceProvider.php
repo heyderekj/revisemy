@@ -30,6 +30,11 @@ class AppServiceProvider extends ServiceProvider
         // every client that can do OAuth refreshes without asking again.
         Passport::tokensExpireIn(now()->addHour());
         Passport::refreshTokensExpireIn(now()->addDays(60));
+        // Discovery advertises this scope. An undefined scope makes some hosts
+        // finish Connect and then drop the tool list.
+        Passport::tokensCan([
+            'mcp:use' => 'Create and read ReviseMy reviews',
+        ]);
 
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
