@@ -43,12 +43,16 @@ class StreamMcpResponse
         $headers = [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
         ];
 
         if ($session = $response->headers->get('MCP-Session-Id')) {
             $headers['MCP-Session-Id'] = $session;
         }
 
-        return response("data: {$body}\n\n", 200, $headers);
+        // MCP streamable HTTP requires the event name. A bare data line is
+        // ignored by hosts that only keep SSE, which is how Connect stuck
+        // without create_review.
+        return response("event: message\ndata: {$body}\n\n", 200, $headers);
     }
 }
