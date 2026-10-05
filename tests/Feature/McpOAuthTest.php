@@ -82,6 +82,10 @@ class McpOAuthTest extends TestCase
 
     public function test_a_client_can_find_out_where_to_sign_in(): void
     {
+        $this->getJson('/.well-known/oauth-protected-resource')
+            ->assertOk()
+            ->assertJsonPath('resource', url('/mcp/revisemy'));
+
         $this->getJson('/.well-known/oauth-protected-resource/mcp/revisemy')
             ->assertOk()
             ->assertJsonPath('resource', url('/mcp/revisemy'));
@@ -97,6 +101,37 @@ class McpOAuthTest extends TestCase
         $this->postJson('/mcp/revisemy', $this->rpc('tools/list'))
             ->assertUnauthorized()
             ->assertHeader('WWW-Authenticate');
+    }
+
+    /** A missing key pair must not turn the connector probe into a 500. */
+    public function test_a_missing_passport_key_still_challenges(): void
+    {
+        config(['passport.private_key' => null, 'passport.public_key' => null]);
+
+        $hidden = [];
+
+        foreach (['oauth-private.key', 'oauth-public.key'] as $name) {
+            $path = storage_path($name);
+
+            if (is_file($path)) {
+                rename($path, $path.'.bak');
+                $hidden[] = $path;
+            }
+        }
+
+        try {
+            $this->postJson('/mcp/revisemy', $this->rpc('initialize', [
+                'protocolVersion' => '2025-06-18',
+                'capabilities' => [],
+                'clientInfo' => ['name' => 'grok', 'version' => '0'],
+            ]))
+                ->assertUnauthorized()
+                ->assertHeader('WWW-Authenticate');
+        } finally {
+            foreach ($hidden as $path) {
+                rename($path.'.bak', $path);
+            }
+        }
     }
 
     public function test_one_click_connect_ends_in_a_working_token(): void

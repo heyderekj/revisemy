@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,6 +24,28 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             // MCP clients need the 401 (with WWW-Authenticate) to learn where
             // to sign in, never a redirect to the Connect page.
-            fn (Request $request) => $request->is('api/*', 'mcp/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*', 'mcp/*', 'oauth/*') || $request->expectsJson(),
         );
+
+        // A missing Passport key pair used to surface as "Server Error" on
+        // /oauth/authorize and /oauth/token, so Connect looked broken.
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (! $request->is('oauth/*', 'mcp/*')) {
+                return null;
+            }
+
+            $message = $e->getMessage();
+
+            if (! str_contains($message, 'Invalid key') && ! str_contains($message, 'key file') && ! str_contains($message, 'oauth-private.key') && ! str_contains($message, 'oauth-public.key')) {
+                return null;
+            }
+
+            $body = 'ReviseMy cannot sign assistants in until PASSPORT_PRIVATE_KEY and PASSPORT_PUBLIC_KEY are set.';
+
+            if ($request->expectsJson() || $request->is('mcp/*', 'oauth/token', 'oauth/register')) {
+                return response()->json(['message' => $body], 503);
+            }
+
+            return response($body, 503);
+        });
     })->create();

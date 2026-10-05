@@ -10,7 +10,7 @@ return [
             'label' => 'Connectors',
             'icon' => 'puzzle-piece',
             'title' => 'Connect ReviseMy to Claude, ChatGPT, Cursor, VS Code, Grok, Muse or Codex',
-            'description' => 'Add ReviseMy to the assistant you already use. Claude and ChatGPT connect with one address, Cursor and VS Code in one click, others with a try token.',
+            'description' => 'Add ReviseMy to the assistant you already use. Claude, ChatGPT and Grok connect with one address, Cursor and VS Code in one click, Muse and Codex with a try token.',
             'keywords' => [
                 'MCP connectors',
                 'Claude custom connector',

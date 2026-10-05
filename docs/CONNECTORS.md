@@ -10,7 +10,7 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 | **ChatGPT** | Settings → Connectors → custom connector with the URL → **Connect** (OAuth only; the app takes no key) |
 | **Cursor / VS Code** | One-click deep links (`App\Support\InstallLinks`), then sign in — VS Code renders the review inline |
 | **Claude Code** | `claude mcp add --transport http revisemy <url>`, then `/mcp` to sign in — agent shares `review_url` |
-| **Grok** | Grok CLI: `grok mcp add … --header "Authorization: Bearer ${REVISEMY_TOKEN}"` with a try token (the grok.com connector form isn't documented to take a header) |
+| **Grok** | grok.com/connectors → New Connector → Custom, paste the URL, click Connect (OAuth; the form has no token field). The CLI can still send a try token as a Bearer header |
 | **Muse** | Ask Muse to build a custom connector with the URL and a try token (its connector sign-in is still rough) |
 | **Codex** | `[mcp_servers.revisemy]` in `~/.codex/config.toml` with `bearer_token_env_var` |
 | **Any MCP client** | HTTP MCP at `/mcp/revisemy`: OAuth, or a Bearer try token |
@@ -63,7 +63,7 @@ Pass `webhook_url` (https) to `create_review` — over MCP or REST — and Revis
 
 ### Connect (OAuth)
 
-Shipped. `routes/ai.php` takes either guard (`auth:sanctum,api`) and serves the OAuth discovery documents and dynamic registration (`Mcp::oauthRoutes()`). An assistant that signs in is sent to `/connect`, which is one button: it makes a try workspace (the same rate limit as Get a try token) or, with a pasted try token, attaches to that workspace. That click is the consent, so Passport's own page is skipped once (`App\Models\OAuthClient::skipsAuthorization`); a later sign-in from the same browser asks on `resources/views/oauth/authorize.blade.php`. Tokens last an hour and refresh for 60 days. Tests: `tests/Feature/McpOAuthTest.php`.
+Shipped. `routes/ai.php` accepts a Sanctum try token or a Passport access token (`AuthenticateMcp`) and serves the OAuth discovery documents and dynamic registration (`Mcp::oauthRoutes()`). An assistant that signs in is sent to `/connect`, which is one button: it makes a try workspace (the same rate limit as Get a try token) or, with a pasted try token, attaches to that workspace. That click is the consent, so Passport's own page is skipped once (`App\Models\OAuthClient::skipsAuthorization`); a later sign-in from the same browser asks on `resources/views/oauth/authorize.blade.php`. Tokens last an hour and refresh for 60 days. Tests: `tests/Feature/McpOAuthTest.php`. A missing Passport key pair must not turn the URL probe into a 500 — Grok, Claude and ChatGPT only start Connect after a 401 with `WWW-Authenticate`.
 
 ### ChatGPT Action / custom GPT
 

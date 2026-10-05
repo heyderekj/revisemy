@@ -1,16 +1,31 @@
 <?php
 
+use App\Http\Middleware\AuthenticateMcp;
 use App\Http\Middleware\RecordAssistantCall;
 use App\Mcp\Servers\ReviseMyServer;
+use Illuminate\Support\Facades\Route;
 use Laravel\Mcp\Facades\Mcp;
 
 /*
  * Two ways in, one door. A try token pasted as a Bearer header (Sanctum), or
- * an assistant that connected by signing in (Passport) — the way Claude.ai,
- * Claude Desktop and ChatGPT add a custom connector from just a URL.
+ * an assistant that connected by signing in (Passport) — the way Claude,
+ * ChatGPT and Grok add a custom connector from just a URL.
  */
 Mcp::web('/mcp/revisemy', ReviseMyServer::class)
-    ->middleware(['auth:sanctum,api', 'throttle:120,1', RecordAssistantCall::class]);
+    ->middleware([AuthenticateMcp::class, 'throttle:120,1', RecordAssistantCall::class]);
+
+/*
+ * Some clients fetch the origin discovery document instead of the path-inserted
+ * one. This app has one MCP server, so advertise that resource. Registered
+ * before Mcp::oauthRoutes() so Laravel MCP leaves this route alone.
+ */
+Route::get('/.well-known/oauth-protected-resource', function () {
+    return response()->json([
+        'resource' => url('/mcp/revisemy'),
+        'authorization_servers' => [config('mcp.authorization_server') ?? url('/')],
+        'scopes_supported' => ['mcp:use'],
+    ]);
+});
 
 /*
  * The discovery documents an MCP client reads to find out where to sign in,

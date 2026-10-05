@@ -16,7 +16,7 @@ use RuntimeException;
 /**
  * Connecting an assistant by signing in, without an account.
  *
- * Claude.ai, Claude Desktop and ChatGPT add a custom connector from a URL and
+ * Claude, ChatGPT and Grok add a custom connector from a URL and
  * sign in over OAuth; they can't send a pasted Bearer token. Passport sends
  * them here to "log in", and there is nothing to log in to — so this page is
  * one button. Connect makes a try workspace, the same as Get a try token,

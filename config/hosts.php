@@ -11,7 +11,7 @@ return [
     | homepage's Setup, /connectors) and by TryTokenService's prompts. Each
     | host leads with its fastest honest path:
     |
-    |   oauth    paste the address and click Connect (or one command, then sign in)
+    |   oauth    paste the address and click Connect (Claude, ChatGPT, Grok, Claude Code)
     |   deeplink one click installs it, then sign in
     |   token    needs a try token, because the host can't sign in yet
     |
@@ -80,13 +80,14 @@ return [
         'grok' => [
             'name' => 'Grok',
             'icon' => 'grok',
-            'mode' => 'token',
-            'where' => 'The Grok command line',
-            'command' => 'grok mcp add --transport http revisemy {url} --header "Authorization: Bearer ${REVISEMY_TOKEN}"',
+            'mode' => 'oauth',
+            'where' => 'Grok on the web, iOS or Android',
             'steps' => [
-                'Get a try token, and keep it in a variable with the line below.',
-                'Run the command. Grok fills the token in from the variable, so it stays out of your shell history.',
+                'In Grok, open Connectors → New Connector and choose Custom.',
+                'Name it ReviseMy and paste the address.',
+                'Grok opens ReviseMy. Click Connect, and you’re done.',
             ],
+            'note' => 'The custom connector signs in. It has no field for a try token. The command line can still send one as a Bearer header.',
         ],
         'muse' => [
             'name' => 'Muse',

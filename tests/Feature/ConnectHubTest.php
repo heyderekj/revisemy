@@ -37,7 +37,9 @@ class ConnectHubTest extends TestCase
             $page->assertSee('Connect '.$name);
         }
 
-        $page->assertDontSee('mcp-remote')->assertDontSee('grok.com/connectors');
+        $page->assertDontSee('mcp-remote');
+        $page->assertSee('In Grok, open Connectors → New Connector and choose Custom.');
+        $page->assertDontSee('Grok connects with a try token');
     }
 
     public function test_a_first_call_proves_the_connection(): void
