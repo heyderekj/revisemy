@@ -37,3 +37,9 @@ curl -sI -H 'Accept: application/json' https://revisemy.com/mcp/revisemy
 ```
 
 Remove the Grok connector. Add a custom connector with `https://revisemy.com/mcp/revisemy-grok`. In a new chat, `create_review` and `get_review` have to be callable. If the connector says connected and those names are missing, the tool list was dropped again.
+
+## Correction, 2026-10-06 08:30 CDT
+
+The changelog heading 1.5.0 (2026-10-03) is not the deploy time. Connector commits are deploying. `06cfdd8` was on `revisemy.com` within minutes: `/connect` shows the new Grok step, and `/.well-known/oauth-protected-resource/mcp/revisemy-grok` returns that resource.
+
+GET is still an empty `text/html` 405 because `laravel/mcp` `Registrar::web()` returns `response('', 405)` itself. That never throws `MethodNotAllowedHttpException`, so the exception renderer does not run, and a route registered before `Mcp::web()` is not the one answering. A middleware now rewrites any `405` on `mcp/*` to JSON.
