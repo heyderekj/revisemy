@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\KeepOutOfSearch;
+use App\Models\Screenshot;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -38,9 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return response('', 405, [
+            return response()->json([
+                'message' => 'Method not allowed. POST JSON-RPC to this URL.',
+            ], 405, [
                 'Allow' => 'POST',
-                'Content-Type' => 'application/json',
             ]);
         });
         // A missing Passport key pair used to surface as "Server Error" on
@@ -70,8 +72,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (InvalidSignatureException $e, Request $request) {
             $id = $request->segment(2);
 
-            if ($request->is('shots/*') && is_numeric($id)) {
-                $shot = \App\Models\Screenshot::query()->with('review')->find($id);
+            // Only a truncated or expired signed link. An unsigned /shots/{id}
+            // must stay 403 — redirecting it would reveal the review token.
+            if ($request->is('shots/*') && $request->has('signature') && is_numeric($id)) {
+                $shot = Screenshot::query()->with('review')->find($id);
 
                 if ($shot?->review?->token) {
                     return redirect('/r/'.$shot->review->token);

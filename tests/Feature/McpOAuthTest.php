@@ -239,4 +239,24 @@ class McpOAuthTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'text/event-stream; charset=UTF-8');
     }
+
+    public function test_opening_the_mcp_url_is_json_not_an_html_error_page(): void
+    {
+        $this->get('/mcp/revisemy')
+            ->assertStatus(405)
+            ->assertHeader('content-type', 'application/json')
+            ->assertJsonPath('message', 'Method not allowed. POST JSON-RPC to this URL.');
+
+        $this->get('/mcp/revisemy-grok')
+            ->assertStatus(405)
+            ->assertHeader('content-type', 'application/json');
+    }
+
+    public function test_the_grok_path_advertises_itself_as_the_resource(): void
+    {
+        $this->getJson('/.well-known/oauth-protected-resource/mcp/revisemy-grok')
+            ->assertOk()
+            ->assertJsonPath('resource', url('/mcp/revisemy-grok'))
+            ->assertJsonPath('scopes_supported.0', 'mcp:use');
+    }
 }

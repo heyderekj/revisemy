@@ -91,6 +91,7 @@ return [
                 'In Grok, open Connectors → New Connector and choose Custom.',
                 'Name it ReviseMy and paste the address.',
                 'Grok opens ReviseMy. Click Connect, and you’re done.',
+                'If it connects and create_review never shows up, remove it and paste the same origin with /mcp/revisemy-grok. Grok caches a failed URL.',
             ],
             'note' => 'The custom connector signs in. It has no field for a try token. The command line can still send one as a Bearer header.',
             'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. Grok does not render the inline board, so the reply must include the review_url on its own line. Poll get_review and follow next_action until I approve.",
