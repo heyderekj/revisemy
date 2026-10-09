@@ -25,6 +25,7 @@
             ['/guest-links', 'Guest links'],
             ['/reviews', 'Your reviews'],
             ['/alternatives', 'Alternatives'],
+            ['/docs', 'Developer docs'],
             ['https://github.com/heyderekj/revisemy', 'GitHub ↗'],
         ],
     ];

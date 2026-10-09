@@ -26,16 +26,33 @@ final class McpCatalog
      */
     public static function tools(): array
     {
-        $server = new ReflectionClass(ReviseMyServer::class);
-        $paidOnly = $server->getConstant('PAID_ONLY_TOOLS') ?: [];
-        $pricing = (bool) config('billing.pricing_enabled');
+        return array_map(fn (string $tool) => self::describe($tool), self::agentTools());
+    }
 
-        return collect($server->getDefaultProperties()['tools'] ?? [])
-            ->reject(fn (string $tool) => ! $pricing && in_array($tool, $paidOnly, true))
-            ->reject(fn (string $tool) => self::humanOnly($tool))
-            ->map(fn (string $tool) => self::describe($tool))
-            ->values()
-            ->all();
+    /**
+     * The same tools with their parameters, read from each tool's own input
+     * schema, for the developer docs' reference.
+     *
+     * @return list<array{name: string, description: string, parameters: list<array{name: string, type: string, required: bool, description: string}>}>
+     */
+    public static function reference(): array
+    {
+        return array_map(function (string $tool) {
+            $schema = app($tool)->toArray()['inputSchema'];
+            $required = $schema['required'] ?? [];
+
+            return self::describe($tool) + [
+                'parameters' => collect((array) $schema['properties'])
+                    ->map(fn (array $property, string $name) => [
+                        'name' => $name,
+                        'type' => self::type($property),
+                        'required' => in_array($name, $required, true),
+                        'description' => $property['description'] ?? '',
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        }, self::agentTools());
     }
 
     /**
@@ -84,6 +101,45 @@ final class McpCatalog
             'name' => self::attribute($reflection, Name::class)?->value ?? $reflection->getShortName(),
             'description' => self::attribute($reflection, Description::class)?->value ?? '',
         ];
+    }
+
+    /**
+     * Tools an agent can call, as classes.
+     *
+     * @return list<class-string>
+     */
+    protected static function agentTools(): array
+    {
+        $server = new ReflectionClass(ReviseMyServer::class);
+        $paidOnly = $server->getConstant('PAID_ONLY_TOOLS') ?: [];
+        $pricing = (bool) config('billing.pricing_enabled');
+
+        return collect($server->getDefaultProperties()['tools'] ?? [])
+            ->reject(fn (string $tool) => ! $pricing && in_array($tool, $paidOnly, true))
+            ->reject(fn (string $tool) => self::humanOnly($tool))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * A property's type as a reader would write it: string, boolean,
+     * array of string, or one of a fixed set of values.
+     *
+     * @param  array<string, mixed>  $property
+     */
+    protected static function type(array $property): string
+    {
+        if (isset($property['enum'])) {
+            return implode(' | ', array_map(fn ($value) => '"'.$value.'"', $property['enum']));
+        }
+
+        $type = (string) ($property['type'] ?? 'any');
+
+        if ($type === 'array' && isset($property['items']['type'])) {
+            return 'array of '.$property['items']['type'];
+        }
+
+        return $type;
     }
 
     /** Rendered by the inline review for the human, and hidden from the model. */
