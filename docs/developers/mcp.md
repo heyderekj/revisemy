@@ -72,6 +72,6 @@ A tool that can't do what was asked answers with an MCP error whose message star
 | `[capture_provider_failed]` | Rendering failed. Retry once with `images`. |
 | `[insufficient_credits]` | Out of credits. Call `get_billing` for when they refill. |
 
-A failed `capture_url` doesn't error. The review still opens, with a placeholder shot and the reason at the top of `context`, so there's always a link to share. Your agent can follow up with `add_screenshot`.
+A failed `capture_url` doesn't error. The review still opens, so there's always a link, but its shot is a blank placeholder (`meta.origin` is `capture_failed`) and the reply names the failure. Your agent should add the page with `add_screenshot`, desktop and mobile, before it shares the link.
 
 Anything else is a plain sentence meant for your agent to read and act on.
