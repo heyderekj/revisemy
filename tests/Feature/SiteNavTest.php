@@ -14,7 +14,7 @@ class SiteNavTest extends TestCase
 
     public function test_every_browsable_page_carries_the_site_nav(): void
     {
-        foreach (['/board', '/for', '/for/websites', '/alternatives', '/alternatives/marker-io', '/connectors', '/privacy', '/terms', '/reviews'] as $path) {
+        foreach (['/board', '/for', '/for/websites', '/alternatives', '/alternatives/marker-io', '/connectors', '/docs', '/docs/mcp', '/privacy', '/terms', '/reviews'] as $path) {
             $this->get($path)
                 ->assertOk()
                 ->assertSee('aria-label="Site"', false)

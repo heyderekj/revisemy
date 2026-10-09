@@ -5,6 +5,7 @@
             <a href="/terms" class="transition-colors hover:text-zinc-900">Terms</a>
             <a href="/reviews" class="transition-colors hover:text-zinc-900">Your reviews</a>
             <a href="/changelog" class="transition-colors hover:text-zinc-900">Changelog</a>
+            <a href="/docs" class="transition-colors hover:text-zinc-900">Developer docs</a>
             <a href="https://github.com/heyderekj/revisemy" target="_blank" rel="noreferrer" class="transition-colors hover:text-zinc-900">GitHub ↗</a>
         </p>
         <p class="shrink-0 text-zinc-400">

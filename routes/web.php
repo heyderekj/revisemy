@@ -3,6 +3,7 @@
 use App\Http\Controllers\AlternativeController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ConnectController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PolarWebhookController;
@@ -42,6 +43,10 @@ Route::get('/guest-links', [GuideController::class, 'show'])
     ->defaults('slug', 'guest-links');
 Route::get('/changelog', [GuideController::class, 'show'])
     ->defaults('slug', 'changelog');
+
+// The developer docs, from docs/developers/*.md.
+Route::get('/docs', [DocsController::class, 'index']);
+Route::get('/docs/{slug}', [DocsController::class, 'show'])->where('slug', '[a-z0-9-]+');
 
 Route::get('/privacy', [LegalController::class, 'privacy']);
 Route::get('/terms', [LegalController::class, 'terms']);

@@ -24,6 +24,10 @@ final class MarketingPages
             }
         }
 
+        foreach (DeveloperDocs::pages() as $doc) {
+            $pages[] = ['href' => $doc['path'], 'label' => $doc['slug'] === 'index' ? 'Developer docs' : $doc['title'], 'line' => $doc['description'], 'icon' => $doc['icon']];
+        }
+
         $pages[] = ['href' => '/for', 'label' => 'Built for', 'line' => 'Review types and who uses them.', 'icon' => 'squares-2x2'];
 
         foreach (config('use-cases.pages', []) + config('use-cases.audiences', []) as $slug => $page) {

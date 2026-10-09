@@ -375,6 +375,7 @@ new class extends Component
                 <span>
                     <a href="https://osaasy.dev/" target="_blank" rel="noreferrer" class="text-zinc-700 underline decoration-border-strong underline-offset-2 transition-colors hover:text-zinc-900">O’Saasy License</a>.
                     Use it, fork it, run your own copy. Issues and PRs welcome.
+                    Building on it? Read the <a href="/docs" class="text-zinc-700 underline decoration-border-strong underline-offset-2 transition-colors hover:text-zinc-900">developer docs</a>.
                 </span>
             </p>
         </div>

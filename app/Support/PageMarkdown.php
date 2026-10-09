@@ -22,6 +22,9 @@ final class PageMarkdown
             $path === '/' || $path === '/index' => self::home(),
             $path === '/for' => self::useCaseIndex(),
             $path === '/alternatives' => self::alternativeIndex(),
+            $path === '/docs' => self::doc('index'),
+            $path === '/docs/index' => null,
+            str_starts_with($path, '/docs/') => self::doc(substr($path, 6)),
             str_starts_with($path, '/for/') => self::useCase(substr($path, 5)),
             str_starts_with($path, '/alternatives/') => self::alternative(substr($path, 14)),
             default => self::guide($path),
@@ -113,6 +116,18 @@ final class PageMarkdown
         }
 
         return $md.self::faq($page['faq'] ?? []);
+    }
+
+    /** A developer doc is markdown already; it only needs the page's head. */
+    protected static function doc(string $slug): ?string
+    {
+        $page = DeveloperDocs::find($slug);
+
+        if ($page === null) {
+            return null;
+        }
+
+        return self::head($page['title'], $page['description'], $page['path']).DeveloperDocs::markdown($page['slug']);
     }
 
     protected static function useCase(string $slug): ?string

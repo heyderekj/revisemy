@@ -116,14 +116,7 @@ The homepage also copies configs for Claude Desktop, Copilot, Claude Code, and C
 
 ### REST API (same auth)
 
-- `POST /api/try-token` — create a try workspace + token
-- `POST /api/reviews` — `{ "title", "context?", "type?", "page_url?", "parent_id?", "webhook_url?", "images"|"capture_url"|"pdf"|"html" }`
-- `GET /api/reviews/{id}`
-- `GET /api/reviews`
-- `POST /api/reviews/{id}/screenshots` — `{ "image" }`
-- `POST /api/reviews/{id}/findings` — `{ "findings": [...] }`
-- `POST /api/reviews/{id}/marks/resolve` — same payload as `resolve_marks`
-- `POST /api/reviews/{id}/second-opinion` — optional `{ "screenshot_index" }`
+The same reviews over plain HTTP, for scripts and CI: `POST /api/try-token`, then `/api/reviews` and its screenshots, findings, `marks/resolve` and `second-opinion` endpoints. Every endpoint with a curl example is in the [REST API docs](https://revisemy.com/docs/rest-api).
 
 ## Local development
 
@@ -202,6 +195,7 @@ For free pixel vision without a cloud API key, point `REVISEMY_OPENAI_BASE_URL` 
 
 ## Docs
 
+- **[Developer docs](https://revisemy.com/docs)** — quickstart, authentication, the MCP tool reference, the review loop, REST API and webhooks. Source in [docs/developers](docs/developers); the tool reference is generated from the server.
 - [CONNECTORS.md](docs/CONNECTORS.md) — ChatGPT / Claude / Cursor / Grok setup, MCP Apps inline review, decision webhooks
 - [SECOND-OPINION.md](docs/SECOND-OPINION.md) — second opinion, agent subagent findings, work packets
 - [DEPLOY.md](docs/DEPLOY.md) — Laravel Cloud deploy
