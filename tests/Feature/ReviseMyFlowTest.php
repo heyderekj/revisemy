@@ -54,8 +54,11 @@ class ReviseMyFlowTest extends TestCase
         $this->assertTrue(
             now()->diffInDays(Carbon::parse($tokenResponse->json('token_expires_at')), false) >= 6
         );
-        // Hosts that need a token get it filled in; nothing teaches mcp-remote any more.
-        $this->assertStringContainsString('export REVISEMY_TOKEN='.$token, (string) data_get($tokenResponse->json(), 'setup_prompts.grok'));
+        // Hosts that need a token get it filled in; hosts that sign in never
+        // see one. Nothing teaches mcp-remote any more.
+        $this->assertStringContainsString('export REVISEMY_TOKEN='.$token, (string) data_get($tokenResponse->json(), 'setup_prompts.muse'));
+        $this->assertStringContainsString($token, (string) data_get($tokenResponse->json(), 'setup_prompts.codex'));
+        $this->assertStringNotContainsString($token, (string) data_get($tokenResponse->json(), 'setup_prompts.grok'));
         $this->assertStringNotContainsString('mcp-remote', (string) json_encode($tokenResponse->json('setup_prompts')));
 
         $reviewResponse = $this->withToken($token)->postJson('/api/reviews', [
