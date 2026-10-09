@@ -43,3 +43,20 @@ Remove the Grok connector. Add a custom connector with `https://revisemy.com/mcp
 The changelog heading 1.5.0 (2026-10-03) is not the deploy time. Connector commits are deploying. `06cfdd8` was on `revisemy.com` within minutes: `/connect` shows the new Grok step, and `/.well-known/oauth-protected-resource/mcp/revisemy-grok` returns that resource.
 
 GET is still an empty `text/html` 405 because `laravel/mcp` `Registrar::web()` returns `response('', 405)` itself. That never throws `MethodNotAllowedHttpException`, so the exception renderer does not run, and a route registered before `Mcp::web()` is not the one answering. A middleware now rewrites any `405` on `mcp/*` to JSON.
+
+## Fix, 2026-10-08
+
+`d6eb7f9` passed a Closure to `$middleware->append()`, which only takes class names. That is a fatal TypeError on boot, so `composer install` failed in CI and Cloud never built it. Production stayed on `06cfdd8`, still answering GET with an empty `text/html` 405.
+
+- The JSON 405 is now a route registered after `Mcp::web()`, for GET and DELETE on both paths. The route registered last answers, so the package's empty 405 no longer wins. The global middleware is gone.
+- `StreamMcpResponse` wrapped every 200 as SSE, because every spec-compliant host sends `text/event-stream` in Accept. Only `/mcp/revisemy-grok`, or a Grok user agent on the main path, gets SSE now. Everyone else gets the package's JSON, with the rate-limit headers intact.
+- Cursor and VS Code could not register: `cursor://` and `vscode://` callbacks need `config/mcp.php` `custom_schemes`.
+- A signed-in browser skipped consent for any registered client. It now skips only for known assistant callbacks (`App\Support\AssistantCallback`).
+- Screenshot URLs carried the owner token, so a guest page leaked it. They carry the guest token now.
+
+Check after deploy:
+
+```bash
+curl -sI https://revisemy.com/mcp/revisemy          # 405, application/json
+curl -sI -X DELETE https://revisemy.com/mcp/revisemy # 405, application/json
+```
