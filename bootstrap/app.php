@@ -2,15 +2,14 @@
 
 use App\Http\Middleware\KeepOutOfSearch;
 use App\Models\Screenshot;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
-use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,23 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'noindex' => KeepOutOfSearch::class,
         ]);
-
-        // Laravel MCP registers GET /mcp/* as an empty 405. That response is
-        // text/html, and a host that opens the URL treats the connector as
-        // broken. It is not an exception, so the renderer below never sees it.
-        $middleware->append(function ($request, $next) {
-            $response = $next($request);
-
-            if ($request->is('mcp/*') && $response->getStatusCode() === 405) {
-                return response()->json([
-                    'message' => 'Method not allowed. POST JSON-RPC to this URL.',
-                ], 405, [
-                    'Allow' => 'POST',
-                ]);
-            }
-
-            return $response;
-        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
