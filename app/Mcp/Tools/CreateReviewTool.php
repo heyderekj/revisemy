@@ -72,10 +72,12 @@ class CreateReviewTool extends Tool
         $pagesNote = $truncated
             ? 'Only the first '.count($payload['screenshots']).' of '.$truncated['meta']['total_pages'].' PDF pages were rendered — split the deck to review the rest.'."\n\n"
             : '';
+        $captureNote = $this->captureFailedNote($payload);
 
         return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
             "Review link (always share this with the human, even if the board also rendered inline):\n{$url}\n\n".
+            $captureNote.
             $pagesNote.
             "Hosts that support MCP Apps also render the board in this chat. Every other host only has this link. Do not finish the turn without it.\n\n".
             "Loop: share the link → human marks + decides → you poll get_review → follow next_action.\n\n".
@@ -84,6 +86,28 @@ class CreateReviewTool extends Tool
             "Then poll get_review with id `{$payload['id']}`.\n\n".
             "```json\n{$json}\n```"
         ))->withStructuredContent($payload);
+    }
+
+    /**
+     * A failed capture still opens the review, with a blank placeholder shot,
+     * so the human gets a link. The agent has to hear that it failed, or it
+     * shares a review with nothing on it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function captureFailedNote(array $payload): string
+    {
+        $failed = collect($payload['screenshots'] ?? [])
+            ->contains(fn ($shot) => ($shot['meta']['origin'] ?? null) === 'capture_failed');
+
+        if (! $failed) {
+            return '';
+        }
+
+        preg_match('/\[(capture_[a-z_]+)\]/', (string) ($payload['context'] ?? ''), $code);
+        $tag = isset($code[1]) ? "[{$code[1]}] " : '';
+
+        return "{$tag}Capture failed, so this review has no page shot yet. Call add_screenshot with id `{$payload['id']}` and the page as an image data URL, once for desktop and once for mobile, before you share the link.\n\n";
     }
 
     /**

@@ -11,30 +11,27 @@ use Laravel\Mcp\Facades\Mcp;
  * Two ways in, one door. A try token pasted as a Bearer header (Sanctum), or
  * an assistant that connected by signing in (Passport) — the way Claude,
  * ChatGPT and Grok add a custom connector from just a URL.
- *
- * GET must be an empty 405, not an HTML error page. Laravel's default empty
- * response is text/html, and a host that opens the URL then drops the tools.
  */
 $mcpMiddleware = [AuthenticateMcp::class, StreamMcpResponse::class, 'throttle:120,1', RecordAssistantCall::class];
 
-// GET must be JSON, not an HTML error page. A host that opens the URL
-// before POST treats text/html as a broken connector.
-$mcpGet = function () {
-    return response()->json([
-        'message' => 'Method not allowed. POST JSON-RPC to this URL.',
-    ], 405, [
-        'Allow' => 'POST',
-    ]);
-};
+// A host that opens the URL before it POSTs treats an HTML error page as a
+// broken connector, so GET and DELETE answer in JSON.
+$mcp405 = fn () => response()->json([
+    'message' => 'Method not allowed. POST JSON-RPC to this URL.',
+], 405, [
+    'Allow' => 'POST',
+]);
 
-Route::get('/mcp/revisemy', $mcpGet);
-Route::get('/mcp/revisemy-grok', $mcpGet);
+// The -grok path is the same server. Grok caches a failed verdict per URL and
+// remove + re-add often does not re-probe, so it gets an address of its own.
+foreach (['/mcp/revisemy', '/mcp/revisemy-grok'] as $path) {
+    Mcp::web($path, ReviseMyServer::class)->middleware($mcpMiddleware);
 
-Mcp::web('/mcp/revisemy', ReviseMyServer::class)->middleware($mcpMiddleware);
-
-// Same server, different path. Grok caches a failed verdict per URL and
-// remove + re-add often does not re-probe. Paste this one after a deploy.
-Mcp::web('/mcp/revisemy-grok', ReviseMyServer::class)->middleware($mcpMiddleware);
+    // Registered after Mcp::web(), which adds its own empty text/html 405 for
+    // GET and DELETE. The route registered last is the one that answers.
+    Route::get($path, $mcp405);
+    Route::delete($path, $mcp405);
+}
 
 /*
  * Some clients fetch the origin discovery document instead of the path-inserted

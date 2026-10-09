@@ -12,6 +12,6 @@ test('the homepage shows how to connect before anyone gets a token', async ({ pa
 
     await hub.getByRole('tab', { name: /Muse/ }).click();
     await hub.getByRole('button', { name: 'Get a try token' }).first().click();
-    await expect(hub.getByText('Build a custom connector to ReviseMy.')).toBeVisible();
+    await expect(hub.getByText('Build a custom connector to ReviseMy and save this credential.')).toBeVisible();
     await expect(hub.getByText('Waiting for your assistant’s first call')).toBeVisible();
 });

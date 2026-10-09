@@ -32,7 +32,7 @@ return [
                 'Claude opens ReviseMy. Click Connect, and you’re done.',
             ],
             'inline' => true,
-            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. The review board renders inline here. Also paste review_url in your reply. Poll get_review and follow next_action until I approve. Do not mark your own work verified.",
+            'prompt' => 'ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. The review board renders inline here. Also paste review_url in your reply. Poll get_review and follow next_action until I approve. Do not mark your own work verified.',
         ],
         'chatgpt' => [
             'name' => 'ChatGPT',
@@ -45,7 +45,7 @@ return [
                 'ChatGPT opens ReviseMy. Click Connect, and you’re done.',
             ],
             'note' => 'The ChatGPT app only connects by signing in, so there’s no token to paste.',
-            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. ChatGPT does not render the inline board, so paste review_url in your reply and wait. Poll get_review and follow next_action until I approve.",
+            'prompt' => 'ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. ChatGPT does not render the inline board, so paste review_url in your reply and wait. Poll get_review and follow next_action until I approve.',
         ],
         'cursor' => [
             'name' => 'Cursor',
@@ -56,7 +56,7 @@ return [
                 'Click Add to Cursor and confirm in Cursor.',
                 'Cursor opens ReviseMy to sign in. Click Connect.',
             ],
-            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for the local UI, or capture_url true and page_url for a public page. Paste review_url in your reply. Poll get_review and follow next_action until I approve. Human marks in work_packets.pins are authoritative.",
+            'prompt' => 'ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for the local UI, or capture_url true and page_url for a public page. Paste review_url in your reply. Poll get_review and follow next_action until I approve. Human marks in work_packets.pins are authoritative.',
         ],
         'vscode' => [
             'name' => 'VS Code',
@@ -68,7 +68,7 @@ return [
                 'VS Code opens ReviseMy to sign in. Click Connect.',
             ],
             'inline' => true,
-            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for the local UI, or capture_url true and page_url for a public page. The review can render inline. Also paste review_url. Poll get_review and follow next_action until I approve.",
+            'prompt' => 'ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for the local UI, or capture_url true and page_url for a public page. The review can render inline. Also paste review_url. Poll get_review and follow next_action until I approve.',
         ],
         'claude-code' => [
             'name' => 'Claude Code',
@@ -80,7 +80,7 @@ return [
                 'Run the command in your project.',
                 'Run /mcp, choose revisemy, and sign in. Click Connect.',
             ],
-            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for local UI, or capture_url true and page_url for a public page. Paste review_url in your reply — this host has no inline board. Poll get_review and follow next_action until I approve.",
+            'prompt' => 'ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: images as data URLs for local UI, or capture_url true and page_url for a public page. Paste review_url in your reply — this host has no inline board. Poll get_review and follow next_action until I approve.',
         ],
         'grok' => [
             'name' => 'Grok',
@@ -94,7 +94,7 @@ return [
                 'If it connects and create_review never shows up, remove it and paste the same origin with /mcp/revisemy-grok. Grok caches a failed URL.',
             ],
             'note' => 'The custom connector signs in. It has no field for a try token. The command line can still send one as a Bearer header.',
-            'prompt' => "ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. Grok does not render the inline board, so the reply must include the review_url on its own line. Poll get_review and follow next_action until I approve.",
+            'prompt' => 'ReviseMy is connected. Run a design checkup on the work I just changed. Call create_review with exactly one source: capture_url true and page_url for a public page, or images as data URLs for local UI. Grok does not render the inline board, so the reply must include the review_url on its own line. Poll get_review and follow next_action until I approve.',
         ],
         'muse' => [
             'name' => 'Muse',
@@ -119,7 +119,7 @@ return [
                 'Add the block to ~/.codex/config.toml.',
                 'Paste the prompt to Codex once the server is listed.',
             ],
-            'prompt' => "ReviseMy is connected at {url} with bearer token {token}. Confirm create_review and get_review are available. When I ask for a checkup, call create_review with exactly one source: images as data URLs for local UI, or capture_url true and page_url for a public page. Paste review_url in your reply. Poll get_review and follow next_action until I approve.",
+            'prompt' => 'ReviseMy is connected at {url} with bearer token {token}. Confirm create_review and get_review are available. When I ask for a checkup, call create_review with exactly one source: images as data URLs for local UI, or capture_url true and page_url for a public page. Paste review_url in your reply. Poll get_review and follow next_action until I approve.',
         ],
     ],
 
