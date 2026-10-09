@@ -232,7 +232,8 @@ class McpCreateReviewTest extends TestCase
         );
     }
 
-    public function test_create_review_capture_fails_cleanly_when_not_configured(): void
+    /** A failed capture still opens a review, and tells the agent what to add. */
+    public function test_create_review_capture_off_still_opens_a_review(): void
     {
         $user = $this->setUpUser();
         config(['revisemy.capture.driver' => null]);
@@ -241,10 +242,15 @@ class McpCreateReviewTest extends TestCase
             'title' => 'Capture off',
             'page_url' => 'https://example.com',
             'capture_url' => true,
-        ])->assertHasErrors(['capture_not_configured']);
+        ])->assertHasNoErrors()
+            ->assertSee('[capture_not_configured] Capture failed')
+            ->assertSee('Call add_screenshot');
+
+        $shot = Review::query()->firstOrFail()->screenshots()->firstOrFail();
+        $this->assertSame('capture_failed', $shot->meta['origin'] ?? null);
     }
 
-    public function test_create_review_capture_reports_provider_failure(): void
+    public function test_create_review_capture_provider_failure_still_opens_a_review(): void
     {
         $user = $this->setUpUser();
 
@@ -256,7 +262,10 @@ class McpCreateReviewTest extends TestCase
             'title' => 'Provider down',
             'page_url' => 'https://example.com',
             'capture_url' => true,
-        ])->assertHasErrors(['capture_provider_failed']);
+        ])->assertHasNoErrors()
+            ->assertSee('[capture_provider_failed] Capture failed');
+
+        $this->assertStringContainsString('HTTP 502', (string) Review::query()->firstOrFail()->context);
     }
 
     public function test_create_review_url_capture_stores_dom_snapshot(): void

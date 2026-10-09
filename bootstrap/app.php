@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Middleware\JsonMcpMethodNotAllowed;
 use App\Http\Middleware\KeepOutOfSearch;
 use App\Models\Screenshot;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -24,9 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'noindex' => KeepOutOfSearch::class,
         ]);
-
-        // GET /mcp/* answers JSON, not an empty text/html 405.
-        $middleware->append(JsonMcpMethodNotAllowed::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

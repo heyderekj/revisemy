@@ -282,7 +282,8 @@ class CaptureIngestionTest extends TestCase
         ])->assertUnprocessable();
     }
 
-    public function test_capture_fails_cleanly_when_not_configured(): void
+    /** A failed capture still opens the review, so the human gets a link. */
+    public function test_capture_off_still_opens_a_review(): void
     {
         $token = $this->setUpEnv();
         config(['revisemy.capture.driver' => null]);
@@ -291,12 +292,14 @@ class CaptureIngestionTest extends TestCase
             'title' => 'Capture off',
             'page_url' => 'https://example.com',
             'capture_url' => true,
-        ])->assertUnprocessable()
-            ->assertJsonValidationErrors(['capture'])
-            ->assertJsonFragment(['capture' => ['[capture_not_configured] Server-side capture is off. Set REVISEMY_CAPTURE_DRIVER=hosted plus REVISEMY_CAPTURE_ENDPOINT/KEY (Browserless) on Cloud, or browsershot locally. Fallback: call create_review with images as desktop+mobile data URLs instead of capture_url.']]);
+        ])->assertCreated();
+
+        $review = Review::query()->firstOrFail();
+        $this->assertStringContainsString('[capture_not_configured]', (string) $review->context);
+        $this->assertSame('capture_failed', $review->screenshots()->firstOrFail()->meta['origin'] ?? null);
     }
 
-    public function test_capture_reports_provider_http_failure(): void
+    public function test_capture_provider_failure_is_named_on_the_review(): void
     {
         $token = $this->setUpEnv();
 
@@ -304,17 +307,16 @@ class CaptureIngestionTest extends TestCase
             'capture.test/*' => Http::response('nope', 502),
         ]);
 
-        $response = $this->withToken($token)->postJson('/api/reviews', [
+        $this->withToken($token)->postJson('/api/reviews', [
             'title' => 'Provider down',
             'page_url' => 'https://example.com',
             'capture_url' => true,
-        ])->assertUnprocessable()
-            ->assertJsonValidationErrors(['capture']);
+        ])->assertCreated();
 
-        $message = (string) data_get($response->json(), 'errors.capture.0');
-        $this->assertStringContainsString('[capture_provider_failed]', $message);
-        $this->assertStringContainsString('HTTP 502', $message);
-        $this->assertStringContainsString('Provider said: nope', $message);
+        $context = (string) Review::query()->firstOrFail()->context;
+        $this->assertStringContainsString('[capture_provider_failed]', $context);
+        $this->assertStringContainsString('HTTP 502', $context);
+        $this->assertStringContainsString('Provider said: nope', $context);
     }
 
     public function test_plain_image_uploads_still_work(): void
@@ -381,7 +383,12 @@ class CaptureIngestionTest extends TestCase
         // Legacy screenshots without a stored thumb fall back to the original.
         $shot->update(['thumb_path' => null]);
         $this->assertSame($shot->url(), $shot->thumbUrl());
-        $this->assertStringContainsString('/shots/'.$shot->id.'?', $shot->url());
+
+        // Images are opened with the guest token. The owner token never
+        // appears in an <img src> a guest can read.
+        $review = $shot->review;
+        $this->assertStringContainsString('/r/'.$review->share_token.'/shots/'.$shot->id, $shot->url());
+        $this->assertStringNotContainsString($review->token, $shot->url());
     }
 
     public function test_url_capture_stores_dom_snapshot(): void

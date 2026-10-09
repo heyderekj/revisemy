@@ -157,4 +157,28 @@ return [
         ))),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Connector sign-in
+    |--------------------------------------------------------------------------
+    |
+    | A browser that connected before skips the consent screen only when the
+    | code goes back to one of these https hosts (or a subdomain of one), a
+    | desktop app's own scheme (mcp.custom_schemes), or a loopback address on
+    | any port. Every other return address is asked. See
+    | App\Support\AssistantCallback.
+    |
+    */
+
+    'oauth' => [
+        'trusted_redirect_hosts' => [
+            'claude.ai',
+            'claude.com',
+            'chatgpt.com',
+            'grok.com',
+            'x.ai',
+            'vscode.dev',
+        ],
+    ],
+
 ];

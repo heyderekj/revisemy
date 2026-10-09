@@ -38,9 +38,9 @@ class McpOAuthTest extends TestCase
         return ['jsonrpc' => '2.0', 'id' => 1, 'method' => $method, 'params' => $params];
     }
 
-    private function register(): string
+    private function register(string $callback = self::CALLBACK): string
     {
-        return $this->postJson('/oauth/register', ['client_name' => 'Claude', 'redirect_uris' => [self::CALLBACK]])
+        return $this->postJson('/oauth/register', ['client_name' => 'Claude', 'redirect_uris' => [$callback]])
             ->assertSuccessful()
             ->json('client_id');
     }
@@ -48,7 +48,7 @@ class McpOAuthTest extends TestCase
     /**
      * @return array{0: TestResponse, 1: string}
      */
-    private function authorize(string $client, ?string $verifier = null): array
+    private function authorize(string $client, ?string $verifier = null, string $callback = self::CALLBACK): array
     {
         $verifier ??= Str::random(64);
         $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
@@ -56,7 +56,7 @@ class McpOAuthTest extends TestCase
         $response = $this->get('/oauth/authorize?'.http_build_query([
             'response_type' => 'code',
             'client_id' => $client,
-            'redirect_uri' => self::CALLBACK,
+            'redirect_uri' => $callback,
             'state' => 'xyz',
             'scope' => 'mcp:use',
             'code_challenge' => $challenge,
@@ -227,8 +227,94 @@ class McpOAuthTest extends TestCase
             ->assertJsonPath('result.structuredContent.count', 0);
     }
 
-    /** Grok drops a JSON tool list. It keeps SSE. */
-    public function test_a_tool_list_is_streamed_when_the_host_asks_for_events(): void
+    /**
+     * Registration is open, so a browser that connected before must not hand
+     * a stranger's client a code without asking.
+     */
+    public function test_an_unknown_return_address_always_asks(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+
+        $client = $this->register('https://evil.example/cb');
+        [$response] = $this->authorize($client, callback: 'https://evil.example/cb');
+
+        $response->assertOk()->assertSee('evil.example');
+        $this->assertStringNotContainsString('code=', (string) $response->headers->get('Location'));
+    }
+
+    public function test_a_lookalike_assistant_host_is_not_trusted(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+
+        $client = $this->register('https://claude.ai.evil.example/cb');
+        [$response] = $this->authorize($client, callback: 'https://claude.ai.evil.example/cb');
+
+        $response->assertOk();
+        $this->assertNull($response->headers->get('Location'));
+    }
+
+    /** Claude Code and Codex listen on a loopback port that changes each time. */
+    public function test_a_local_assistant_reconnects_without_asking(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+
+        $client = $this->register('http://127.0.0.1:43123/callback');
+        [$response] = $this->authorize($client, callback: 'http://127.0.0.1:43123/callback');
+
+        $response->assertRedirectContains('http://127.0.0.1:43123/callback?code=');
+    }
+
+    /** Clicking Connect is the yes, wherever the client sends the code. */
+    public function test_connect_click_is_consent_for_any_return_address(): void
+    {
+        $client = $this->register('https://muse.example/cb');
+        [$first, $verifier] = $this->authorize($client, callback: 'https://muse.example/cb');
+        $first->assertRedirect('/connect');
+
+        $this->post('/connect')->assertRedirectContains('/oauth/authorize');
+
+        [$approved] = $this->authorize($client, $verifier, 'https://muse.example/cb');
+        $approved->assertRedirectContains('https://muse.example/cb?code=');
+    }
+
+    public function test_cursor_and_vscode_clients_can_register(): void
+    {
+        foreach (['cursor://anysphere.cursor-mcp/oauth/callback', 'vscode://vscode.github-authentication/did-authenticate'] as $callback) {
+            $this->postJson('/oauth/register', ['client_name' => 'Desktop', 'redirect_uris' => [$callback]])
+                ->assertCreated()
+                ->assertJsonPath('redirect_uris.0', $callback);
+        }
+    }
+
+    /** Grok drops a JSON tool list. It keeps SSE, on its own path. */
+    public function test_the_grok_path_streams_the_tool_list(): void
+    {
+        $try = app(TryTokenService::class)->create();
+
+        $this->withToken($try['token'])
+            ->postJson('/mcp/revisemy-grok', $this->rpc('tools/list'), [
+                'Accept' => 'application/json, text/event-stream',
+            ])
+            ->assertOk()
+            ->assertHeader('content-type', 'text/event-stream; charset=UTF-8')
+            ->assertHeader('X-RateLimit-Limit');
+    }
+
+    public function test_grok_on_the_main_path_still_gets_a_stream(): void
+    {
+        $try = app(TryTokenService::class)->create();
+
+        $this->withToken($try['token'])
+            ->postJson('/mcp/revisemy', $this->rpc('tools/list'), [
+                'Accept' => 'application/json, text/event-stream',
+                'User-Agent' => 'Grok/1.0 (xAI connector)',
+            ])
+            ->assertOk()
+            ->assertHeader('content-type', 'text/event-stream; charset=UTF-8');
+    }
+
+    /** Every spec-compliant host asks for both; everyone but Grok gets JSON. */
+    public function test_other_hosts_get_json_even_when_they_accept_events(): void
     {
         $try = app(TryTokenService::class)->create();
 
@@ -237,19 +323,22 @@ class McpOAuthTest extends TestCase
                 'Accept' => 'application/json, text/event-stream',
             ])
             ->assertOk()
-            ->assertHeader('content-type', 'text/event-stream; charset=UTF-8');
+            ->assertHeader('content-type', 'application/json')
+            ->assertHeader('X-RateLimit-Limit')
+            ->assertJsonPath('result.tools.0.name', 'create_review');
     }
 
     public function test_opening_the_mcp_url_is_json_not_an_html_error_page(): void
     {
-        $this->get('/mcp/revisemy')
-            ->assertStatus(405)
-            ->assertHeader('content-type', 'application/json')
-            ->assertJsonPath('message', 'Method not allowed. POST JSON-RPC to this URL.');
-
-        $this->get('/mcp/revisemy-grok')
-            ->assertStatus(405)
-            ->assertHeader('content-type', 'application/json');
+        foreach (['/mcp/revisemy', '/mcp/revisemy-grok'] as $path) {
+            foreach (['get', 'delete'] as $method) {
+                $this->{$method}($path)
+                    ->assertStatus(405)
+                    ->assertHeader('content-type', 'application/json')
+                    ->assertHeader('Allow', 'POST')
+                    ->assertJsonPath('message', 'Method not allowed. POST JSON-RPC to this URL.');
+            }
+        }
     }
 
     public function test_the_grok_path_advertises_itself_as_the_resource(): void

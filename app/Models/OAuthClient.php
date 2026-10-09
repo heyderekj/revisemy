@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AssistantCallback;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Laravel\Passport\Client;
 
@@ -9,9 +10,11 @@ use Laravel\Passport\Client;
  * An assistant that registered itself to connect over OAuth.
  *
  * The Connect page is the consent: whoever clicked Connect there has already
- * said yes, and a browser that is still signed in can reconnect without
- * Passport's one-time approve token. That token was failing after a connector
- * was removed and rendering the 403 page.
+ * said yes to that client, once. After that a browser that is still signed in
+ * reconnects without Passport's one-time approve token, which was failing
+ * after a connector was removed and rendering the 403 page, but only when the
+ * code goes back to an assistant we know. Registration is open, so any other
+ * return address always sees the consent screen.
  */
 class OAuthClient extends Client
 {
@@ -28,10 +31,29 @@ class OAuthClient extends Client
             return true;
         }
 
-        // Re-adding a connector reuses this browser's remembered sign-in.
-        // Passport's consent form then fails its one-time auth token and
-        // rendered the 403 page. The Connect click already was the consent.
-        return auth('web')->check()
-            && (string) auth('web')->id() === (string) $user->getAuthIdentifier();
+        $uri = $this->requestedRedirectUri();
+
+        return $uri !== null
+            && auth('web')->check()
+            && (string) auth('web')->id() === (string) $user->getAuthIdentifier()
+            && AssistantCallback::isKnown($uri);
+    }
+
+    /**
+     * Where this sign-in sends the code. The OAuth server has already checked
+     * it against the client's registered addresses before asking us; with no
+     * redirect_uri in the request, a client with one address uses that one.
+     */
+    protected function requestedRedirectUri(): ?string
+    {
+        $uri = request()->query('redirect_uri');
+
+        if (is_string($uri) && $uri !== '') {
+            return $uri;
+        }
+
+        $registered = $this->redirect_uris;
+
+        return count($registered) === 1 ? (string) $registered[0] : null;
     }
 }

@@ -60,15 +60,19 @@ class Screenshot extends Model
     }
 
     /**
-     * Signed app URL so the browser does not depend on a public /storage
-     * symlink (missing on Laravel Cloud when using the local public disk).
+     * App URL so the browser does not depend on a public /storage symlink
+     * (missing on Laravel Cloud when using the local public disk).
+     *
+     * Gated by the review's guest token, never the owner one. Guests see
+     * these URLs in an <img src>, and the owner token there would let anyone
+     * holding the guest link approve the review.
      */
     public function url(): string
     {
         $this->loadMissing('review');
 
-        if ($this->review?->token) {
-            return url('/r/'.$this->review->token.'/shots/'.$this->id);
+        if ($this->review?->share_token) {
+            return url('/r/'.$this->review->share_token.'/shots/'.$this->id);
         }
 
         return URL::temporarySignedRoute(
@@ -90,8 +94,8 @@ class Screenshot extends Model
 
         $this->loadMissing('review');
 
-        if ($this->review?->token) {
-            return url('/r/'.$this->review->token.'/shots/'.$this->id.'/thumb');
+        if ($this->review?->share_token) {
+            return url('/r/'.$this->review->share_token.'/shots/'.$this->id.'/thumb');
         }
 
         return URL::temporarySignedRoute(
