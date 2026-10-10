@@ -3,7 +3,7 @@
      matches the page (Flux puts .dark on <html>) at the moment it opens.
      Sources live in public/videos; the video project is marketing/video. --}}
 @props([
-    'duration' => '1:08',
+    'duration' => '1:21',
     'fathomEvent' => 'Pitch video',
 ])
 
@@ -61,7 +61,7 @@
         </span>
         <span class="min-w-0">
             <span class="block text-sm font-semibold text-zinc-900">Watch the tour</span>
-            <span class="block text-sm text-zinc-500">See a review go from marks to approved · <span class="tabular-nums">{{ $duration }}</span></span>
+            <span class="block text-sm text-zinc-500">See a review go from marks to verified · <span class="tabular-nums">{{ $duration }}</span></span>
         </span>
     </button>
 

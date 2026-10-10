@@ -2,9 +2,14 @@ import React from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import { copy } from '../copy';
 import { cursorAt, Cursor, DotGrid, MarkBadge, Typed } from '../components/ui';
+import { voFrames, VoLine } from '../components/Vo';
 import { lerp, popScale, prog } from '../lib/anim';
 import { Sfx } from '../lib/sfx';
 import { c, ease, font } from '../theme';
+
+// v1 starts once the headline is boxed; the hook holds until it's said.
+const HOOK_VO = 40;
+export const HOOK_DURATION = Math.max(168, HOOK_VO + voFrames('v1') + 24);
 
 // The box the cursor drags around "Visual feedback".
 const BOX = { x: 250, y: 300, w: 1420, h: 236 };
@@ -130,6 +135,7 @@ export const Scene1Hook: React.FC = () => {
         </span>
       </div>
 
+      <VoLine id="v1" at={HOOK_VO} />
       <Cursor path={path} holds={[{ from: 46, to: 69 }]} appearAt={24} hideAt={92} />
       <Sfx at={47} name="drag" volume={0.7} />
     </AbsoluteFill>

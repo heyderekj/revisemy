@@ -3,7 +3,7 @@ import { interpolate, useCurrentFrame } from 'remotion';
 import { appear, lerp, prog } from '../lib/anim';
 import { Sfx } from '../lib/sfx';
 import { c, font, shadow } from '../theme';
-import { MockSite } from './MockSite';
+import { FieldnoteMobile, FieldnoteSite } from './FieldnoteSite';
 import { AppIcon, Button, Chip, Icon, Spinner } from './ui';
 
 export const CHAT = { x: 300, y: 70, w: 1320, h: 940, header: 72, composerH: 124, col: 860 };
@@ -232,22 +232,42 @@ export const ToolCall: React.FC<{
   );
 };
 
-/** The inline review the MCP app shows in chat. */
+/** The inline review card, as the site's hero chat draws it (hero-loop-preview). */
 export const InlineReviewCard: React.FC<{
   pressed?: number;
+  subtitle?: string;
   status?: React.ReactNode;
   compact?: boolean;
-  fix?: number;
-}> = ({ pressed = 0, status, compact = false, fix = 0 }) => (
+}> = ({ pressed = 0, subtitle = 'Review · Pass 1 · waiting on you', status, compact = false }) => (
   <div style={{ display: 'flex', gap: 16, width: '100%' }}>
     <span style={{ width: 36, flexShrink: 0 }} />
     <div style={{ flex: 1, background: c.raised, borderRadius: 18, boxShadow: shadow.float, overflow: 'hidden' }}>
-      <div style={{ height: 56, display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderBottom: `1px solid ${c.n100}` }}>
-        <AppIcon size={26} style={{ borderRadius: 6 }} />
-        <span style={{ fontWeight: 600, fontSize: 19, color: c.fg }}>Northwind homepage</span>
-        <Chip>Pass 1</Chip>
+      <div style={{ height: 68, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', borderBottom: compact ? undefined : `1px solid ${c.n100}` }}>
+        <AppIcon size={34} style={{ borderRadius: 8 }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontWeight: 500, fontSize: 19, color: c.fg }}>Fieldnote Coffee home page</span>
+          <span style={{ fontSize: 15, color: c.muted }}>{subtitle}</span>
+        </div>
         <div style={{ flex: 1 }} />
-        {status ?? <span style={{ fontSize: 15, color: c.muted }}>Inline review</span>}
+        {status ??
+          (compact ? null : (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                borderRadius: 999,
+                background: c.key,
+                color: c.keyInk,
+                padding: '7px 16px',
+                fontSize: 16,
+                fontWeight: 500,
+                transform: `scale(${1 - pressed * 0.06})`,
+              }}
+            >
+              Open ↗
+            </span>
+          ))}
       </div>
       {compact ? null : (
         <div
@@ -257,7 +277,7 @@ export const InlineReviewCard: React.FC<{
             backgroundImage: `radial-gradient(circle at center, ${c.borderStrong} 1.2px, transparent 1.6px)`,
             backgroundSize: '18px 18px',
             padding: '22px 26px 0',
-            height: 310,
+            height: 300,
             display: 'flex',
             gap: 20,
             alignItems: 'flex-start',
@@ -265,20 +285,11 @@ export const InlineReviewCard: React.FC<{
           }}
         >
           <div style={{ borderRadius: '10px 10px 0 0', overflow: 'hidden', boxShadow: shadow.float }}>
-            <MockSite width={560} fix={fix} />
+            <FieldnoteSite width={560} />
           </div>
           <div style={{ borderRadius: 14, overflow: 'hidden', boxShadow: shadow.float, marginTop: 22 }}>
-            <MockSite width={148} mobile fix={fix} />
+            <FieldnoteMobile width={148} />
           </div>
-        </div>
-      )}
-      {compact ? null : (
-        <div style={{ height: 66, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12 }}>
-          <span style={{ fontFamily: font.mono, fontSize: 15, color: c.muted }}>revisemy.com/r/k7Q2xb</span>
-          <div style={{ flex: 1 }} />
-          <Button variant="primary" pressed={pressed}>
-            Open review <Icon name="arrow" size={16} />
-          </Button>
         </div>
       )}
     </div>

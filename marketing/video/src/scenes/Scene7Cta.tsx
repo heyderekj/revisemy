@@ -2,11 +2,13 @@ import React from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import { copy } from '../copy';
 import { AppIcon, Button, Cursor, DotGrid, Typed, typedEnd } from '../components/ui';
+import { voFrames, VoLine } from '../components/Vo';
 import { appear, lerp, popScale, prog } from '../lib/anim';
 import { Sfx } from '../lib/sfx';
 import { c, ease, font } from '../theme';
 
-export const CTA_DURATION = 270;
+const VO_AT = 10;
+export const CTA_DURATION = Math.max(240, VO_AT + voFrames('v14') + 70);
 
 export const Scene7Cta: React.FC = () => {
   const frame = useCurrentFrame();
@@ -82,6 +84,7 @@ export const Scene7Cta: React.FC = () => {
         hideAt={click + 30}
       />
       <Sfx at={click + 2} name="chime" volume={0.6} />
+      <VoLine id="v14" at={VO_AT} captionY={900} />
     </AbsoluteFill>
   );
 };

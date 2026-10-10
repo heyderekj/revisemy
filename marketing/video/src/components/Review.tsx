@@ -2,22 +2,25 @@ import React from 'react';
 import { useCurrentFrame } from 'remotion';
 import { appear, popScale, prog } from '../lib/anim';
 import { c, font, shadow } from '../theme';
-import { MockSite, spots } from './MockSite';
+import { FieldnoteSite } from './FieldnoteSite';
 import { AppIcon, Button, Chip, Icon, MarkBadge, SignalTag, statusTone } from './ui';
 
 // The review page as /r/{token} draws it, laid out for 1920×1080.
 export const PAGE = { x: 70, y: 96, w: 1780, header: 68 };
 export const CANVAS = { x: 90, y: PAGE.y + PAGE.header + 20, w: 1320 };
-export const SITE = { x: CANVAS.x + 20, y: CANVAS.y + 20, w: 1280, h: 800 };
+const CONTEXT_H = 52; // the "What to look at" row above the shot
+export const SITE = { x: CANVAS.x + 20, y: CANVAS.y + 20 + CONTEXT_H, w: 1280, h: 800 };
 export const SIDE = { x: CANVAS.x + CANVAS.w + 20, y: CANVAS.y, w: 400 };
 
+/** A point on the shot, from fractions of it, in screen coordinates. */
 export const at = (fx: number, fy: number) => ({ x: SITE.x + fx * SITE.w, y: SITE.y + fy * SITE.h });
-export const HEAD_RECT = {
-  x: SITE.x + spots.headline.x * SITE.w,
-  y: SITE.y + spots.headline.y * SITE.h,
-  w: spots.headline.w * SITE.w,
-  h: spots.headline.h * SITE.h,
-};
+/** A region of the shot, from fractions of it, in screen coordinates. */
+export const region = (r: { x: number; y: number; w: number; h: number }) => ({
+  x: SITE.x + r.x * SITE.w,
+  y: SITE.y + r.y * SITE.h,
+  w: r.w * SITE.w,
+  h: r.h * SITE.h,
+});
 
 // Header buttons, right-aligned, fixed widths so the cursor can find them.
 const BTNS = [
@@ -47,9 +50,9 @@ export const ReviewHeader: React.FC<{ pass?: string; pressed?: Record<string, nu
     <span style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: c.fg }}>Review</span>
     <Chip>{pass}</Chip>
     <Chip>
-      <Icon name="link" size={14} color={c.n400} /> northwind.studio
+      <Icon name="link" size={14} color={c.n400} /> fieldnote.coffee
     </Chip>
-    <span style={{ fontSize: 17, color: c.muted }}>Northwind homepage</span>
+    <span style={{ fontSize: 17, color: c.muted }}>Fieldnote Coffee home page</span>
     <div style={{ flex: 1 }} />
     {BTNS.map((b) => (
       <Button
@@ -70,9 +73,9 @@ export const ReviewPage: React.FC<{
   header: React.ReactNode;
   overlay?: React.ReactNode;
   sidebar?: React.ReactNode;
-  fix?: number;
+  site?: Omit<React.ComponentProps<typeof FieldnoteSite>, 'width'>;
   style?: React.CSSProperties;
-}> = ({ header, overlay, sidebar, fix = 0, style }) => (
+}> = ({ header, overlay, sidebar, site = {}, style }) => (
   <div
     style={{
       position: 'absolute',
@@ -90,8 +93,15 @@ export const ReviewPage: React.FC<{
   >
     {header}
     <div style={{ position: 'absolute', left: CANVAS.x - PAGE.x, top: CANVAS.y - PAGE.y, width: CANVAS.w, height: 1100, background: c.card, borderRadius: 20 }}>
-      <div style={{ position: 'absolute', left: 20, top: 20, borderRadius: 12, overflow: 'hidden', boxShadow: `0 0 0 1px ${c.ring}` }}>
-        <MockSite width={SITE.w} fix={fix} />
+      <div style={{ position: 'absolute', left: 20, top: 18, height: CONTEXT_H - 18, display: 'flex', alignItems: 'center', gap: 28 }}>
+        <span style={{ fontSize: 18, fontWeight: 600, color: c.fg, width: 150 }}>What to look at</span>
+        <span style={{ fontSize: 18, color: c.n600 }}>New hero and product cards before Friday’s launch.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 20, top: 20 + CONTEXT_H, borderRadius: 12, overflow: 'hidden', boxShadow: `0 0 0 1px ${c.ring}` }}>
+        <FieldnoteSite width={SITE.w} {...site} />
+      </div>
+      <div style={{ position: 'absolute', left: 20, top: 20 + CONTEXT_H + SITE.h + 12, fontSize: 16, color: c.muted }}>
+        Drag to mark a region, or click for a point.
       </div>
     </div>
     <div style={{ position: 'absolute', left: SIDE.x - PAGE.x, top: SIDE.y - PAGE.y, width: SIDE.w }}>{sidebar}</div>
@@ -125,7 +135,10 @@ export const MarkCard: React.FC<{
   children: React.ReactNode;
   appearAt?: number;
   dashed?: boolean;
-}> = ({ badge, label, status, children, appearAt, dashed }) => {
+  footer?: React.ReactNode;
+  lit?: number; // 0..1, a key-coloured ring while the camera is on it
+  clamp?: boolean; // one line, once the note is written, to keep the sidebar short
+}> = ({ badge, label, status, children, appearAt, dashed, footer, lit = 0, clamp = false }) => {
   const frame = useCurrentFrame();
   return (
     <div
@@ -134,7 +147,7 @@ export const MarkCard: React.FC<{
         border: dashed ? `2px dashed ${c.sky200}` : undefined,
         borderRadius: 14,
         padding: 14,
-        boxShadow: dashed ? undefined : shadow.raised,
+        boxShadow: dashed ? undefined : lit > 0 ? `0 0 0 ${2 * lit}px ${c.key}, ${shadow.float}` : shadow.raised,
         ...(appearAt === undefined ? {} : appear(frame, appearAt, 12, 12)),
       }}
     >
@@ -144,7 +157,17 @@ export const MarkCard: React.FC<{
         <div style={{ flex: 1 }} />
         {status ? <SignalTag tone={statusTone(status)}>{status}</SignalTag> : null}
       </div>
-      <div style={{ fontSize: 18, lineHeight: 1.45, color: c.n700 }}>{children}</div>
+      <div
+        style={{
+          fontSize: 18,
+          lineHeight: 1.45,
+          color: c.n700,
+          ...(clamp ? { display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' } : {}),
+        }}
+      >
+        {children}
+      </div>
+      {footer}
     </div>
   );
 };

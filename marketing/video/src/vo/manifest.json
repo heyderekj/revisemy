@@ -1,0 +1,277 @@
+{
+  "fps": 30,
+  "lines": {
+    "v1": {
+      "text": "Your agent can build the page. ReviseMy is how you tell it what to change.",
+      "frames": 187,
+      "words": [
+        0,
+        12,
+        26,
+        36,
+        50,
+        60,
+        74,
+        95,
+        103,
+        113,
+        123,
+        135,
+        143,
+        155,
+        163
+      ],
+      "real": false
+    },
+    "v2": {
+      "text": "Ask for a review. Your agent captures the page and sends you a link.",
+      "frames": 176,
+      "words": [
+        0,
+        10,
+        20,
+        27,
+        45,
+        57,
+        71,
+        92,
+        102,
+        114,
+        124,
+        139,
+        149,
+        155
+      ],
+      "real": false
+    },
+    "v3": {
+      "text": "Drag over anything that needs work, and say why.",
+      "frames": 117,
+      "words": [
+        0,
+        11,
+        23,
+        42,
+        53,
+        67,
+        80,
+        89,
+        99
+      ],
+      "real": false
+    },
+    "v4": {
+      "text": "Each mark says how much it matters — must fix, nice to have, or keep this.",
+      "frames": 199,
+      "words": [
+        0,
+        13,
+        25,
+        38,
+        49,
+        61,
+        70,
+        89,
+        95,
+        108,
+        121,
+        133,
+        142,
+        157,
+        165,
+        178
+      ],
+      "real": false
+    },
+    "v5": {
+      "text": "Mark what to keep, too, so your agent leaves it alone.",
+      "frames": 140,
+      "words": [
+        0,
+        12,
+        24,
+        32,
+        47,
+        59,
+        67,
+        79,
+        93,
+        110,
+        118
+      ],
+      "real": false
+    },
+    "v6": {
+      "text": "A second opinion points out what you might miss. Only your marks count.",
+      "frames": 164,
+      "words": [
+        0,
+        6,
+        20,
+        37,
+        52,
+        61,
+        72,
+        81,
+        94,
+        107,
+        119,
+        130,
+        143
+      ],
+      "real": false
+    },
+    "v7": {
+      "text": "Share a guest link, and your client can mark it too. No account needed.",
+      "frames": 176,
+      "words": [
+        0,
+        14,
+        20,
+        33,
+        47,
+        57,
+        69,
+        85,
+        94,
+        106,
+        114,
+        126,
+        134,
+        151
+      ],
+      "real": false
+    },
+    "v8": {
+      "text": "Then ask for changes.",
+      "frames": 58,
+      "words": [
+        0,
+        12,
+        22,
+        32
+      ],
+      "real": false
+    },
+    "v9": {
+      "text": "Your agent reads your marks as work. It fixes what you asked for, and leaves what you kept.",
+      "frames": 223,
+      "words": [
+        0,
+        12,
+        26,
+        39,
+        51,
+        65,
+        73,
+        87,
+        94,
+        108,
+        120,
+        130,
+        144,
+        155,
+        165,
+        181,
+        193,
+        203
+      ],
+      "real": false
+    },
+    "v10": {
+      "text": "Every fix comes back with a before and after.",
+      "frames": 117,
+      "words": [
+        0,
+        14,
+        24,
+        38,
+        50,
+        62,
+        68,
+        84,
+        94
+      ],
+      "real": false
+    },
+    "v11": {
+      "text": "You compare them and verify each one. Only you can mark a fix verified.",
+      "frames": 176,
+      "words": [
+        0,
+        10,
+        28,
+        39,
+        49,
+        65,
+        77,
+        89,
+        100,
+        110,
+        120,
+        132,
+        138,
+        148
+      ],
+      "real": false
+    },
+    "v12": {
+      "text": "When it looks right, approve. Your agent knows it's done.",
+      "frames": 129,
+      "words": [
+        0,
+        11,
+        18,
+        31,
+        45,
+        63,
+        74,
+        86,
+        99,
+        110
+      ],
+      "real": false
+    },
+    "v13": {
+      "text": "Pages, app screens, emails, decks and ads. If it's visual, you can review it.",
+      "frames": 176,
+      "words": [
+        0,
+        15,
+        24,
+        42,
+        59,
+        72,
+        81,
+        92,
+        99,
+        110,
+        127,
+        136,
+        145,
+        160
+      ],
+      "real": false
+    },
+    "v14": {
+      "text": "ReviseMy. Visual feedback for your agent. Free to try at revisemy dot com.",
+      "frames": 164,
+      "words": [
+        0,
+        20,
+        34,
+        52,
+        61,
+        72,
+        86,
+        97,
+        104,
+        113,
+        120,
+        138,
+        147
+      ],
+      "real": false
+    }
+  }
+}

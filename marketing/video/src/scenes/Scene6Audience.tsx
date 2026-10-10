@@ -1,240 +1,226 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame } from 'remotion';
-import { copy } from '../copy';
-import { Camera } from '../components/Camera';
-import { AppIcon, Chip, DotGrid, Icon, MarkBadge, SignalTag, statusTone, Typed } from '../components/ui';
-import { appear, lerp, popScale, prog } from '../lib/anim';
+import { Bag, FieldnoteMobile, FieldnoteSite } from '../components/FieldnoteSite';
+import { DotGrid, MarkBadge } from '../components/ui';
+import { VoLine } from '../components/Vo';
+import { appear, popScale } from '../lib/anim';
 import { Sfx } from '../lib/sfx';
-import { c, ease, font, shadow } from '../theme';
+import { c, font, shadow } from '../theme';
 
-const CELL = { y: 290, w: 540, h: 540, gap: 40 };
-const cellX = (i: number) => (1920 - (CELL.w * 3 + CELL.gap * 2)) / 2 + i * (CELL.w + CELL.gap);
-const cellAt = (i: number) => 22 + i * 12;
-// each card's little animation gets the camera to itself
-const VIZ = [58, 142, 222];
-const SOURCES = 300;
+/*
+ * What you can send for review, item by item. Each tile is a kind of work,
+ * tagged with how ReviseMy captures it (a URL, an image, a PDF or HTML email),
+ * and gets a mark so it reads as "and you mark it like this".
+ */
 
-export const AUDIENCE_DURATION = 360;
+type Item = { label: string; via: string; Thumb: React.FC; mark: { x: number; y: number } };
 
-const cellCentre = (i: number) => ({ fx: cellX(i) + CELL.w / 2, fy: CELL.y + CELL.h / 2 + 10 });
-const TOUR = [
-  { f: 0, s: 1, fx: 960, fy: 540 },
-  { f: VIZ[0] - 10, s: 1, fx: 960, fy: 540 },
-  { f: VIZ[0] + 4, s: 1.55, ...cellCentre(0), ax: 960, ay: 560 },
-  { f: VIZ[1] - 12, s: 1.55, ...cellCentre(0), ax: 960, ay: 560 },
-  { f: VIZ[1] + 2, s: 1.55, ...cellCentre(1), ax: 960, ay: 560 },
-  { f: VIZ[2] - 12, s: 1.55, ...cellCentre(1), ax: 960, ay: 560 },
-  { f: VIZ[2] + 2, s: 1.55, ...cellCentre(2), ax: 960, ay: 560 },
-  { f: SOURCES - 24, s: 1.55, ...cellCentre(2), ax: 960, ay: 560 },
-  { f: SOURCES - 6, s: 0.92, fx: 960, fy: 500, ax: 960, ay: 470 },
+const ITEMS: Item[] = [
+  { label: 'Landing pages', via: 'URL · desktop + mobile', Thumb: () => <SiteThumb />, mark: { x: 0.3, y: 0.32 } },
+  { label: 'Product UI', via: 'Screenshot', Thumb: () => <DashboardThumb />, mark: { x: 0.62, y: 0.3 } },
+  { label: 'Mobile layouts', via: 'URL · mobile', Thumb: () => <MobileThumb />, mark: { x: 0.56, y: 0.4 } },
+  { label: 'Email newsletters', via: 'HTML email', Thumb: () => <EmailThumb />, mark: { x: 0.42, y: 0.78 } },
+  { label: 'Pitch decks', via: 'PDF', Thumb: () => <SlideThumb />, mark: { x: 0.78, y: 0.36 } },
+  { label: 'One-pagers', via: 'PDF', Thumb: () => <PageThumb />, mark: { x: 0.62, y: 0.42 } },
+  { label: 'Social posts', via: 'Image', Thumb: () => <SocialThumb />, mark: { x: 0.68, y: 0.36 } },
+  { label: 'Ads & banners', via: 'Image', Thumb: () => <BannerThumb />, mark: { x: 0.74, y: 0.5 } },
 ];
+
+const COLS = 4;
+const TILE = { w: 390, h: 318, gap: 26, thumb: 222 };
+const GRID_X = (1920 - (COLS * TILE.w + (COLS - 1) * TILE.gap)) / 2;
+const GRID_Y = 230;
+const tileAt = (i: number) => 18 + i * 7;
+
+export const AUDIENCE_DURATION = tileAt(ITEMS.length) + 96;
 
 export const Scene6Audience: React.FC = () => {
   const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ fontFamily: font.sans }}>
       <DotGrid />
-      <Camera keys={TOUR}>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 120, textAlign: 'center', ...appear(frame, 4, 14, 16) }}>
-        <div style={{ fontFamily: font.mono, fontSize: 20, letterSpacing: '0.14em', textTransform: 'uppercase', color: c.muted }}>
-          Agencies · Freelancers · Teams
-        </div>
-        <div style={{ fontSize: 76, fontWeight: 600, letterSpacing: '-0.035em', color: c.fg, marginTop: 14 }}>{copy.audience.kicker}</div>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 92, textAlign: 'center', ...appear(frame, 0, 14, 14) }}>
+        <div style={{ fontSize: 72, fontWeight: 600, letterSpacing: '-0.035em', color: c.fg }}>Review anything visual</div>
       </div>
 
-      {copy.audience.cells.map((cell, i) => (
-        <div
-          key={cell.n}
-          style={{
-            position: 'absolute',
-            left: cellX(i),
-            top: CELL.y,
-            width: CELL.w,
-            height: CELL.h,
-            background: c.raised,
-            borderRadius: 28,
-            boxShadow: shadow.window,
-            padding: 34,
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
-            ...appear(frame, cellAt(i), 16, 40),
-          }}
-        >
-          <div style={{ fontFamily: font.mono, fontSize: 20, color: c.muted }}>{cell.n}</div>
-          <div style={{ fontSize: 54, fontWeight: 600, letterSpacing: '-0.03em', color: c.fg, marginTop: 6 }}>{cell.who}</div>
-          <div style={{ fontSize: 26, lineHeight: 1.35, color: c.n600, marginTop: 10 }}>{cell.line}</div>
-          <div style={{ flex: 1 }} />
-          <div style={{ height: 210, background: c.card, borderRadius: 18, position: 'relative', overflow: 'hidden' }}>
-            {i === 0 ? <AgencyViz /> : i === 1 ? <FreelanceViz /> : <TeamViz />}
+      {ITEMS.map((it, i) => {
+        const col = i % COLS;
+        const row = Math.floor(i / COLS);
+        const at = tileAt(i);
+        const markAt = at + 12;
+        return (
+          <div
+            key={it.label}
+            style={{
+              position: 'absolute',
+              left: GRID_X + col * (TILE.w + TILE.gap),
+              top: GRID_Y + row * (TILE.h + TILE.gap),
+              width: TILE.w,
+              height: TILE.h,
+              borderRadius: 24,
+              background: c.raised,
+              boxShadow: shadow.window,
+              overflow: 'hidden',
+              ...appear(frame, at, 14, 24),
+            }}
+          >
+            <div
+              style={{
+                position: 'relative',
+                height: TILE.thumb,
+                background: c.card,
+                backgroundImage: `radial-gradient(circle at center, ${c.borderStrong} 1.2px, transparent 1.6px)`,
+                backgroundSize: '16px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              <it.Thumb />
+              {frame >= markAt ? (
+                <div style={{ position: 'absolute', left: `${it.mark.x * 100}%`, top: `${it.mark.y * 100}%`, transform: `translate(-50%, -50%) scale(${popScale(frame, markAt)})` }}>
+                  <MarkBadge label="M1" size={34} style={{ boxShadow: `0 0 0 3px ${c.bg}, 0 3px 8px rgba(0,0,0,0.2)` }} />
+                </div>
+              ) : null}
+            </div>
+            <div style={{ padding: '18px 22px' }}>
+              <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.02em', color: c.fg }}>{it.label}</div>
+              <div style={{ fontFamily: font.mono, fontSize: 17, color: c.muted, marginTop: 6 }}>{it.via}</div>
+            </div>
+            <Sfx at={at} name="tick" volume={0.25} />
+            <Sfx at={markAt} name="pop" volume={0.25} />
           </div>
-          <Sfx at={cellAt(i) + 2} name="pop" volume={0.45} />
-        </div>
-      ))}
-
-      </Camera>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 890, display: 'flex', justifyContent: 'center', gap: 14, alignItems: 'center' }}>
-        <span style={{ fontSize: 24, color: c.muted, marginRight: 6, opacity: prog(frame, SOURCES - 6, 10) }}>Review anything visual:</span>
-        {copy.audience.sources.map((s, i) => {
-          const at = SOURCES + i * 7;
-          return (
-            <span key={s} style={{ transform: `scale(${popScale(frame, at)})` }}>
-              <Chip style={{ fontSize: 24, padding: '10px 20px', borderRadius: 12, background: c.raised, color: c.fg, boxShadow: shadow.raised }}>{s}</Chip>
-              <Sfx at={at} name="tick" volume={0.4} />
-            </span>
-          );
-        })}
-      </div>
+        );
+      })}
+      <VoLine id="v13" at={14} />
     </AbsoluteFill>
   );
 };
 
-/** Agency: a link goes out, the client marks on it. */
-const AgencyViz: React.FC = () => {
-  const frame = useCurrentFrame();
-  const base = VIZ[0];
-  return (
-    <>
-      <div style={{ position: 'absolute', left: 22, top: 24, display: 'flex', alignItems: 'center', gap: 10, ...appear(frame, base, 10, 8) }}>
-        <AppIcon size={30} style={{ borderRadius: 8 }} />
-        <span style={{ fontFamily: font.mono, fontSize: 19, background: c.raised, borderRadius: 10, padding: '7px 12px', color: c.n700, boxShadow: shadow.raised }}>
-          <Typed text="revisemy.com/r/k7Q2xb" start={base + 6} seed="agency" speed={1.1} caretUntil={base + 40} volume={0.18} />
-        </span>
-      </div>
-      <div style={{ position: 'absolute', left: 22, top: 96, right: 22, height: 92, background: c.raised, borderRadius: 12, ...appear(frame, base + 40, 12, 10) }}>
-        <div style={{ position: 'absolute', left: 16, top: 16, width: 180, height: 14, borderRadius: 4, background: c.n150 }} />
-        <div style={{ position: 'absolute', left: 16, top: 40, width: 130, height: 14, borderRadius: 4, background: c.n150 }} />
-        <div
-          style={{
-            position: 'absolute',
-            left: 230,
-            top: 14,
-            width: lerp(0, 190, prog(frame, base + 54, 14)),
-            height: 60,
-            border: `3px solid rgba(255,197,61,0.9)`,
-            background: 'rgba(255,197,61,0.12)',
-            borderRadius: 8,
-          }}
-        />
-        {frame >= base + 70 ? (
-          <div style={{ position: 'absolute', left: 218, top: 2, transform: `scale(${popScale(frame, base + 70)})` }}>
-            <MarkBadge label="G1" kind="guest" size={28} />
-          </div>
-        ) : null}
-        <span style={{ position: 'absolute', right: 14, bottom: 8, fontFamily: font.hand, fontSize: 28, fontWeight: 600, color: c.fg, opacity: prog(frame, base + 76, 10) }}>
-          client, no login
-        </span>
-      </div>
-      <Sfx at={base + 70} name="pop" volume={0.35} />
-    </>
-  );
-};
+/* ------------------------------------------------------------- thumbnails */
 
-/** Freelancer: the email chain gets struck out, one link replaces it. */
-const FreelanceViz: React.FC = () => {
-  const frame = useCurrentFrame();
-  const base = VIZ[1];
-  const lines = ['Re: Re: homepage feedback', 'Fwd: hero_v7_FINAL(2).png', 'Re: "which button?"'];
-  const linkAt = base + 64;
-  return (
-    <>
-      {lines.map((l, i) => {
-        const strike = prog(frame, base + 14 + i * 12, 10, ease.snap);
-        const gone = prog(frame, linkAt - 4, 12);
-        return (
-          <div
-            key={l}
-            style={{
-              position: 'absolute',
-              left: 22,
-              top: 20 + i * 48,
-              right: 22,
-              height: 38,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              fontSize: 19,
-              color: c.n600,
-              opacity: (1 - gone * 0.75) * prog(frame, base + i * 4, 8),
-            }}
-          >
-            <span style={{ fontSize: 18 }}>✉︎</span>
-            <span style={{ position: 'relative' }}>
-              {l}
-              <span style={{ position: 'absolute', left: 0, top: '52%', height: 2.5, width: `${strike * 100}%`, background: c.problem }} />
-            </span>
-            {strike > 0 && strike < 0.5 ? <Sfx at={base + 14 + i * 12} name="scribble" volume={0.25} /> : null}
-          </div>
-        );
-      })}
-      <div
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: 120,
-          transform: `translateX(-50%) scale(${popScale(frame, linkAt)})`,
-          background: c.key,
-          color: c.keyInk,
-          borderRadius: 12,
-          padding: '12px 18px',
-          fontSize: 21,
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          boxShadow: shadow.float,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <Icon name="link" size={18} /> One review link
-      </div>
-      <Sfx at={linkAt} name="pop-high" volume={0.4} />
-    </>
-  );
-};
+const frameStyle: React.CSSProperties = { borderRadius: 10, overflow: 'hidden', boxShadow: shadow.float, background: c.raised };
+const bar = (w: number | string, h = 8, color = c.n150): React.CSSProperties => ({ width: w, height: h, borderRadius: h, background: color });
 
-/** Team: everyone's mark moves through to verified. */
-const TeamViz: React.FC = () => {
-  const frame = useCurrentFrame();
-  const base = VIZ[2];
-  const rows = [
-    { who: 'Design', id: 'M1', kind: 'mark' as const },
-    { who: 'Agent', id: 'S1', kind: 'hint' as const },
-    { who: 'Eng', id: 'M2', kind: 'mark' as const },
-  ];
-  const statuses = ['Open', 'In progress', 'Resolved', 'Verified'];
-  return (
-    <>
-      {rows.map((r, i) => {
-        const step = Math.max(0, Math.min(3, Math.floor((frame - base - i * 6) / 14)));
-        return (
-          <div
-            key={r.id}
-            style={{
-              position: 'absolute',
-              left: 22,
-              right: 22,
-              top: 22 + i * 58,
-              height: 46,
-              background: c.raised,
-              borderRadius: 12,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '0 12px',
-              ...appear(frame, base + i * 5, 10, 8),
-            }}
-          >
-            <MarkBadge label={r.id} kind={r.kind} size={28} />
-            <span style={{ fontSize: 19, color: c.n700 }}>{r.who}</span>
-            <div style={{ flex: 1 }} />
-            <SignalTag tone={statusTone(statuses[step])}>{statuses[step]}</SignalTag>
-          </div>
-        );
-      })}
-      {[1, 2, 3].map((s) => (
-        <Sfx key={s} at={base + s * 14 + 12} name="tick" volume={0.3} />
+const SiteThumb: React.FC = () => (
+  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+    <div style={frameStyle}>
+      <FieldnoteSite width={250} />
+    </div>
+    <div style={{ ...frameStyle, borderRadius: 8 }}>
+      <FieldnoteMobile width={62} />
+    </div>
+  </div>
+);
+
+const DashboardThumb: React.FC = () => (
+  <div style={{ ...frameStyle, width: 300, height: 180, display: 'flex' }}>
+    <div style={{ width: 62, background: c.well, padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} style={bar('100%', 7, i === 0 ? c.border : c.n150)} />
       ))}
-    </>
-  );
-};
+    </div>
+    <div style={{ flex: 1, padding: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: c.fg }}>Ledgerly</div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        {['$12.4k', '$3.1k', '$860'].map((v, i) => (
+          <div key={v} style={{ flex: i === 0 ? 1.4 : 1, borderRadius: 8, background: c.well, padding: 8 }}>
+            <div style={{ fontSize: 8, color: c.muted }}>{['Balance', 'In', 'Out'][i]}</div>
+            <div style={{ fontSize: i === 0 ? 16 : 12, fontWeight: 600, color: c.fg, fontVariantNumeric: 'tabular-nums' }}>{v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 64, marginTop: 12 }}>
+        {[30, 48, 36, 60, 44, 56, 40].map((h, i) => (
+          <div key={i} style={{ flex: 1, height: h, borderRadius: 4, background: i === 5 ? c.attention : c.n150 }} />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const MobileThumb: React.FC = () => (
+  <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+    {[0, 1].map((i) => (
+      <div key={i} style={{ ...frameStyle, borderRadius: 16, border: `3px solid ${c.fg}`, transform: `translateY(${i ? 14 : -6}px)` }}>
+        <FieldnoteMobile width={92} />
+      </div>
+    ))}
+  </div>
+);
+
+const EmailThumb: React.FC = () => (
+  <div style={{ ...frameStyle, width: 290, height: 196, background: c.well, padding: 12, boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ width: 16, height: 16, borderRadius: '50%', background: c.attention }} />
+      <span style={{ fontSize: 10, fontWeight: 600, color: c.fg }}>Fieldnote Coffee</span>
+    </div>
+    <div style={{ fontSize: 12, fontWeight: 600, color: c.fg, marginTop: 6 }}>October beans are here</div>
+    <div style={{ borderRadius: 8, background: c.raised, marginTop: 8, overflow: 'hidden' }}>
+      <div style={{ height: 62, background: c.attentionSoft, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, paddingTop: 6, boxSizing: 'border-box' }}>
+        {(
+          [
+            ['KOCHERE', c.attention],
+            ['HUILA', c.done],
+            ['HOUSE', c.n700],
+          ] as const
+        ).map(([n, f]) => (
+          <div key={n} style={{ height: 54 }}>
+            <Bag name={n} notes="" fill={f} />
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: c.fg }}>Three new coffees for fall</div>
+        <div style={{ display: 'inline-block', marginTop: 6, borderRadius: 5, background: c.fg, color: c.onFg, fontSize: 9, fontWeight: 600, padding: '4px 8px' }}>Learn more</div>
+      </div>
+    </div>
+  </div>
+);
+
+const SlideThumb: React.FC = () => (
+  <div style={{ ...frameStyle, width: 300, height: 169, padding: 16, boxSizing: 'border-box', position: 'relative' }}>
+    <div style={{ fontSize: 9, color: c.muted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Traction</div>
+    <div style={{ fontSize: 18, fontWeight: 600, color: c.fg, letterSpacing: '-0.02em', marginTop: 4, width: 170, lineHeight: 1.1 }}>3× retention since March</div>
+    <div style={{ position: 'absolute', right: 16, bottom: 16, display: 'flex', alignItems: 'flex-end', gap: 8, height: 90 }}>
+      {[26, 38, 50, 84].map((h, i) => (
+        <div key={i} style={{ width: 18, height: h, borderRadius: 4, background: i === 3 ? c.attention : c.n150 }} />
+      ))}
+    </div>
+    <div style={{ position: 'absolute', left: 16, bottom: 14, ...bar(90, 5) }} />
+  </div>
+);
+
+const PageThumb: React.FC = () => (
+  <div style={{ ...frameStyle, width: 150, height: 196, padding: 14, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 7 }}>
+    <div style={{ fontSize: 11, fontWeight: 600, color: c.fg }}>Fieldnote Wholesale</div>
+    <div style={{ height: 56, borderRadius: 6, background: c.attentionSoft, marginBottom: 4 }} />
+    {[100, 92, 96, 70, 88, 60].map((w, i) => (
+      <div key={i} style={bar(`${w}%`, 6)} />
+    ))}
+  </div>
+);
+
+const SocialThumb: React.FC = () => (
+  <div style={{ ...frameStyle, width: 186, height: 186, background: c.attentionSoft, position: 'relative' }}>
+    <div style={{ position: 'absolute', left: 14, top: 14, fontSize: 15, fontWeight: 700, color: c.attentionInk, width: 120, lineHeight: 1.1 }}>New: Huila, cherry and cocoa</div>
+    <div style={{ position: 'absolute', right: 16, bottom: 10, height: 112 }}>
+      <Bag name="HUILA" notes="Cherry · cocoa" fill={c.done} />
+    </div>
+  </div>
+);
+
+const BannerThumb: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+    <div style={{ ...frameStyle, width: 320, height: 64, background: c.fg, display: 'flex', alignItems: 'center', padding: '0 14px', gap: 10, boxSizing: 'border-box' }}>
+      <span style={{ width: 22, height: 22, borderRadius: '50%', background: c.attention }} />
+      <span style={{ fontSize: 14, fontWeight: 600, color: c.onFg, flex: 1 }}>Fresh beans every two weeks</span>
+      <span style={{ fontSize: 11, fontWeight: 600, background: c.attention, color: c.attentionInk, borderRadius: 999, padding: '5px 10px' }}>Subscribe</span>
+    </div>
+    <div style={{ ...frameStyle, width: 150, height: 110, background: c.attentionSoft, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 10, boxSizing: 'border-box' }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: c.attentionInk }}>Roasted Monday</span>
+      <span style={{ alignSelf: 'flex-start', fontSize: 10, fontWeight: 600, background: c.fg, color: c.onFg, borderRadius: 999, padding: '4px 9px' }}>Shop</span>
+    </div>
+  </div>
+);
