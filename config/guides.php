@@ -69,6 +69,10 @@ return [
                     'a' => 'No. Connect makes a try workspace that’s yours, and the people you ask for a review only need its link.',
                 ],
                 [
+                    'q' => 'What do I say to start a review?',
+                    'a' => 'Ask it to check, proof, mark up or get feedback on something visual. Assistants know to leave code review alone. Add your own words on Your reviews, or pick check_page from your assistant’s prompts.',
+                ],
+                [
                     'q' => 'My assistant isn’t listed.',
                     'a' => 'Any MCP client can use the address. It signs in the same way, or takes a try token as a Bearer header.',
                 ],
@@ -103,7 +107,7 @@ return [
             'loop_steps' => [
                 [
                     'command' => 'create_review',
-                    'text' => 'runs the free checklist immediately.',
+                    'text' => 'runs the free checklist immediately, led by your DESIGN.md when there is one.',
                 ],
                 [
                     'text' => 'With an Anthropic or OpenAI key, vision can add dashed region hints.',
@@ -129,6 +133,11 @@ return [
                     'body' => 'Type-aware heuristics for UI, website, email, and slides — hierarchy, contrast, CTAs, density, and more. No API key required.',
                 ],
                 [
+                    'icon' => 'document-text',
+                    'title' => 'Your DESIGN.md first',
+                    'body' => 'When your agent sends your project’s DESIGN.md, or you’ve saved design rules on Your reviews, the checklist leads with your firmest rules and vision names the rule a shot breaks. Those hints start with “DESIGN.md:”, and the review shows a DESIGN.md chip.',
+                ],
+                [
                     'icon' => 'eye',
                     'title' => 'Optional vision regions',
                     'body' => 'With ANTHROPIC_API_KEY or OPENAI_API_KEY (or an OpenAI-compatible base URL), vision findings can carry an area and render as dashed markers on the screenshot.',
@@ -148,6 +157,7 @@ return [
                 'Human marks = intent (must-fix, nit, question, keep, …) exposed as work_packets.pins',
                 'Findings = suggestions only (suggestion / a11y / polish)',
                 'Checklist findings have no area; only vision findings may point at a region',
+                'design_rules on create_review (your DESIGN.md) puts your own rules first, and passes keep them',
                 'request_second_opinion re-runs checklist (+ vision when keyed)',
                 'Open the craft chip on a review to see which public lenses apply for that type',
             ],
@@ -161,6 +171,10 @@ return [
                 [
                     'q' => 'Can second opinion approve a review?',
                     'a' => 'No. Only you approve or request changes. Agents follow next_action from your decision and must treat second_opinion as hints.',
+                ],
+                [
+                    'q' => 'Does it use my DESIGN.md?',
+                    'a' => 'Yes, when your agent passes it as design_rules or you save rules on Your reviews. Your rules are checked first. When a mark states a lasting preference, your agent offers to add it to DESIGN.md, and asks you first.',
                 ],
                 [
                     'q' => 'How do I refresh hints?',

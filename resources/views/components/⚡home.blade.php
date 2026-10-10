@@ -73,13 +73,13 @@ new class extends Component
                         <flux:icon.photo variant="micro" class="size-[18px]" />
                     </div>
                     <h3 class="mt-3 text-sm font-semibold text-zinc-900">Capture anything visual</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Screenshots, a live page on desktop and phone, PDF slides or email HTML. Each kind gets its own checklist.</p>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Screenshots, a live page on desktop, phone and tablet, PDF slides or email HTML. Each kind gets its own checklist.</p>
                 </article>
 
                 <article class="rounded-2xl bg-card p-7 lg:row-start-1">
                     <x-mark-type-icon type="s" />
                     <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">A checklist on every capture, and vision hints when a key is set. Suggestions, never decisions.</p>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">A checklist on every capture, led by your DESIGN.md when you have one, and vision hints when a key is set. Suggestions, never decisions.</p>
                     <a
                         href="/second-opinion"
                         class="mt-2 inline-block text-sm link"

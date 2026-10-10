@@ -199,7 +199,7 @@ final class DeveloperDocs
             'images' => '`images` (screenshots you send)',
             'pdf' => '`pdf` (one shot per page)',
             'html' => '`html` (an email, rendered)',
-            'capture_url' => '`capture_url` (desktop and mobile capture of `page_url`)',
+            'capture_url' => '`capture_url` (desktop, mobile and tablet capture of `page_url`)',
         ];
 
         $md = "| Source | Credits |\n|---|---|\n";
