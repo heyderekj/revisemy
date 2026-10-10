@@ -50,7 +50,15 @@ What a client reads:
 | `/.well-known/oauth-protected-resource/mcp/revisemy` | The resource, its authorization server, and the one scope, `mcp:use` |
 | `/.well-known/oauth-authorization-server` | Where to register, authorize and swap a code for a token |
 
-If you're building an MCP client, the standard MCP authorization flow is all you need. If your client can't do OAuth, a try token in the `Authorization` header works on the same address.
+If you're building an MCP client, the standard MCP authorization flow is all you need:
+
+- Register with no secret (`token_endpoint_auth_method: none`) and use PKCE with `S256`.
+- Send the token request form-encoded. Sending `resource` (RFC 8707) is fine.
+- Access tokens last an hour. Refresh tokens last 60 days and are swapped on each use. If a refresh answer gets lost, the old refresh token works once more within a minute.
+- A `401` with `error="invalid_token"` means refresh. A `401` without `error` means sign in.
+- A loopback callback (`http://localhost:<port>/…` or `http://127.0.0.1:<port>/…`) can come back on any port.
+
+If your client can't do OAuth, a try token in the `Authorization` header works on the same address.
 
 ## The review link
 

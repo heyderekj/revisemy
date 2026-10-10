@@ -15,6 +15,19 @@ return [
     'entries' => [
 
         [
+            'version' => '1.5.1',
+            'date' => '2026-10-10',
+            'title' => 'Assistants that sign in stay connected',
+            'highlights' => [
+                'Claude, ChatGPT and Grok could sign in and then have every call turned away. They now stay connected after Connect',
+                'A token refresh that gets lost on the way no longer asks you to connect again',
+                'Claude Code can sign in from a different local port each time',
+                'If a sign-in loses its way, Connect says to start again from your assistant instead of looping',
+                'Connect has its own allowance for new try workspaces, so an office on one network isn’t stopped after a few tries',
+            ],
+        ],
+
+        [
             'version' => '1.5.0',
             'date' => '2026-10-03',
             'title' => 'Captures that match the finished page',

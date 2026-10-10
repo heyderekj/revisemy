@@ -2,12 +2,15 @@
 
 use App\Http\Middleware\KeepOutOfSearch;
 use App\Models\Screenshot;
+use App\Support\ConnectLog;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
+use Illuminate\Support\Facades\Route;
+use League\OAuth2\Server\Exception\OAuthServerException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
@@ -18,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
+        // After Passport and Laravel MCP, so the logged, rate-limited OAuth
+        // endpoints in this file are the ones that answer.
+        then: fn () => Route::group([], __DIR__.'/../routes/oauth.php'),
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
@@ -25,6 +31,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Passport reports every expired or revoked bearer it turns down, and
+        // hosts refresh an expired one every hour. AuthenticateMcp logs each
+        // refusal with its reason and reports the ones that mean broken keys.
+        $exceptions->dontReport(OAuthServerException::class);
+
         $exceptions->shouldRenderJsonWhen(
             // MCP clients and the token endpoint need JSON. /oauth/authorize is a
             // browser redirect to Connect, so it must not be forced to JSON.
@@ -99,12 +110,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            if (! $request->session()->has('url.intended') && $request->is('oauth/authorize')) {
+            // Only a GET still carries the whole sign-in in its query. A
+            // failed approve POST has none, and saving that bare URL left
+            // /connect with nothing to connect, looping.
+            if ($request->isMethod('GET') && $request->is('oauth/authorize') && ! $request->session()->has('url.intended')) {
                 $request->session()->put('url.intended', $request->fullUrl());
             }
 
+            ConnectLog::event('authorize.expired', [
+                'method' => $request->method(),
+                'reason' => ConnectLog::reason($e),
+            ], 'warning');
+
             return redirect()->route('login')->withErrors([
-                'token' => 'That connect attempt expired. Click Connect here, then start it again from the assistant if it does not return.',
+                'token' => 'That connect attempt expired. Start it again from your assistant.',
             ]);
         });
     })->create();

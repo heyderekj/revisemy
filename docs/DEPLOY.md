@@ -6,7 +6,7 @@ Repo: https://github.com/heyderekj/revisemy
 
 1. Open https://cloud.laravel.com and sign in.
 2. **New application** → import `heyderekj/revisemy`.
-3. Attach **Postgres** and **object storage**.
+3. Attach a **database** (production runs Laravel MySQL 8.4; Serverless Postgres works too) and **object storage**.
    - Do **not** use SQLite on Cloud. The app filesystem is ephemeral, so `database/database.sqlite` disappears on every deploy and try-token / reviews will 500.
    - A **queue worker** is optional (useful for webhooks); vision second opinion does not need one.
 4. Environment variables:
@@ -43,16 +43,43 @@ Repo: https://github.com/heyderekj/revisemy
      - Billing pages: `Plus purchased` (900) and `Credit pack purchased` (500) on `/billing/success`, once per checkout id per browser tab and only when Polar's return URL carries a valid checkout id and a known product; `Checkout canceled` on `/billing/cancel`; `Checkout unavailable` when a checkout link couldn't open (a broken setup shows here as well as in the log).
      - Pageviews skip `/r/…` (review tokens) and `/billing/manage|checkout/…` (workspace ids).
    - Try mint limits (shared homepage + `POST /api/try-token`): 3/hour and 3/day per client IP (`REVISEMY_TRY_TOKEN_PER_HOUR` / `REVISEMY_TRY_TOKEN_PER_DAY`). Prefer a Cloudflare rate rule on `POST /api/try-token` as defense-in-depth.
-   - Connect (OAuth, for Claude, ChatGPT and Grok custom connectors): set `PASSPORT_PRIVATE_KEY` and `PASSPORT_PUBLIC_KEY` to the contents of a key pair made once with `php artisan passport:keys` (`storage/oauth-*.key`). Without them, `/oauth/authorize` and `/oauth/token` fail, so pasting the MCP URL never finishes Connect. Try tokens keep working either way. `php artisan revisemy:check` reports this.
+   - Connect (OAuth, for Claude, ChatGPT and Grok custom connectors): set `PASSPORT_PRIVATE_KEY` only, as one line. See [Connect on Laravel Cloud](#connect-on-laravel-cloud). Try tokens keep working without it.
    - Support top-up a try workspace: `php artisan revisemy:extend-try {workspace_public_id} --credits=20` (or `--pack` for a full Try pack + token bump).
-   - Keep Serverless Postgres **scale-to-zero** (e.g. 10-minute idle) and Flex scale-to-zero for cost; bump migrate wake wait if deploys hit “still waking up”.
+   - Scale-to-zero: assistants give the sign-in endpoints 10 seconds and a token refresh 30, and every MCP call reads the database. Production keeps the app and database awake (the every-minute scheduler does this today). If you turn the scheduler off, turn scale-to-zero off too, or a cold start can fail Connect.
 5. Build commands should include `npm ci && npm run build` (Cloud default for Node apps) and `composer install`. Cloud injects database credentials while building Laravel's cached configuration; raw `DB_*` variables may not be available later in the Commands shell.
 6. Run the scheduler (`php artisan schedule:run` every minute — Cloud's scheduler toggle does this). It prunes reviews 30 days past their retention, with their screenshots, and expired tokens, nightly.
 7. Optional: `NIGHTWATCH_ENABLED=true` and `NIGHTWATCH_TOKEN` for error tracking (requests are sampled at 10%).
 8. Check the install: `cloud command:run "php artisan revisemy:check"` lists each thing as ready or not, with the one thing to do, and exits 1 while anything is missing.
-9. Deploy commands: `php artisan migrate --force` (and `php artisan storage:link` only if using local public disk; object storage usually needs no link).
-10. Open `/connect` on the `*.laravel.cloud` URL, connect an assistant, and check the page shows its first call.
+9. Deploy commands: `php artisan migrate --force`, then `php artisan revisemy:check --connect`, which fails the deploy if Connect would be broken (keys that can't check their own tokens, missing OAuth tables). Add `php artisan storage:link` only if using a local public disk.
+10. After the deploy, run `php artisan revisemy:probe-connect https://YOUR-APP --token=YOUR_TRY_TOKEN` from any machine. It connects the way Claude does and names the step that fails. Then open `/connect`, connect an assistant, and check the page shows its first call.
 11. Contest reply: post that `https://….laravel.cloud` URL.
+
+## Connect on Laravel Cloud
+
+ReviseMy is used through MCP, so Connect is the front door. On 2026-10-10 Claude registered, signed in and got a token, then every MCP call came back 401: the public key on the server didn't check what the private key signed. Nothing logged it. See `docs/CONNECTOR-FAILURES.md`.
+
+**Keys.** Set `PASSPORT_PRIVATE_KEY` only. The public key is worked out from it (`App\Support\PassportKeys`), so the pair can't drift. Cloud's editor takes one `KEY=value` per line, so paste the key as one line with `\n` where the line breaks go:
+
+```bash
+php artisan passport:keys --force
+awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' storage/oauth-private.key
+```
+
+Paste the output as `PASSPORT_PRIVATE_KEY="…"`. A leftover `PASSPORT_PUBLIC_KEY` is ignored when it doesn't match, and `revisemy:check` says to remove it. Changing the private key signs everyone out of their assistants; they reconnect from Connect.
+
+**Logs.** Every Connect step writes one `connect.*` line (register, authorize, Connect click, token, refresh, MCP refusal) with the client id, where it returns to, status, OAuth error and timing. Never a code, token or key. On Cloud they go to Cloud's own log channel, so they show under Monitoring → Logs even if `LOG_CHANNEL` is overridden. Don't override Cloud's injected `LOG_CHANNEL` with `stack`/`single`: that sends every other log line to a file inside the container that nobody sees.
+
+**Checks.**
+- `php artisan revisemy:check --connect` as a deploy command: a broken key pair fails the deploy, and the last good build keeps serving.
+- `php artisan revisemy:probe-connect {url} --token=…` after a deploy, from anywhere. Add `--callback=http://localhost:3118/callback` to run the Claude Code variant.
+- Set `REVISEMY_PROBE_TOKEN` to a try token and the scheduler runs the probe hourly, reporting a failure.
+
+**Edge and network.**
+- Anthropic's servers call from `160.79.104.0/21`, and ChatGPT's and Grok's from their own clouds. Rate limits on `/oauth/token` are per assistant (`throttle:oauth-token`), not per address, for that reason.
+- Leave edge bot categories and "Under attack mode" off: they challenge server-to-server calls.
+- With Browser Integrity Check on, the edge answers `403` to the default `Python-urllib` user agent before the app sees it. Most MCP clients send their own user agent and pass.
+- `www.revisemy.com` redirects to `revisemy.com`. Hosts drop the bearer token on a cross-host redirect, so the address to paste is always `https://revisemy.com/mcp/revisemy`.
+- Claude's limits: 10 seconds for discovery, registration and the token swap; 30 for a refresh. The probe times each step against them.
 
 ## “Still waking up” / 30s deploy timeout
 

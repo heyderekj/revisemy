@@ -49,6 +49,10 @@
                     <p class="mt-2 max-w-xl text-[15px] leading-relaxed text-pretty text-muted-foreground">
                         Pick yours. Most connect by pasting one address and clicking Connect — no account, no token to copy.
                     </p>
+                    {{-- An assistant's sign-in that was lost on the way (expired, or opened in another browser). --}}
+                    @error('token')
+                        <p class="mt-4 max-w-xl rounded-xl bg-well px-4 py-3 text-sm text-problem-ink" role="alert">{{ $message }}</p>
+                    @enderror
 
                     <div class="mt-8"><livewire:connect-hub /></div>
                 </div>

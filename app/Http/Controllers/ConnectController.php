@@ -6,6 +6,7 @@ use App\Models\OAuthClient;
 use App\Models\User;
 use App\Services\TryTokenGate;
 use App\Services\TryTokenService;
+use App\Support\ConnectLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,7 +40,13 @@ class ConnectController extends Controller
         $client = $this->pendingClient($request);
 
         if (! $client) {
-            return redirect()->route('login');
+            // The sign-in this browser started isn't in its session any more:
+            // it expired, or the assistant opened it in another browser.
+            ConnectLog::event('connect.nothing-pending', [], 'warning');
+
+            return redirect()->route('login')->withErrors([
+                'token' => 'That connect attempt expired. Start it again from your assistant.',
+            ]);
         }
 
         $data = $request->validate([
@@ -50,16 +57,23 @@ class ConnectController extends Controller
             $user = $this->userForToken($data['token']);
 
             if (! $user) {
+                ConnectLog::event('connect.bad-token', ['client_id' => (string) $client->getKey()], 'warning');
+
                 return back()->withErrors(['token' => 'That try token isn’t valid any more. Leave it empty to start a new workspace.']);
             }
+
+            $outcome = 'attached';
         } else {
             try {
-                $gate->assertCanMint($request);
+                $gate->assertCanConnect($request);
             } catch (RuntimeException $e) {
+                ConnectLog::event('connect.limited', ['client_id' => (string) $client->getKey(), 'reason' => $e->getMessage()], 'warning');
+
                 return back()->withErrors(['token' => $e->getMessage()]);
             }
 
             $user = $tryTokens->createWorkspaceUser();
+            $outcome = 'new-workspace';
         }
 
         // Remembered, so the homepage and /reviews still know this browser on a later visit.
@@ -69,6 +83,13 @@ class ConnectController extends Controller
             'client_id' => (string) $client->getKey(),
             'user_id' => $user->getKey(),
             'at' => now()->timestamp,
+        ]);
+
+        ConnectLog::event('connect.'.$outcome, [
+            'client_id' => (string) $client->getKey(),
+            'client' => $client->name,
+            'workspace_id' => $user->workspace_id,
+            'returns_to' => $this->returnsTo($request),
         ]);
 
         return redirect()->intended('/');

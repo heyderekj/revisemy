@@ -70,7 +70,8 @@ new class extends Component
 
         if ($kind === 'app') {
             $tokens = Token::query()->whereIn('user_id', $userIds)->where('client_id', $id);
-            RefreshToken::query()->whereIn('access_token_id', (clone $tokens)->pluck('id'))->update(['revoked' => true]);
+            // No swap time, so the refresh grace can't bring any of them back.
+            RefreshToken::query()->whereIn('access_token_id', (clone $tokens)->pluck('id'))->update(['revoked' => true, 'revoked_at' => null]);
             $tokens->update(['revoked' => true]);
         }
 

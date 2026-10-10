@@ -101,6 +101,9 @@ return [
     'try_token' => [
         'per_hour' => (int) env('REVISEMY_TRY_TOKEN_PER_HOUR', 3),
         'per_day' => (int) env('REVISEMY_TRY_TOKEN_PER_DAY', 12),
+        // New workspaces from Connect (an assistant signing in), counted apart.
+        'connect_per_hour' => (int) env('REVISEMY_CONNECT_PER_HOUR', 6),
+        'connect_per_day' => (int) env('REVISEMY_CONNECT_PER_DAY', 20),
     ],
 
     /*
