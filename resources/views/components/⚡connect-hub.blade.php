@@ -295,7 +295,11 @@ new class extends Component
         @endif
     @endif
 
-    <p class="text-sm text-muted-foreground">
-        Another MCP client? Give it <span class="font-mono text-[13px] text-zinc-700">{{ $url }}</span>. It signs in the same way, or takes a try token as a Bearer header.
-    </p>
+    {{-- Any client not listed: the address, copyable, and how it signs in. --}}
+    <div class="rounded-2xl bg-card p-5">
+        <p class="text-sm font-medium text-zinc-900">Any other MCP client</p>
+        <p class="mt-1 text-sm text-pretty text-muted-foreground">Add this address. It signs in the way Claude does, or send a try token as a Bearer header.</p>
+        <x-copy-field :value="$url" class="mt-3" />
+        <a href="/docs/mcp" class="mt-3 inline-block text-xs link">Setup details</a>
+    </div>
 </div>

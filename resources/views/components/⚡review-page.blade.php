@@ -740,6 +740,24 @@ new class extends Component
         $this->loadReview();
     }
 
+    /**
+     * The owner deletes this review now instead of waiting for it to expire:
+     * every pass, with its screenshots, marks and comments. The link stops
+     * working at once.
+     */
+    public function deleteReview(ReviewService $reviews): void
+    {
+        if (! $this->isOwner()) {
+            return;
+        }
+
+        $count = $reviews->deleteLoop($this->review);
+
+        session()->flash('status', $count === 1 ? 'Review deleted, with its screenshots.' : "Review deleted, with all {$count} passes and their screenshots.");
+
+        $this->redirect('/reviews');
+    }
+
     public function regenerateShareToken(): void
     {
         if (! $this->isOwner()) {

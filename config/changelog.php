@@ -15,6 +15,17 @@ return [
     'entries' => [
 
         [
+            'version' => '1.5.6',
+            'date' => '2026-10-10',
+            'title' => 'Privacy and security, and deleting a review',
+            'highlights' => [
+                'A Privacy and security page says who can open a review, where your work goes, and how long it’s kept, from how this install is actually set up',
+                'Delete a review now from its Share menu: every pass, its screenshots, marks and comments, and the links stop working',
+                'The homepage has a short Private by default section, and security.txt says where to report a problem',
+            ],
+        ],
+
+        [
             'version' => '1.5.5',
             'date' => '2026-10-10',
             'title' => 'Check reviews against your DESIGN.md',

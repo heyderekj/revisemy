@@ -34,6 +34,8 @@ final class MarketingPages
             $pages[] = ['href' => '/for/'.$slug, 'label' => $page['label'], 'line' => $page['description'], 'icon' => $page['icon'] ?? null];
         }
 
+        $pages[] = ['href' => '/security', 'label' => 'Privacy and security', 'line' => 'Who can open a review, where your work goes, and how long it’s kept.', 'icon' => 'lock-closed'];
+
         $pages[] = ['href' => '/alternatives', 'label' => 'Alternatives', 'line' => 'When ReviseMy fits, and when something else does.', 'icon' => 'arrows-right-left'];
 
         foreach (config('alternatives.pages', []) as $slug => $page) {

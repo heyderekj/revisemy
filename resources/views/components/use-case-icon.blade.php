@@ -216,6 +216,15 @@
                 <path d="M5 3.75A3.75 3.75 0 0 1 8.75 0h6.5A3.75 3.75 0 0 1 19 3.75v8.5A3.75 3.75 0 0 1 15.25 16H11.1l-4.35 4.05c-.55.51-1.4.12-1.4-.62v-3.55A3.75 3.75 0 0 1 5 12.25v-8.5z" />
             </svg>
             @break
+        @case('key')
+            <flux:icon.key variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('document-text')
+            <flux:icon.document-text variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('lock-closed')
+            <flux:icon.lock-closed variant="micro" class="{{ $glyph }}" />
+            @break
         @default
             <flux:icon.photo variant="micro" class="{{ $glyph }}" />
     @endswitch

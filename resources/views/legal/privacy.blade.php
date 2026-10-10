@@ -5,7 +5,7 @@
     heading="Privacy"
     updated="October 2, 2026"
 >
-    <p class="text-sm text-muted-foreground">A product-truth draft for an open-source tool, not lawyer-reviewed counsel.</p>
+    <p class="text-sm text-muted-foreground">A product-truth draft for an open-source tool, not lawyer-reviewed counsel. For the short version, read <a href="/security" class="link">Privacy and security</a>.</p>
 
     <div class="mt-10">
 <div class="space-y-8 text-[15px] leading-relaxed text-zinc-600">

@@ -3,7 +3,7 @@
   "name": "io.github.heyderekj/revisemy",
   "title": "ReviseMy",
   "description": "Visual feedback for your agent: it sends a review, you mark what matters, it fixes the next pass.",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "websiteUrl": "https://revisemy.com",
   "repository": {
     "url": "https://github.com/heyderekj/revisemy",

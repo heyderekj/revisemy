@@ -12,6 +12,7 @@ use App\Support\DesignRules;
 use App\Support\OutboundUrl;
 use App\Support\ToolProgress;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -269,6 +270,37 @@ class ReviewService
         }
 
         return $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent']) ?? $review;
+    }
+
+    /**
+     * Delete a review now, with every pass of it: the screenshots, marks,
+     * hints, comments and files. A pass on its own would leave the others
+     * pointing at a hole, so it's the whole loop or nothing. Returns how
+     * many passes went.
+     */
+    public function deleteLoop(Review $review): int
+    {
+        $root = $review;
+
+        while ($root->parent_id !== null && ($parent = Review::query()->find($root->parent_id))) {
+            $root = $parent;
+        }
+
+        $passes = collect([$root]);
+        $frontier = collect([$root->id]);
+
+        while ($frontier->isNotEmpty()) {
+            $children = Review::query()->whereIn('parent_id', $frontier)->get();
+            $passes = $passes->concat($children);
+            $frontier = $children->pluck('id');
+        }
+
+        // Rows first, in one go; files after, so a storage hiccup never
+        // leaves a review that opens with its images missing.
+        DB::transaction(fn () => $passes->sortByDesc('pass')->each(fn (Review $pass) => $pass->delete()));
+        $passes->each(fn (Review $pass) => $pass->deleteFiles());
+
+        return $passes->count();
     }
 
     public function addScreenshot(Review $review, string|UploadedFile $image): Screenshot

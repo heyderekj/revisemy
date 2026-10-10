@@ -449,6 +449,27 @@ class SecondOpinionService
     }
 
     /**
+     * Who sees screenshots for vision hints, for the privacy page: "Anthropic",
+     * "OpenAI", an OpenAI-compatible host, or null when vision is off.
+     */
+    public function visionProviderName(): ?string
+    {
+        $provider = $this->visionProvider();
+
+        if ($provider === null) {
+            return null;
+        }
+
+        if ($provider->source() === Finding::SOURCE_ANTHROPIC) {
+            return 'Anthropic';
+        }
+
+        $host = parse_url((string) config('revisemy.openai.base_url'), PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' && ! str_ends_with($host, 'openai.com') ? $host : 'OpenAI';
+    }
+
+    /**
      * The active vision provider, or null when none is configured.
      *
      * REVISEMY_VISION_PROVIDER forces one; the default "auto" prefers

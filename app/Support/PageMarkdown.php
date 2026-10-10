@@ -23,6 +23,7 @@ final class PageMarkdown
             $path === '/for' => self::useCaseIndex(),
             $path === '/alternatives' => self::alternativeIndex(),
             $path === '/docs' => self::doc('index'),
+            $path === '/security' => self::security(),
             $path === '/docs/index' => null,
             str_starts_with($path, '/docs/') => self::doc(substr($path, 6)),
             str_starts_with($path, '/for/') => self::useCase(substr($path, 5)),
@@ -116,6 +117,24 @@ final class PageMarkdown
         }
 
         return $md.self::faq($page['faq'] ?? []);
+    }
+
+    /** /security, from the same live facts as the page. */
+    protected static function security(): string
+    {
+        $page = TrustFacts::page();
+
+        $md = self::head($page['headline'], $page['lead'], '/security');
+        $md .= "## Who can open a review\n\n";
+        foreach ($page['who'] as $item) {
+            $md .= '### '.$item['title']."\n\n".self::text($item['body'])."\n\n";
+        }
+        $md .= "## Where your work goes\n\n".self::bullets($page['where']);
+        $md .= "## How long it’s kept\n\n".self::bullets($page['kept']);
+        $md .= "## Check it yourself\n\n".$page['open_source']."\n\n";
+        $md .= "## Found a security problem?\n\n".$page['report'].' '.TrustFacts::reportUrl()."\n\n";
+
+        return $md.self::faq($page['faq']);
     }
 
     /** A developer doc is markdown already; it only needs the page's head. */
