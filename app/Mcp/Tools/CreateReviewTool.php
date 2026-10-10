@@ -140,7 +140,7 @@ class CreateReviewTool extends Tool
             'type' => $schema->string()
                 ->enum(['ui', 'website', 'presentation', 'email'])
                 ->description('What kind of content this is — ui (default), website, slide (`presentation`), or email. Drives the second-opinion lens: emails get CTA/dark-mode/client checks, slides get slide-density checks, websites get above-the-fold/responsive checks. Follow-up passes inherit the parent type.'),
-            'page_url' => $schema->string()->description('Live page URL. Required with capture_url:true for server-side website capture (desktop + mobile) — on a follow-up pass it defaults to the parent review page_url. Metadata only when using images/html/pdf — does not trigger capture on its own.'),
+            'page_url' => $schema->string()->description('Live page URL. Required with capture_url:true for server-side website capture (desktop, mobile and tablet) — on a follow-up pass it defaults to the parent review page_url. Metadata only when using images/html/pdf — does not trigger capture on its own.'),
             'design_rules' => $schema->string()->description('The project’s DESIGN.md (or other design rules) as Markdown, up to 20,000 characters. If the repo has a DESIGN.md, pass it on the first pass; later passes inherit it. The second opinion then checks each shot against these rules first.'),
             'webhook_url' => $schema->string()->description('Optional https URL POSTed when the human decides (event review.decided, HMAC-signed with the review token) — lets pipelines gate on approval instead of polling. Follow-up passes inherit it.'),
             'parent_id' => $schema->string()->description('Previous review id when opening the next pass after changes_requested'),
@@ -150,7 +150,7 @@ class CreateReviewTool extends Tool
                 ->max(5)
                 ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs 1 credit). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
             'capture_url' => $schema->boolean()
-                ->description('Capture page_url server-side (desktop + mobile; costs 5 credits). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
+                ->description('Capture page_url server-side (desktop, mobile and tablet; costs 5 credits; 20 to 60 seconds). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
             'pdf' => $schema->string()
                 ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
             'html' => $schema->string()

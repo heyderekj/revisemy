@@ -20,6 +20,8 @@ final class HomeFaq
 
         $faq = [
             ['Do I need to sign up?', 'No. Pick your assistant under <a href="/#setup" class="link">Connect</a>. Most connect by pasting one address and clicking Connect, which makes a try workspace that’s yours.'.($pricing ? '' : " {$credits} credits a month, free for now.")],
+            ['What do I say to get a review?', 'Ask your agent to check, proof, mark up or get feedback on a page, screen, email or deck. It knows to leave code review alone. Add your own words on <a href="/reviews" class="link">Your reviews</a>, or pick check_page from your assistant’s prompts.'],
+            ['Does it know my design system?', 'If your project has a DESIGN.md, your agent sends it with the review and the second opinion checks your rules first. No repo? Paste your rules once on <a href="/reviews" class="link">Your reviews</a>.'],
             ['Where does the review open?', 'Always at a review link you can open anywhere. In Claude and VS Code it can also open right in the chat, so you mark and decide without leaving it.'],
             ['My marks, second opinion, guests — who’s in charge?', 'You. Your marks are the brief the agent works from. Second opinion and guest notes stay suggestions until you accept them.'],
             ['What happens when I run out of credits?', $pricing

@@ -52,7 +52,7 @@ curl -s -X POST https://revisemy.com/api/reviews \
 | `context` | What the person should look at on this pass |
 | `type` | `ui` (default), `website`, `presentation` or `email`. It sets the second opinion's checklist. |
 | `images` | 1 to 5 screenshots: https image URLs, data URLs or base64 |
-| `capture_url` + `page_url` | `true` and a public URL: ReviseMy captures desktop and mobile |
+| `capture_url` + `page_url` | `true` and a public URL: ReviseMy captures desktop, mobile and tablet |
 | `pdf` | An https URL or base64. One shot per page, up to 5. |
 | `html` | An email's HTML, rendered at mail-client width |
 | `parent_id` | The previous pass, when opening the next one |

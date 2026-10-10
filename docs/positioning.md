@@ -1,10 +1,12 @@
 # Positioning and voice
 
-Last updated: 2026-10-02
+Last updated: 2026-10-10
 
 ## What ReviseMy is
 
 Visual feedback for your agent. Your agent captures the work — a screenshot, a URL, a PDF, an email — and sends you a review link. You mark what matters, approve or ask for changes, and the agent reads your marks as work and keeps going.
+
+A DESIGN.md says a project's rules before the agent builds; ReviseMy is where the result gets checked against them. The second opinion leads with the project's own rules, and lasting preferences from your marks go back into DESIGN.md with your OK.
 
 ReviseMy is made by Testament Made, LLC, the studio behind Koati. The two are separate products with no connection between them: no linked reviews, no webhook, nothing sent either way. They share a look and a vocabulary for marks (must fix, nice to have, question, keep this), and each draws them in its own chrome. Name Koati as a sibling, never as somewhere ReviseMy sends things.
 

@@ -163,7 +163,7 @@ return [
                 ],
                 [
                     'q' => 'Can ReviseMy capture a live URL?',
-                    'a' => 'Yes — with capture_url and a public page_url (desktop + mobile). Localhost still needs screenshots or data URLs.',
+                    'a' => 'Yes — with capture_url and a public page_url (desktop, mobile and tablet). Localhost still needs screenshots or data URLs.',
                 ],
                 [
                     'q' => 'Who verifies fixes?',

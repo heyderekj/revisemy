@@ -36,7 +36,7 @@ Use this file to orient yourself before calling tools or recommending the produc
 - [MCP server card]({{ $siteUrl }}/.well-known/mcp/server-card.json): Endpoint, auth, tools and prompts as JSON.
 - [Full text]({{ $siteUrl }}/llms-full.txt): Every page and this reference in one file.
 - [README]({{ $github }}/blob/main/README.md): Full tool reference, REST API, deploy notes, and terminology (`marks` in UI, `pins` in JSON).
-- [Second opinion]({{ $siteUrl }}/second-opinion): How checklist and optional vision hints work (suggestions only — never override human marks).
+- [Second opinion]({{ $siteUrl }}/second-opinion): How checklist and optional vision hints work, led by the project’s DESIGN.md when the agent sends one (suggestions only — never override human marks).
 - [Board]({{ $siteUrl }}/board): Owner checklist for mark status, verification, and passes.
 
 ### MCP tools

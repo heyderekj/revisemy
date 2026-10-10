@@ -117,7 +117,7 @@ return [
             'review_type' => 'website',
             'label' => 'Websites',
             'icon' => 'globe-alt',
-            'teaser' => 'Live URL capture — desktop and mobile, above-the-fold and nav.',
+            'teaser' => 'Live URL capture — desktop, mobile and tablet, above-the-fold and nav.',
             'title' => 'Website design review for AI agents — ReviseMy',
             'description' => 'Website review with your AI agent: desktop and phone captures of a live URL, your marks on the fold and nav, and fixes your agent reads over MCP.',
             'keywords' => [
@@ -128,7 +128,7 @@ return [
                 'URL screenshot review',
                 'MCP design review',
             ],
-            'headline' => 'Website review with desktop and mobile capture',
+            'headline' => 'Website review with desktop, mobile and tablet capture',
             'subheadline' => 'Point your agent at a live URL. ReviseMy captures the page, runs a website-specific checklist, and keeps human marks authoritative across viewports.',
             'problem' => 'Marketing pages and landing sites get rebuilt by agents without a structured pass on above-the-fold clarity, navigation, or mobile breakpoints. Stakeholders comment in docs; nothing ties feedback to the actual rendered page.',
             'loop' => 'Your agent opens a review with `type: website` so hints target above-the-fold story, nav, and viewports. Prefer server capture from a public URL; fall back to screenshots when the site is behind auth or only on localhost.',
@@ -140,7 +140,7 @@ return [
                         'label' => 'Live URL capture',
                         'icon' => 'globe-alt',
                         'primary' => true,
-                        'body' => 'Best default for public sites. `capture_url: true` + `page_url` renders desktop and mobile server-side and defaults to `type: website`.',
+                        'body' => 'Best default for public sites. `capture_url: true` + `page_url` renders desktop, mobile and tablet server-side and defaults to `type: website`.',
                     ],
                     [
                         'key' => 'images',
@@ -168,7 +168,7 @@ return [
             'features' => [
                 [
                     'icon' => 'computer-desktop',
-                    'title' => 'Server-side desktop + mobile capture',
+                    'title' => 'Server-side desktop, mobile and tablet capture',
                     'body' => 'No manual screenshot gymnastics. Pass the URL; ReviseMy renders and stores viewport captures so review and fixes stay tied to the live page.',
                 ],
                 [
@@ -195,14 +195,14 @@ return [
                 'One dominant CTA per view with outcome-focused labels',
             ],
             'prompts' => [
-                'Review this URL — capture desktop and mobile and share the review link.',
+                'Review this URL — capture desktop, mobile and tablet and share the review link.',
                 'Run a design checkup on our landing page before we ship.',
                 'Apply my website marks and open a new pass with updated captures.',
             ],
             'faq' => [
                 [
                     'q' => 'Does ReviseMy capture both desktop and mobile?',
-                    'a' => 'Yes when you use `capture_url`. If you pass `images` instead, include both viewports yourself and set `type: website`.',
+                    'a' => 'Yes, and tablet too, when you use `capture_url`. If you pass `images` instead, include the viewports yourself and set `type: website`.',
                 ],
                 [
                     'q' => 'What if the site is behind login?',
