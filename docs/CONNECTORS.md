@@ -20,6 +20,10 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 
 MCP has no keyword triggers: the model picks a tool from its description and the server's instructions. `App\Support\AssistantPhrases::WHEN` opens the instructions with when ReviseMy fits (something visual to judge before it ships) and when it doesn't (code or PR review), and `create_review`'s description leads with the same. A workspace adds its own words both ways on **Your reviews** (`⚡review-phrases`), stored in `workspaces.assistant_phrases` and added, quoted, to the instructions for that workspace's sessions. Hosts read instructions when a chat starts, so a change applies to the next chat. The `check_page` prompt (url, optional focus) starts a review of one live page from a host's prompt menu; `design_checkup_loop` covers the whole loop.
 
+## DESIGN.md
+
+`create_review` takes `design_rules`: a project's `DESIGN.md` as Markdown (`App\Support\DesignRules`, 20,000 characters). The agent sends it because it can read the repo and we can't. Resolution, kept per review: sent this pass → the parent's → the workspace default (Your reviews → Design rules). The second opinion puts the firmest rules first in the checklist (`DesignRules::checklist`, never cut by the cap). The vision prompt gets the file fenced and labelled as data, and is asked to quote the rule a shot breaks. The payload's `design_rules` carries source, title, rule count, the chip summary and guidance: propose lasting preferences from marks as `DESIGN.md` edits, with the human's OK. There's no formal spec, so any Markdown works; list items and table rows are read as rules.
+
 ## Inline review (MCP Apps)
 
 `create_review` and `get_review` declare a `ui://revisemy/review-app` resource ([MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)). Hosts that support the extension (Claude web/desktop, Copilot, Goose, …) render the review inline in a sandboxed iframe — the human loop (mark, verify, decide) plus a board view, without leaving the chat. The full owner workspace (comment threads, share/guest, drag columns, second-opinion triage) remains on `review_url` / `board_url`.
@@ -41,6 +45,7 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Marker / status / severity colors & labels | `Annotation::markerClass()`, `statusBadgeClass()`, `severityLabels()`, `statusLabels()` |
 | Board column owners & empty copy | `Annotation::boardColumnMeta()` |
 | Mark focus crop | `MarkFocus` → pin `focus_preview` in `Review::markToArray()` |
+| DESIGN.md chip | `<x-design-rules-chip>` ↔ `payload.design_rules.summary` (`DesignRules::summary()`) |
 | Control height | Web Flux `size="sm"` (`h-8`) |
 
 **Intentionally web-only:** comment threads (inline shows `comment_count` + “View comments” → `board_url` / `review_url`), share/guest link management, the “Your reviews” link in the header, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.

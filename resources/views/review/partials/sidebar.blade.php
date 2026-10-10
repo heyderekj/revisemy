@@ -131,7 +131,10 @@
                                 {{ $mode === 'owner' ? 'Suggestions until you accept them.' : 'Suggestions from you and other guests. The owner decides what becomes a mark.' }}
                             </p>
                             @if ($mode === 'owner')
-                                <x-taste-craft-chip :taste="\App\Support\TasteLenses::forType($review->type)" />
+                                <div class="flex shrink-0 items-center gap-1.5">
+                                    <x-design-rules-chip :review="$review" />
+                                    <x-taste-craft-chip :taste="\App\Support\TasteLenses::forType($review->type)" />
+                                </div>
                             @endif
                         </div>
 

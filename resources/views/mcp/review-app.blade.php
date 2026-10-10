@@ -51,6 +51,10 @@
                         x-text="'Pass ' + payload.pass"></span>
                     <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium text-zinc-600"
                         x-show="payload.type" x-text="({ ui: 'UI', website: 'Website', presentation: 'Slides', email: 'Email' })[payload.type] || payload.type"></span>
+                    {{-- Same chip as web <x-design-rules-chip>: hints checked against the project's DESIGN.md. --}}
+                    <span class="inline-flex shrink-0 items-center rounded-full bg-chip px-2 py-0.5 font-mono text-[11px] font-medium text-zinc-700"
+                        x-show="payload.design_rules" :title="payload.design_rules && payload.design_rules.summary"
+                        :aria-label="payload.design_rules && payload.design_rules.summary">DESIGN.md</span>
                     <span class="relative inline-flex shrink-0" x-data="{ tasteOpen: false }" x-show="payload.taste && payload.taste.label">
                         <button type="button"
                             class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800"

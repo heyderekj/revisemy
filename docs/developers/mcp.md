@@ -44,9 +44,23 @@ Claude Code also has a plugin that adds the server and a `design-checkup` skill:
 | [`/llms.txt`](/llms.txt) | A short index of the site and the tools, for agents |
 | `server.json` in the repo | The entry in the MCP registry, `io.github.heyderekj/revisemy` |
 
-## The checkup prompt
+## Prompts
 
-The server offers one prompt, `design_checkup_loop`. It walks an agent through the whole loop: capture, `create_review`, share the link, poll `get_review`, follow `next_action`. Hosts that show prompts list it as a starting point.
+- `design_checkup_loop` walks an agent through the whole loop: capture, `create_review`, share the link, poll `get_review`, follow `next_action`.
+- `check_page` takes a `url` (and an optional `focus`) and starts a review of one live page.
+
+Hosts that show prompts list both as starting points.
+
+## Your DESIGN.md
+
+If your project has a `DESIGN.md`, the Markdown file that tells coding agents your design system, have your agent pass its text as `design_rules` on the first `create_review`. Later passes keep it. The second opinion then checks every shot against your rules before anything else:
+
+- The free checklist turns your firmest rules (never, always, must, avoid…) into checks.
+- With vision on, hints that break a rule start with `DESIGN.md:` and name it.
+
+The review shows a `DESIGN.md` chip so you know. `get_review` returns `design_rules` with where they came from and how many rules were read, never the file itself. When one of your marks states a lasting preference, the agent is asked to propose adding it to `DESIGN.md`, and to ask you before editing it.
+
+No repo? Paste your rules once under **Design rules** on [Your reviews](/reviews) and every review without its own uses them.
 
 ## Reviews inside the chat
 

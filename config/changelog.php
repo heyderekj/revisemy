@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.5.5',
+            'date' => '2026-10-10',
+            'title' => 'Check reviews against your DESIGN.md',
+            'highlights' => [
+                'Your agent can send your project’s DESIGN.md with a review, and the second opinion checks every shot against your rules first',
+                'Hints that come from your rules say “DESIGN.md:” and name the rule, and the review shows a DESIGN.md chip',
+                'No repo? Paste your design rules once on Your reviews and every review uses them',
+                'When a mark is a lasting preference, your agent offers to add it to DESIGN.md, with your OK',
+            ],
+        ],
+
+        [
             'version' => '1.5.4',
             'date' => '2026-10-10',
             'title' => 'Your words for starting a review',

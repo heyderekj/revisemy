@@ -167,6 +167,10 @@ new class extends Component
                         <livewire:review-phrases :workspace-id="$workspaceId" :key="'phrases-'.$workspaceId" />
                     </div>
 
+                    <div class="mt-8">
+                        <livewire:design-rules :workspace-id="$workspaceId" :key="'rules-'.$workspaceId" />
+                    </div>
+
                     @if ($tryToken !== '')
                         <button type="button" wire:click="clearToken" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this token in this browser</button>
                     @else
