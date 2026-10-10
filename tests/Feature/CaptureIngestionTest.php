@@ -180,8 +180,62 @@ class CaptureIngestionTest extends TestCase
                 && ($body['viewport']['width'] ?? null) === 375
                 && ($body['viewport']['isMobile'] ?? null) === true
                 && ($body['viewport']['deviceScaleFactor'] ?? null) === 2
-                && str_contains((string) ($body['userAgent'] ?? ''), 'iPhone');
+                && str_contains((string) ($body['userAgent']['userAgent'] ?? ''), 'iPhone');
         });
+    }
+
+    /** Current Browserless wants an object; an older one that wants the string is asked again. */
+    public function test_mobile_capture_retries_with_a_string_user_agent_for_older_browserless(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/function')) {
+                return Http::response('{"error":"Invalid function code"}', 400);
+            }
+
+            if (is_array($request->data()['userAgent'] ?? null)) {
+                return Http::response('POST Body validation failed: "userAgent" must be string', 400);
+            }
+
+            return Http::response($this->tinyPngBinary());
+        });
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated()->assertJsonCount(3, 'screenshots');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/screenshot')
+            && is_string($request->data()['userAgent'] ?? null)
+            && str_contains($request->data()['userAgent'], 'iPhone'));
+    }
+
+    /** What production's Browserless answered on 2026-10-10 to a string userAgent. */
+    public function test_mobile_capture_sends_the_user_agent_as_an_object(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/function')) {
+                return Http::response('{"error":"Invalid function code"}', 400);
+            }
+
+            if (is_string($request->data()['userAgent'] ?? null)) {
+                return Http::response('POST Body validation failed: "userAgent" must be object', 400);
+            }
+
+            return Http::response($this->tinyPngBinary());
+        });
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated()->assertJsonCount(3, 'screenshots');
+
+        Http::assertNotSent(fn ($request) => is_string($request->data()['userAgent'] ?? null));
     }
 
     public function test_capture_url_falls_back_to_screenshot_when_function_rejects_the_payload(): void
