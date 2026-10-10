@@ -250,11 +250,22 @@ JS;
                 ],
             ];
 
+            // Browserless types userAgent from Puppeteer's setUserAgent: an
+            // object ({userAgent: …}) on current versions, a string on older
+            // ones. The string started coming back as a 400 ("userAgent" must
+            // be object), which failed every mobile shot and so the whole
+            // capture. Send the object; a server that wants the string gets
+            // asked once more with it.
             if ($viewport['mobile']) {
-                $payload['userAgent'] = $this->mobileUserAgent();
+                $payload['userAgent'] = ['userAgent' => $this->mobileUserAgent()];
             }
 
             $response = $this->send($endpoint, $payload, $httpTimeout, $label);
+
+            if ($viewport['mobile'] && $response->status() === 400 && str_contains($response->body(), 'userAgent')) {
+                $payload['userAgent'] = $this->mobileUserAgent();
+                $response = $this->send($endpoint, $payload, $httpTimeout, $label);
+            }
 
             if (! $response->successful() || $response->body() === '') {
                 throw ValidationException::withMessages([

@@ -15,6 +15,15 @@ return [
     'entries' => [
 
         [
+            'version' => '1.5.2',
+            'date' => '2026-10-10',
+            'title' => 'Mobile captures work again',
+            'highlights' => [
+                'Website captures stopped at the phone-sized shot and came back empty. Desktop, mobile and tablet shots all land again',
+            ],
+        ],
+
+        [
             'version' => '1.5.1',
             'date' => '2026-10-10',
             'title' => 'Assistants that sign in stay connected',
