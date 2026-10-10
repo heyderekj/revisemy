@@ -334,6 +334,81 @@ class ConnectReliabilityTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_a_bad_sign_in_link_gets_a_page_not_json(): void
+    {
+        $client = $this->register();
+
+        [$response] = $this->authorize($client, callback: 'https://claude.ai/somewhere-else');
+
+        $response->assertStatus(401)
+            ->assertHeader('Content-Type', 'text/html; charset=utf-8')
+            ->assertSee('This sign-in link doesn’t work')
+            ->assertSee('In Claude, remove ReviseMy from your connectors.')
+            ->assertSee(url('/mcp/revisemy'))
+            ->assertSee('invalid_client');
+
+        $this->getJson('/oauth/authorize?client_id='.$client)
+            ->assertStatus(400)
+            ->assertJsonPath('error', 'invalid_request');
+    }
+
+    public function test_connect_names_the_assistant_by_where_it_returns_not_what_it_calls_itself(): void
+    {
+        $client = $this->postJson('/oauth/register', ['client_name' => 'claude-ai-connector', 'redirect_uris' => [self::CALLBACK]])->json('client_id');
+        $this->authorize($client);
+
+        $this->get('/connect')
+            ->assertSee('Connect Claude')
+            ->assertDontSee('claude-ai-connector')
+            ->assertDontSee('calls itself');
+    }
+
+    public function test_a_lookalike_is_named_and_warned_about(): void
+    {
+        $client = $this->register('https://evil.example/cb');
+        $this->authorize($client, callback: 'https://evil.example/cb');
+
+        $this->get('/connect')
+            ->assertSee('Connect evil.example')
+            ->assertDontSee('>Connect Claude<', false)
+            ->assertSee('This app calls itself Claude, but it sends you back to', false)
+            ->assertSee('https://evil.example');
+    }
+
+    public function test_claude_code_on_localhost_is_not_called_a_lookalike(): void
+    {
+        $client = $this->postJson('/oauth/register', ['client_name' => 'Claude Code (revisemy)', 'redirect_uris' => ['http://localhost:3118/callback']])->json('client_id');
+        $this->authorize($client, callback: 'http://localhost:3118/callback');
+
+        $this->get('/connect')
+            ->assertSee('Connect Claude Code (revisemy)')
+            ->assertDontSee('calls itself');
+    }
+
+    public function test_one_assistant_connected_twice_is_one_row_and_one_disconnect(): void
+    {
+        $first = $this->connectLikeClaude();
+        $user = User::query()->firstOrFail();
+
+        // Claude registers again on a reconnect, from a browser that's still signed in.
+        $this->actingAs($user, 'web');
+        $second = $this->register();
+        [$approved, $verifier] = $this->authorize($second);
+        $this->tokenFrom($approved, $second, $verifier);
+
+        $component = Livewire::test('connected-assistants', ['workspaceId' => $user->workspace_id]);
+        $apps = collect($component->instance()->connections)->where('kind', 'app');
+
+        $this->assertCount(1, $apps);
+        $this->assertSame('Claude', $apps->first()['name']);
+        $this->assertSame('claude', $apps->first()['icon']);
+
+        $component->call('disconnect', 'app', $apps->first()['id']);
+
+        $this->assertSame(0, Token::query()->where('revoked', false)->count());
+        $this->assertNotEmpty($first['access_token']);
+    }
+
     /**
      * @return array{0: string, 1: string} PEM private and public key, each as one line with \n
      */

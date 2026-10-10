@@ -32,6 +32,7 @@ class ConnectController extends Controller
         return view('connect', [
             'client' => $this->pendingClient($request),
             'returnsTo' => $this->returnsTo($request),
+            'redirectUri' => is_string($uri = $this->intendedQuery($request)['redirect_uri'] ?? null) ? $uri : null,
         ]);
     }
 

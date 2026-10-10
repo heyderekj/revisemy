@@ -24,6 +24,9 @@ return [
                 'Claude Code can sign in from a different local port each time',
                 'If a sign-in loses its way, Connect says to start again from your assistant instead of looping',
                 'Connect has its own allowance for new try workspaces, so an office on one network isn’t stopped after a few tries',
+                'The Connect page names the assistant by where it sends you, with its logo, and warns when an app only calls itself Claude',
+                'A sign-in link that can’t be used shows how to fix it, not an error code',
+                'An assistant you connected more than once is one row in your connections, and one Disconnect',
             ],
         ],
 

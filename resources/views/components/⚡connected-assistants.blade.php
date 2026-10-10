@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\OAuthClient;
+use App\Support\AssistantCallback;
 use App\Models\Workspace;
 use Laravel\Passport\RefreshToken;
 use Laravel\Passport\Token;
@@ -29,24 +30,33 @@ new class extends Component
     }
 
     /**
-     * @return list<array{kind: string, id: string, name: string, seen: ?string}>
+     * @return list<array{kind: string, id: string, name: string, icon?: ?string, seen: ?string}>
      */
     #[Computed]
     public function connections(): array
     {
         $userIds = $this->workspace?->users()->pluck('id') ?? collect();
 
-        $apps = Token::query()
+        $tokens = Token::query()
             ->whereIn('user_id', $userIds)
             ->where('revoked', false)
             ->where('expires_at', '>', now()->subDays(60))
-            ->get()
-            ->groupBy('client_id')
-            ->map(fn ($tokens, $clientId) => [
+            ->get();
+
+        $clients = OAuthClient::query()->whereKey($tokens->pluck('client_id')->unique())->get()->keyBy('id');
+
+        // Assistants register again on every connect, so one Claude can hold
+        // several registrations. Show it once, named by where it returns to.
+        $apps = $tokens
+            ->groupBy(fn ($token) => ($client = $clients->get($token->client_id))
+                ? AssistantCallback::displayName($client->name, $client->redirect_uris[0] ?? null)
+                : 'An app')
+            ->map(fn ($group, $name) => [
                 'kind' => 'app',
-                'id' => (string) $clientId,
-                'name' => (string) (OAuthClient::query()->whereKey($clientId)->value('name') ?? 'An app'),
-                'seen' => $tokens->max('created_at')?->diffForHumans(),
+                'id' => $group->pluck('client_id')->unique()->sort()->implode(','),
+                'name' => (string) $name,
+                'icon' => ($client = $clients->get($group->first()->client_id)) ? AssistantCallback::identify($client->redirect_uris[0] ?? null)['icon'] ?? null : null,
+                'seen' => $group->max('created_at')?->diffForHumans(),
             ]);
 
         $keys = PersonalAccessToken::query()
@@ -69,7 +79,8 @@ new class extends Component
         $userIds = $this->workspace?->users()->pluck('id') ?? collect();
 
         if ($kind === 'app') {
-            $tokens = Token::query()->whereIn('user_id', $userIds)->where('client_id', $id);
+            // One row can stand for several registrations of the same assistant.
+            $tokens = Token::query()->whereIn('user_id', $userIds)->whereIn('client_id', explode(',', $id));
             // No swap time, so the refresh grace can't bring any of them back.
             RefreshToken::query()->whereIn('access_token_id', (clone $tokens)->pluck('id'))->update(['revoked' => true, 'revoked_at' => null]);
             $tokens->update(['revoked' => true]);
@@ -94,6 +105,9 @@ new class extends Component
         <ul class="divide-y divide-black/[0.05] overflow-hidden rounded-2xl bg-card">
             @foreach ($this->connections as $connection)
                 <li class="flex items-center gap-3 px-4 py-3" wire:key="{{ $connection['kind'] }}-{{ $connection['id'] }}">
+                    @if ($connection['icon'] ?? null)
+                        <x-host-icon :name="$connection['icon']" size="md" class="text-foreground" />
+                    @endif
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-medium text-zinc-900">{{ $connection['name'] }}</p>
                         <p class="text-xs text-muted-foreground">

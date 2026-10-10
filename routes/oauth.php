@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\LogOAuthResponse;
+use App\Http\Middleware\RenderAuthorizeError;
 use Illuminate\Support\Facades\Route;
 use Laravel\Mcp\Server\Http\Controllers\OAuthRegisterController;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
@@ -14,7 +15,7 @@ use Laravel\Passport\Http\Controllers\AuthorizationController;
  * comes from Anthropic's servers, which share a handful of IPs.
  */
 Route::get('/oauth/authorize', [AuthorizationController::class, 'authorize'])
-    ->middleware(['web', LogOAuthResponse::class.':authorize'])
+    ->middleware(['web', RenderAuthorizeError::class, LogOAuthResponse::class.':authorize'])
     ->name('passport.authorizations.authorize');
 
 Route::post('/oauth/token', [AccessTokenController::class, 'issueToken'])
