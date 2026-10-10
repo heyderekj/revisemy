@@ -9,6 +9,7 @@ use App\Models\Screenshot;
 use App\Models\Workspace;
 use App\Services\Capture\PageCaptureService;
 use App\Support\OutboundUrl;
+use App\Support\ToolProgress;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -75,16 +76,21 @@ class ReviewService
 
         try {
             if (isset($sources['capture_url'])) {
+                ToolProgress::report('Opening '.(parse_url($pageUrl, PHP_URL_HOST) ?: $pageUrl).' to capture it');
                 ['shots' => $images, 'dom' => $domHtml] = $this->capture->capturePage($pageUrl);
                 $type ??= Review::TYPE_WEBSITE;
             } elseif (isset($sources['pdf'])) {
+                ToolProgress::report('Rendering the slides');
                 $images = $this->documents->pdfToImages((string) $data['pdf']);
                 $type ??= Review::TYPE_PRESENTATION;
             } elseif (isset($sources['html'])) {
+                ToolProgress::report('Rendering the email');
                 $images = $this->capture->captureHtml((string) $data['html']);
                 $domHtml = (string) $data['html'];
                 $type ??= Review::TYPE_EMAIL;
             }
+
+            ToolProgress::report('Saving the review and its second opinion');
 
             return $this->create(
                 $workspace,

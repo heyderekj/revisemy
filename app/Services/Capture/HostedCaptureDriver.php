@@ -2,6 +2,7 @@
 
 namespace App\Services\Capture;
 
+use App\Support\ToolProgress;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -58,6 +59,7 @@ JS;
             $shots = [];
 
             foreach ($viewports as $index => $viewport) {
+                ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
                 $shot = $this->captureViaFunction($functionEndpoint, $url, $viewport, $baseMeta, $fullPage, $sweep, withHtml: $index === 0);
 
                 if ($shot === null) {
@@ -230,6 +232,8 @@ JS;
         $shots = [];
 
         foreach ($viewports as $viewport) {
+            ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
+
             // URL captures: full-page at DPR 1 by default — tall 2× PNGs OOM
             // Cloud's 256MB PHP; narrow viewports may ask for more.
             $dpr = $viewport['dpr'] ?? ($isUrl ? $this->urlDeviceScaleFactor() : max(1, (int) config('revisemy.capture.device_scale_factor', 2)));
