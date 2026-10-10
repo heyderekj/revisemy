@@ -111,6 +111,9 @@ new class extends Component
                 <a href="/connect" class="link text-sm">Connect an assistant</a>
             </div>
             <div class="mt-8 max-w-3xl">
+                @if (session('status'))
+                    <p class="mb-6 rounded-xl bg-done-soft px-4 py-3 text-sm text-done-ink" role="status">{{ session('status') }}</p>
+                @endif
                 @if (! $workspaceId)
                     <p class="text-sm text-muted-foreground">Reviews your try token can see — the same list your agent gets.</p>
                     <form wire:submit="loadReviews" class="mt-5 flex flex-col gap-2 rounded-2xl bg-card p-4 sm:flex-row sm:p-5">

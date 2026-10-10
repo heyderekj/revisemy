@@ -245,6 +245,12 @@ class Review extends Model
      */
     protected function pruning(): void
     {
+        $this->deleteFiles();
+    }
+
+    /** Its screenshots, thumbnails, element maps and DOM snapshot, from storage. */
+    public function deleteFiles(): void
+    {
         $disks = $this->screenshots()->pluck('disk')->filter()->unique();
 
         foreach ($disks->isEmpty() ? [config('filesystems.revisemy_disk')] : $disks as $disk) {

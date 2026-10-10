@@ -209,6 +209,15 @@
                                 >
                                     {{ $review->allowsComments() ? 'Disable comments' : 'Enable comments' }}
                                 </flux:menu.item>
+                                <flux:menu.separator />
+                                <flux:menu.item
+                                    icon="trash"
+                                    variant="danger"
+                                    wire:click="deleteReview"
+                                    wire:confirm="Delete this review and every pass of it? Screenshots, marks and comments go too, and the links stop working. This can’t be undone."
+                                >
+                                    Delete review…
+                                </flux:menu.item>
                             </flux:menu>
                         </flux:dropdown>
 

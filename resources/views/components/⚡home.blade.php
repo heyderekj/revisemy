@@ -157,6 +157,45 @@ new class extends Component
         </div>
     </x-home-section>
 
+    {{-- Privacy: the short version of /security, from the same live facts. --}}
+    @php
+        $trustVision = \App\Support\TrustFacts::vision();
+        $trustRetention = \App\Support\TrustFacts::retention();
+    @endphp
+    <x-home-section id="privacy">
+        <x-section-eyebrow number="04" label="Privacy" />
+        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Private by default</h2>
+        <p class="mt-4 max-w-xl text-[15px] leading-relaxed text-zinc-600">
+            Reviews hold work you haven’t shipped, so they stay between you and the people you send them to.
+        </p>
+        {{-- Three across only when the column itself is wide; the sidebar takes a varying share of the window. --}}
+        <div class="@container mt-8">
+            <div class="grid grid-cols-1 gap-3 @3xl:grid-cols-3">
+                <article class="rounded-2xl bg-card p-5">
+                    <x-use-case-icon name="key" />
+                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Only people with the link</h3>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">No accounts to break into and no list to browse. Each review is a 40-character secret link, kept out of search.</p>
+                </article>
+                <article class="rounded-2xl bg-card p-5">
+                    <x-use-case-icon name="photo" />
+                    @if ($trustVision)
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">You know who sees them</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Vision hints send screenshots to {{ $trustVision }}. ReviseMy never sells them or trains on them.</p>
+                    @else
+                        <h3 class="mt-3 text-sm font-semibold text-zinc-900">Screenshots stay with ReviseMy</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">The second opinion here is a built-in checklist, so no screenshot goes to an AI model.</p>
+                    @endif
+                </article>
+                <article class="rounded-2xl bg-card p-5">
+                    <x-use-case-icon name="check" />
+                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Gone when you say</h3>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Delete a review and every pass from its page, or let it lapse after {{ $trustRetention['try'] }} days on Try.</p>
+                </article>
+            </div>
+        </div>
+        <a href="/security" class="mt-6 inline-block text-sm link">Privacy and security</a>
+    </x-home-section>
+
     {{-- Credits / Pricing --}}
     @php
         $pricingEnabled = (bool) config('billing.pricing_enabled', false);
@@ -169,7 +208,7 @@ new class extends Component
         $pack = collect(config('billing.packs', []))->first();
     @endphp
     <x-home-section id="pricing" x-data x-intersect.once.threshold.25="window.fathom && fathom.trackEvent('Pricing viewed')">
-        <x-section-eyebrow number="04" :label="$pricingEnabled ? 'Pricing' : 'Credits'" />
+        <x-section-eyebrow number="05" :label="$pricingEnabled ? 'Pricing' : 'Credits'" />
         @if ($pricingEnabled)
             <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
                 Try it free. Keep it with Plus.
@@ -316,7 +355,7 @@ new class extends Component
             $faq = \App\Support\HomeFaq::all();
         @endphp
         <div class="max-w-xl">
-            <x-section-eyebrow number="05" label="FAQ" />
+            <x-section-eyebrow number="06" label="FAQ" />
             <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Questions</h2>
 
             <div class="mt-6 space-y-2">
@@ -338,7 +377,7 @@ new class extends Component
         @php
             $stars = \App\Support\GitHubStars::count();
         @endphp
-        <x-section-eyebrow number="06" label="Open source" />
+        <x-section-eyebrow number="07" label="Open source" />
         <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built in the open</h2>
         <p class="mt-4 max-w-xl text-[15px] leading-relaxed text-zinc-600">
             Agents are getting fast at shipping what we see. ReviseMy keeps a person’s eye in that loop: your marks decide what ships. It’s open source so anyone can read how it works, run their own, and make it better.

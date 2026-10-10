@@ -10,6 +10,7 @@ use App\Http\Controllers\PolarWebhookController;
 use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\UseCaseController;
+use App\Support\TrustFacts;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -49,6 +50,17 @@ Route::get('/docs', [DocsController::class, 'index']);
 Route::get('/docs/{slug}', [DocsController::class, 'show'])->where('slug', '[a-z0-9-]+');
 
 Route::get('/privacy', [LegalController::class, 'privacy']);
+Route::view('/security', 'security');
+
+// RFC 9116: where to report a security problem, for tools that look.
+Route::get('/.well-known/security.txt', fn () => response(implode("\n", [
+    'Contact: '.TrustFacts::reportUrl(),
+    'Expires: '.now()->addYear()->startOfDay()->toIso8601ZuluString(),
+    'Policy: '.url('/security'),
+    'Canonical: '.url('/.well-known/security.txt'),
+    'Preferred-Languages: en',
+    '',
+]), 200, ['Content-Type' => 'text/plain; charset=utf-8']));
 Route::get('/terms', [LegalController::class, 'terms']);
 
 /*

@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'version' => '1.5.5',
+    'version' => '1.5.6',
 
     /*
     | Koati, the studio's other product. The footer names it as a sibling and
@@ -169,6 +169,21 @@ return [
     | App\Support\AssistantCallback.
     |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security
+    |--------------------------------------------------------------------------
+    |
+    | Where /security and /.well-known/security.txt send someone who found a
+    | problem. GitHub's private vulnerability reporting by default.
+    |
+    */
+
+    'security' => [
+        'report_url' => env('REVISEMY_SECURITY_REPORT_URL', 'https://github.com/heyderekj/revisemy/security/advisories/new'),
+        'hosting' => env('REVISEMY_HOSTING_NOTE', 'Laravel Cloud, in the US (Virginia)'),
+    ],
 
     'oauth' => [
         // A try token for revisemy:probe-connect, so the hourly check connects
