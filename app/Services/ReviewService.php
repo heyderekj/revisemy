@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
 use App\Services\Capture\PageCaptureService;
+use App\Support\DesignRules;
 use App\Support\OutboundUrl;
 use App\Support\ToolProgress;
 use Illuminate\Http\UploadedFile;
@@ -102,6 +103,7 @@ class ReviewService
                 $type,
                 $domHtml,
                 $data['webhook_url'] ?? null,
+                $data['design_rules'] ?? null,
             );
         } catch (ValidationException $e) {
             $this->credits->refund($workspace, $debited);
@@ -125,6 +127,7 @@ class ReviewService
                 $type ?? Review::TYPE_WEBSITE,
                 null,
                 $data['webhook_url'] ?? null,
+                $data['design_rules'] ?? null,
             );
         } catch (Throwable $e) {
             $this->credits->refund($workspace, $debited);
@@ -154,6 +157,7 @@ class ReviewService
         ?string $type = null,
         ?string $domHtml = null,
         ?string $webhookUrl = null,
+        ?string $designRules = null,
     ): Review {
         if ($type !== null && ! in_array($type, Review::types(), true)) {
             throw ValidationException::withMessages([
@@ -217,6 +221,16 @@ class ReviewService
             }
         }
 
+        // The project's DESIGN.md: as the agent sent it on this pass, or as
+        // the last pass had it, or the workspace's default. The review keeps
+        // its own copy, so editing the default later doesn't rewrite it.
+        [$designRules, $designRulesSource] = match (true) {
+            DesignRules::clean($designRules) !== null => [DesignRules::clean($designRules), DesignRules::SOURCE_AGENT],
+            $parent?->design_rules !== null => [$parent->design_rules, $parent->design_rules_source],
+            DesignRules::clean($workspace->design_rules) !== null => [DesignRules::clean($workspace->design_rules), DesignRules::SOURCE_WORKSPACE],
+            default => [null, null],
+        };
+
         $retentionDays = $workspace->reviewRetentionDays();
 
         $review = $workspace->reviews()->create([
@@ -227,6 +241,8 @@ class ReviewService
             'page_url' => $pageUrl,
             'webhook_url' => $webhookUrl,
             ...($webhookHealth ?? []),
+            'design_rules' => $designRules,
+            'design_rules_source' => $designRulesSource,
             'pass' => $pass,
             'expires_at' => now()->addDays($retentionDays),
         ]);

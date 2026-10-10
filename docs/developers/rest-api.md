@@ -57,6 +57,7 @@ curl -s -X POST https://revisemy.com/api/reviews \
 | `html` | An email's HTML, rendered at mail-client width |
 | `parent_id` | The previous pass, when opening the next one |
 | `webhook_url` | An https URL to POST to when the person decides. See [Webhooks](/docs/webhooks). |
+| `design_rules` | Your project's `DESIGN.md` (or other design rules) as Markdown, up to 20,000 characters. The second opinion checks each shot against them first. Later passes inherit them. |
 
 Returns `201` with the review.
 

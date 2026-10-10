@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use App\Services\SecondOpinionService;
+use App\Support\DesignRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -42,6 +43,7 @@ class ReviewController extends Controller
             'type' => ['nullable', 'string', 'in:ui,website,presentation,email'],
             'page_url' => ['nullable', 'string', 'max:2048'],
             'webhook_url' => ['nullable', 'string', 'max:2048'],
+            'design_rules' => ['nullable', 'string', 'max:'.DesignRules::MAX_LENGTH],
             'parent_id' => ['nullable', 'string'],
             'images' => ['nullable', 'array', 'min:1', 'max:5'],
             'images.*' => ['required'],

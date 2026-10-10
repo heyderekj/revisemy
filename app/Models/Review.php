@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\ScreenshotStorage;
+use App\Support\DesignRules;
 use App\Support\MarkFocus;
 use App\Support\TasteLenses;
 use Illuminate\Database\Eloquent\Builder;
@@ -72,6 +73,8 @@ class Review extends Model
         'webhook_paused_at',
         'webhook_last_error',
         'dom_path',
+        'design_rules',
+        'design_rules_source',
         'pass',
         'status',
         'decision_note',
@@ -815,6 +818,15 @@ class Review extends Model
             'updated_at' => $this->lastActivityAt()?->toIso8601String(),
             'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read recent comments on each pin for context. Ask before inventing answers to unanswered question marks. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
             'taste' => TasteLenses::forType($this->type),
+            // Whether the second opinion checked against the project's own
+            // rules, and where they came from. Never the whole file.
+            'design_rules' => $this->design_rules ? [
+                'source' => $this->design_rules_source,
+                'title' => DesignRules::title($this->design_rules),
+                'rule_count' => $ruleCount = count(DesignRules::rules($this->design_rules)),
+                'summary' => DesignRules::summary($ruleCount, DesignRules::title($this->design_rules), $this->design_rules_source),
+                'guidance' => 'Second-opinion hints starting "DESIGN.md:" quote the project’s own rules. Keep your fixes within them. If a human mark states a lasting preference rather than a one-off fix, propose adding it to DESIGN.md and ask before you edit the file.',
+            ] : null,
             'next_action' => $this->nextAction(),
             'loop' => [
                 'pass' => $this->pass,

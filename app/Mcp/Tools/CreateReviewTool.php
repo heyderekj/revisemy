@@ -7,6 +7,7 @@ use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Mcp\Resources\ReviewApp;
 use App\Services\ReviewService;
 use App\Support\BrandAssets;
+use App\Support\DesignRules;
 use App\Support\ToolProgress;
 use Generator;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -61,6 +62,7 @@ class CreateReviewTool extends Tool
             'type' => 'nullable|string|in:ui,website,presentation,email',
             'page_url' => 'nullable|string|max:2048',
             'webhook_url' => 'nullable|string|max:2048',
+            'design_rules' => 'nullable|string|max:'.DesignRules::MAX_LENGTH,
             'parent_id' => 'nullable|string',
             'images' => 'nullable|array|min:1|max:5',
             'images.*' => 'required|string',
@@ -139,6 +141,7 @@ class CreateReviewTool extends Tool
                 ->enum(['ui', 'website', 'presentation', 'email'])
                 ->description('What kind of content this is — ui (default), website, slide (`presentation`), or email. Drives the second-opinion lens: emails get CTA/dark-mode/client checks, slides get slide-density checks, websites get above-the-fold/responsive checks. Follow-up passes inherit the parent type.'),
             'page_url' => $schema->string()->description('Live page URL. Required with capture_url:true for server-side website capture (desktop + mobile) — on a follow-up pass it defaults to the parent review page_url. Metadata only when using images/html/pdf — does not trigger capture on its own.'),
+            'design_rules' => $schema->string()->description('The project’s DESIGN.md (or other design rules) as Markdown, up to 20,000 characters. If the repo has a DESIGN.md, pass it on the first pass; later passes inherit it. The second opinion then checks each shot against these rules first.'),
             'webhook_url' => $schema->string()->description('Optional https URL POSTed when the human decides (event review.decided, HMAC-signed with the review token) — lets pipelines gate on approval instead of polling. Follow-up passes inherit it.'),
             'parent_id' => $schema->string()->description('Previous review id when opening the next pass after changes_requested'),
             'images' => $schema->array()
