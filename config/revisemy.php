@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'version' => '1.4.0',
+    'version' => '1.5.1',
 
     /*
     | Koati, the studio's other product. The footer names it as a sibling and
@@ -171,6 +171,11 @@ return [
     */
 
     'oauth' => [
+        // A try token for revisemy:probe-connect, so the hourly check connects
+        // to one workspace instead of making a new one each time. Unset, the
+        // hourly check doesn't run.
+        'probe_token' => env('REVISEMY_PROBE_TOKEN'),
+
         'trusted_redirect_hosts' => [
             'claude.ai',
             'claude.com',

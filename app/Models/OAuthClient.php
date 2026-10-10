@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Support\AssistantCallback;
+use App\Support\ConnectLog;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Laravel\Passport\Client;
 
 /**
@@ -28,15 +30,52 @@ class OAuthClient extends Client
             && ($approved['client_id'] ?? null) === (string) $this->getKey()
             && ($approved['user_id'] ?? null) === $user->getAuthIdentifier()
             && now()->timestamp - (int) ($approved['at'] ?? 0) < 300) {
+            $this->logSkip('connect-click');
+
             return true;
         }
 
         $uri = $this->requestedRedirectUri();
 
-        return $uri !== null
+        $known = $uri !== null
             && auth('web')->check()
             && (string) auth('web')->id() === (string) $user->getAuthIdentifier()
             && AssistantCallback::isKnown($uri);
+
+        if ($known) {
+            $this->logSkip('signed-in-browser');
+        }
+
+        return $known;
+    }
+
+    /**
+     * The addresses the code may go back to.
+     *
+     * Claude Code and other local programs listen on a port picked fresh for
+     * each sign-in. The OAuth server already ignores the port for 127.0.0.1
+     * and [::1]; this does the same for localhost (RFC 8252 §7.3), so a
+     * client registered on one port can sign in from another.
+     */
+    protected function redirectUris(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value, array $attributes): array {
+                $registered = match (true) {
+                    ! empty($value) => $this->fromJson($value),
+                    ! empty($attributes['redirect']) => explode(',', $attributes['redirect']),
+                    default => [],
+                };
+
+                $requested = request()->input('redirect_uri');
+
+                if (is_string($requested) && AssistantCallback::matchesLoopbackIgnoringPort($requested, $registered)) {
+                    $registered[] = $requested;
+                }
+
+                return array_values(array_unique($registered));
+            },
+        );
     }
 
     /**
@@ -55,5 +94,15 @@ class OAuthClient extends Client
         $registered = $this->redirect_uris;
 
         return count($registered) === 1 ? (string) $registered[0] : null;
+    }
+
+    private function logSkip(string $via): void
+    {
+        ConnectLog::event('authorize.skip-consent', [
+            'client_id' => (string) $this->getKey(),
+            'client' => $this->name,
+            'via' => $via,
+            'returns_to' => ConnectLog::host($this->requestedRedirectUri()),
+        ]);
     }
 }

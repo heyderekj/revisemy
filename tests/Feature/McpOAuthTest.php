@@ -5,8 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
-use Illuminate\Testing\TestResponse;
+use Tests\Concerns\SignsInAssistants;
 use Tests\TestCase;
 
 /**
@@ -20,9 +19,7 @@ use Tests\TestCase;
  */
 class McpOAuthTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private const CALLBACK = 'https://claude.ai/api/mcp/auth_callback';
+    use RefreshDatabase, SignsInAssistants;
 
     protected function setUp(): void
     {
@@ -31,53 +28,6 @@ class McpOAuthTest extends TestCase
         if (! is_file(storage_path('oauth-private.key'))) {
             $this->artisan('passport:keys', ['--force' => true]);
         }
-    }
-
-    private function rpc(string $method, array $params = []): array
-    {
-        return ['jsonrpc' => '2.0', 'id' => 1, 'method' => $method, 'params' => $params];
-    }
-
-    private function register(string $callback = self::CALLBACK): string
-    {
-        return $this->postJson('/oauth/register', ['client_name' => 'Claude', 'redirect_uris' => [$callback]])
-            ->assertSuccessful()
-            ->json('client_id');
-    }
-
-    /**
-     * @return array{0: TestResponse, 1: string}
-     */
-    private function authorize(string $client, ?string $verifier = null, string $callback = self::CALLBACK): array
-    {
-        $verifier ??= Str::random(64);
-        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
-
-        $response = $this->get('/oauth/authorize?'.http_build_query([
-            'response_type' => 'code',
-            'client_id' => $client,
-            'redirect_uri' => $callback,
-            'state' => 'xyz',
-            'scope' => 'mcp:use',
-            'code_challenge' => $challenge,
-            'code_challenge_method' => 'S256',
-        ]));
-
-        return [$response, $verifier];
-    }
-
-    private function tokenFrom(TestResponse $redirect, string $client, string $verifier): string
-    {
-        parse_str((string) parse_url((string) $redirect->headers->get('Location'), PHP_URL_QUERY), $returned);
-        $this->assertSame('xyz', $returned['state'] ?? null);
-
-        return $this->postJson('/oauth/token', [
-            'grant_type' => 'authorization_code',
-            'client_id' => $client,
-            'redirect_uri' => self::CALLBACK,
-            'code' => $returned['code'],
-            'code_verifier' => $verifier,
-        ])->assertOk()->json('access_token');
     }
 
     public function test_a_client_can_find_out_where_to_sign_in(): void

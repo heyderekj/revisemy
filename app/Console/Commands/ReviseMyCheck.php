@@ -2,12 +2,14 @@
 
 namespace App\Console\Commands;
 
+use App\Support\PassportKeys;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Passport\Passport;
+use Throwable;
 
 /**
  * What this install still needs before every part of ReviseMy works for real.
@@ -19,10 +21,14 @@ use Laravel\Passport\Passport;
  * are listed as notes. Ported from Koati's koati:check.
  *
  * Reads only. On Laravel Cloud: `cloud command:run "php artisan revisemy:check"`.
+ *
+ * `--connect` checks only what assistants need to sign in and stay signed in,
+ * and exits 1 if any of it fails. Run it as a deploy command, so a key pair
+ * that can't check its own tokens fails the deploy instead of going live.
  */
 class ReviseMyCheck extends Command
 {
-    protected $signature = 'revisemy:check';
+    protected $signature = 'revisemy:check {--connect : Only what assistants need to connect, for a deploy command}';
 
     protected $description = 'Say what this install still needs before reviews, Connect and webhooks work for real';
 
@@ -33,9 +39,18 @@ class ReviseMyCheck extends Command
 
     public function handle(): int
     {
+        if ($this->option('connect')) {
+            $this->section('Assistants');
+            $this->connect();
+            $this->newLine();
+            $this->line($this->missing ? 'Connect is broken: fix each ✗ above before this goes live.' : 'Connect ready.');
+
+            return $this->missing ? self::FAILURE : self::SUCCESS;
+        }
+
         $this->section('The app');
         $this->appUrl();
-        $this->check(config('database.default') !== 'sqlite' || app()->environment('local'), 'Reviews are kept in a real database.', 'DB_CONNECTION is sqlite, which a deploy on Laravel Cloud throws away. Attach Postgres.');
+        $this->check(config('database.default') !== 'sqlite' || app()->environment('local'), 'Reviews are kept in a real database.', 'DB_CONNECTION is sqlite, which a deploy on Laravel Cloud throws away. Attach a database.');
 
         $this->section('Screenshots');
         $disk = (string) config('filesystems.revisemy_disk');
@@ -58,7 +73,7 @@ class ReviseMyCheck extends Command
         );
 
         $this->section('Assistants');
-        $this->check($this->passportKeys(), 'Assistants can Connect by signing in.', 'No Passport keys, so Connect fails at the last step. Set PASSPORT_PRIVATE_KEY and PASSPORT_PUBLIC_KEY. Try tokens still work.');
+        $this->connect();
         $this->note('They connect to '.url('/mcp/revisemy'));
 
         $this->section('Errors');
@@ -118,10 +133,33 @@ class ReviseMyCheck extends Command
         }
     }
 
-    private function passportKeys(): bool
+    /**
+     * What an assistant needs to sign in and keep calling: a private key
+     * whose public half checks what it signs, the OAuth tables, the scope.
+     */
+    private function connect(): void
     {
-        return (filled(config('passport.private_key')) || is_file(Passport::keyPath('oauth-private.key')))
-            && (filled(config('passport.public_key')) || is_file(Passport::keyPath('oauth-public.key')));
+        $this->check(
+            PassportKeys::roundTrip(),
+            'Tokens handed to assistants can be checked when they come back.',
+            PassportKeys::privatePem() === null
+                ? 'No PASSPORT_PRIVATE_KEY, so Connect fails at the last step. Set it as one line with \\n for each line break. Try tokens still work.'
+                : 'PASSPORT_PRIVATE_KEY can’t be read as a private key, so Connect fails. Set it as one line with \\n for each line break.',
+        );
+
+        if (PassportKeys::configuredPublicMismatch()) {
+            $this->note('PASSPORT_PUBLIC_KEY doesn’t match the private key. It is ignored now; remove it.');
+        }
+
+        try {
+            DB::connection()->getPdo();
+            $tables = Schema::hasTable('oauth_clients') && Schema::hasTable('oauth_access_tokens') && Schema::hasColumn('oauth_refresh_tokens', 'revoked_at');
+        } catch (Throwable) {
+            $tables = false;
+        }
+
+        $this->check($tables, 'The database has the OAuth tables.', 'The database is unreachable or the OAuth tables are missing. Run php artisan migrate.');
+        $this->check(Passport::hasScope('mcp:use'), 'The mcp:use scope assistants ask for is defined.', 'mcp:use isn’t defined, so hosts that ask for it fail to connect.');
     }
 
     private function section(string $title): void
