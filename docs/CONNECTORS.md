@@ -16,6 +16,10 @@ ReviseMy’s product surface is **MCP tools** (`create_review`, `get_review`, `l
 | **Any MCP client** | HTTP MCP at `/mcp/revisemy`: OAuth, or a Bearer try token |
 | **REST-only agents** | `/api/reviews` with Sanctum Bearer token |
 
+## When assistants use ReviseMy
+
+MCP has no keyword triggers: the model picks a tool from its description and the server's instructions. `App\Support\AssistantPhrases::WHEN` opens the instructions with when ReviseMy fits (something visual to judge before it ships) and when it doesn't (code or PR review), and `create_review`'s description leads with the same. A workspace adds its own words both ways on **Your reviews** (`⚡review-phrases`), stored in `workspaces.assistant_phrases` and added, quoted, to the instructions for that workspace's sessions. Hosts read instructions when a chat starts, so a change applies to the next chat. The `check_page` prompt (url, optional focus) starts a review of one live page from a host's prompt menu; `design_checkup_loop` covers the whole loop.
+
 ## Inline review (MCP Apps)
 
 `create_review` and `get_review` declare a `ui://revisemy/review-app` resource ([MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)). Hosts that support the extension (Claude web/desktop, Copilot, Goose, …) render the review inline in a sandboxed iframe — the human loop (mark, verify, decide) plus a board view, without leaving the chat. The full owner workspace (comment threads, share/guest, drag columns, second-opinion triage) remains on `review_url` / `board_url`.

@@ -96,8 +96,13 @@ new class extends Component
             try { saved = sessionStorage.getItem('revisemy_try_token') } catch (e) {}
             if (saved && ! {{ $workspaceId ? 'true' : 'false' }}) { $wire.restoreToken(saved) }
         },
+        // Alpine runs an event handler as an expression, so the try lives here.
+        forgetSaved(token) {
+            if (token) return;
+            try { sessionStorage.removeItem('revisemy_try_token') } catch (e) {}
+        },
     }"
-    x-on:revisemy-try-token.window="try { $event.detail.token || sessionStorage.removeItem('revisemy_try_token') } catch (e) {}"
+    x-on:revisemy-try-token.window="forgetSaved($event.detail.token)"
 >
     <x-site-shell :cta="false">
         <x-home-section first>
@@ -156,6 +161,10 @@ new class extends Component
 
                     <div class="mt-8">
                         <livewire:connected-assistants :workspace-id="$workspaceId" :key="'assistants-'.$workspaceId" />
+                    </div>
+
+                    <div class="mt-8">
+                        <livewire:review-phrases :workspace-id="$workspaceId" :key="'phrases-'.$workspaceId" />
                     </div>
 
                     @if ($tryToken !== '')

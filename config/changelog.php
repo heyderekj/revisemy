@@ -15,6 +15,17 @@ return [
     'entries' => [
 
         [
+            'version' => '1.5.4',
+            'date' => '2026-10-10',
+            'title' => 'Your words for starting a review',
+            'highlights' => [
+                'Assistants know when to reach for ReviseMy (check, proof, mark up, get feedback, "is this ready") and leave it out of code review',
+                'Add your own words on Your reviews: phrases that should start a review, and phrases that never should. A new chat picks them up',
+                'A check_page prompt reviews one live page from your assistant’s prompt menu',
+            ],
+        ],
+
+        [
             'version' => '1.5.3',
             'date' => '2026-10-10',
             'title' => 'See what a review is doing while it’s made',
