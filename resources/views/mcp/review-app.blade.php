@@ -19,7 +19,27 @@
 <div class="bg-background text-foreground" x-data="reviewApp()" x-init="init()" x-cloak>
     <div class="mx-auto max-w-5xl px-4 py-4 sm:px-6">
         <template x-if="!payload">
-            <p class="text-sm text-zinc-500">Loading review…</p>
+            {{-- Before the result: what's being made, from the call's arguments
+                 (ui/notifications/tool-input), so a 20–60 second capture isn't a
+                 blank spinner. Then the error, if the call failed. --}}
+            <div class="py-2" role="status" aria-live="polite">
+                <template x-if="failed">
+                    <div>
+                        <p class="text-sm font-medium text-zinc-900" x-text="failedTitle"></p>
+                        <p class="mt-1 text-sm text-pretty text-zinc-500" x-text="failed"></p>
+                    </div>
+                </template>
+                <template x-if="!failed">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="size-2 shrink-0 animate-pulse rounded-full" :class="workingDot()"></span>
+                            <p class="text-sm font-medium text-zinc-900" x-text="working.title"></p>
+                            <span class="ml-auto text-xs tabular-nums text-zinc-500" x-show="elapsed >= 3" x-text="elapsedLabel()"></span>
+                        </div>
+                        <p class="mt-1 text-sm text-pretty text-zinc-500" x-show="working.detail" x-text="working.detail"></p>
+                    </div>
+                </template>
+            </div>
         </template>
 
         <template x-if="payload">
@@ -344,6 +364,10 @@
         let nextId = 1;
         let onToolResult = null;
         let lastToolResult = null; // buffered so a result pushed before the UI mounts isn't lost
+        let onToolInput = null;
+        let lastToolInput = null;
+        let onToolCancelled = null;
+        let lastCancelReason = null;
 
         function send(msg) { window.parent.postMessage(msg, '*'); }
 
@@ -368,7 +392,21 @@
                 return;
             }
 
-            // Notifications from the host.
+            // Notifications from the host. The call's arguments arrive first
+            // (partially while the agent is still writing them), the result
+            // when the tool finishes.
+            if (msg.method === 'ui/notifications/tool-input' || msg.method === 'ui/notifications/tool-input-partial') {
+                lastToolInput = msg.params?.arguments || {};
+                if (onToolInput) onToolInput(lastToolInput);
+                return;
+            }
+
+            if (msg.method === 'ui/notifications/tool-cancelled') {
+                lastCancelReason = msg.params?.reason || '';
+                if (onToolCancelled) onToolCancelled(lastCancelReason);
+                return;
+            }
+
             if (msg.method === 'ui/notifications/tool-result') {
                 lastToolResult = msg.params || {};
                 if (onToolResult) onToolResult(lastToolResult);
@@ -409,12 +447,38 @@
         window.mcpBridge = {
             connect,
             set ontoolresult(fn) { onToolResult = fn; if (fn && lastToolResult) fn(lastToolResult); },
+            set ontoolinput(fn) { onToolInput = fn; if (fn && lastToolInput) fn(lastToolInput); },
+            set ontoolcancelled(fn) { onToolCancelled = fn; if (fn && lastCancelReason !== null) fn(lastCancelReason); },
             callTool: (name, args) => request('tools/call', { name, arguments: args || {} }),
             openLink: (url) => request('ui/open-link', { url }),
         };
 
         connect().catch((e) => console.error('[ReviseMy] MCP connect failed', e));
     })();
+
+    // What's being made, read from the tool call's arguments. Honest about
+    // time; it doesn't pretend to know which step the server is on.
+    function workingFor(args) {
+        args = args || {};
+        if (args.id && !args.title) return { title: 'Opening the review', detail: '' };
+
+        let host = '';
+        try { host = args.page_url ? new URL(args.page_url).hostname : ''; } catch (e) { host = ''; }
+
+        if (args.capture_url) {
+            return {
+                title: 'Capturing ' + (host || 'the page'),
+                detail: 'Desktop, mobile and tablet, full page. This usually takes 20 to 60 seconds.',
+            };
+        }
+        if (args.pdf) return { title: 'Rendering the slides', detail: 'One shot per page, up to five.' };
+        if (args.html) return { title: 'Rendering the email', detail: 'At about 600px, like a mail client.' };
+        if (Array.isArray(args.images)) {
+            const n = args.images.length;
+            return { title: 'Saving ' + n + (n === 1 ? ' screenshot' : ' screenshots'), detail: '' };
+        }
+        return { title: 'Making the review', detail: '' };
+    }
 
     function reviewApp() {
         // Keep in sync with Annotation::severityLabels(),
@@ -438,6 +502,10 @@
             activeFinding: null,
             busy: false,
             error: '',
+            working: { title: 'Opening the review', detail: '' },
+            elapsed: 0,
+            failed: '',
+            failedTitle: '',
             decisionNote: '',
             previousOpen: false,
             draft: { drawing: false, x0: 0, y0: 0, x: 0, y: 0, w: 0, h: 0 },
@@ -458,9 +526,29 @@
             ],
 
             init() {
+                const started = Date.now();
+                const tick = setInterval(() => {
+                    this.elapsed = Math.floor((Date.now() - started) / 1000);
+                    if (this.payload || this.failed) clearInterval(tick);
+                }, 1000);
+
+                window.mcpBridge.ontoolinput = (args) => { this.working = workingFor(args); };
+                window.mcpBridge.ontoolcancelled = () => {
+                    if (this.payload) return;
+                    this.failedTitle = 'Stopped';
+                    this.failed = 'The call was stopped before the review was made.';
+                };
                 window.mcpBridge.ontoolresult = (params) => {
                     const data = params.structuredContent;
-                    if (data && data.id) this.apply(data);
+                    if (data && data.id) { this.apply(data); return; }
+
+                    // An error (no credits, a bad source) has no review to show.
+                    // Say what the tool said instead of loading forever.
+                    if (!this.payload) {
+                        const text = (params.content || []).find((c) => c.type === 'text')?.text || '';
+                        this.failedTitle = 'No review this time';
+                        this.failed = text.split('\n')[0] || 'The tool didn’t return a review.';
+                    }
                 };
 
                 setInterval(() => {
@@ -482,6 +570,15 @@
             },
 
             get isPending() { return this.payload && this.payload.status === 'pending'; },
+
+            // The agent's tone: the same dot "In progress" wears.
+            workingDot() { return TONES.agent.dot; },
+
+            elapsedLabel() {
+                const m = Math.floor(this.elapsed / 60);
+                const s = String(this.elapsed % 60).padStart(2, '0');
+                return m + ':' + s;
+            },
 
             markerBg() { return MARKER; },
             severityLabel(severity) { return SEVERITY_LABELS[severity] || severity; },

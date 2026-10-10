@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'version' => '1.5.2',
+    'version' => '1.5.3',
 
     /*
     | Koati, the studio's other product. The footer names it as a sibling and

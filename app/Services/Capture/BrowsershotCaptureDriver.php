@@ -2,6 +2,7 @@
 
 namespace App\Services\Capture;
 
+use App\Support\ToolProgress;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Spatie\Browsershot\Browsershot;
@@ -136,6 +137,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
         $shots = [];
 
         foreach ($viewports as $viewport) {
+            ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
             $dpr = $viewport['dpr'] ?? $deviceScaleFactor ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
 
             $shot = $this->configure($factory(), $sweep, $hideConsent);

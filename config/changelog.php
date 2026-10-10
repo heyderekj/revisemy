@@ -15,6 +15,17 @@ return [
     'entries' => [
 
         [
+            'version' => '1.5.3',
+            'date' => '2026-10-10',
+            'title' => 'See what a review is doing while it’s made',
+            'highlights' => [
+                'While a review is made, the inline board says what it’s capturing and for how long, instead of a blank loading line',
+                'Assistants that ask for progress hear each step as it happens: opening the page, then desktop, mobile and tablet',
+                'If a review can’t be made, the inline board says why instead of loading forever',
+            ],
+        ],
+
+        [
             'version' => '1.5.2',
             'date' => '2026-10-10',
             'title' => 'Mobile captures work again',

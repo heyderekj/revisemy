@@ -7,6 +7,8 @@ use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Mcp\Resources\ReviewApp;
 use App\Services\ReviewService;
 use App\Support\BrandAssets;
+use App\Support\ToolProgress;
+use Generator;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
@@ -20,7 +22,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
 #[Name('create_review')]
-#[Description('Start or continue a design checkup loop: provide exactly one source — capture_url+page_url (public website), html (email), pdf (slides), or images (local UI as data URLs) — and get a review URL for the human. Pass parent_id after changes_requested to open the next pass with a fresh source. Call add_findings before sharing if you want a subagent critique. In MCP Apps hosts the review renders inline so the human can start marking right away.')]
+#[Description('Start or continue a design checkup loop: provide exactly one source — capture_url+page_url (public website), html (email), pdf (slides), or images (local UI as data URLs) — and get a review URL for the human. Pass parent_id after changes_requested to open the next pass with a fresh source. Call add_findings before sharing if you want a subagent critique. In MCP Apps hosts the review renders inline so the human can start marking right away. A website capture takes 20 to 60 seconds: tell the human you are capturing the page before you call this.')]
 #[RendersApp(ReviewApp::class)]
 #[IsDestructive(false)]
 #[IsOpenWorld]
@@ -30,7 +32,22 @@ class CreateReviewTool extends Tool
 
     public function __construct(protected ReviewService $reviews) {}
 
-    public function handle(Request $request): Response|ResponseFactory
+    /**
+     * A capture takes 20 to 60 seconds. When the host asks for progress, say
+     * what's happening as it happens (ToolProgress); otherwise answer once.
+     */
+    public function handle(Request $request): Response|ResponseFactory|Generator
+    {
+        $token = $request->meta()['progressToken'] ?? null;
+
+        if (is_string($token) || is_int($token)) {
+            return ToolProgress::stream($token, fn () => $this->create($request));
+        }
+
+        return $this->create($request);
+    }
+
+    protected function create(Request $request): Response|ResponseFactory
     {
         $workspace = $this->workspace($request);
 
