@@ -203,15 +203,14 @@
 
                     {{-- mark composer --}}
                     <div class="mt-3 rounded-2xl bg-card px-3 py-3 sm:px-4" x-show="composer.open" @keydown.escape="closeComposer()">
-                        <div class="flex flex-wrap gap-1.5">
+                        {{-- One row, as on the review page: what kind of mark this is. --}}
+                        <div class="flex w-full max-w-md items-center gap-0.5 rounded-xl bg-chip p-0.5" role="radiogroup" aria-label="Kind of mark">
                             <template x-for="sev in severities" :key="sev.value">
-                                <button type="button"
-                                    class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-sm transition"
-                                    :class="composer.severity === sev.value ? 'bg-raised shadow-sm ring-1 ring-black/[0.08]' : 'bg-chip'"
-                                    @click="composer.severity = sev.value">
-                                    <span class="h-2.5 w-2.5 rounded-full" :class="markerBg(sev.value)"></span>
-                                    <span x-text="sev.label"></span>
-                                </button>
+                                <button type="button" role="radio"
+                                    class="h-7 min-w-0 flex-1 whitespace-nowrap rounded-[0.6rem] px-1.5 text-xs font-medium transition-colors"
+                                    :class="composer.severity === sev.value ? 'bg-raised text-zinc-900 shadow-xs ring-1 ring-black/[0.06]' : 'text-zinc-500 hover:text-zinc-900'"
+                                    :aria-checked="(composer.severity === sev.value).toString()"
+                                    @click="composer.severity = sev.value" x-text="sev.label"></button>
                             </template>
                         </div>
                         <textarea x-model="composer.body" rows="3" placeholder="What should change here?"

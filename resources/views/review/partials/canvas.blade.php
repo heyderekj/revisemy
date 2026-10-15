@@ -819,7 +819,7 @@
                 <div
                     x-ref="panel"
                     x-bind:style="panelStyle"
-                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(20rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
+                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(22rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
                     role="dialog"
                     aria-label="{{ $mode === 'guest' ? 'Suggest a change' : 'Leave a note' }}"
                     x-on:keydown.escape.window="$wire.cancelPin()"
@@ -859,10 +859,11 @@
                             <flux:error name="draftBody" />
                         </div>
                         @if ($mode === 'owner')
-                        <div class="flex flex-wrap gap-2">
+                        {{-- One row, like the viewport switch: what kind of mark this is. --}}
+                        <div class="flex w-full items-center gap-0.5 rounded-xl bg-chip p-0.5" role="radiogroup" aria-label="Kind of mark">
                             @foreach (\App\Models\Annotation::severityLabels() as $value => $label)
-                                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-chip px-2.5 py-1 text-sm has-[:checked]:bg-raised has-[:checked]:shadow-sm has-[:checked]:ring-1 has-[:checked]:ring-black/[0.08]">
-                                    <input type="radio" wire:model.live="draftSeverity" value="{{ $value }}" class="{{ \App\Models\Annotation::accentClass($value) }}">
+                                <label class="flex h-7 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-[0.6rem] px-1.5 text-xs font-medium whitespace-nowrap text-zinc-500 transition-colors hover:text-zinc-900 has-[:checked]:bg-raised has-[:checked]:text-zinc-900 has-[:checked]:shadow-xs has-[:checked]:ring-1 has-[:checked]:ring-black/[0.06] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-zinc-400">
+                                    <input type="radio" wire:model.live="draftSeverity" value="{{ $value }}" class="sr-only">
                                     {{ $label }}
                                 </label>
                             @endforeach
