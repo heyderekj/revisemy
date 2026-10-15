@@ -66,6 +66,6 @@ class OpenAiVisionProvider extends BaseVisionProvider
 
         $content = data_get($response->json(), 'choices.0.message.content');
 
-        return $this->parseFindings($this->decodeJson(is_string($content) ? $content : null));
+        return $this->parseFindings($this->decodeJson(is_string($content) ? $content : null), $image['crop']);
     }
 }

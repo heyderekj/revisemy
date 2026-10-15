@@ -9,11 +9,12 @@ interface CaptureDriver
     /**
      * Render a live URL at each viewport, settled to its final resting state.
      * Each shot may also carry the element map and rendered DOM from the same
-     * page load, and a rail thumbnail made by the browser; null when the
-     * driver can't provide them from that load.
+     * page load, plus a rail thumbnail and a vision-sized copy made by the
+     * browser (the top of the page; crop is the share of the shot's height it
+     * covers); null when the driver can't provide them from that load.
      *
      * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}>  $viewports
-     * @return list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, html?: string|null, thumb?: string|null}>
+     * @return list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, html?: string|null, thumb?: string|null, vision?: array{binary: string, crop: float}|null}>
      */
     public function captureUrl(string $url, array $viewports): array;
 
