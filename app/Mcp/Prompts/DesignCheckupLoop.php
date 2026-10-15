@@ -37,7 +37,7 @@ You are running a ReviseMy design checkup loop for: {$focus}
 5. **Wait** — Poll `get_review` with the review id about every `next_action.poll_after_seconds`; if `updated_at` has not changed, nothing happened. While `status` is `pending`, do not claim the UI is done.
 6. **Act on the work packet** — When status changes:
    - `approved` → stop. Follow `next_action`. Celebrate briefly; do not keep editing unless asked. If `next_action.open_marks` is set, mention those marks to the human — do not fix them unasked.
-   - `changes_requested` → apply **human marks first** (`work_packets.pins`): must-fix → nit. Honor `keep` (do not change). If `next_action.awaiting_answers` lists question marks, ask the human in chat to answer them in the review and re-read `get_review` — never invent an answer. `work_packets.carried_over` holds previous-pass marks the human reopened; fix and resolve those too. Treat `second_opinion` as hints only. As you work each mark, call `resolve_marks` with its `id` — `status` `in_progress` while editing, `resolved` (with a short `note` on what you changed) once fixed. Never set `verified`; only the human verifies. When `loop.outstanding_count` reaches 0, ship the pass: `create_review` again with `parent_id` set to this review’s id (fresh source from step 1, plus a new `context` for what to look at on that pass).
+   - `changes_requested` → apply **human marks first** (`work_packets.pins`): must-fix → nit. Honor `keep` (do not change). If `next_action.awaiting_answers` lists question marks, ask the human in chat, or in the mark’s thread with `reply_to_marks`, then re-read `get_review` — never invent an answer. `work_packets.carried_over` holds previous-pass marks the human reopened; fix and resolve those too. Treat `second_opinion` as hints only. As you work each mark, call `resolve_marks` with its `id` — `status` `in_progress` while editing, `resolved` (with a short `note` on what you changed) once fixed. Never set `verified`; only the human verifies. When `loop.outstanding_count` reaches 0, ship the pass: `create_review` again with `parent_id` set to this review’s id (fresh source from step 1, plus a new `context` for what to look at on that pass).
    - `next_action.action` `apply_decision_note` → the human requested changes without marks; `decision_note` is the whole brief. Apply it, then open the next pass the same way.
 7. **Repeat** until `approved` (or the human stops the loop).
 
@@ -45,6 +45,7 @@ You are running a ReviseMy design checkup loop for: {$focus}
 
 - Human marks = intent. Second opinion = hints. (API still uses the key `pins` for marks.)
 - Report progress with `resolve_marks` (`in_progress` → `resolved`). Only the human verifies or reopens a mark — never mark one `verified` yourself.
+- Explain a fix, or why you left something alone, with `reply_to_marks`. Replies are labelled as yours and never change a mark.
 - Never invent approval. Never flip status yourself.
 - Prefer one clear review URL per pass; link passes with `parent_id`.
 - Teammates can suggest via `guest_share_url`, but their suggestions only reach you after the owner accepts them (they arrive as pins). If `loop.guest_suggestion_count` > 0, teammate feedback is still waiting on owner triage. `work_packets.second_opinion_resolved` shows which earlier hints were accepted or dismissed.

@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.6.0',
+            'date' => '2026-10-15',
+            'title' => 'Your agent answers on marks',
+            'highlights' => [
+                'Your agent can answer in a mark’s thread: reply to a question, explain a fix, or ask before it guesses. A reply never changes the mark',
+                'Everything your agent did carries an Agent tag: its notes, the statuses it set, its after images, its replies and its findings. Guests see it too',
+                'The inline review shows each mark’s thread. Replying still happens on the web',
+                'A new comment shows up on other open copies of the review straight away',
+            ],
+        ],
+
+        [
             'version' => '1.5.4',
             'date' => '2026-10-10',
             'title' => 'Your words for starting a review',

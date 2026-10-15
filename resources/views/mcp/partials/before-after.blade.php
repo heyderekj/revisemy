@@ -5,7 +5,7 @@
         <div class="aspect-[4/3] max-h-28 bg-cover bg-top bg-no-repeat" :style="{{ $pin }} && bgStyle({{ $pin }})"></div>
     </figure>
     <figure class="overflow-hidden rounded-lg bg-well">
-        <figcaption class="px-2 py-1 text-xs text-muted-foreground">After</figcaption>
+        <figcaption class="flex items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground">After <x-agent-tag /></figcaption>
         <img class="aspect-[4/3] max-h-28 w-full object-cover object-top" :src="{{ $pin }} && {{ $pin }}.after_screenshot_url" alt="After">
     </figure>
 </div>

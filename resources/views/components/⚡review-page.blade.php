@@ -1,7 +1,9 @@
 <?php
 
 use App\Livewire\Concerns\FindsReviewMarks;
+use App\Events\MarkUpdated;
 use App\Models\Annotation;
+use App\Models\AnnotationComment;
 use App\Models\Finding;
 use App\Models\Review;
 use App\Models\Screenshot;
@@ -576,9 +578,12 @@ new class extends Component
 
         $annotation->comments()->create([
             'author' => $this->mode === 'guest' ? $this->guestName : 'Owner',
+            'author_type' => $this->mode === 'owner' ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST,
             'from_owner' => $this->mode === 'owner',
             'body' => $this->markCommentBody,
         ]);
+        // Other open copies of the review pick the comment up at once.
+        MarkUpdated::dispatch($annotation);
 
         $this->activeCommentMarkId = null;
         $this->markCommentBody = '';

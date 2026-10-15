@@ -68,6 +68,7 @@ No account required for the human reviewer.
 | `add_screenshot` | append a shot to an open review |
 | `add_findings` | agent subagent — push suggestion/a11y/polish into the review |
 | `resolve_marks` | agent progress on human marks: `in_progress` → `resolved` (+ note, optional `after_image`); never `verified`. Check `skipped` in the response — marks listed there did **not** land |
+| `reply_to_marks` | reply in a mark's thread: answer a question, explain a fix, or ask before guessing. Labelled as your agent's for the owner and guests; never changes the mark. Check `skipped` |
 | `request_second_opinion` | refresh checklist (+ vision if keyed) |
 | `get_billing` | plan, credits remaining, burn table, and when credits refill |
 | `add_mark` | **MCP Apps UI only** — human leaves a mark inline (agents must not call) |

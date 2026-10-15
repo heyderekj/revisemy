@@ -22,9 +22,9 @@ We shouldn't copy their shape. A ticket system is the thing positioning says we 
 | Who verifies | Reviewer resolves | Human only, enforced |
 | Agent critique | Not mentioned | `add_findings`, second opinion |
 | Pipelines | Not mentioned | Decision webhooks, progress notifications |
-| Agent replies to a thread | Yes | No, comments are web-only |
+| Agent replies to a thread | Yes | Yes, `reply_to_marks`; threads show inline read-only |
 | Query past feedback | Project, status, page, device, ticket | `list_reviews`, this token only |
-| AI actions labeled | Yes | Not visible to the human |
+| AI actions labeled | Yes | Yes, an Agent tag on notes, statuses, after images, replies and findings |
 | Activity log, revoke | 90-day log, one-click disconnect | Not visible |
 | Setup over SSH | One-step command | Token paste |
 | Published rate limits | Per plan | Not stated |
@@ -48,13 +48,13 @@ Still to do:
 - **A vision copy for tall captures.** Anthropic turns down images over 8000px on a side and shrinks the rest, and 2× makes tall shots common. Send the vision pass a smaller copy, or the page in slices. Production runs no vision key today, so the second opinion is the checklist only.
 - **One checklist per review, not per shot.** A URL capture repeats the same eight checklist hints on each of its three shots: 24 hints, most of them the same, in every `get_review`.
 
-### 1. Let the agent reply on a mark
+### 1. Let the agent reply on a mark (shipped)
 
-Today `resolve_marks` takes a note, but the agent can't answer a human's comment, and `get_review` doesn't return the thread. Add comments to the `work_packets.pins` payload and a `reply_to_mark` tool (or a `reply` field on `resolve_marks`). Human marks stay authoritative; a reply never changes a mark's status.
+`reply_to_marks` puts the agent's reply in a mark's thread: an answer to a question, an explanation of a fix, or a question before it guesses. It works while the review waits on the person or after they ask for changes, respects comments being off, and never changes a mark's status. `get_review` already returned each pin's last 10 comments; they now carry `author_type`. The inline review shows threads read-only, and replying stays on the web.
 
-### 2. Label what the agent did
+### 2. Label what the agent did (shipped)
 
-Show an "AI" label on agent notes, status changes, findings and after images, on the web board and in the inline review. Guests who open a share link should be able to tell a person from an agent at a glance.
+An Agent tag, in the sky agent tone, marks the agent's notes, the statuses it set (`status_by` on each pin), its after images, its replies and its findings. It reads the same on the review page, the board, guest links and the inline review, so a guest can tell a person from the agent at a glance. We said "Agent", not "AI", to match "your agent".
 
 ### 3. Make `list_reviews` a real query
 
@@ -89,6 +89,6 @@ What they don't claim is proof. A fix with an after image the human can check ag
 
 ## Open questions
 
-- Should replies from the agent be visible to guests, or only to the owner?
+- ~~Should replies from the agent be visible to guests, or only to the owner?~~ Guests see them, labelled, like every other part of the thread.
 - Does a workspace-wide `list_reviews` need its own scope on the OAuth consent screen?
 - Is the activity log per workspace or per connection, and who can see it?
