@@ -6,25 +6,34 @@
                     x-show="$store.rmPanel?.brief ?? true"
                     x-transition.opacity.duration.120ms
                     data-brief
+                    x-data="{
+                        more: false,
+                        clamped: false,
+                        measure() {
+                            const text = this.$refs.text;
+                            this.clamped = !! text && text.scrollHeight > text.clientHeight + 1;
+                        },
+                    }"
+                    x-init="$nextTick(() => measure())"
+                    x-on:resize.window.debounce.100ms="measure()"
                 >
-                    <div class="mb-1.5 flex items-center justify-between gap-2">
-                        <h2 class="text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
+                    <div class="mb-1.5 flex items-center gap-3">
+                        <h2 class="min-w-0 flex-1 text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
+                        @if ($review->context && ! $editingContext)
+                            <button
+                                type="button"
+                                class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900"
+                                x-show="clamped || more"
+                                x-cloak
+                                x-on:click="more = ! more; $nextTick(() => measure())"
+                                x-text="more ? 'Show less' : 'Show all'"
+                            ></button>
+                        @endif
                         <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900" x-on:click="$store.rmPanel.brief = false">Hide</button>
                     </div>
 
-                    {{-- Clamped so the shot stays in view; Show all opens the rest. --}}
-                    <div
-                        x-data="{
-                            more: false,
-                            clamped: false,
-                            measure() {
-                                const text = this.$refs.text;
-                                this.clamped = !! text && text.scrollHeight > text.clientHeight + 1;
-                            },
-                        }"
-                        x-init="$nextTick(() => measure())"
-                        x-on:resize.window.debounce.100ms="measure()"
-                    >
+                    {{-- Clamped so the shot stays in view; Show all, up by Hide, opens the rest. --}}
+                    <div>
                         @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
                             <textarea
                                 wire:key="context-editor"
@@ -88,16 +97,6 @@
                             >{{ $review->context }}</p>
                         @endif
 
-                        @if ($review->context && ! $editingContext)
-                            <button
-                                type="button"
-                                class="mt-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900"
-                                x-show="clamped || more"
-                                x-cloak
-                                x-on:click="more = ! more; $nextTick(() => measure())"
-                                x-text="more ? 'Show less' : 'Show all'"
-                            ></button>
-                        @endif
                     </div>
                 </div>
             @endif
