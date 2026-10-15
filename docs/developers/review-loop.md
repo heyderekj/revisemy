@@ -34,7 +34,9 @@ Your agent shouldn't have to work out what to do from the status. `next_action.a
 The table is generated from `Review::NEXT_ACTIONS` on the site. Read it at [revisemy.com/docs/review-loop](https://revisemy.com/docs/review-loop#next-action).
 <!-- /generated -->
 
-While it's `wait_for_human`, poll `get_review` about every 30 seconds, or set a [webhook](/docs/webhooks) and don't poll at all.
+While it's `wait_for_human`, call `wait_for_review` with `since` set to `updated_at` (`next_action.wait_with` has both). It holds until the person does anything, or about 45 seconds, then returns the same record as `get_review` plus `changed`. Call it again while `changed` is `false`. A host that sends a `progressToken` hears a heartbeat while it waits. Over REST it's `GET /api/reviews/{id}/wait?since=…`. If your agent can't hold a call that long, poll `get_review` about every 30 seconds instead, or set a [webhook](/docs/webhooks) and don't poll at all.
+
+In hosts that show the review inline (Claude, ChatGPT, VS Code), the person's decision also arrives in the chat as their message, such as "I asked for changes on Pricing page, pass 2: 3 marks to fix. Go ahead." The inline review keeps your agent's context current as they mark and reply, too.
 
 ## Marks
 

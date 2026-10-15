@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
+use App\Services\ReviewWaiter;
 use App\Services\SecondOpinionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,24 @@ class ReviewController extends Controller
         }
 
         return response()->json($review->toAgentPayload());
+    }
+
+    /**
+     * Hold until the person acts on the review, then answer with the record;
+     * wait_for_review over REST.
+     */
+    public function wait(Request $request, string $publicId, ReviewService $reviews, ReviewWaiter $waiter): JsonResponse
+    {
+        $review = $reviews->findForWorkspace($request->user()->workspace, $publicId);
+
+        if (! $review) {
+            return response()->json(['message' => 'Review not found for this try token.'], 404);
+        }
+
+        $data = $request->validate(['since' => ['nullable', 'date']]);
+        $changed = $waiter->until($review, $waiter->since($review, $data['since'] ?? null));
+
+        return response()->json(['changed' => $changed] + $review->fresh()->toAgentPayload());
     }
 
     public function addScreenshot(Request $request, string $publicId, ReviewService $reviews): JsonResponse

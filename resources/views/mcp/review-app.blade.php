@@ -19,7 +19,7 @@
      App-only tools: add_mark / add_comment / decide_review / verify_mark. --}}
 <style>{!! $styles !!}</style>
 
-<div class="bg-background text-foreground" x-data="reviewApp()" x-init="init()" x-cloak>
+<div class="bg-background text-foreground" x-data="reviewApp()" x-init="init()" :style="safeAreaStyle()" x-cloak>
     <div class="mx-auto max-w-5xl px-4 py-4 sm:px-6">
         <template x-if="!payload">
             {{-- Before the result: what's being made, from the call's arguments
@@ -45,7 +45,14 @@
             </div>
         </template>
 
-        <template x-if="payload">
+        {{-- An older copy of this review in the chat: fold away, point down. --}}
+        <template x-if="payload && superseded">
+            <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2.5">
+                <p class="min-w-0 text-sm text-zinc-700"><span class="font-medium text-zinc-900" x-text="payload.title"></span> continues further down the chat.</p>
+                <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover" @click="openFullReview()">Open full review</button>
+            </div>
+        </template>
+        <template x-if="payload && !superseded">
             <div>
                 {{-- header: title + chips, matching the review page header line --}}
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -100,6 +107,9 @@
                     </div>
                     <button type="button" class="inline-flex h-8 items-center gap-1 rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover disabled:opacity-50"
                         :disabled="busy" @click="refresh()">↻ Refresh</button>
+                    <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover"
+                        x-show="canFullscreen" @click="toggleFullscreen()"
+                        x-text="displayMode === 'fullscreen' ? 'Back to the chat' : 'Full screen'"></button>
                 </div>
 
                 {{-- SCREENSHOT VIEW --}}
@@ -364,6 +374,7 @@
                 </div>
 
                 <div class="mt-4 space-y-3" x-show="!isPending">
+                    <p class="rounded-xl bg-attention-soft px-3 py-2.5 text-sm text-attention-ink sm:px-4" x-show="handoffNote" x-text="handoffNote"></p>
                     <div class="rounded-xl bg-card px-3 py-2.5 text-sm leading-relaxed text-zinc-700 sm:px-4"
                         x-show="payload.decision_note">
                         <strong class="font-medium text-zinc-900">Note to the agent:</strong>
@@ -401,6 +412,12 @@
         let lastToolInput = null;
         let onToolCancelled = null;
         let lastCancelReason = null;
+        // What the host told us about itself: display modes, platform, safe
+        // area, and which app→host messages it takes (hostCapabilities).
+        let hostContext = {};
+        let hostCapabilities = null;
+        let onHostContext = null;
+        let onTeardown = null;
 
         function send(msg) { window.parent.postMessage(msg, '*'); }
 
@@ -408,6 +425,40 @@
             const id = nextId++;
             send({ jsonrpc: '2.0', id, method, params: params || {} });
             return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+        }
+
+        // A host that doesn't know a method may never answer. Give up after
+        // a few seconds so the caller can fall back.
+        function requestWithin(method, params, ms) {
+            return Promise.race([
+                request(method, params),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('No answer from the host')), ms)),
+            ]);
+        }
+
+        function mergeHostContext(update) {
+            hostContext = Object.assign({}, hostContext, update || {});
+            if (hostContext.theme) { hostTheme = hostContext.theme; applyTheme(); }
+            if (onHostContext) onHostContext(hostContext);
+        }
+
+        // Tell the host how tall we are, so the inline frame fits the review.
+        function watchSize() {
+            if (typeof ResizeObserver === 'undefined' || !document.body) return;
+            let queued = false;
+            new ResizeObserver(() => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => {
+                    queued = false;
+                    const html = document.documentElement;
+                    const previous = html.style.height;
+                    html.style.height = 'max-content';
+                    const height = Math.ceil(html.getBoundingClientRect().height);
+                    html.style.height = previous;
+                    send({ jsonrpc: '2.0', method: 'ui/notifications/size-changed', params: { width: Math.ceil(window.innerWidth), height } });
+                });
+            }).observe(document.body);
         }
 
         window.addEventListener('message', (event) => {
@@ -447,11 +498,18 @@
             }
 
             if (msg.method === 'ui/notifications/host-context-changed') {
-                if (msg.params?.theme) { hostTheme = msg.params.theme; applyTheme(); }
+                mergeHostContext(msg.params);
                 return;
             }
 
-            // Requests from the host (e.g. teardown) — acknowledge.
+            // The host is about to remove us: stop timers first, then say so.
+            if (msg.method === 'ui/resource-teardown' && msg.id != null) {
+                if (onTeardown) onTeardown();
+                send({ jsonrpc: '2.0', id: msg.id, result: {} });
+                return;
+            }
+
+            // Any other request from the host — acknowledge.
             if (msg.id != null && msg.method) {
                 send({ jsonrpc: '2.0', id: msg.id, result: {} });
             }
@@ -469,12 +527,14 @@
 
         async function connect() {
             const result = await request('ui/initialize', {
+                protocolVersion: '2026-01-26',
                 appInfo: { name: 'ReviseMy review', version: @json(config('revisemy.version')) },
-                appCapabilities: { availableDisplayModes: ['inline'] },
+                appCapabilities: { availableDisplayModes: ['inline', 'fullscreen'] },
             });
-            hostTheme = result?.hostContext?.theme || null;
-            applyTheme();
+            hostCapabilities = result?.hostCapabilities || null;
+            mergeHostContext(result?.hostContext || {});
             send({ jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {} });
+            watchSize();
         }
 
         window.mcpBridge = {
@@ -484,6 +544,17 @@
             set ontoolcancelled(fn) { onToolCancelled = fn; if (fn && lastCancelReason !== null) fn(lastCancelReason); },
             callTool: (name, args) => request('tools/call', { name, arguments: args || {} }),
             openLink: (url) => request('ui/open-link', { url }),
+            // Post a message into the chat as the person, which starts the
+            // agent's next turn. Rejects when the host doesn't take it.
+            sendMessage: (text) => requestWithin('ui/message', { role: 'user', content: [{ type: 'text', text }] }, 8000),
+            // Keep what the agent knows current without starting a turn.
+            // Each call replaces the last; best-effort.
+            updateModelContext: (params) => requestWithin('ui/update-model-context', params, 5000).catch(() => null),
+            requestDisplayMode: (mode) => requestWithin('ui/request-display-mode', { mode }, 5000),
+            get hostContext() { return hostContext; },
+            get hostCapabilities() { return hostCapabilities; },
+            set onhostcontext(fn) { onHostContext = fn; if (fn) fn(hostContext); },
+            set onteardown(fn) { onTeardown = fn; },
         };
 
         connect().catch((e) => console.error('[ReviseMy] MCP connect failed', e));
@@ -542,6 +613,21 @@
             error: '',
             replyBody: '',
             talkOnly: false,
+            // Handing back to the agent and staying in step with the host.
+            handoffNote: '',
+            displayMode: 'inline',
+            canFullscreen: false,
+            platform: '',
+            safeArea: null,
+            // One live copy: every get_review leaves another copy in the chat.
+            // The one whose first result is newest stays live; older ones
+            // fold away and stop polling (see claimLatest()).
+            firstSnapshot: null,
+            superseded: false,
+            channel: null,
+            onScreen: true,
+            contextKey: '',
+            pollTimer: null,
             working: { title: 'Opening the review', detail: '' },
             elapsed: 0,
             failed: '',
@@ -591,12 +677,110 @@
                     }
                 };
 
-                setInterval(() => {
-                    if (!this.payload || this.busy) return;
+                window.mcpBridge.onhostcontext = (ctx) => {
+                    if (ctx.displayMode) this.displayMode = ctx.displayMode;
+                    this.canFullscreen = (ctx.availableDisplayModes || []).includes('fullscreen');
+                    this.platform = ctx.platform || '';
+                    this.safeArea = ctx.safeAreaInsets || null;
+                };
+                window.mcpBridge.onteardown = () => this.stop();
+
+                // Only poll while someone can see it, and only the live copy.
+                if (typeof IntersectionObserver !== 'undefined') {
+                    new IntersectionObserver((entries) => { this.onScreen = entries.some((e) => e.isIntersecting); })
+                        .observe(this.$el);
+                }
+                this.pollTimer = setInterval(() => {
+                    if (!this.payload || this.busy || this.superseded || document.hidden || !this.onScreen) return;
                     if (this.payload.status === 'pending' || this.payload.status === 'changes_requested') {
                         this.refresh();
                     }
                 }, 12000);
+            },
+
+            stop() {
+                clearInterval(this.pollTimer);
+                if (this.channel) this.channel.close();
+            },
+
+            // Copies of this review in the chat share an origin, so they can
+            // talk. Each says when its first result was made; any copy that
+            // hears of a newer one folds away.
+            claimLatest(snapshot) {
+                if (this.firstSnapshot || !snapshot) return;
+                this.firstSnapshot = snapshot;
+                if (typeof BroadcastChannel === 'undefined' || !this.payload) return;
+                this.channel = new BroadcastChannel('revisemy:' + this.payload.id);
+                this.channel.onmessage = (event) => {
+                    const theirs = event.data && event.data.snapshot;
+                    if (!theirs || theirs === this.firstSnapshot) return;
+                    if (theirs > this.firstSnapshot) { this.superseded = true; return; }
+                    // An older copy just woke up: tell it there's a newer one.
+                    this.channel.postMessage({ snapshot: this.firstSnapshot });
+                };
+                this.channel.postMessage({ snapshot: this.firstSnapshot });
+            },
+
+            // What the agent should know without being asked: replaced on
+            // every real change, never starts a turn.
+            pushContext() {
+                if (this.superseded || !this.payload) return;
+                const p = this.payload;
+                const open = this.boardPins()
+                    .filter((pin) => pin.status === 'open' || pin.status === 'in_progress')
+                    .map((pin) => ({
+                        id: pin.id, number: pin.number, severity: pin.severity, status: pin.status,
+                        body: (pin.body || '').slice(0, 140), awaiting_reply: !!pin.awaiting_reply,
+                    }));
+                const structured = {
+                    review_id: p.id, title: p.title, pass: p.pass, status: p.status,
+                    updated_at: p.updated_at, open_marks: open,
+                    awaiting_reply_count: (p.loop && p.loop.awaiting_reply_count) || 0,
+                };
+                const key = JSON.stringify(structured);
+                if (key === this.contextKey) return;
+                this.contextKey = key;
+                const waiting = open.filter((m) => m.awaiting_reply).map((m) => 'M' + m.number);
+                const text = 'ReviseMy review "' + p.title + '", pass ' + p.pass + ', status ' + String(p.status).replace('_', ' ') + '. '
+                    + open.length + (open.length === 1 ? ' open mark' : ' open marks')
+                    + (waiting.length ? ', waiting on your reply: ' + waiting.join(', ') : '')
+                    + '. Review id ' + p.id + '; call get_review for the full record.';
+                window.mcpBridge.updateModelContext({ content: [{ type: 'text', text }], structuredContent: structured });
+            },
+
+            // After a decision, say so in the chat as the person, so the agent
+            // picks it up now rather than on its next poll.
+            async handOff(decision, note) {
+                const p = this.payload;
+                if (!p) return;
+                const where = p.title + ', pass ' + p.pass;
+                const count = (p.loop && p.loop.outstanding_count) || 0;
+                let text = decision === 'approved'
+                    ? 'I approved ' + where + '.'
+                    : 'I asked for changes on ' + where + (count ? ': ' + count + (count === 1 ? ' mark' : ' marks') + ' to fix.' : '.');
+                if (note) text += ' My note: “' + note + '”';
+                if (decision !== 'approved') text += ' Go ahead.';
+                this.handoffNote = '';
+                try {
+                    await window.mcpBridge.sendMessage(text);
+                } catch (e) {
+                    this.handoffNote = 'Tell your agent in the chat to carry on.';
+                }
+            },
+
+            async toggleFullscreen() {
+                const want = this.displayMode === 'fullscreen' ? 'inline' : 'fullscreen';
+                try {
+                    const result = await window.mcpBridge.requestDisplayMode(want);
+                    this.displayMode = (result && result.mode) || want;
+                    if (this.displayMode === 'fullscreen') this.setFit('page');
+                } catch (e) { /* the host kept us where we are */ }
+            },
+
+            safeAreaStyle() {
+                const a = this.displayMode === 'fullscreen' ? this.safeArea : null;
+                if (!a) return '';
+                return 'padding:' + (a.top || 0) + 'px ' + (a.right || 0) + 'px ' + (a.bottom || 0) + 'px ' + (a.left || 0) + 'px;';
             },
 
             apply(data) {
@@ -607,6 +791,8 @@
                     const refreshed = this.boardPins().find((p) => p.id === this.activePin.id);
                     this.activePin = refreshed || null;
                 }
+                this.claimLatest(data.snapshot_at);
+                this.pushContext();
             },
 
             get isPending() { return this.payload && this.payload.status === 'pending'; },
@@ -909,6 +1095,8 @@
             openComposer(x, y, area) {
                 this.closeDetail();
                 this.composer = { open: true, x, y, area, severity: 'must-fix', body: '' };
+                // A phone caps the inline frame's height: mark in full screen.
+                if (this.platform === 'mobile' && this.canFullscreen && this.displayMode !== 'fullscreen') this.toggleFullscreen();
             },
             closeComposer() { this.composer.open = false; this.composer.body = ''; },
 
@@ -945,10 +1133,14 @@
             },
 
             async decide(decision) {
+                const note = this.decisionNote.trim();
                 const ok = await this.run(() => window.mcpBridge.callTool('decide_review', {
-                    review_id: this.payload.id, decision, note: this.decisionNote.trim() || undefined,
+                    review_id: this.payload.id, decision, note: note || undefined,
                 }));
-                if (ok) this.decisionNote = '';
+                if (ok) {
+                    this.decisionNote = '';
+                    await this.handOff(decision, note);
+                }
             },
 
             async refresh() {

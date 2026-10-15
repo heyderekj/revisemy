@@ -19,7 +19,7 @@ ReviseMy gives the person a review link. They mark what matters on your capture 
 
 ## Loop
 
-- Poll `get_review` and follow `next_action`:
+- Wait with `wait_for_review` (call it again when `changed` is false) and follow `next_action`. Call `look_at_marks` before fixing to see what the person marked:
   - `wait_for_human`: keep waiting. Don't call the work done.
   - `apply_pins_then_next_pass`: fix their marks (`work_packets.pins`) in order, must fix first, and leave `keep` marks alone. Call `resolve_marks` as you go: `in_progress` while editing, `resolved` with a short note once fixed.
   - `apply_decision_note`: their note is the brief. Apply it.

@@ -14,6 +14,7 @@ use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\RendersApp;
+use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
@@ -26,6 +27,7 @@ use Laravel\Mcp\Server\Ui\Enums\Visibility;
  * — agents must never call this.
  */
 #[Name('verify_mark')]
+#[Title('Verify or reopen a mark')]
 #[Description('HUMAN-IN-THE-LOOP UI ONLY — agents must never call this. Verifies or reopens a mark from the inline review app.')]
 #[RendersApp(ReviewApp::class, visibility: [Visibility::App])]
 #[IsDestructive(false)]
