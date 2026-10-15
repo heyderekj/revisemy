@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fake MCP Apps host</title>
+<style>
+    body { margin: 0; font: 14px system-ui, sans-serif; background: #eee; }
+    iframe { display: block; width: 100%; height: 900px; border: 0; margin-bottom: 16px; background: #fff; }
+</style>
+</head>
+<body>
+<!--
+    A chat with two copies of the inline review in it, the way get_review
+    leaves one per call. Answers the app the way an MCP Apps host does, passes
+    tools/call through to the real MCP server, and keeps every app→host
+    message in window.hostLog for the spec to read.
+-->
+<iframe id="older" title="Older copy" src="/__e2e/review-app"></iframe>
+<iframe id="newer" title="Newer copy" src="/__e2e/review-app"></iframe>
+<script>
+    const config = /*CONFIG*/null;
+    window.hostLog = [];
+
+    const frames = {
+        older: document.getElementById('older'),
+        newer: document.getElementById('newer'),
+    };
+
+    function copyFor(source) {
+        return Object.keys(frames).find((name) => frames[name].contentWindow === source);
+    }
+
+    function reply(copy, id, result) {
+        frames[copy].contentWindow.postMessage({ jsonrpc: '2.0', id, result }, '*');
+    }
+
+    async function callTool(params) {
+        const response = await fetch('/mcp/revisemy', {
+            method: 'POST',
+            headers: {
+                Authorization: 'Bearer ' + config.token,
+                'Content-Type': 'application/json',
+                Accept: 'application/json, text/event-stream',
+            },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params }),
+        });
+        return (await response.json()).result;
+    }
+
+    window.addEventListener('message', async (event) => {
+        const copy = copyFor(event.source);
+        const msg = event.data;
+        if (!copy || !msg || msg.jsonrpc !== '2.0' || !msg.method) return;
+        window.hostLog.push({ copy, method: msg.method, params: msg.params });
+
+        switch (msg.method) {
+            case 'ui/initialize':
+                return reply(copy, msg.id, {
+                    protocolVersion: '2026-01-26',
+                    hostInfo: { name: 'fake-host', version: '0' },
+                    hostCapabilities: { message: {}, updateModelContext: {}, openLinks: {} },
+                    hostContext: { theme: 'light', displayMode: 'inline', availableDisplayModes: ['inline', 'fullscreen'], platform: 'web' },
+                });
+            case 'ui/notifications/initialized':
+                // The tool's result, as the host pushes it once the app is ready.
+                return frames[copy].contentWindow.postMessage({
+                    jsonrpc: '2.0',
+                    method: 'ui/notifications/tool-result',
+                    params: config.results[copy],
+                }, '*');
+            case 'tools/call':
+                return reply(copy, msg.id, await callTool(msg.params));
+            case 'ui/message':
+                // A host that doesn't take messages never answers.
+                if (config.silentMessage) return;
+                return reply(copy, msg.id, {});
+            case 'ui/request-display-mode':
+                return reply(copy, msg.id, { mode: msg.params.mode });
+            default:
+                if (msg.id != null) reply(copy, msg.id, {});
+        }
+    });
+</script>
+</body>
+</html>
