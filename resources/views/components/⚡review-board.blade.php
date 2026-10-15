@@ -2,7 +2,7 @@
 
 use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
-use App\Models\AnnotationEvent;
+use App\Models\AnnotationComment;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
 use App\Support\FeedbackText;
@@ -138,7 +138,7 @@ new class extends Component
 
         $this->validate(['commentBody' => FeedbackText::bodyRules()]);
 
-        $lifecycle->addComment($annotation, AnnotationEvent::ACTOR_OWNER, $this->commentBody);
+        $lifecycle->addComment($annotation, AnnotationComment::AUTHOR_OWNER, $this->commentBody);
 
         $this->commentBody = '';
         $this->loadBoard();
@@ -426,6 +426,9 @@ new class extends Component
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold {{ $mark->markerClass() }}">M{{ $mark->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $mark->label() }}</span>
                                         <x-signal-tag :tone="$mark->statusTone()">{{ $mark->statusLabel() }}</x-signal-tag>
+                                        @if ($mark->changedByAgent())
+                                            <x-agent-tag />
+                                        @endif
                                         @if ($mark->comments->isNotEmpty())
                                             <span class="inline-flex items-center gap-1 rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600">
                                                 <flux:icon name="chat-bubble-left-right" class="size-3" />
@@ -508,6 +511,9 @@ new class extends Component
                                 <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold {{ $selectedMark->markerClass() }}">M{{ $selectedMark->number }}</span>
                                 <span class="text-xs text-zinc-500">{{ $selectedMark->label() }}</span>
                                 <x-signal-tag :tone="$selectedMark->statusTone()">{{ $selectedMark->statusLabel() }}</x-signal-tag>
+                                @if ($selectedMark->changedByAgent())
+                                    <x-agent-tag />
+                                @endif
                             </div>
                             @if ($markReview)
                                 <p class="mt-2 text-xs text-zinc-400">Pass {{ $markReview->pass }} · {{ $markReview->title }}</p>

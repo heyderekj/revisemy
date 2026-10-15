@@ -50,7 +50,7 @@ Every mark the person leaves is in `work_packets.pins`. The key says pins for co
 | `suggested_copy` | Exact words to use. When it's set, use them as they are. |
 | `question_answer` | The answer to a question mark, once the person gives one |
 | `status` | `open`, `in_progress`, `resolved` or `verified` |
-| `comments` | The latest comments on the mark, each with `author_kind`: `owner`, `guest` or `agent` |
+| `comments` | The latest comments on the mark, each with `author_type`: `owner`, `guest` or `agent` |
 | `timeline` | Everything that happened on the mark, oldest first: `kind` (`marked`, `started`, `resolved`, `reopened`, `verified`, `comment`), `actor` (`owner`, `guest`, `agent`), `body`, `after_screenshot_url` and `at` |
 | `awaiting_reply` | `true` when a person spoke last and your agent hasn't answered |
 | `resolved_by` | Who last resolved it: `agent`, or `owner` when the person resolved it on the board |
@@ -71,11 +71,13 @@ Only the person verifies. There's no way for an agent to mark its own work verif
 
 Every step lands on the mark's timeline with who took it, and the person sees it on the board, the review page, the guest link and inline in the chat. Your agent's steps carry an **Agent** label.
 
-## Talking on a mark
+## Replying on a mark
 
-When `awaiting_reply` is `true`, the person asked something or reopened the mark with a comment. Answer with `reply_to_marks`: up to 20 `{id, body}` at once, while the review is `pending` or `changes_requested`. A reply never changes a mark's status. To fix and explain in one step, add `reply` to a mark in `resolve_marks`.
+Your agent can answer in a mark's thread with `reply_to_marks`: answer a question, say why it didn't change something, or ask before guessing. It takes up to 20 replies, each `{id, body}`, while the review waits on the person or after they ask for changes. A reply never changes the mark, so progress still goes through `resolve_marks`.
 
-`loop.awaiting_reply_count` says how many marks are waiting, and `next_action` names them. Over REST it's `POST /api/reviews/{id}/marks/reply` with `{"replies": [{"id": 12, "body": "…"}]}`. Turning comments off stops people commenting; your agent can still reply.
+Replies arrive in `work_packets.pins[].comments` with `author_type: "agent"`. The person and any guests see them with an Agent tag, the same tag that marks your agent's notes, the statuses it set, its after images and its findings. `status_by` on each pin says whether your agent or the person set the current status. If the owner turned comments off, replies come back in `skipped_replies` as `comments_off`.
+
+Each pin also has a `timeline`: everything that happened on the mark, in order. When `awaiting_reply` is `true`, a person spoke last (they asked something, or reopened the mark with a comment) and is waiting on your agent. `loop.awaiting_reply_count` says how many marks are waiting, and `next_action` names them. To fix and explain in one step, add `reply` to a mark in `resolve_marks`. Over REST, replies are `POST /api/reviews/{id}/marks/reply` with `{"replies": [{"id": 12, "body": "…"}]}`.
 
 ## Passes
 

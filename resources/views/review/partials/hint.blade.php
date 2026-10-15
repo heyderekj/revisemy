@@ -17,7 +17,9 @@
                 'border-sky-500 text-sky-700' => ! $guest,
             ])>{{ $guest ? 'G' : 'S' }}{{ $number }}</span>
             <span class="text-xs text-muted-foreground">{{ $guest ? $finding->sourceLabel() : (\App\Models\Annotation::allSeverityLabels()[$finding->severity] ?? ucfirst($finding->severity)) }}</span>
-            @if (! $guest && $finding->isVisionSource())
+            @if ($finding->source === \App\Models\Finding::SOURCE_AGENT)
+                <x-agent-tag />
+            @elseif (! $guest && $finding->isVisionSource())
                 <span class="rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800">{{ $finding->sourceLabel() }}</span>
             @endif
         </div>

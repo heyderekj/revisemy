@@ -71,9 +71,9 @@ class MarkTimeline
             /** @var AnnotationComment $comment */
             $entries[] = [
                 'kind' => self::KIND_COMMENT,
-                'actor' => $comment->author_kind ?: ($comment->from_owner ? AnnotationEvent::ACTOR_OWNER : AnnotationEvent::ACTOR_GUEST),
-                'author' => $comment->author_kind === AnnotationEvent::ACTOR_GUEST ? $comment->author : null,
-                'verb' => $comment->isFromAgent() ? 'replied' : 'commented',
+                'actor' => $comment->author_type ?: ($comment->from_owner ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST),
+                'author' => $comment->author_type === AnnotationComment::AUTHOR_GUEST ? $comment->author : null,
+                'verb' => $comment->isAgent() ? 'replied' : 'commented',
                 'body' => $comment->body,
                 'after_screenshot_id' => null,
                 'after_screenshot_url' => null,

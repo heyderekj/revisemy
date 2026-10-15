@@ -15,13 +15,8 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
-/**
- * The agent's side of a mark's conversation. A reply lands on the mark's
- * timeline under the Agent label and never moves the mark — status changes
- * stay with resolve_marks, and verify stays with the human.
- */
 #[Name('reply_to_marks')]
-#[Description('Answer a person on a mark\'s thread: a question they asked, a reopen with a comment, or a choice you need them to make. Each reply shows on the mark\'s timeline labelled Agent, on the board, the review page and inline. A reply never changes a mark\'s status — use resolve_marks for that (it also takes a reply). Read work_packets.pins[].timeline first; awaiting_reply is true where a person spoke last.')]
+#[Description('Reply in a mark\'s thread: answer a question mark, explain what you changed or why you didn\'t, or ask before guessing. The human and any guests see the reply, labelled as your agent\'s. A reply never changes a mark — set progress with resolve_marks, and the human still verifies. Works while the review waits on the human or after they ask for changes.')]
 #[IsDestructive(false)]
 #[IsOpenWorld(false)]
 class ReplyToMarksTool extends Tool
@@ -54,33 +49,33 @@ class ReplyToMarksTool extends Tool
             return Response::error('No review with that id for this try token.');
         }
 
-        $status = $review->effectiveStatus();
-
-        if (! in_array($status, [Review::STATUS_PENDING, Review::STATUS_CHANGES_REQUESTED], true)) {
-            return Response::error(match ($status) {
-                Review::STATUS_APPROVED => 'The human approved this review — the conversation is closed. Say anything else in the chat.',
+        // While it waits on the human, and after they ask for changes — the
+        // moment an explanation is most useful.
+        if (! in_array($review->effectiveStatus(), [Review::STATUS_PENDING, Review::STATUS_CHANGES_REQUESTED], true)) {
+            return Response::error(match ($review->effectiveStatus()) {
+                Review::STATUS_APPROVED => 'The human approved this review — the thread is closed. Stop unless they ask for another checkup.',
                 Review::STATUS_EXPIRED => 'This review expired. Start a fresh create_review if you still need a checkup.',
-                default => 'Replies are only open while the review is pending or has changes requested. Current status: '.$status.'.',
+                default => 'Replies only work while the review is open. Current status: '.$review->effectiveStatus().'.',
             });
         }
 
-        ['updated' => $updated, 'skipped' => $skipped] = $this->lifecycle->addAgentReplies($review, $data['replies']);
+        ['replied' => $replied, 'skipped' => $skipped] = $this->lifecycle->replyAsAgent($review, $data['replies']);
 
-        if ($updated->isEmpty()) {
+        if ($replied->isEmpty()) {
             return Response::error('No replies were posted: '.self::describeSkipped($skipped));
         }
 
-        $payload = $review->fresh()?->toAgentPayload();
+        $payload = $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations'])?->toAgentPayload();
         $payload['skipped_replies'] = $skipped;
 
         $warning = $skipped === [] ? '' : sprintf(
-            "%d reply(ies) were NOT posted: %s\n\n",
+            "%d reply(ies) were NOT posted — fix these: %s\n\n",
             count($skipped),
             self::describeSkipped($skipped),
         );
 
         return Response::text(
-            "Posted {$updated->count()} reply(ies). The human sees them on each mark's timeline.\n\n".
+            "Posted {$replied->count()} reply(ies). Replies don't change any mark — use resolve_marks for progress.\n\n".
             $warning.
             "Follow next_action.\n\n".
             json_encode($payload, JSON_UNESCAPED_SLASHES)
@@ -106,7 +101,7 @@ class ReplyToMarksTool extends Tool
                 ->items($schema->object())
                 ->min(1)
                 ->max(20)
-                ->description('List of {id, body}. id is the mark id from work_packets.pins[].id (not the M# number). body is what you want the human to read, in plain words.')
+                ->description('List of {id, body}. id is the mark id from work_packets.pins[].id (not the M# number). body is your reply, up to 2000 characters, in plain words for the human.')
                 ->required(),
         ];
     }

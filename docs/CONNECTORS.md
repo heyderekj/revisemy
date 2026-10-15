@@ -44,6 +44,7 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Board column owners & empty copy | `Annotation::boardColumnMeta()` |
 | Mark focus crop | `MarkFocus` → pin `focus_preview` in `Review::markToArray()` |
 | Shot display size (width ÷ DPR, so 2× captures stay sharp) | `Screenshot::pixelRatio()` on the board; `shotFrameStyle()` reads `meta.dpr` inline |
+| The Agent tag on the agent's notes, statuses, after images, replies and findings | `x-agent-tag` (`Annotation::TONES['agent']`), used by both |
 | Canvas first: viewport tabs, floating brief, fit width / whole page / 100% | `review.partials.viewport-tabs` and the canvas's `setFit()` on the web; `setFit()` and `shotFrameStyle()` inline |
 | Control height | Web Flux `size="sm"` (`h-8`) |
 | Mark timeline: steps and comments, who did each, "Talk only" | `App\Support\MarkTimeline` → pin `timeline`; `components/mark-timeline` on the web, `mcp/partials/mark-timeline` inline |

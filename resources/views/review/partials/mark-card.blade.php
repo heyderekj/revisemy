@@ -16,6 +16,9 @@
             <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
             <span class="text-xs text-muted-foreground">{{ $pin->label() }}</span>
             <x-signal-tag :tone="$pin->statusTone()">{{ $pin->statusLabel() }}</x-signal-tag>
+            @if ($pin->changedByAgent())
+                <x-agent-tag />
+            @endif
             @if ($pin->source && $pin->source !== \App\Models\Annotation::SOURCE_HUMAN)
                 <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium text-zinc-600">{{ $pin->sourceLabel() }}</span>
             @endif

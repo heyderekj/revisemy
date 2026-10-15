@@ -153,18 +153,62 @@ class MarkLifecycleService
                 }
             }
 
-            $this->transition($annotation, $status, $mark['note'] ?? null, AnnotationEvent::ACTOR_AGENT, $afterShot?->id);
+            $this->transition($annotation, $status, $mark['note'] ?? null, Annotation::STATUS_BY_AGENT, $afterShot?->id);
 
             $reply = FeedbackText::sanitizeBody((string) ($mark['reply'] ?? ''));
 
             if ($reply !== '') {
-                $this->addComment($annotation, AnnotationEvent::ACTOR_AGENT, $reply);
+                $this->addComment($annotation, AnnotationComment::AUTHOR_AGENT, $reply);
             }
 
             $updated->push($annotation);
         }
 
         return ['updated' => $updated, 'skipped' => $skipped];
+    }
+
+    /**
+     * Agent replies on marks (reply_to_marks): answer a question, explain a
+     * fix, or ask before guessing. A reply is a comment in the mark's thread
+     * and never changes the mark — the human's marks stay the ones that count.
+     *
+     * @param  array<int, array{id: int|string, body?: ?string}>  $replies
+     * @return array{replied: Collection<int, AnnotationComment>, skipped: list<array{id: int, reason: string, detail: string}>}
+     */
+    public function replyAsAgent(Review $review, array $replies): array
+    {
+        $ids = collect($replies)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+
+        $annotations = $this->workspaceMarks($review->workspace, $ids)->keyBy('id');
+        $reviewIds = array_map(intval(...), array_filter([$review->id, $review->parent_id]));
+
+        $replied = collect();
+        $skipped = [];
+
+        foreach ($replies as $reply) {
+            $id = (int) ($reply['id'] ?? 0);
+            $annotation = $annotations->get($id);
+            $body = FeedbackText::sanitizeBody($reply['body'] ?? '');
+
+            $reason = match (true) {
+                ! $annotation => ['not_found', 'No mark with that id on this try token — use work_packets.pins[].id (the database id), not the M# number.'],
+                ! in_array((int) $annotation->screenshot->review_id, $reviewIds, true) => ['wrong_review', 'That mark belongs to a different review — reply with that review\'s id.'],
+                ! $annotation->screenshot->review->allowsComments() => ['comments_off', 'The owner turned comments off on this review — say it in resolve_marks notes or the next pass instead.'],
+                $body === '' => ['empty_body', 'The reply was empty.'],
+                mb_strlen($body) > 2000 => ['too_long', 'Replies are at most 2000 characters.'],
+                default => null,
+            };
+
+            if ($reason !== null) {
+                $skipped[] = ['id' => $id, 'reason' => $reason[0], 'detail' => $reason[1]];
+
+                continue;
+            }
+
+            $replied->push($this->addComment($annotation, AnnotationComment::AUTHOR_AGENT, $body));
+        }
+
+        return ['replied' => $replied, 'skipped' => $skipped];
     }
 
     /**
@@ -206,85 +250,25 @@ class MarkLifecycleService
     }
 
     /**
-     * The agent answers on marks' threads. Each entry is {id, body}. A reply
-     * never changes a mark's status — the human's marks and verify are the
-     * only ones that count — so it is allowed on any mark of this review or
-     * the pass before it, including verified ones.
-     *
-     * @param  array<int, array{id: int|string, body?: ?string}>  $replies
-     * @return array{updated: Collection<int, Annotation>, skipped: list<array{id: int, reason: string, detail: string}>}
+     * Post on a mark's thread. $type is who is speaking (an
+     * AnnotationComment::AUTHOR_* value); a guest's name is their $author,
+     * the owner and the agent have fixed names.
      */
-    public function addAgentReplies(Review $review, array $replies): array
-    {
-        $ids = collect($replies)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
-
-        $annotations = $this->workspaceMarks($review->workspace, $ids)->keyBy('id');
-        $reviewIds = array_map(intval(...), array_filter([$review->id, $review->parent_id]));
-
-        $updated = collect();
-        $skipped = [];
-
-        foreach ($replies as $reply) {
-            $id = (int) ($reply['id'] ?? 0);
-            $annotation = $annotations->get($id);
-
-            if (! $annotation) {
-                $skipped[] = [
-                    'id' => $id,
-                    'reason' => 'not_found',
-                    'detail' => 'No mark with that id on this try token — use work_packets.pins[].id (the database id), not the M# number.',
-                ];
-
-                continue;
-            }
-
-            if (! in_array((int) $annotation->screenshot->review_id, $reviewIds, true)) {
-                $skipped[] = [
-                    'id' => $id,
-                    'reason' => 'wrong_review',
-                    'detail' => 'That mark belongs to a different review — reply with that review\'s id.',
-                ];
-
-                continue;
-            }
-
-            $body = FeedbackText::sanitizeBody((string) ($reply['body'] ?? ''));
-
-            if ($body === '') {
-                $skipped[] = [
-                    'id' => $id,
-                    'reason' => 'empty',
-                    'detail' => 'The reply was empty after cleaning — send the words you want the human to read.',
-                ];
-
-                continue;
-            }
-
-            $this->addComment($annotation, AnnotationEvent::ACTOR_AGENT, $body);
-            $updated->push($annotation);
-        }
-
-        return ['updated' => $updated, 'skipped' => $skipped];
-    }
-
-    /**
-     * Post on a mark's thread. $kind is who is speaking (owner, guest or
-     * agent); a guest's name is their $author, the others have fixed names.
-     */
-    public function addComment(Annotation $annotation, string $kind, string $body, ?string $author = null): AnnotationComment
+    public function addComment(Annotation $annotation, string $type, string $body, ?string $author = null): AnnotationComment
     {
         $comment = $annotation->comments()->create([
-            'author' => match ($kind) {
-                AnnotationEvent::ACTOR_OWNER => 'Owner',
-                AnnotationEvent::ACTOR_AGENT => 'Agent',
+            'author' => match ($type) {
+                AnnotationComment::AUTHOR_OWNER => 'Owner',
+                AnnotationComment::AUTHOR_AGENT => 'Your agent',
                 default => $author ?: 'Guest',
             },
-            'from_owner' => $kind === AnnotationEvent::ACTOR_OWNER,
-            'author_kind' => $kind,
+            'author_type' => $type,
+            'from_owner' => $type === AnnotationComment::AUTHOR_OWNER,
             'body' => $body,
         ]);
 
-        // Touch the mark so updated_at moves and pollers see something new.
+        // Touch the mark so updated_at moves and pollers see something new;
+        // other open copies of the review pick the comment up at once.
         $annotation->touch();
 
         MarkUpdated::dispatch($annotation);
@@ -398,7 +382,7 @@ class MarkLifecycleService
             return false;
         }
 
-        $this->transition($annotation, Annotation::STATUS_VERIFIED);
+        $this->transition($annotation, Annotation::STATUS_VERIFIED, by: Annotation::STATUS_BY_OWNER);
 
         return true;
     }
@@ -412,7 +396,7 @@ class MarkLifecycleService
             return false;
         }
 
-        $this->transition($annotation, Annotation::STATUS_OPEN);
+        $this->transition($annotation, Annotation::STATUS_OPEN, by: Annotation::STATUS_BY_OWNER);
 
         return true;
     }
@@ -426,7 +410,7 @@ class MarkLifecycleService
             return false;
         }
 
-        $this->transition($annotation, Annotation::STATUS_RESOLVED, $note);
+        $this->transition($annotation, Annotation::STATUS_RESOLVED, $note, Annotation::STATUS_BY_OWNER);
 
         return true;
     }
@@ -448,6 +432,7 @@ class MarkLifecycleService
 
         Annotation::query()->whereKey($ids)->update([
             'status' => Annotation::STATUS_VERIFIED,
+            'status_by' => Annotation::STATUS_BY_OWNER,
             'verified_at' => $now,
         ]);
 
@@ -472,13 +457,13 @@ class MarkLifecycleService
         Annotation $annotation,
         string $status,
         ?string $note = null,
-        string $actor = AnnotationEvent::ACTOR_OWNER,
+        string $by = Annotation::STATUS_BY_OWNER,
         ?int $afterScreenshotId = null,
     ): void {
         $note = $note !== null ? trim($note) : null;
         $changed = $annotation->status !== $status;
 
-        $attributes = ['status' => $status];
+        $attributes = ['status' => $status, 'status_by' => $by];
 
         if ($note !== null && $note !== '') {
             $attributes['resolution_note'] = $note;
@@ -497,7 +482,7 @@ class MarkLifecycleService
 
         if ($type !== null && ($changed || ($note !== null && $note !== '') || $afterScreenshotId !== null)) {
             $annotation->events()->create([
-                'actor' => $actor,
+                'actor' => $by,
                 'type' => $type,
                 'body' => $note !== '' ? $note : null,
                 'after_screenshot_id' => $afterScreenshotId,
@@ -522,7 +507,7 @@ class MarkLifecycleService
         return Annotation::query()
             ->whereKey($ids)
             ->whereHas('screenshot.review', fn ($q) => $q->where('workspace_id', $workspace->id))
-            ->with('screenshot')
+            ->with('screenshot.review')
             ->get();
     }
 }

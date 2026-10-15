@@ -818,7 +818,7 @@ class Review extends Model
             // Changes whenever the human does anything — an unchanged value
             // means the poll can be skipped.
             'updated_at' => $this->lastActivityAt()?->toIso8601String(),
-            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read each pin\'s timeline for context; when awaiting_reply is true a person spoke last, so answer with reply_to_marks. Ask before inventing answers to unanswered question marks. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
+            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read each pin\'s timeline for context; when awaiting_reply is true a person spoke last, so answer with reply_to_marks. Ask before inventing answers to unanswered question marks: reply_to_marks puts your question or explanation in the mark’s thread without changing the mark. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
             'taste' => TasteLenses::forType($this->type),
             'next_action' => $this->nextAction(),
             'loop' => [
@@ -936,6 +936,8 @@ class Review extends Model
             'source_label' => $annotation->sourceLabel(),
             'promoted_from_finding_id' => $annotation->promoted_from_finding_id,
             'status' => $annotation->status,
+            // Who set the current status: "agent" (resolve_marks) or "owner".
+            'status_by' => $annotation->status_by,
             'resolution_note' => $annotation->resolution_note,
             'after_screenshot_url' => $annotation->afterScreenshot?->url(),
             'comment_count' => (int) ($annotation->comments_count ?? $annotation->comments()->count()),
@@ -953,7 +955,7 @@ class Review extends Model
                 ->map(fn (AnnotationComment $comment) => [
                     'id' => $comment->id,
                     'author' => $comment->author,
-                    'author_kind' => $comment->author_kind,
+                    'author_type' => $comment->author_type ?? ($comment->from_owner ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST),
                     'from_owner' => (bool) $comment->from_owner,
                     'body' => $comment->body,
                     'created_at' => $comment->created_at?->toIso8601String(),

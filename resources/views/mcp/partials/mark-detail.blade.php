@@ -6,6 +6,7 @@
             <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold" :class="markerBg()" x-text="activePin && ('M' + activePin.number)"></span>
             <span class="text-xs text-muted-foreground" x-text="activePin && severityLabel(activePin.severity)"></span>
             <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(activePin ? activePin.status : '')" x-show="activePin"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(activePin ? activePin.status : '')" aria-hidden="true"></span><span x-text="activePin && statusLabel(activePin.status)"></span></span>
+            <span class="inline-flex" x-show="agentSet(activePin)"><x-agent-tag /></span>
             <span class="text-xs text-zinc-400" x-show="activePin && activePin._from_parent" x-text="activePin && ('From pass ' + activePin._pass)"></span>
         </div>
         <button type="button" class="inline-flex size-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-chip hover:text-zinc-700" @click="closeDetail()" aria-label="Close">×</button>

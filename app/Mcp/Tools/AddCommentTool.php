@@ -5,7 +5,7 @@ namespace App\Mcp\Tools;
 use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Mcp\Resources\ReviewApp;
 use App\Models\Annotation;
-use App\Models\AnnotationEvent;
+use App\Models\AnnotationComment;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use App\Support\FeedbackText;
@@ -79,7 +79,7 @@ class AddCommentTool extends Tool
             return Response::error('Write something to send.');
         }
 
-        $this->lifecycle->addComment($mark, AnnotationEvent::ACTOR_OWNER, $body);
+        $this->lifecycle->addComment($mark, AnnotationComment::AUTHOR_OWNER, $body);
 
         return Response::structured($review->refresh()->toAgentPayload());
     }

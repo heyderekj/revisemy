@@ -8,6 +8,7 @@ use App\Mcp\Tools\GetReviewTool;
 use App\Mcp\Tools\ReplyToMarksTool;
 use App\Mcp\Tools\ResolveMarksTool;
 use App\Models\Annotation;
+use App\Models\AnnotationComment;
 use App\Models\AnnotationEvent;
 use App\Models\Review;
 use App\Models\User;
@@ -73,8 +74,8 @@ class MarkTimelineTest extends TestCase
         $this->assertSame(Annotation::STATUS_OPEN, $mark->fresh()->status);
         $this->assertDatabaseHas('annotation_comments', [
             'annotation_id' => $mark->id,
-            'author' => 'Agent',
-            'author_kind' => AnnotationEvent::ACTOR_AGENT,
+            'author' => 'Your agent',
+            'author_type' => AnnotationEvent::ACTOR_AGENT,
             'from_owner' => false,
         ]);
 
@@ -115,7 +116,7 @@ class MarkTimelineTest extends TestCase
         ReviseMyServer::actingAs($user)->tool(ReplyToMarksTool::class, [
             'id' => $review->public_id,
             'replies' => [['id' => $mark->id, 'body' => 'Late thought.']],
-        ])->assertHasErrors(['conversation is closed']);
+        ])->assertHasErrors(['the thread is closed']);
     }
 
     public function test_resolve_marks_records_the_agent_and_its_reply(): void
@@ -154,19 +155,19 @@ class MarkTimelineTest extends TestCase
     public function test_a_person_speaking_last_tells_the_agent_to_reply(): void
     {
         [$user, $review, $mark] = $this->setUpReview();
-        app(MarkLifecycleService::class)->addComment($mark, AnnotationEvent::ACTOR_OWNER, 'Which do you recommend?');
+        app(MarkLifecycleService::class)->addComment($mark, AnnotationComment::AUTHOR_OWNER, 'Which do you recommend?');
 
         ReviseMyServer::actingAs($user)->tool(GetReviewTool::class, ['id' => $review->public_id])
             ->assertHasNoErrors()
             ->assertStructuredContent(fn ($json) => $json
                 ->where('loop.awaiting_reply_count', 1)
                 ->where('work_packets.pins.0.awaiting_reply', true)
-                ->where('work_packets.pins.0.comments.0.author_kind', 'owner')
+                ->where('work_packets.pins.0.comments.0.author_type', 'owner')
                 ->where('work_packets.pins.0.timeline.1.kind', 'comment')
                 ->where('next_action.summary', fn ($summary) => str_contains($summary, 'M1 has a comment waiting on your reply'))
                 ->etc());
 
-        app(MarkLifecycleService::class)->addAgentReplies($review, [['id' => $mark->id, 'body' => '2 months free.']]);
+        app(MarkLifecycleService::class)->replyAsAgent($review, [['id' => $mark->id, 'body' => '2 months free.']]);
 
         ReviseMyServer::actingAs($user)->tool(GetReviewTool::class, ['id' => $review->public_id])
             ->assertStructuredContent(fn ($json) => $json
@@ -191,7 +192,7 @@ class MarkTimelineTest extends TestCase
 
         $mark = $mark->fresh();
         $this->assertSame(AnnotationEvent::ACTOR_OWNER, $mark->resolvedBy());
-        $this->assertSame(AnnotationEvent::ACTOR_OWNER, $mark->comments()->sole()->author_kind);
+        $this->assertSame(AnnotationEvent::ACTOR_OWNER, $mark->comments()->sole()->author_type);
     }
 
     public function test_approving_records_who_verified(): void
@@ -238,7 +239,7 @@ class MarkTimelineTest extends TestCase
 
         $this->assertDatabaseHas('annotation_comments', [
             'annotation_id' => $mark->id,
-            'author_kind' => AnnotationEvent::ACTOR_OWNER,
+            'author_type' => AnnotationEvent::ACTOR_OWNER,
             'body' => 'Go with 2 months free.',
         ]);
 
@@ -255,8 +256,8 @@ class MarkTimelineTest extends TestCase
     {
         [, $review, $mark] = $this->setUpReview();
         $lifecycle = app(MarkLifecycleService::class);
-        $lifecycle->addComment($mark, AnnotationEvent::ACTOR_OWNER, 'Owner thought.');
-        $lifecycle->addAgentReplies($review, [['id' => $mark->id, 'body' => 'Agent answer.']]);
+        $lifecycle->addComment($mark, AnnotationComment::AUTHOR_OWNER, 'Owner thought.');
+        $lifecycle->replyAsAgent($review, [['id' => $mark->id, 'body' => 'Agent answer.']]);
 
         Livewire::test('review-page', ['token' => $review->share_token])
             ->assertSee('Agent answer.')

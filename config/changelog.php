@@ -15,14 +15,26 @@ return [
     'entries' => [
 
         [
+            'version' => '1.7.0',
+            'date' => '2026-10-15',
+            'title' => 'Every mark has a timeline',
+            'highlights' => [
+                'Every mark has a timeline: who marked it, what your agent did, what you said back, in order. “Talk only” folds it down to the conversation',
+                'Your agent knows when you’ve spoken last on a mark and is asked to answer, and it can explain a fix in the same step it resolves it',
+                'Reply to your agent from the inline review in your chat, not just on the web',
+                'The Agent label is a round pill now, so it never reads as the In progress status',
+            ],
+        ],
+
+        [
             'version' => '1.6.0',
             'date' => '2026-10-15',
-            'title' => 'Your agent answers on the mark',
+            'title' => 'Your agent answers on marks',
             'highlights' => [
-                'Every mark has a timeline: who marked it, what your agent did, what you said back, in order',
-                'Your agent can answer you on a mark, and it reads when you’ve spoken last. A reply never changes the mark',
-                'Anything your agent wrote, changed or attached carries an Agent label, on the board, the review, the guest link and inline',
-                'Reply from the inline review in your chat, the board or the review page',
+                'Your agent can answer in a mark’s thread: reply to a question, explain a fix, or ask before it guesses. A reply never changes the mark',
+                'Everything your agent did carries an Agent tag: its notes, the statuses it set, its after images, its replies and its findings. Guests see it too',
+                'The inline review shows each mark’s thread. Replying still happens on the web',
+                'A new comment shows up on other open copies of the review straight away',
             ],
         ],
 

@@ -180,7 +180,7 @@ class ReviewController extends Controller
             'replies.*.body' => ['required', 'string', 'max:2000'],
         ]);
 
-        ['updated' => $updated, 'skipped' => $skipped] = $lifecycle->addAgentReplies($review, $data['replies']);
+        ['replied' => $updated, 'skipped' => $skipped] = $lifecycle->replyAsAgent($review, $data['replies']);
 
         if ($updated->isEmpty()) {
             return response()->json([

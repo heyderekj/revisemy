@@ -2,7 +2,7 @@
 
 use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
-use App\Models\AnnotationEvent;
+use App\Models\AnnotationComment;
 use App\Models\Finding;
 use App\Models\Review;
 use App\Models\Screenshot;
@@ -578,7 +578,7 @@ new class extends Component
 
         $lifecycle->addComment(
             $annotation,
-            $this->mode === 'owner' ? AnnotationEvent::ACTOR_OWNER : AnnotationEvent::ACTOR_GUEST,
+            $this->mode === 'owner' ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST,
             $this->markCommentBody,
             $this->guestName,
         );
