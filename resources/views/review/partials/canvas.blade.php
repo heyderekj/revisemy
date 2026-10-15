@@ -1,7 +1,7 @@
-        <section class="min-h-0 min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto overscroll-contain pt-4 sm:space-y-4 sm:pt-5 md:max-h-none md:overflow-hidden md:pt-6">
+        <section class="min-h-0 min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto overscroll-contain pt-4 sm:space-y-4 sm:pt-5 md:flex md:max-h-none md:flex-col md:space-y-0 md:gap-3 md:pb-3 md:pt-4">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
-                <div class="grid gap-1.5 py-3 sm:grid-cols-[9.5rem_1fr] sm:gap-4 sm:py-4">
-                    <flux:heading size="sm" class="sm:pt-0.5">What to look at</flux:heading>
+                <div class="grid shrink-0 gap-1 py-1 lg:grid-cols-[9.5rem_1fr] lg:gap-4">
+                    <flux:heading size="sm" class="lg:pt-0.5">What to look at</flux:heading>
 
                     <div class="flex items-start gap-2">
                         <div class="min-w-0 flex-1">
@@ -28,7 +28,7 @@
                                     title="Click to edit"
                                 >
                                     @if ($review->context)
-                                        <p class="text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base">
+                                        <p class="line-clamp-3 text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base">
                                             {{ $review->context }}
                                         </p>
                                     @else
@@ -38,7 +38,13 @@
                                     @endif
                                 </button>
                             @elseif ($review->context)
-                                <p class="text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base">
+                                {{-- Clamped so the shot stays in view; a click shows it all. --}}
+                                <p
+                                    x-data="{ open: false }"
+                                    x-on:click="open = ! open"
+                                    x-bind:class="open ? '' : 'line-clamp-3'"
+                                    class="line-clamp-3 cursor-pointer text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base"
+                                >
                                     {{ $review->context }}
                                 </p>
                             @endif
@@ -74,11 +80,14 @@
                 </div>
             @endif
 
-            <div @class(['sm:flex sm:items-start sm:gap-3' => $review->screenshots->count() > 1])>
+            <div @class([
+                'md:flex md:min-h-0 md:flex-1',
+                'sm:flex sm:items-start sm:gap-3 md:items-stretch' => $review->screenshots->count() > 1,
+            ])>
 
             @if ($review->screenshots->count() > 1)
                 <div
-                    class="mb-2 flex gap-2 overflow-x-auto p-1 sm:mb-0 sm:max-h-[min(70svh,560px)] sm:w-24 sm:shrink-0 sm:flex-col sm:overflow-y-auto sm:overflow-x-visible"
+                    class="mb-2 flex gap-2 overflow-x-auto p-1 sm:mb-0 sm:max-h-[min(70svh,560px)] sm:w-24 sm:shrink-0 sm:flex-col sm:overflow-y-auto sm:overflow-x-visible md:max-h-full"
                     role="tablist"
                     aria-label="Screenshots"
                     aria-orientation="vertical"
@@ -114,12 +123,12 @@
                 </div>
             @endif
 
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 md:flex md:min-h-0 md:flex-col">
 
             @if ($shot)
                 <div
                     wire:key="shot-viewer-{{ $activeScreenshotIndex }}"
-                    class="min-w-0"
+                    class="min-w-0 md:flex md:min-h-0 md:flex-1 md:flex-col"
                     x-data="{
                         zoom: 1,
                         zoomMin: 1,
@@ -364,7 +373,7 @@
                     x-on:keyup.window="onKeyUp($event)"
                 >
                     <div @class([
-                        'relative overflow-hidden rounded-2xl bg-well',
+                        'relative overflow-hidden rounded-2xl bg-well md:flex md:min-h-0 md:flex-col',
                     ])>
                         <div data-zoom-controls class="absolute bottom-2 left-2 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
                             <button
@@ -392,7 +401,7 @@
 
                     <div
                         x-ref="viewport"
-                        class="relative max-h-[min(52svh,420px)] overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] lg:max-h-[min(70svh,560px)]"
+                        class="relative max-h-[min(52svh,420px)] overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] md:max-h-none md:min-h-0"
                         x-bind:class="{
                             'cursor-grab': canPan() && spaceHeld && !panning,
                             'cursor-grabbing': panning
@@ -597,7 +606,7 @@
                     </div>
 
                 @if ($review->isOpenForFeedback())
-                    <p class="mt-2 hidden text-center text-xs text-muted-foreground md:block">
+                    <p class="mt-2 hidden shrink-0 text-center text-xs text-muted-foreground md:block">
                         {{ $mode === 'guest' ? 'Drag to suggest a change, or click for a point.' : 'Drag to mark a region, or click for a point.' }} Space+drag pans.
                     </p>
                 @endif

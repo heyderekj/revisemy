@@ -1,5 +1,5 @@
     <header class="relative z-40 shrink-0 border-b border-border bg-background">
-        <div class="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:flex sm:gap-4 sm:px-6">
+        <div class="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:px-6 lg:flex lg:gap-4">
             <div class="col-start-1 row-start-1 flex shrink-0 items-center gap-2 sm:gap-3">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                     <x-revisemy-logo size="sm" />
@@ -14,7 +14,7 @@
                 <h1 class="sr-only shrink-0 text-lg font-semibold tracking-tight text-zinc-900 sm:not-sr-only">Review</h1>
             </div>
 
-            <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:col-span-1 sm:row-start-1 sm:flex-1 sm:flex-nowrap">
+            <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 lg:col-span-1 lg:row-start-1 lg:flex-1 lg:flex-nowrap">
                 <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600">
                     Pass {{ $review->pass }}
                 </span>
