@@ -29,15 +29,18 @@
 
     <div class="space-y-3 px-3 py-3 sm:px-4">
         <p class="text-sm leading-relaxed text-pretty text-zinc-800" x-text="activePin && activePin.body"></p>
-        <p class="rounded-lg bg-done-soft px-3 py-2 text-sm text-done-ink" x-show="activePin && activePin.resolution_note">
-            <span class="font-medium">Agent:</span> <span x-text="activePin && activePin.resolution_note"></span>
-        </p>
         @include('mcp.partials.before-after', ['pin' => 'activePin'])
-        <div class="flex flex-wrap items-center gap-2" x-show="activePin && (activePin.comment_count > 0 || canManagePin(activePin))">
-            <template x-if="activePin && activePin.comment_count > 0">
-                <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover" @click="openComments()"
-                    x-text="'View ' + activePin.comment_count + (activePin.comment_count === 1 ? ' comment' : ' comments')"></button>
-            </template>
+        {{-- Who did what on this mark, then your reply. --}}
+        @include('mcp.partials.mark-timeline', ['pin' => 'activePin'])
+        <form class="flex items-center gap-2" x-show="activePin && payload.comments_enabled" @submit.prevent="sendReply(activePin)">
+            <label class="sr-only" for="rm-reply">Reply on this mark</label>
+            <input id="rm-reply" type="text" maxlength="2000" class="h-8 min-w-0 flex-1 rounded-lg bg-well px-3 text-sm text-zinc-900 ring-1 ring-inset ring-zinc-200 placeholder:text-zinc-400 focus:ring-2 focus:ring-zinc-900 focus:outline-none"
+                x-model="replyBody" placeholder="Reply to your agent…">
+            <button type="submit" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover disabled:opacity-50"
+                :disabled="busy || !replyBody.trim()">Send</button>
+        </form>
+        <p class="text-xs text-zinc-400" x-show="activePin && payload.comments_enabled && activePin.awaiting_reply">Your agent sees this the next time it checks the review.</p>
+        <div class="flex flex-wrap items-center gap-2" x-show="activePin && canManagePin(activePin)">
             <div class="ml-auto flex flex-wrap gap-2" x-show="activePin && canManagePin(activePin)">
                 <button type="button" class="inline-flex h-8 items-center rounded-full bg-done-soft px-3 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200 disabled:opacity-50"
                     x-show="activePin && activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')">Verify</button>

@@ -47,6 +47,7 @@ class ResolveMarksTool extends Tool
             'marks.*.status' => 'nullable|string|in:in_progress,resolved',
             'marks.*.note' => 'nullable|string|max:2000',
             'marks.*.after_image' => 'nullable|string',
+            'marks.*.reply' => 'nullable|string|max:2000',
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['id']);
@@ -115,7 +116,7 @@ class ResolveMarksTool extends Tool
                 ->items($schema->object())
                 ->min(1)
                 ->max(50)
-                ->description('List of {id, status?, note?, after_image?}. id is the mark id from work_packets.pins[].id. status is "in_progress" or "resolved" (default resolved). note describes what you changed. after_image is an optional screenshot of the fixed area (https URL, data URL, or base64) shown to the human as a before/after.')
+                ->description('List of {id, status?, note?, after_image?, reply?}. id is the mark id from work_packets.pins[].id. status is "in_progress" or "resolved" (default resolved). note describes what you changed. after_image is an optional screenshot of the fixed area (https URL, data URL, or base64) shown to the human as a before/after. reply answers a person on the mark\'s thread in the same step — use it when they asked something or reopened with a comment.')
                 ->required(),
         ];
     }

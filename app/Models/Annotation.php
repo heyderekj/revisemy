@@ -275,6 +275,36 @@ class Annotation extends Model
     ];
 
     /**
+     * Who did something, as a round pill — the counterpart to the square
+     * status tag. The agent shares sky with "In progress"; the shape tells
+     * them apart. `dot` marks each step on a mark's timeline. Read by the
+     * who-pill and mark-timeline components and by the inline review.
+     *
+     * @var array<string, array{pill: string, dot: string}>
+     */
+    public const ACTOR_PILLS = [
+        AnnotationEvent::ACTOR_OWNER => ['pill' => 'bg-chip text-zinc-700', 'dot' => 'bg-zinc-700'],
+        AnnotationEvent::ACTOR_AGENT => ['pill' => 'bg-sky-100 text-sky-800', 'dot' => 'bg-sky-500'],
+        AnnotationEvent::ACTOR_GUEST => ['pill' => 'text-zinc-500 ring-1 ring-inset ring-zinc-300', 'dot' => 'bg-zinc-400'],
+    ];
+
+    /**
+     * Who last resolved this mark: "agent" or "owner". Marks resolved before
+     * events were recorded read as the agent's, as their note always did.
+     */
+    public function resolvedBy(): ?string
+    {
+        $events = $this->relationLoaded('events') ? $this->events : $this->events()->get();
+        $last = $events->last(fn (AnnotationEvent $event) => $event->type === AnnotationEvent::TYPE_RESOLVED);
+
+        if ($last) {
+            return $last->actor;
+        }
+
+        return $this->resolved_at !== null || $this->resolution_note ? AnnotationEvent::ACTOR_AGENT : null;
+    }
+
+    /**
      * Which tone each status wears: resolved waits on you, verified is done.
      *
      * @return array<string, string>
@@ -410,5 +440,10 @@ class Annotation extends Model
     public function afterScreenshot(): BelongsTo
     {
         return $this->belongsTo(Screenshot::class, 'after_screenshot_id');
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(AnnotationEvent::class)->orderBy('created_at')->orderBy('id');
     }
 }

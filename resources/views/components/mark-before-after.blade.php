@@ -41,7 +41,7 @@
             ></span>
         </a>
         <a href="{{ $after->url() }}" target="_blank" rel="noopener" class="group block min-w-0">
-            <span class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-emerald-600">After</span>
+            <span class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-emerald-600">After · Agent</span>
             <img
                 src="{{ $after->url() }}"
                 alt="After — the agent's screenshot of the fixed area"

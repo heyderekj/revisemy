@@ -42,7 +42,7 @@ Every mark the person leaves is in `work_packets.pins`. The key says pins for co
 
 | Field | What it is |
 |---|---|
-| `id` | Use this with `resolve_marks` |
+| `id` | Use this with `resolve_marks` and `reply_to_marks` |
 | `number` | The M1, M2… the person sees |
 | `severity` | `must-fix`, `nit`, `question` or `keep`, plus tweak kinds such as `wording` or `spacing` |
 | `body` | What the person wrote |
@@ -50,7 +50,10 @@ Every mark the person leaves is in `work_packets.pins`. The key says pins for co
 | `suggested_copy` | Exact words to use. When it's set, use them as they are. |
 | `question_answer` | The answer to a question mark, once the person gives one |
 | `status` | `open`, `in_progress`, `resolved` or `verified` |
-| `comments` | The latest replies on the mark |
+| `comments` | The latest comments on the mark, each with `author_kind`: `owner`, `guest` or `agent` |
+| `timeline` | Everything that happened on the mark, oldest first: `kind` (`marked`, `started`, `resolved`, `reopened`, `verified`, `comment`), `actor` (`owner`, `guest`, `agent`), `body`, `after_screenshot_url` and `at` |
+| `awaiting_reply` | `true` when a person spoke last and your agent hasn't answered |
+| `resolved_by` | Who last resolved it: `agent`, or `owner` when the person resolved it on the board |
 | `source` | `human`, or where an accepted hint came from: `guest`, `checklist`, `vision`, `agent` |
 
 The same marks are also split into `must_fix`, `nits`, `questions`, `tweaks`, `keeps` and `awaiting_verification`, so your agent can work in order. Fix must-fix first, then nits. Leave anything marked keep alone, and ask before inventing an answer to an open question.
@@ -65,6 +68,14 @@ The same marks are also split into `must_fix`, `nits`, `questions`, `tweaks`, `k
 Only the person verifies. There's no way for an agent to mark its own work verified, on purpose.
 
 `resolve_marks` takes up to 50 marks at once. Check `skipped` in the response: a mark listed there didn't change, with the reason. Resolving only works while the review's status is `changes_requested`.
+
+Every step lands on the mark's timeline with who took it, and the person sees it on the board, the review page, the guest link and inline in the chat. Your agent's steps carry an **Agent** label.
+
+## Talking on a mark
+
+When `awaiting_reply` is `true`, the person asked something or reopened the mark with a comment. Answer with `reply_to_marks`: up to 20 `{id, body}` at once, while the review is `pending` or `changes_requested`. A reply never changes a mark's status. To fix and explain in one step, add `reply` to a mark in `resolve_marks`.
+
+`loop.awaiting_reply_count` says how many marks are waiting, and `next_action` names them. Over REST it's `POST /api/reviews/{id}/marks/reply` with `{"replies": [{"id": 12, "body": "…"}]}`. Turning comments off stops people commenting; your agent can still reply.
 
 ## Passes
 

@@ -4,9 +4,12 @@ namespace App\Services;
 
 use App\Events\MarkUpdated;
 use App\Models\Annotation;
+use App\Models\AnnotationComment;
+use App\Models\AnnotationEvent;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
+use App\Support\FeedbackText;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -29,7 +32,7 @@ class MarkLifecycleService
     public function __construct(protected ScreenshotStorage $screenshots) {}
 
     /**
-     * Apply a batch of agent updates. Each entry is {id, status?, note?, after_image?}.
+     * Apply a batch of agent updates. Each entry is {id, status?, note?, after_image?, reply?}.
      * Marks must belong to this review or its parent pass (reopened parent
      * marks are carried over for the agent to fix alongside this pass's).
      *
@@ -37,7 +40,10 @@ class MarkLifecycleService
      * being dropped silently — a partial batch used to look identical to a full
      * one, so an agent would move on believing every mark had landed.
      *
-     * @param  array<int, array{id: int|string, status?: string, note?: ?string, after_image?: ?string}>  $marks
+     * A reply posts on the mark's thread as the agent, alongside the status
+     * change, so the fix and its explanation land together.
+     *
+     * @param  array<int, array{id: int|string, status?: string, note?: ?string, after_image?: ?string, reply?: ?string}>  $marks
      * @return array{updated: Collection<int, Annotation>, skipped: list<array{id: int, reason: string, detail: string}>}
      */
     public function applyAgentUpdates(Review $review, array $marks): array
@@ -128,12 +134,14 @@ class MarkLifecycleService
                 $remoteFetches++;
             }
 
+            $afterShot = null;
+
             if ($afterImage !== null) {
                 // A bad image skips just this mark. Throwing here used to fail
                 // the whole call after earlier marks had already transitioned,
                 // so a retry stored their after shots twice.
                 try {
-                    $this->storeAfterImage($annotation, $afterImage);
+                    $afterShot = $this->storeAfterImage($annotation, $afterImage);
                 } catch (ValidationException $e) {
                     $skipped[] = [
                         'id' => $id,
@@ -145,7 +153,14 @@ class MarkLifecycleService
                 }
             }
 
-            $this->transition($annotation, $status, $mark['note'] ?? null);
+            $this->transition($annotation, $status, $mark['note'] ?? null, AnnotationEvent::ACTOR_AGENT, $afterShot?->id);
+
+            $reply = FeedbackText::sanitizeBody((string) ($mark['reply'] ?? ''));
+
+            if ($reply !== '') {
+                $this->addComment($annotation, AnnotationEvent::ACTOR_AGENT, $reply);
+            }
+
             $updated->push($annotation);
         }
 
@@ -174,7 +189,7 @@ class MarkLifecycleService
      * in changes_requested. After shots are excluded from Review::screenshots(),
      * so they never count against the 5-shot cap or get a second opinion.
      */
-    protected function storeAfterImage(Annotation $annotation, string $image): void
+    protected function storeAfterImage(Annotation $annotation, string $image): Screenshot
     {
         $annotation->loadMissing('screenshot.review');
 
@@ -186,6 +201,95 @@ class MarkLifecycleService
         );
 
         $annotation->update(['after_screenshot_id' => $shot->id]);
+
+        return $shot;
+    }
+
+    /**
+     * The agent answers on marks' threads. Each entry is {id, body}. A reply
+     * never changes a mark's status — the human's marks and verify are the
+     * only ones that count — so it is allowed on any mark of this review or
+     * the pass before it, including verified ones.
+     *
+     * @param  array<int, array{id: int|string, body?: ?string}>  $replies
+     * @return array{updated: Collection<int, Annotation>, skipped: list<array{id: int, reason: string, detail: string}>}
+     */
+    public function addAgentReplies(Review $review, array $replies): array
+    {
+        $ids = collect($replies)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+
+        $annotations = $this->workspaceMarks($review->workspace, $ids)->keyBy('id');
+        $reviewIds = array_map(intval(...), array_filter([$review->id, $review->parent_id]));
+
+        $updated = collect();
+        $skipped = [];
+
+        foreach ($replies as $reply) {
+            $id = (int) ($reply['id'] ?? 0);
+            $annotation = $annotations->get($id);
+
+            if (! $annotation) {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'not_found',
+                    'detail' => 'No mark with that id on this try token — use work_packets.pins[].id (the database id), not the M# number.',
+                ];
+
+                continue;
+            }
+
+            if (! in_array((int) $annotation->screenshot->review_id, $reviewIds, true)) {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'wrong_review',
+                    'detail' => 'That mark belongs to a different review — reply with that review\'s id.',
+                ];
+
+                continue;
+            }
+
+            $body = FeedbackText::sanitizeBody((string) ($reply['body'] ?? ''));
+
+            if ($body === '') {
+                $skipped[] = [
+                    'id' => $id,
+                    'reason' => 'empty',
+                    'detail' => 'The reply was empty after cleaning — send the words you want the human to read.',
+                ];
+
+                continue;
+            }
+
+            $this->addComment($annotation, AnnotationEvent::ACTOR_AGENT, $body);
+            $updated->push($annotation);
+        }
+
+        return ['updated' => $updated, 'skipped' => $skipped];
+    }
+
+    /**
+     * Post on a mark's thread. $kind is who is speaking (owner, guest or
+     * agent); a guest's name is their $author, the others have fixed names.
+     */
+    public function addComment(Annotation $annotation, string $kind, string $body, ?string $author = null): AnnotationComment
+    {
+        $comment = $annotation->comments()->create([
+            'author' => match ($kind) {
+                AnnotationEvent::ACTOR_OWNER => 'Owner',
+                AnnotationEvent::ACTOR_AGENT => 'Agent',
+                default => $author ?: 'Guest',
+            },
+            'from_owner' => $kind === AnnotationEvent::ACTOR_OWNER,
+            'author_kind' => $kind,
+            'body' => $body,
+        ]);
+
+        // Touch the mark so updated_at moves and pollers see something new.
+        $annotation->touch();
+
+        MarkUpdated::dispatch($annotation);
+
+        return $comment;
     }
 
     /**
@@ -332,16 +436,48 @@ class MarkLifecycleService
      */
     public function verifyResolvedForReview(Review $review): int
     {
-        return $review->annotations()
+        $ids = $review->annotations()
             ->where('status', Annotation::STATUS_RESOLVED)
-            ->update([
-                'status' => Annotation::STATUS_VERIFIED,
-                'verified_at' => now(),
-            ]);
+            ->pluck('annotations.id');
+
+        if ($ids->isEmpty()) {
+            return 0;
+        }
+
+        $now = now();
+
+        Annotation::query()->whereKey($ids)->update([
+            'status' => Annotation::STATUS_VERIFIED,
+            'verified_at' => $now,
+        ]);
+
+        // Approving verifies them, so the timeline says the owner did.
+        AnnotationEvent::query()->insert($ids->map(fn ($id) => [
+            'annotation_id' => (int) $id,
+            'actor' => AnnotationEvent::ACTOR_OWNER,
+            'type' => AnnotationEvent::TYPE_VERIFIED,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all());
+
+        return $ids->count();
     }
 
-    protected function transition(Annotation $annotation, string $status, ?string $note = null): void
-    {
+    /**
+     * Move a mark and record who moved it. A repeat of the same status with
+     * nothing new (no note, no after image) records nothing, so an agent
+     * re-sending in_progress does not stack "started" on the timeline.
+     */
+    protected function transition(
+        Annotation $annotation,
+        string $status,
+        ?string $note = null,
+        string $actor = AnnotationEvent::ACTOR_OWNER,
+        ?int $afterScreenshotId = null,
+    ): void {
+        $note = $note !== null ? trim($note) : null;
+        $changed = $annotation->status !== $status;
+
         $attributes = ['status' => $status];
 
         if ($note !== null && $note !== '') {
@@ -356,6 +492,17 @@ class MarkLifecycleService
         }
 
         $annotation->update($attributes);
+
+        $type = AnnotationEvent::typeForStatus($status);
+
+        if ($type !== null && ($changed || ($note !== null && $note !== '') || $afterScreenshotId !== null)) {
+            $annotation->events()->create([
+                'actor' => $actor,
+                'type' => $type,
+                'body' => $note !== '' ? $note : null,
+                'after_screenshot_id' => $afterScreenshotId,
+            ]);
+        }
 
         MarkUpdated::dispatch($annotation);
     }

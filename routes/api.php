@@ -18,5 +18,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reviews/{publicId}/screenshots', [ReviewController::class, 'addScreenshot']);
     Route::post('/reviews/{publicId}/findings', [ReviewController::class, 'addFindings']);
     Route::post('/reviews/{publicId}/marks/resolve', [ReviewController::class, 'resolveMarks']);
+    Route::post('/reviews/{publicId}/marks/reply', [ReviewController::class, 'replyToMarks']);
     Route::post('/reviews/{publicId}/second-opinion', [ReviewController::class, 'requestSecondOpinion']);
 });

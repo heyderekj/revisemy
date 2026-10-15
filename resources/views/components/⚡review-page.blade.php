@@ -2,6 +2,7 @@
 
 use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
+use App\Models\AnnotationEvent;
 use App\Models\Finding;
 use App\Models\Review;
 use App\Models\Screenshot;
@@ -87,7 +88,7 @@ new class extends Component
     {
         $review = Review::query()
             ->where(fn ($q) => $q->where('token', $this->token)->orWhere('share_token', $this->token))
-            ->with(['screenshots.annotations.comments', 'screenshots.annotations.afterScreenshot', 'screenshots.findings'])
+            ->with(['screenshots.annotations.comments', 'screenshots.annotations.afterScreenshot', 'screenshots.annotations.events.afterScreenshot', 'screenshots.findings'])
             ->firstOrFail();
 
         $this->mode = hash_equals((string) $review->token, $this->token) ? 'owner' : 'guest';
@@ -99,6 +100,7 @@ new class extends Component
             $review->load([
                 'parent.screenshots.annotations.comments',
                 'parent.screenshots.annotations.afterScreenshot',
+                'parent.screenshots.annotations.events.afterScreenshot',
             ]);
         }
 
@@ -541,7 +543,7 @@ new class extends Component
      * Threaded notes on a mark. Guests must sign with a name (same as suggestions);
      * owners may leave the name blank and post as Owner.
      */
-    public function addMarkComment(int $annotationId): void
+    public function addMarkComment(int $annotationId, MarkLifecycleService $lifecycle): void
     {
         if (! $this->review->allowsComments()) {
             return;
@@ -574,11 +576,12 @@ new class extends Component
 
         $this->validate($rules, $messages);
 
-        $annotation->comments()->create([
-            'author' => $this->mode === 'guest' ? $this->guestName : 'Owner',
-            'from_owner' => $this->mode === 'owner',
-            'body' => $this->markCommentBody,
-        ]);
+        $lifecycle->addComment(
+            $annotation,
+            $this->mode === 'owner' ? AnnotationEvent::ACTOR_OWNER : AnnotationEvent::ACTOR_GUEST,
+            $this->markCommentBody,
+            $this->guestName,
+        );
 
         $this->activeCommentMarkId = null;
         $this->markCommentBody = '';

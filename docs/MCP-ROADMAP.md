@@ -22,9 +22,9 @@ We shouldn't copy their shape. A ticket system is the thing positioning says we 
 | Who verifies | Reviewer resolves | Human only, enforced |
 | Agent critique | Not mentioned | `add_findings`, second opinion |
 | Pipelines | Not mentioned | Decision webhooks, progress notifications |
-| Agent replies to a thread | Yes | No, comments are web-only |
+| Agent replies to a thread | Yes | Yes, `reply_to_marks` and `resolve_marks` `reply`, on a timeline per mark |
 | Query past feedback | Project, status, page, device, ticket | `list_reviews`, this token only |
-| AI actions labeled | Yes | Not visible to the human |
+| AI actions labeled | Yes | Yes, an Agent label on every step, reply and after image |
 | Activity log, revoke | 90-day log, one-click disconnect | Not visible |
 | Setup over SSH | One-step command | Token paste |
 | Published rate limits | Per plan | Not stated |
@@ -51,11 +51,13 @@ Still to do:
 
 ### 1. Let the agent reply on a mark
 
-Today `resolve_marks` takes a note, but the agent can't answer a human's comment, and `get_review` doesn't return the thread. Add comments to the `work_packets.pins` payload and a `reply_to_mark` tool (or a `reply` field on `resolve_marks`). Human marks stay authoritative; a reply never changes a mark's status.
+**Shipped (1.6.0).** `reply_to_marks` and a `reply` field on `resolve_marks`. Each pin carries its `timeline` and `awaiting_reply`, `loop.awaiting_reply_count` counts them, and `next_action` names them. A reply never changes a mark's status. The owner answers inline (`add_comment`), on the board or on the review page. Guests see the agent's replies, labelled. That answers the first open question below.
+
+We explored five shapes for this on a design canvas (thread in the card, mark timeline, two lanes, pass recap first, on the shot) and three blends of the first two. We picked the mark timeline, with a "Talk only" switch that folds it down to a thread.
 
 ### 2. Label what the agent did
 
-Show an "AI" label on agent notes, status changes, findings and after images, on the web board and in the inline review. Guests who open a share link should be able to tell a person from an agent at a glance.
+**Shipped (1.6.0).** A round Agent pill (chip icon, sky) on agent replies, the steps it took, fix notes and after images, on the board, the review page, the guest link and inline. Your own steps say You (Owner to a guest), and a guest's say their name. Every state change is recorded with who made it (`annotation_events`). Marks from before that rebuild their steps from the timestamps they carry.
 
 ### 3. Make `list_reviews` a real query
 
@@ -90,6 +92,5 @@ What they don't claim is proof. A fix with an after image the human can check ag
 
 ## Open questions
 
-- Should replies from the agent be visible to guests, or only to the owner?
 - Does a workspace-wide `list_reviews` need its own scope on the OAuth consent screen?
 - Is the activity log per workspace or per connection, and who can see it?

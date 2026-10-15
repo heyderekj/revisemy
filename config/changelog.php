@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.6.0',
+            'date' => '2026-10-15',
+            'title' => 'Your agent answers on the mark',
+            'highlights' => [
+                'Every mark has a timeline: who marked it, what your agent did, what you said back, in order',
+                'Your agent can answer you on a mark, and it reads when you’ve spoken last. A reply never changes the mark',
+                'Anything your agent wrote, changed or attached carries an Agent label, on the board, the review, the guest link and inline',
+                'Reply from the inline review in your chat, the board or the review page',
+            ],
+        ],
+
+        [
             'version' => '1.5.4',
             'date' => '2026-10-10',
             'title' => 'Your words for starting a review',

@@ -11,6 +11,7 @@ class AnnotationComment extends Model
         'annotation_id',
         'author',
         'from_owner',
+        'author_kind',
         'body',
     ];
 
@@ -19,6 +20,20 @@ class AnnotationComment extends Model
         return [
             'from_owner' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (AnnotationComment $comment): void {
+            if ($comment->author_kind === null || $comment->author_kind === '') {
+                $comment->author_kind = $comment->from_owner ? AnnotationEvent::ACTOR_OWNER : AnnotationEvent::ACTOR_GUEST;
+            }
+        });
+    }
+
+    public function isFromAgent(): bool
+    {
+        return $this->author_kind === AnnotationEvent::ACTOR_AGENT;
     }
 
     public function annotation(): BelongsTo

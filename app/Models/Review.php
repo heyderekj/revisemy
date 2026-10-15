@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\ScreenshotStorage;
 use App\Support\MarkFocus;
+use App\Support\MarkTimeline;
 use App\Support\TasteLenses;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -441,7 +442,7 @@ class Review extends Model
         return match ($this->effectiveStatus()) {
             self::STATUS_PENDING => [
                 'action' => 'wait_for_human',
-                'summary' => 'Share review_url with the human. Poll get_review about every '.self::POLL_AFTER_SECONDS.'s until they approve or request changes (compare updated_at to skip unchanged polls). Do not claim the UI is done.',
+                'summary' => 'Share review_url with the human. Poll get_review about every '.self::POLL_AFTER_SECONDS.'s until they approve or request changes (compare updated_at to skip unchanged polls). Do not claim the UI is done.'.$this->awaitingReplyLine(),
                 'poll_after_seconds' => self::POLL_AFTER_SECONDS,
             ],
             self::STATUS_CHANGES_REQUESTED => $this->changesRequestedAction(),
@@ -510,6 +511,8 @@ class Review extends Model
         if ($unanswered->isNotEmpty()) {
             $summary .= ' '.$this->markNumbers($unanswered).' '.($unanswered->count() === 1 ? 'is a question' : 'are questions').' with no answer yet: ask the human in chat to answer in the review, then get_review again — do not invent an answer.';
         }
+
+        $summary .= $this->awaitingReplyLine();
 
         $summary .= $noteLine.' Once every mark is resolved, create_review with parent_id set to this review id, new screenshots of the fixed UI, and a fresh context for what to look at on this next pass.';
 
@@ -693,8 +696,8 @@ class Review extends Model
     {
         $this->load([
             'screenshots.findings',
-            'screenshots.annotations' => fn ($query) => $query->withCount('comments')->with(['comments', 'afterScreenshot']),
-            'parent.screenshots.annotations' => fn ($query) => $query->withCount('comments')->with(['comments', 'afterScreenshot']),
+            'screenshots.annotations' => fn ($query) => $query->withCount('comments')->with(['comments', 'afterScreenshot', 'events.afterScreenshot']),
+            'parent.screenshots.annotations' => fn ($query) => $query->withCount('comments')->with(['comments', 'afterScreenshot', 'events.afterScreenshot']),
             'parent.parent',
         ]);
 
@@ -764,7 +767,7 @@ class Review extends Model
         // the mark minus its comment thread — the agent already has the full
         // record above, keyed by the same id.
         $bucket = fn (Collection $pins) => $pins
-            ->map(fn (array $pin) => Arr::except($pin, 'comments'))
+            ->map(fn (array $pin) => Arr::except($pin, ['comments', 'timeline']))
             ->values()
             ->all();
 
@@ -801,6 +804,8 @@ class Review extends Model
             'review_url' => $this->reviewUrl(),
             'board_url' => $this->boardUrl(),
             'guest_share_url' => $this->shareUrl(),
+            // Whether people can comment; the agent's replies go through either way.
+            'comments_enabled' => $this->allowsComments(),
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
@@ -813,7 +818,7 @@ class Review extends Model
             // Changes whenever the human does anything — an unchanged value
             // means the poll can be skipped.
             'updated_at' => $this->lastActivityAt()?->toIso8601String(),
-            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read recent comments on each pin for context. Ask before inventing answers to unanswered question marks. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
+            'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read each pin\'s timeline for context; when awaiting_reply is true a person spoke last, so answer with reply_to_marks. Ask before inventing answers to unanswered question marks. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
             'taste' => TasteLenses::forType($this->type),
             'next_action' => $this->nextAction(),
             'loop' => [
@@ -833,6 +838,9 @@ class Review extends Model
                 'resolved_count' => count($awaitingVerification),
                 'awaiting_verification_count' => count($awaitingVerification),
                 'verified_count' => $verifiedCount,
+                // Marks where a person spoke last: answer with reply_to_marks.
+                'awaiting_reply_count' => collect($allPins)->where('awaiting_reply', true)->count()
+                    + collect($previousPass['marks'] ?? [])->where('awaiting_reply', true)->count(),
             ],
             'work_packets' => [
                 'pins' => $allPins,
@@ -871,6 +879,31 @@ class Review extends Model
     }
 
     /**
+     * " M2 and M5 have a comment waiting on your reply…" — or nothing. Reads
+     * this pass and the one before it, the same marks the agent works.
+     */
+    protected function awaitingReplyLine(): string
+    {
+        $reviewIds = array_filter([$this->id, $this->parent_id]);
+
+        $waiting = Annotation::query()
+            ->whereHas('screenshot', fn ($q) => $q->whereIn('review_id', $reviewIds)->where('kind', Screenshot::KIND_SOURCE))
+            ->whereHas('comments')
+            ->with(['comments', 'events'])
+            ->orderBy('number')
+            ->get()
+            ->filter(fn (Annotation $mark) => MarkTimeline::awaitingReply(MarkTimeline::for($mark)));
+
+        if ($waiting->isEmpty()) {
+            return '';
+        }
+
+        $numbers = $waiting->map(fn (Annotation $mark) => 'M'.$mark->number)->implode(', ');
+
+        return ' '.$numbers.($waiting->count() === 1 ? ' has a comment' : ' have comments').' waiting on your reply: read the timeline and answer with reply_to_marks (a reply never changes a mark\'s status).';
+    }
+
+    /**
      * Serialize one mark (human annotation) for the agent work packet.
      *
      * Every mark appears several times in a payload — under its screenshot, in
@@ -885,6 +918,9 @@ class Review extends Model
         $comments = $verbose
             ? ($annotation->relationLoaded('comments') ? $annotation->comments : $annotation->comments()->get())
             : collect();
+
+        $timeline = $verbose ? MarkTimeline::for($annotation) : [];
+        $lastResolved = collect($timeline)->last(fn (array $entry) => $entry['kind'] === AnnotationEvent::TYPE_RESOLVED);
 
         return [
             'id' => $annotation->id,
@@ -908,17 +944,23 @@ class Review extends Model
             // every mark; server-rendered previews call MarkFocus directly.
             'focus_preview' => Arr::except(MarkFocus::forMark($annotation), 'bg_style'),
         ] + ($verbose ? [
+            // Who last resolved it: "agent" or "owner" (the board's override).
+            'resolved_by' => $lastResolved['actor'] ?? null,
+            'awaiting_reply' => MarkTimeline::awaitingReply($timeline),
             'comments' => $comments
                 ->take(-10)
                 ->values()
                 ->map(fn (AnnotationComment $comment) => [
                     'id' => $comment->id,
                     'author' => $comment->author,
+                    'author_kind' => $comment->author_kind,
                     'from_owner' => (bool) $comment->from_owner,
                     'body' => $comment->body,
                     'created_at' => $comment->created_at?->toIso8601String(),
                 ])
                 ->all(),
+            // Every step and comment in order, each with who did it.
+            'timeline' => MarkTimeline::toArray($timeline),
         ] : []);
     }
 
@@ -948,7 +990,7 @@ class Review extends Model
             })
             ->sortBy(fn (array $pair) => $pair[0]->number)
             ->values()
-            ->map(fn (array $pair) => $this->markToArray($pair[0]) + ['screenshot_index' => $pair[1]]);
+            ->map(fn (array $pair) => $this->markToArray($pair[0], verbose: true) + ['screenshot_index' => $pair[1]]);
 
         return [
             'id' => $parent->public_id,

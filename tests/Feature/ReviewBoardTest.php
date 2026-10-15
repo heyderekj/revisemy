@@ -93,7 +93,7 @@ class ReviewBoardTest extends TestCase
             ->assertSet('showMarkSheet', true)
             ->assertSet('selectedMarkId', $mark->id)
             ->assertSee('Mark')
-            ->assertSee('Comments')
+            ->assertSee('What happened')
             ->assertSee('Fix the CTA')
             ->assertSee('Bumped contrast to 4.6:1')
             ->assertSee('On the review');

@@ -2,6 +2,7 @@
 
 use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
+use App\Models\AnnotationEvent;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
 use App\Support\FeedbackText;
@@ -34,7 +35,7 @@ new class extends Component
         // Owner token only — the board is an owner tool, not a guest view.
         $this->review = Review::query()
             ->where('token', $this->token)
-            ->with(['screenshots.annotations.comments', 'screenshots.annotations.afterScreenshot', 'parent.screenshots.annotations.comments', 'parent.screenshots.annotations.afterScreenshot'])
+            ->with(['screenshots.annotations.comments', 'screenshots.annotations.afterScreenshot', 'screenshots.annotations.events.afterScreenshot', 'parent.screenshots.annotations.comments', 'parent.screenshots.annotations.afterScreenshot', 'parent.screenshots.annotations.events.afterScreenshot'])
             ->firstOrFail();
 
         if ($this->selectedMarkId && ! $this->ownedAnnotation($this->selectedMarkId)) {
@@ -117,11 +118,11 @@ new class extends Component
         }
 
         return $this->ownedAnnotation($this->selectedMarkId)
-            ?->loadMissing(['screenshot.review', 'afterScreenshot', 'comments']);
+            ?->loadMissing(['screenshot.review', 'afterScreenshot', 'comments', 'events.afterScreenshot']);
     }
 
     /** The board is the owner's, so its comments are the owner's: same rule as the review page. */
-    public function addComment(): void
+    public function addComment(MarkLifecycleService $lifecycle): void
     {
         if (! $this->review->allowsComments() || ! $this->selectedMarkId) {
             return;
@@ -137,11 +138,7 @@ new class extends Component
 
         $this->validate(['commentBody' => FeedbackText::bodyRules()]);
 
-        $annotation->comments()->create([
-            'author' => 'Owner',
-            'from_owner' => true,
-            'body' => $this->commentBody,
-        ]);
+        $lifecycle->addComment($annotation, AnnotationEvent::ACTOR_OWNER, $this->commentBody);
 
         $this->commentBody = '';
         $this->loadBoard();
@@ -438,8 +435,8 @@ new class extends Component
                                     </div>
                                     <p class="text-sm leading-relaxed text-zinc-700">{{ $mark->body }}</p>
                                     @if ($mark->resolution_note)
-                                        <div class="mt-2 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900">
-                                            <span class="font-medium">Agent:</span> {{ $mark->resolution_note }}
+                                        <div class="mt-2 flex items-start gap-1.5 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900">
+                                            <x-who-pill :actor="$mark->resolvedBy() ?? 'agent'" class="mt-px" /> <span>{{ $mark->resolution_note }}</span>
                                         </div>
                                     @endif
                                 </div>
@@ -556,75 +553,25 @@ new class extends Component
                                     <dd class="mt-1 whitespace-pre-wrap text-pretty text-zinc-700">{{ $markReview->context }}</dd>
                                 </div>
                             @endif
-                            @if ($selectedMark->resolution_note)
-                                <div>
-                                    <dt class="text-xs text-muted-foreground">Agent note</dt>
-                                    <dd class="mt-1 rounded-lg bg-done-soft px-3 py-2 text-done-ink">{{ $selectedMark->resolution_note }}</dd>
-                                </div>
-                            @endif
                             @if ($selectedMark->afterScreenshot)
                                 <div>
                                     <dt class="text-xs text-muted-foreground">Before / after</dt>
                                     <dd class="mt-1"><x-mark-before-after :mark="$selectedMark" /></dd>
                                 </div>
                             @endif
-                            @if ($selectedMark->resolved_at || $selectedMark->verified_at)
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    @if ($selectedMark->resolved_at)
-                                        <div>
-                                            <dt class="text-xs text-muted-foreground">Resolved</dt>
-                                            <dd class="mt-0.5 text-zinc-700">
-                                                <time datetime="{{ $selectedMark->resolved_at->toIso8601String() }}" title="{{ $selectedMark->resolved_at->timezone(config('app.timezone'))->toDayDateTimeString() }}">
-                                                    {{ $selectedMark->resolved_at->diffForHumans() }}
-                                                </time>
-                                            </dd>
-                                        </div>
-                                    @endif
-                                    @if ($selectedMark->verified_at)
-                                        <div>
-                                            <dt class="text-xs text-muted-foreground">Verified</dt>
-                                            <dd class="mt-0.5 text-zinc-700">
-                                                <time datetime="{{ $selectedMark->verified_at->toIso8601String() }}" title="{{ $selectedMark->verified_at->timezone(config('app.timezone'))->toDayDateTimeString() }}">
-                                                    {{ $selectedMark->verified_at->diffForHumans() }}
-                                                </time>
-                                            </dd>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endif
                         </dl>
                     </div>
                 </div>
 
-                {{-- Comments column: stretch to left column height on desktop; composer sticks to bottom --}}
+                {{-- What happened: every step and comment, who took it, and the composer at the bottom --}}
                 <div class="flex min-h-0 flex-col bg-well p-5 sm:p-6 lg:h-full">
                     <div class="mb-3 flex shrink-0 items-center gap-2">
-                        <flux:heading size="sm">Comments</flux:heading>
+                        <flux:heading size="sm">What happened</flux:heading>
                         <span class="flex h-5 min-w-5 items-center justify-center rounded-md bg-chip px-1.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ $selectedMark->comments->count() }}</span>
                     </div>
 
-                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-                        @forelse ($selectedMark->comments as $comment)
-                            <div wire:key="mark-comment-{{ $comment->id }}" class="rounded-xl bg-raised px-3 py-2.5 shadow-xs ring-1 ring-black/[0.04]">
-                                <div class="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                                    <p class="text-xs font-medium text-zinc-800">{{ $comment->author }}</p>
-                                    <time
-                                        class="text-[11px] text-zinc-400"
-                                        datetime="{{ $comment->created_at->toIso8601String() }}"
-                                        title="{{ $comment->created_at->timezone(config('app.timezone'))->toDayDateTimeString() }}"
-                                    >{{ $comment->created_at->diffForHumans() }}</time>
-                                </div>
-                                <p class="text-sm leading-relaxed text-pretty text-zinc-700">{{ $comment->body }}</p>
-                            </div>
-                        @empty
-                            <p class="rounded-xl px-3 py-8 text-center text-xs text-muted-foreground">
-                                @if ($review->allowsComments())
-                                    No comments yet.
-                                @else
-                                    Commenting is turned off for this review.
-                                @endif
-                            </p>
-                        @endforelse
+                    <div class="min-h-0 flex-1 overflow-y-auto pr-1">
+                        <x-mark-timeline :mark="$selectedMark" wire:key="mark-timeline-{{ $selectedMark->id }}-{{ $selectedMark->updated_at?->timestamp }}" />
                     </div>
 
                     @if ($review->allowsComments())
@@ -632,18 +579,18 @@ new class extends Component
                             <flux:textarea
                                 wire:model="commentBody"
                                 rows="3"
-                                placeholder="Add a comment…"
+                                placeholder="Reply…"
                                 x-on:keydown.meta.enter.prevent="$wire.addComment()"
                                 x-on:keydown.ctrl.enter.prevent="$wire.addComment()"
                             />
                             <flux:error name="commentBody" />
                             <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="!h-8 w-full">
-                                Comment
+                                Reply
                             </flux:button>
                         </div>
                     @else
                         <p class="mt-4 shrink-0 text-center text-xs text-muted-foreground lg:mt-auto">
-                            Commenting is disabled. Turn it back on from Share on the review.
+                            Comments are off, so only your agent can reply here. Turn them back on from Share on the review.
                         </p>
                     @endif
                 </div>

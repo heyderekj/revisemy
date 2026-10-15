@@ -6,14 +6,15 @@
      - Board columns / empty copy ↔ Annotation::boardColumnMeta
      - Mark focus crop via pin.focus_preview ↔ MarkFocus + mark-focus-preview
      - Control height h-8 ↔ Flux size="sm" on web
-     Intentionally web-only: comment threads, share/guest, drag columns, second-opinion
-     accept/dismiss, zoom/pan, editable title. When comment_count > 0, link out via
-     review_url / board_url.
+     - Mark timeline (steps + comments, who did each) ↔ App\Support\MarkTimeline,
+       components/mark-timeline; actor pills ↔ Annotation::ACTOR_PILLS
+     Intentionally web-only: share/guest, drag columns, second-opinion
+     accept/dismiss, zoom/pan, editable title.
 
      Styles and Alpine are compiled from resources/css/mcp-app.css and
      resources/js/mcp-app.js (the same tokens as the site) and inlined by
      App\Mcp\Resources\ReviewApp; nothing loads from a CDN. The bridge is inline.
-     App-only tools: add_mark / decide_review / verify_mark. --}}
+     App-only tools: add_mark / add_comment / decide_review / verify_mark. --}}
 <style>{!! $styles !!}</style>
 
 <div class="bg-background text-foreground" x-data="reviewApp()" x-init="init()" x-cloak>
@@ -520,6 +521,8 @@
         // The same tones the web review uses, from Annotation::TONES.
         const TONES = @json(\App\Models\Annotation::TONES);
         const STATUS_TONES = @json(\App\Models\Annotation::statusTones());
+        // Who did something: Annotation::ACTOR_PILLS, as the web's who-pill.
+        const ACTOR_PILLS = @json(\App\Models\Annotation::ACTOR_PILLS);
         const STATUS_LABELS = { 'open': 'Open', 'in_progress': 'In progress', 'resolved': 'Resolved', 'verified': 'Verified' };
 
         return {
@@ -533,6 +536,8 @@
             activeFinding: null,
             busy: false,
             error: '',
+            replyBody: '',
+            talkOnly: false,
             working: { title: 'Opening the review', detail: '' },
             elapsed: 0,
             failed: '',
@@ -618,6 +623,34 @@
             statusLabel(status) { return STATUS_LABELS[status] || status; },
             isSettled(pin) { return pin.status === 'resolved' || pin.status === 'verified'; },
             canManagePin(pin) { return pin && pin.severity !== 'keep' && pin.status !== 'open'; },
+
+            // The mark timeline (MarkTimeline on the server). "Talk only"
+            // keeps the mark itself, comments, and steps that carry a note.
+            actorPill(actor) { return (ACTOR_PILLS[actor] || ACTOR_PILLS.owner).pill; },
+            actorDot(actor) { return (ACTOR_PILLS[actor] || ACTOR_PILLS.owner).dot; },
+            actorLabel(entry) {
+                if (entry.actor === 'agent') return 'Agent';
+                if (entry.actor === 'owner') return 'You';
+                return entry.author || 'Guest';
+            },
+            isTalk(entry) { return entry.kind === 'marked' || entry.kind === 'comment' || !!entry.body; },
+            hasSteps(pin) { return !!pin && (pin.timeline || []).some((e) => !this.isTalk(e)); },
+            timelineFor(pin) {
+                const entries = (pin && pin.timeline) || [];
+                return this.talkOnly ? entries.filter((e) => this.isTalk(e)) : entries;
+            },
+            ago(iso) {
+                const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+                if (seconds < 60) return 'just now';
+                const steps = [[60, 'minute'], [24, 'hour'], [7, 'day'], [4.35, 'week'], [12, 'month']];
+                let value = seconds / 60;
+                for (const [size, unit] of steps) {
+                    if (value < size) { const n = Math.floor(value); return n + ' ' + unit + (n === 1 ? '' : 's') + ' ago'; }
+                    value /= size;
+                }
+                const n = Math.floor(value);
+                return n + ' year' + (n === 1 ? '' : 's') + ' ago';
+            },
 
             hasRegion(f) {
                 const a = f && f.area;
@@ -717,6 +750,7 @@
 
             showPin(pin) {
                 this.activeFinding = null;
+                this.replyBody = '';
                 this.activePin = this.activePin && this.activePin.id === pin.id ? null : pin;
             },
 
@@ -737,10 +771,6 @@
                 this.activeFinding = null;
             },
 
-            openComments() {
-                const url = this.payload.board_url || this.payload.review_url;
-                if (url) window.mcpBridge.openLink(url);
-            },
 
             shotLabel(shot, i) {
                 const v = shot.meta && shot.meta.viewport;
@@ -888,6 +918,16 @@
                 }));
                 // Keep the note on screen if the server refused it, so nothing typed is lost.
                 if (ok) this.closeComposer();
+            },
+
+            async sendReply(pin) {
+                const body = this.replyBody.trim();
+                if (!pin || !body) return;
+                const ok = await this.run(() => window.mcpBridge.callTool('add_comment', {
+                    review_id: this.payload.id, mark_id: pin.id, body,
+                }));
+                // Keep what was typed if the server refused it.
+                if (ok) this.replyBody = '';
             },
 
             async verifyMark(pin, action) {

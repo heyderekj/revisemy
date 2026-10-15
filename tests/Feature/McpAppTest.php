@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mcp\Resources\ReviewApp;
 use App\Mcp\Servers\ReviseMyServer;
+use App\Mcp\Tools\AddCommentTool;
 use App\Mcp\Tools\AddMarkTool;
 use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\DecideReviewTool;
@@ -72,7 +73,7 @@ class McpAppTest extends TestCase
 
     public function test_app_only_tools_are_hidden_from_the_model(): void
     {
-        foreach ([AddMarkTool::class, DecideReviewTool::class, VerifyMarkTool::class] as $tool) {
+        foreach ([AddMarkTool::class, AddCommentTool::class, DecideReviewTool::class, VerifyMarkTool::class] as $tool) {
             $meta = app($tool)->toArray()['_meta'] ?? [];
             $this->assertSame('ui://revisemy/review-app', $meta['ui']['resourceUri'] ?? null, $tool);
             $this->assertSame(['app'], $meta['ui']['visibility'] ?? null, $tool);
@@ -123,7 +124,7 @@ class McpAppTest extends TestCase
                 'mcpBridge',
                 'add_mark',
                 'focus_preview',
-                'openComments()',
+                'add_comment',
                 'boardPins',
                 'regionFindings',
                 'numberedRegionFindings',

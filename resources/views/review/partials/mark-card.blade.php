@@ -37,26 +37,10 @@
             <span class="font-medium">Answer:</span> {{ $pin->question_answer }}
         </p>
     @endif
-    @if ($pin->resolution_note)
-        <p class="mt-2 rounded-lg bg-done-soft px-2.5 py-1.5 text-xs leading-relaxed text-done-ink">
-            <span class="font-medium">Agent:</span> {{ $pin->resolution_note }}
-        </p>
-    @endif
     <x-mark-before-after :mark="$pin" />
 
-    @if ($pin->comments->isNotEmpty())
-        <div class="mt-2 space-y-1.5">
-            @foreach ($pin->comments as $comment)
-                <div wire:key="pin-comment-{{ $comment->id }}" class="rounded-lg bg-well px-2.5 py-1.5">
-                    <p class="mb-0.5 flex flex-wrap items-baseline justify-between gap-x-2 text-xs">
-                        <span class="font-medium text-zinc-700">{{ $comment->author }}</span>
-                        <time class="text-zinc-400" datetime="{{ $comment->created_at->toIso8601String() }}">{{ $comment->created_at->diffForHumans() }}</time>
-                    </p>
-                    <p class="text-xs leading-relaxed text-zinc-600">{{ $comment->body }}</p>
-                </div>
-            @endforeach
-        </div>
-    @endif
+    {{-- Who did what on this mark, in order: steps, notes and comments. --}}
+    <x-mark-timeline :mark="$pin" :owner-view="$mode === 'owner'" class="mt-3" wire:key="pin-timeline-{{ $pin->id }}-{{ $pin->updated_at?->timestamp }}" />
 
     @if (! $previous && $activeCommentMarkId === $pin->id)
         <div class="mt-2 space-y-2">
