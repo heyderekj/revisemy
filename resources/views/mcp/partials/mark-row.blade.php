@@ -12,12 +12,13 @@
             <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold" :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
             <span class="text-xs text-muted-foreground" x-text="severityLabel(pin.severity)"></span>
             <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(pin.status)"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(pin.status)" aria-hidden="true"></span><span x-text="statusLabel(pin.status)"></span></span>
+            <span class="inline-flex" x-show="agentSet(pin)"><x-agent-tag /></span>
             <span class="text-xs tabular-nums text-zinc-400" x-show="pin.comment_count > 0" x-text="pin.comment_count + (pin.comment_count === 1 ? ' comment' : ' comments')"></span>
         </div>
         <p class="text-sm leading-relaxed text-zinc-700" x-text="pin.body"></p>
     </button>
     <p class="mt-2 rounded-lg bg-done-soft px-2.5 py-1.5 text-xs leading-relaxed text-done-ink" x-show="pin.resolution_note">
-        <span class="font-medium">Agent:</span> <span x-text="pin.resolution_note"></span>
+        <x-agent-tag class="me-1 align-[1px]" /> <span x-text="pin.resolution_note"></span>
     </p>
     @include('mcp.partials.before-after', ['pin' => 'pin'])
     <div class="mt-2 flex flex-wrap items-center gap-1.5" x-show="canManagePin(pin)">

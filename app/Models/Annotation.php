@@ -314,6 +314,21 @@ class Annotation extends Model
         return 'bg-accent text-accent-foreground';
     }
 
+    /** Who last moved a mark's status. */
+    public const STATUS_BY_OWNER = 'owner';
+
+    public const STATUS_BY_AGENT = 'agent';
+
+    /**
+     * Whether the agent set this mark's current status (in progress or
+     * resolved), so the review can label it as the agent's.
+     */
+    public function changedByAgent(): bool
+    {
+        return $this->status_by === self::STATUS_BY_AGENT
+            && in_array($this->status, self::agentStatuses(), true);
+    }
+
     /**
      * Accent color for radio inputs.
      */
@@ -335,6 +350,7 @@ class Annotation extends Model
         'promoted_from_finding_id',
         'number',
         'status',
+        'status_by',
         'resolution_note',
         'after_screenshot_id',
         'resolved_at',

@@ -16,6 +16,9 @@
             <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold {{ $pin->markerClass() }}">M{{ $pin->number }}</span>
             <span class="text-xs text-muted-foreground">{{ $pin->label() }}</span>
             <x-signal-tag :tone="$pin->statusTone()">{{ $pin->statusLabel() }}</x-signal-tag>
+            @if ($pin->changedByAgent())
+                <x-agent-tag />
+            @endif
             @if ($pin->source && $pin->source !== \App\Models\Annotation::SOURCE_HUMAN)
                 <span class="rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-medium text-zinc-600">{{ $pin->sourceLabel() }}</span>
             @endif
@@ -39,7 +42,7 @@
     @endif
     @if ($pin->resolution_note)
         <p class="mt-2 rounded-lg bg-done-soft px-2.5 py-1.5 text-xs leading-relaxed text-done-ink">
-            <span class="font-medium">Agent:</span> {{ $pin->resolution_note }}
+            <x-agent-tag class="me-1 align-[1px]" /> {{ $pin->resolution_note }}
         </p>
     @endif
     <x-mark-before-after :mark="$pin" />
@@ -47,9 +50,13 @@
     @if ($pin->comments->isNotEmpty())
         <div class="mt-2 space-y-1.5">
             @foreach ($pin->comments as $comment)
-                <div wire:key="pin-comment-{{ $comment->id }}" class="rounded-lg bg-well px-2.5 py-1.5">
+                <div wire:key="pin-comment-{{ $comment->id }}" @class(['rounded-lg px-2.5 py-1.5', 'bg-sky-50/70' => $comment->isAgent(), 'bg-well' => ! $comment->isAgent()])>
                     <p class="mb-0.5 flex flex-wrap items-baseline justify-between gap-x-2 text-xs">
-                        <span class="font-medium text-zinc-700">{{ $comment->author }}</span>
+                        @if ($comment->isAgent())
+                            <x-agent-tag />
+                        @else
+                            <span class="font-medium text-zinc-700">{{ $comment->author }}</span>
+                        @endif
                         <time class="text-zinc-400" datetime="{{ $comment->created_at->toIso8601String() }}">{{ $comment->created_at->diffForHumans() }}</time>
                     </p>
                     <p class="text-xs leading-relaxed text-zinc-600">{{ $comment->body }}</p>

@@ -1,7 +1,9 @@
 <?php
 
 use App\Livewire\Concerns\FindsReviewMarks;
+use App\Events\MarkUpdated;
 use App\Models\Annotation;
+use App\Models\AnnotationComment;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
 use App\Support\FeedbackText;
@@ -139,9 +141,11 @@ new class extends Component
 
         $annotation->comments()->create([
             'author' => 'Owner',
+            'author_type' => AnnotationComment::AUTHOR_OWNER,
             'from_owner' => true,
             'body' => $this->commentBody,
         ]);
+        MarkUpdated::dispatch($annotation);
 
         $this->commentBody = '';
         $this->loadBoard();
@@ -429,6 +433,9 @@ new class extends Component
                                         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold {{ $mark->markerClass() }}">M{{ $mark->number }}</span>
                                         <span class="text-xs text-zinc-500">{{ $mark->label() }}</span>
                                         <x-signal-tag :tone="$mark->statusTone()">{{ $mark->statusLabel() }}</x-signal-tag>
+                                        @if ($mark->changedByAgent())
+                                            <x-agent-tag />
+                                        @endif
                                         @if ($mark->comments->isNotEmpty())
                                             <span class="inline-flex items-center gap-1 rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600">
                                                 <flux:icon name="chat-bubble-left-right" class="size-3" />
@@ -439,7 +446,7 @@ new class extends Component
                                     <p class="text-sm leading-relaxed text-zinc-700">{{ $mark->body }}</p>
                                     @if ($mark->resolution_note)
                                         <div class="mt-2 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900">
-                                            <span class="font-medium">Agent:</span> {{ $mark->resolution_note }}
+                                            <x-agent-tag class="me-1 align-[1px]" /> {{ $mark->resolution_note }}
                                         </div>
                                     @endif
                                 </div>
@@ -511,6 +518,9 @@ new class extends Component
                                 <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold {{ $selectedMark->markerClass() }}">M{{ $selectedMark->number }}</span>
                                 <span class="text-xs text-zinc-500">{{ $selectedMark->label() }}</span>
                                 <x-signal-tag :tone="$selectedMark->statusTone()">{{ $selectedMark->statusLabel() }}</x-signal-tag>
+                                @if ($selectedMark->changedByAgent())
+                                    <x-agent-tag />
+                                @endif
                             </div>
                             @if ($markReview)
                                 <p class="mt-2 text-xs text-zinc-400">Pass {{ $markReview->pass }} · {{ $markReview->title }}</p>
@@ -558,7 +568,7 @@ new class extends Component
                             @endif
                             @if ($selectedMark->resolution_note)
                                 <div>
-                                    <dt class="text-xs text-muted-foreground">Agent note</dt>
+                                    <dt class="flex items-center gap-1.5 text-xs text-muted-foreground">Note <x-agent-tag /></dt>
                                     <dd class="mt-1 rounded-lg bg-done-soft px-3 py-2 text-done-ink">{{ $selectedMark->resolution_note }}</dd>
                                 </div>
                             @endif
@@ -605,9 +615,13 @@ new class extends Component
 
                     <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                         @forelse ($selectedMark->comments as $comment)
-                            <div wire:key="mark-comment-{{ $comment->id }}" class="rounded-xl bg-raised px-3 py-2.5 shadow-xs ring-1 ring-black/[0.04]">
+                            <div wire:key="mark-comment-{{ $comment->id }}" @class(['rounded-xl px-3 py-2.5 shadow-xs ring-1 ring-black/[0.04]', 'bg-sky-50/70' => $comment->isAgent(), 'bg-raised' => ! $comment->isAgent()])>
                                 <div class="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                                    <p class="text-xs font-medium text-zinc-800">{{ $comment->author }}</p>
+                                    @if ($comment->isAgent())
+                                        <x-agent-tag />
+                                    @else
+                                        <p class="text-xs font-medium text-zinc-800">{{ $comment->author }}</p>
+                                    @endif
                                     <time
                                         class="text-[11px] text-zinc-400"
                                         datetime="{{ $comment->created_at->toIso8601String() }}"

@@ -25,7 +25,8 @@ ReviseMy gives the person a review link. They mark what matters on your capture 
   - `apply_decision_note`: their note is the brief. Apply it.
   - `open_next_pass`: `create_review` again with `parent_id` and fresh captures so they can verify.
   - `done`: they approved. Stop.
-- If a mark is a question with no answer, ask the person in chat. Don't invent one.
+- If a mark is a question with no answer, ask the person in chat, or in the mark's thread with `reply_to_marks`. Don't invent one.
+- Use `reply_to_marks` to explain a fix or why you left something alone. A reply never changes a mark.
 
 ## Rules
 

@@ -66,6 +66,12 @@ Only the person verifies. There's no way for an agent to mark its own work verif
 
 `resolve_marks` takes up to 50 marks at once. Check `skipped` in the response: a mark listed there didn't change, with the reason. Resolving only works while the review's status is `changes_requested`.
 
+## Replying on a mark
+
+Your agent can answer in a mark's thread with `reply_to_marks`: answer a question, say why it didn't change something, or ask before guessing. It takes up to 20 replies, each `{id, body}`, while the review waits on the person or after they ask for changes. A reply never changes the mark, so progress still goes through `resolve_marks`.
+
+Replies arrive in `work_packets.pins[].comments` with `author_type: "agent"`. The person and any guests see them with an Agent tag, the same tag that marks your agent's notes, the statuses it set, its after images and its findings. `status_by` on each pin says whether your agent or the person set the current status. If the owner turned comments off, replies come back in `skipped_replies` as `comments_off`.
+
 ## Passes
 
 When every mark is resolved, `next_action` becomes `open_next_pass`. Call `create_review` again with `parent_id` set to this review and fresh captures. The new pass inherits the type and the webhook. It also shows the person what changed since the last one.

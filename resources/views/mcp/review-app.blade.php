@@ -6,8 +6,11 @@
      - Board columns / empty copy ↔ Annotation::boardColumnMeta
      - Mark focus crop via pin.focus_preview ↔ MarkFocus + mark-focus-preview
      - Control height h-8 ↔ Flux size="sm" on web
-     Intentionally web-only: comment threads, share/guest, drag columns, second-opinion
-     accept/dismiss, zoom/pan, editable title. When comment_count > 0, link out via
+     - Agent tag (x-agent-tag) on notes, statuses the agent set, after images,
+       replies and agent findings ↔ the same component on the web
+     - Comment threads shown read-only (pins[].comments); replying stays on the web.
+     Intentionally web-only: writing comments, share/guest, drag columns, second-opinion
+     accept/dismiss, pan, editable title. "Reply on the web" links out via
      review_url / board_url.
 
      Styles and Alpine are compiled from resources/css/mcp-app.css and
@@ -263,8 +266,9 @@
                                         x-show="hasRegion(f)"
                                         x-text="'S' + regionNumber(f)"></span>
                                     <span class="text-xs text-zinc-500" x-text="severityLabel(f.severity)"></span>
+                                    <span class="inline-flex" x-show="f.source === 'agent'"><x-agent-tag /></span>
                                     <span class="rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800"
-                                        x-show="hasRegion(f)" x-text="findingSourceLabel(f)"></span>
+                                        x-show="hasRegion(f) && f.source !== 'agent'" x-text="findingSourceLabel(f)"></span>
                                 </div>
                                 <p class="text-sm leading-relaxed text-zinc-700" x-text="f.body"></p>
                             </button>
@@ -320,6 +324,7 @@
                                                 :class="markerBg(pin.severity)" x-text="'M' + pin.number"></span>
                                             <span class="text-xs text-zinc-500" x-text="severityLabel(pin.severity)"></span>
                                             <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(pin.status)"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(pin.status)" aria-hidden="true"></span><span x-text="statusLabel(pin.status)"></span></span>
+                                            <span class="inline-flex" x-show="agentSet(pin)"><x-agent-tag /></span>
                                             <span class="rounded-full bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-500"
                                                 x-show="pin._from_parent" x-text="'P' + pin._pass"></span>
                                             <span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-600"
@@ -328,7 +333,7 @@
                                         <p class="text-sm leading-relaxed text-zinc-700" x-text="pin.body"></p>
                                         <div class="mt-2 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900"
                                             x-show="pin.resolution_note" @click.stop>
-                                            <span class="font-medium">Agent:</span>
+                                            <x-agent-tag class="me-1 align-[1px]" />
                                             <span x-text="pin.resolution_note"></span>
                                         </div>
                                     </button>
@@ -658,6 +663,10 @@
                     return 's' + this.findingStableId(f);
                 }
                 return 't' + this.findingStableId(f);
+            },
+            // Mirrors Annotation::changedByAgent(): a status your agent set.
+            agentSet(pin) {
+                return !! pin && pin.status_by === 'agent' && ['in_progress', 'resolved'].includes(pin.status);
             },
             findingSourceLabel(f) {
                 const s = (f && f.source) || 'checklist';
