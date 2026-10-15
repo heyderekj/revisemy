@@ -2,6 +2,7 @@
 
 namespace App\Services\Capture;
 
+use App\Services\ScreenshotStorage;
 use App\Support\ToolProgress;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -14,12 +15,30 @@ use Illuminate\Validation\ValidationException;
  * plain HTTPS POST.
  *
  * URL captures prefer Browserless /function: one page session settles the
- * page, takes the screenshot, and reads the element map and DOM, so all three
- * describe exactly the same frame. Hosts without /function fall back to
- * /screenshot (bytes only) plus a separate, equally settled /content load.
+ * page, waits for the network to go quiet, takes the screenshot and its rail
+ * thumbnail, and reads the element map and DOM, so all of them describe
+ * exactly the same frame. It measures the page first, so it can shoot at the
+ * viewport's full DPR within a pixel budget. Hosts without /function fall back
+ * to /screenshot (bytes only, wide viewports at 1×) plus a separate, equally
+ * settled /content load.
  */
 class HostedCaptureDriver implements CaptureDriver
 {
+    /**
+     * Tallest shot in device pixels. Chrome's screenshot surface tops out at
+     * 16,384px; past it, full-page captures repeat or blank out.
+     */
+    public const MAX_SHOT_HEIGHT = 16_000;
+
+    /** Time for the two screenshots and their encoding in /function (ms). */
+    protected const SHOOT_BUDGET_MS = 10_000;
+
+    /**
+     * Longest /function waits for network idle after the settle (ms). The
+     * settle's own load gate has already waited for what's on screen.
+     */
+    protected const IDLE_BUDGET_MS = 3_000;
+
     /**
      * Runs inside Browserless /function (Puppeteer). Kept free of PHP
      * interpolation; every value arrives through `context`.
@@ -35,12 +54,70 @@ export default async function ({ page, context }) {
     await new Promise((resolve) => setTimeout(resolve, context.waitMs));
   }
   await page.evaluate('(' + context.settle + ')()');
-  const image = await page.screenshot({ type: 'png', fullPage: context.fullPage, encoding: 'base64' });
-  const elements = context.collectElements ? await page.evaluate(() => window.__rmElements || null) : null;
-  const html = context.withHtml ? await page.content() : null;
-  const stable = await page.evaluate(() => window.__rmSettleStable === true);
 
-  return { data: { image, elements, html, stable }, type: 'application/json' };
+  // The sweep and the load gate start fetches the first load never made.
+  // Let them land and, if any did, bring the page to rest once more. Pages
+  // with an open chat or analytics socket never go idle, so this is short.
+  if (context.idleMs > 0) {
+    const finished = () => page.evaluate(() => performance.getEntriesByType('resource').length);
+    const before = await finished();
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: context.idleMs, concurrency: 2 }).catch(() => {});
+    if ((await finished()) !== before) {
+      await page.evaluate(() => (window.__rmSettleAgain ? window.__rmSettleAgain() : null));
+    }
+  }
+
+  // The whole document at the viewport's DPR, scaled down only as far as the
+  // pixel budget and Chrome's screenshot height need, and again if the PNG
+  // would still be over the storage cap.
+  const doc = await page.evaluate(() => ({
+    width: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0, window.innerWidth),
+    height: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0, window.innerHeight),
+  }));
+  const dpr = context.viewport.deviceScaleFactor || 1;
+  const width = doc.width;
+  const height = context.fullPage ? doc.height : context.viewport.height;
+  const shoot = (type, clip, scale, extra) => page.screenshot({
+    type,
+    encoding: 'base64',
+    captureBeyondViewport: true,
+    clip: { x: 0, y: 0, width: clip.width, height: clip.height, scale },
+    ...extra,
+  });
+  let scale = Math.min(1, Math.sqrt(context.maxPixels / (width * dpr * height * dpr)), context.maxHeight / (height * dpr));
+  let image = await shoot('png', { width, height }, scale, {});
+  while (image.length * 0.75 > context.maxBytes && scale > 0.25) {
+    scale *= 0.8;
+    image = await shoot('png', { width, height }, scale, {});
+  }
+
+  // The rail thumbnail: the top of the page, already small, so the app
+  // never decodes a tall capture to make one.
+  const thumb = context.thumbWidth > 0
+    ? await shoot('jpeg', { width, height: Math.min(height, Math.ceil(width * 1.25)) }, Math.min(1, context.thumbWidth / (width * dpr)), { quality: 75 })
+    : null;
+
+  const state = await page.evaluate(() => ({
+    elements: window.__rmElements || null,
+    stable: window.__rmSettleStable === true,
+    loaded: window.__rmLoadComplete === true,
+    incomplete: window.__rmIncomplete || 0,
+  }));
+  const html = context.withHtml ? await page.content() : null;
+
+  return {
+    data: {
+      image,
+      thumb,
+      scale,
+      html,
+      elements: context.collectElements ? state.elements : null,
+      stable: state.stable,
+      loaded: state.loaded,
+      incomplete: state.incomplete,
+    },
+    type: 'application/json',
+  };
 }
 JS;
 
@@ -51,40 +128,53 @@ JS;
 
     public function captureUrl(string $url, array $viewports): array
     {
+        if ($this->functionEndpoint() !== null) {
+            try {
+                return $this->captureUrlVia('function', $url, $viewports);
+            } catch (FunctionUnavailable) {
+                // Logged where it was turned down; /screenshot does the lot.
+            }
+        }
+
+        return $this->captureUrlVia('screenshot', $url, $viewports);
+    }
+
+    /**
+     * Capture through one path only, never falling back: 'function' or
+     * 'screenshot'. revisemy:probe-capture uses it to show what each path
+     * does with a page.
+     *
+     * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}>  $viewports
+     * @return list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, html?: string|null, thumb?: string|null}>
+     *
+     * @throws FunctionUnavailable when /function is missing or turns the request down
+     */
+    public function captureUrlVia(string $path, string $url, array $viewports): array
+    {
         $fullPage = (bool) config('revisemy.capture.url_full_page', true);
         $sweep = $fullPage && CaptureSettleScript::enabled();
         $baseMeta = ['origin' => 'capture', 'page_url' => $url];
 
-        if ($functionEndpoint = $this->functionEndpoint()) {
-            $shots = [];
-
-            foreach ($viewports as $index => $viewport) {
-                ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
-                $shot = $this->captureViaFunction($functionEndpoint, $url, $viewport, $baseMeta, $fullPage, $sweep, withHtml: $index === 0);
-
-                if ($shot === null) {
-                    // This host has no /function — use /screenshot for the lot.
-                    Log::info('Hosted capture: /function unavailable, falling back to /screenshot', ['endpoint' => $functionEndpoint]);
-                    $shots = null;
-                    break;
-                }
-
-                $shots[] = $shot;
-            }
-
-            if ($shots !== null) {
-                return $shots;
-            }
+        if ($path !== 'function') {
+            return $this->captureViaScreenshot(
+                ['url' => $url],
+                $viewports,
+                $baseMeta,
+                fullPage: $fullPage,
+                sweep: $sweep,
+                hideConsent: (bool) config('revisemy.capture.hide_consent', true),
+            );
         }
 
-        return $this->captureViaScreenshot(
-            ['url' => $url],
-            $viewports,
-            $baseMeta,
-            fullPage: $fullPage,
-            sweep: $sweep,
-            hideConsent: (bool) config('revisemy.capture.hide_consent', true),
-        );
+        $endpoint = $this->functionEndpoint() ?? throw new FunctionUnavailable(0, 'no /function endpoint is configured');
+        $shots = [];
+
+        foreach ($viewports as $index => $viewport) {
+            ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
+            $shots[] = $this->captureViaFunction($endpoint, $url, $viewport, $baseMeta, $fullPage, $sweep, withHtml: $index === 0);
+        }
+
+        return $shots;
     }
 
     public function captureHtml(string $html, array $viewports): array
@@ -136,17 +226,22 @@ JS;
     }
 
     /**
-     * One viewport through Browserless /function. Null when the host has no
-     * /function endpoint (404/405), so the caller can fall back.
+     * One viewport through Browserless /function.
      *
-     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool}  $viewport
+     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
      * @param  array<string, mixed>  $baseMeta
-     * @return array{binary: string, meta: array<string, mixed>, elements: array<string, mixed>|null, html: string|null}|null
+     * @return array{binary: string, meta: array<string, mixed>, elements: array<string, mixed>|null, html: string|null, thumb: string|null}
+     *
+     * @throws FunctionUnavailable when the host has no /function or turns the request down
      */
-    protected function captureViaFunction(string $endpoint, string $url, array $viewport, array $baseMeta, bool $fullPage, bool $sweep, bool $withHtml): ?array
+    protected function captureViaFunction(string $endpoint, string $url, array $viewport, array $baseMeta, bool $fullPage, bool $sweep, bool $withHtml): array
     {
         $collect = (bool) config('revisemy.capture.collect_elements', true);
-        $budgetMs = CaptureSettleScript::budgetMs($sweep, $collect);
+        // Settle, then network idle and maybe a second settle, then two shots.
+        $budgetMs = CaptureSettleScript::budgetMs($sweep, $collect)
+            + self::IDLE_BUDGET_MS
+            + CaptureSettleScript::againBudgetMs($collect)
+            + self::SHOOT_BUDGET_MS;
         $httpTimeout = $this->requestTimeout($budgetMs);
         $dpr = $viewport['dpr'] ?? $this->urlDeviceScaleFactor();
         $label = $viewport['label'];
@@ -160,7 +255,7 @@ JS;
                 'isMobile' => $viewport['mobile'],
                 'hasTouch' => $viewport['mobile'],
             ],
-            'userAgent' => $viewport['mobile'] ? $this->mobileUserAgent() : null,
+            'userAgent' => CaptureDevice::userAgent($viewport),
             'waitUntil' => $this->gotoOptions()['waitUntil'],
             'timeout' => $this->gotoOptions()['timeout'],
             'waitMs' => $this->waitMs(),
@@ -169,13 +264,24 @@ JS;
                 hideConsent: (bool) config('revisemy.capture.hide_consent', true),
                 collectElements: $collect,
             ),
+            'idleMs' => min(self::IDLE_BUDGET_MS, CaptureSettleScript::loadTimeoutMs()),
             'fullPage' => $fullPage,
+            'maxPixels' => max(1_000_000, (int) config('revisemy.capture.max_pixels', 24_000_000)),
+            'maxHeight' => self::MAX_SHOT_HEIGHT,
+            'maxBytes' => ScreenshotStorage::MAX_CAPTURE_BYTES,
+            'thumbWidth' => ScreenshotStorage::THUMB_WIDTH,
             'collectElements' => $collect,
             'withHtml' => $withHtml,
         ];
 
-        // Browserless ends a session at its own timeout; give it the same budget.
-        $target = $endpoint.(str_contains($endpoint, '?') ? '&' : '?').'timeout='.($httpTimeout * 1000);
+        // Browserless ends a session at its own timeout; give it the same
+        // budget, but never more than the plan allows — over the cap, the
+        // whole request is turned down.
+        $sessionMs = $httpTimeout * 1000;
+        if (($maxMs = (int) config('revisemy.capture.session_max_ms')) > 0) {
+            $sessionMs = min($sessionMs, $maxMs);
+        }
+        $target = $endpoint.(str_contains($endpoint, '?') ? '&' : '?').'timeout='.$sessionMs;
 
         $response = $this->send($target, ['code' => self::FUNCTION_CODE, 'context' => $context], $httpTimeout, $label);
 
@@ -189,7 +295,7 @@ JS;
                 'body' => $this->providerSnippet($response),
             ]);
 
-            return null;
+            throw new FunctionUnavailable($response->status(), $this->providerSnippet($response));
         }
 
         $data = $response->successful() ? $response->json() : null;
@@ -201,23 +307,31 @@ JS;
             ]);
         }
 
+        $thumb = is_string($data['thumb'] ?? null) ? base64_decode($data['thumb'], true) : false;
+        $scale = is_numeric($data['scale'] ?? null) ? min(1.0, max(0.0, (float) $data['scale'])) : 1.0;
+
         return [
             'binary' => $binary,
             'meta' => $baseMeta + [
                 'viewport' => $label,
                 'css_width' => $viewport['width'],
-                'dpr' => $dpr,
+                // What the pixels hold per CSS px once the budget had its say.
+                'dpr' => $scale >= 0.995 ? $dpr : round($dpr * $scale, 2),
+                'requested_dpr' => $dpr,
                 'mobile' => $viewport['mobile'],
                 'settled' => (bool) ($data['stable'] ?? false),
+                'loaded' => (bool) ($data['loaded'] ?? false),
+                'incomplete_images' => (int) ($data['incomplete'] ?? 0),
             ] + (is_array($data['elements'] ?? null) ? ['elements_source' => 'same_load'] : []),
             'elements' => is_array($data['elements'] ?? null) ? $data['elements'] : null,
             'html' => is_string($data['html'] ?? null) && $data['html'] !== '' ? $data['html'] : null,
+            'thumb' => is_string($thumb) && $thumb !== '' ? $thumb : null,
         ];
     }
 
     /**
      * @param  array<string, string>  $source
-     * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool}>  $viewports
+     * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}>  $viewports
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
@@ -234,10 +348,13 @@ JS;
         foreach ($viewports as $viewport) {
             ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
 
-            // URL captures: full-page at DPR 1 by default — tall 2× PNGs OOM
-            // Cloud's 256MB PHP; narrow viewports may ask for more.
-            $dpr = $viewport['dpr'] ?? ($isUrl ? $this->urlDeviceScaleFactor() : max(1, (int) config('revisemy.capture.device_scale_factor', 2)));
+            // A full-page URL shot here can't be measured first, so wide
+            // viewports stay at 1× (see CaptureDevice::unmeasuredDpr).
+            $dpr = $isUrl
+                ? CaptureDevice::unmeasuredDpr($viewport)
+                : ($viewport['dpr'] ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2)));
             $label = $viewport['label'];
+            $userAgent = CaptureDevice::userAgent($viewport);
 
             $payload = $source + [
                 'viewport' => [
@@ -260,14 +377,14 @@ JS;
             // be object), which failed every mobile shot and so the whole
             // capture. Send the object; a server that wants the string gets
             // asked once more with it.
-            if ($viewport['mobile']) {
-                $payload['userAgent'] = ['userAgent' => $this->mobileUserAgent()];
+            if ($userAgent !== null) {
+                $payload['userAgent'] = ['userAgent' => $userAgent];
             }
 
             $response = $this->send($endpoint, $payload, $httpTimeout, $label);
 
-            if ($viewport['mobile'] && $response->status() === 400 && str_contains($response->body(), 'userAgent')) {
-                $payload['userAgent'] = $this->mobileUserAgent();
+            if ($userAgent !== null && $response->status() === 400 && str_contains($response->body(), 'userAgent')) {
+                $payload['userAgent'] = $userAgent;
                 $response = $this->send($endpoint, $payload, $httpTimeout, $label);
             }
 
@@ -376,11 +493,6 @@ JS;
     protected function urlDeviceScaleFactor(): int
     {
         return max(1, (int) config('revisemy.capture.url_device_scale_factor', 1));
-    }
-
-    protected function mobileUserAgent(): string
-    {
-        return (string) config('revisemy.capture.mobile_user_agent');
     }
 
     /**

@@ -7,12 +7,19 @@ namespace App\Services\Capture;
  * screenshot, so the capture shows what a visitor sees once everything has
  * loaded and finished animating — never a frame mid-fade.
  *
- * In order: wait for fonts and images; optionally sweep the viewport down the
+ * In order: hide the scrollbar so the page lays out at the full viewport
+ * width; wait for fonts and images; optionally sweep the viewport down the
  * document so IntersectionObserver / scroll-in reveals fire; lock below-fold
  * reveals so they can't play back out when we return to the top; fast-forward
- * every CSS/WAAPI animation and transition to its end; optionally hide cookie
- * consent banners; then wait until nothing on the page moves. Optionally it
- * records an element map (selector, kind, text, box) on window.__rmElements.
+ * every CSS/WAAPI animation and transition to its end; wait until everything a
+ * visitor would see has loaded (images, CSS backgrounds, autoplaying video,
+ * fonts, then a quiet network); optionally hide cookie consent banners; then
+ * wait until nothing on the page moves. It notes how many images never
+ * loaded on window.__rmIncomplete, and optionally records an element map
+ * (selector, kind, text, box) on window.__rmElements.
+ *
+ * window.__rmSettleAgain() repeats only the last steps, for a caller that
+ * waited on the network after the first pass (Browserless /function).
  *
  * Runs as a Puppeteer waitForFunction (Browserless and Browsershot both run
  * waitForTimeout first, so this is the last thing before the shot) or as a
@@ -62,6 +69,15 @@ class CaptureSettleScript
     }
 
     /**
+     * Budget for the load gate: images, CSS backgrounds, video frames, fonts
+     * and a quiet network (ms).
+     */
+    public static function loadTimeoutMs(): int
+    {
+        return max(1_000, (int) config('revisemy.capture.load_timeout_ms', 8_000));
+    }
+
+    /**
      * Total time the function may take; callers use it for their timeouts.
      */
     public static function budgetMs(bool $sweep, bool $collectElements = false): int
@@ -69,7 +85,16 @@ class CaptureSettleScript
         // The sweep gets its own budget and restarts the settle budget after it.
         return self::settleTimeoutMs()
             + ($sweep ? self::timeoutMs() + self::settleTimeoutMs() : 0)
+            + self::loadTimeoutMs()
             + ($collectElements ? self::ELEMENTS_BUDGET_MS : 0);
+    }
+
+    /**
+     * Time one __rmSettleAgain() call may take.
+     */
+    public static function againBudgetMs(bool $collectElements = false): int
+    {
+        return self::settleTimeoutMs() + ($collectElements ? self::ELEMENTS_BUDGET_MS : 0);
     }
 
     /**
@@ -79,6 +104,11 @@ class CaptureSettleScript
     public const OUTER_HEADROOM_MS = 3_000;
 
     protected const ELEMENTS_BUDGET_MS = 3_000;
+
+    /**
+     * Most CSS background images the load gate waits on.
+     */
+    protected const MAX_BACKGROUNDS = 60;
 
     /**
      * Async page function (returns true once settled).
@@ -104,6 +134,8 @@ class CaptureSettleScript
             'stableMs' => self::stableMs(),
             'sweepBudgetMs' => $sweep ? self::timeoutMs() : 0,
             'settleBudgetMs' => self::settleTimeoutMs(),
+            'loadBudgetMs' => self::loadTimeoutMs(),
+            'maxBackgrounds' => self::MAX_BACKGROUNDS,
             'elementsBudgetMs' => self::ELEMENTS_BUDGET_MS,
             'maxElements' => 2000,
             'consentSelectors' => implode(',', self::CONSENT_SELECTORS),
@@ -168,6 +200,86 @@ async () => {
     .filter((img) => img.currentSrc || img.src)
     .filter((img) => !img.complete || img.naturalWidth === 0)
     .map((img) => capped(img.decode(), ms))), ms);
+
+  const pendingImages = () => Array.from(document.images)
+    .filter((img) => (img.currentSrc || img.src) && !img.complete).length;
+
+  // Native lazy loading waits for the viewport, but the shot shows the whole
+  // page: load everything now, including what the page adds later.
+  const loadEagerly = () => {
+    for (const el of document.querySelectorAll('img[loading="lazy"], iframe[loading="lazy"]')) {
+      el.loading = 'eager';
+    }
+  };
+
+  // CSS background images (Elementor and Webflow sections lean on them),
+  // so the load gate can wait for those too.
+  const backgroundUrls = () => {
+    const urls = new Set();
+    const nodes = document.body ? document.body.getElementsByTagName('*') : [];
+    for (let i = 0; i < nodes.length && i < 5000 && urls.size < cfg.maxBackgrounds; i++) {
+      const value = getComputedStyle(nodes[i]).backgroundImage;
+      if (!value || value === 'none') {
+        continue;
+      }
+      for (const match of value.matchAll(/url\(["']?(.*?)["']?\)/g)) {
+        if (match[1] && !match[1].startsWith('data:')) {
+          urls.add(match[1]);
+        }
+      }
+    }
+    return Array.from(urls);
+  };
+
+  const loadUrl = (url) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = img.onerror = () => resolve();
+    img.src = url;
+  });
+
+  // A visitor sees an autoplaying video's frames, not a black box.
+  const videoFrames = () => Promise.all(Array.from(document.querySelectorAll('video'))
+    .filter((video) => (video.autoplay || !video.paused) && video.readyState < 2)
+    .map((video) => new Promise((resolve) => {
+      video.preload = 'auto';
+      video.addEventListener('loadeddata', resolve, { once: true });
+      video.addEventListener('error', resolve, { once: true });
+    })));
+
+  // Resource timing lists a request once it finishes. When none has
+  // finished for quietMs, the page has stopped fetching.
+  const networkQuiet = async (quietMs, maxMs) => {
+    const until = Date.now() + maxMs;
+    const count = () => performance.getEntriesByType('resource').length;
+    let last = count();
+    let since = Date.now();
+    while (Date.now() < until) {
+      await sleep(100);
+      const next = count();
+      if (next !== last) {
+        last = next;
+        since = Date.now();
+      } else if (Date.now() - since >= quietMs) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Everything a visitor would see, loaded — or the budget runs out.
+  const loadGate = async (maxMs) => {
+    const until = Date.now() + maxMs;
+    const left = () => Math.max(0, until - Date.now());
+    loadEagerly();
+    await capped(Promise.all([
+      settleImages(maxMs),
+      Promise.all(backgroundUrls().map(loadUrl)),
+      videoFrames(),
+      document.fonts ? document.fonts.ready : null,
+    ]), left());
+    await networkQuiet(500, left());
+    await settleImages(left());
+  };
 
   const finishAnimations = () => {
     if (!cfg.freeze || !document.getAnimations) {
@@ -461,14 +573,50 @@ async () => {
     };
   };
 
+  // The last word before the shot. Consent banners cover the hero, so they
+  // go; then wait until nothing moves for stableMs (or the budget runs out),
+  // note what never loaded, and take the element map from this exact state.
+  const finalPass = async (maxMs) => {
+    if (cfg.hideConsent) {
+      hideConsent();
+    }
+    window.__rmSettleStable = await settleView(maxMs, cfg.stableMs, false);
+    window.__rmIncomplete = pendingImages();
+    window.__rmLoadComplete = window.__rmIncomplete === 0;
+    if (!cfg.collectElements) {
+      return true;
+    }
+    try {
+      window.__rmElements = collectElements();
+      if (cfg.embedElements) {
+        const old = document.getElementById('__rm-elements');
+        if (old) {
+          old.remove();
+        }
+        const tag = document.createElement('script');
+        tag.type = 'application/json';
+        tag.id = '__rm-elements';
+        tag.textContent = JSON.stringify(window.__rmElements).replace(/</g, '\\u003c');
+        (document.body || document.documentElement).appendChild(tag);
+      }
+    } catch (e) {
+      window.__rmElements = null;
+    }
+    return true;
+  };
+
   try {
     let settleDeadline = Date.now() + cfg.settleBudgetMs;
     const left = () => Math.max(0, settleDeadline - Date.now());
 
-    // 1. Ready gates: fonts and every image, including lazy ones.
-    for (const img of document.querySelectorAll('img[loading="lazy"]')) {
-      img.loading = 'eager';
-    }
+    // 1. Lay out at the full viewport width: a headless scrollbar takes 15px
+    // of it and leaves the capture narrower than the device it names. Then
+    // the ready gates: fonts and every image, including lazy ones.
+    addStyle('html{scrollbar-width:none!important}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important}');
+    try {
+      performance.setResourceTimingBufferSize(5000);
+    } catch (e) {}
+    loadEagerly();
     if (document.fonts && document.fonts.ready) {
       await capped(document.fonts.ready, Math.min(2000, left()));
     }
@@ -498,44 +646,25 @@ async () => {
       const step = Math.max(Math.floor(view * 0.85), 100);
       for (let y = 0; y < height && Date.now() < sweepDeadline; y += step) {
         window.scrollTo(0, y);
+        loadEagerly();
         await sleep(cfg.stepMs);
         await settleView(Math.min(1500, Math.max(0, sweepDeadline - Date.now())), 150, true);
       }
       window.scrollTo(0, height);
       await sleep(cfg.endSettleMs);
-      await settleImages(1500);
       finishAnimations();
       window.scrollTo(0, 0);
       await sleep(cfg.topSettleMs);
-      settleDeadline = Date.now() + cfg.settleBudgetMs;
     }
 
-    // 4. Fast-forward anything the return to the top started.
+    // 4. Load everything a visitor would see, then land what that started.
+    await loadGate(cfg.loadBudgetMs);
     finishAnimations();
+    settleDeadline = Date.now() + cfg.settleBudgetMs;
 
-    // 5. Consent banners cover the hero; take them out of the shot.
-    if (cfg.hideConsent) {
-      hideConsent();
-    }
-
-    // 6. Wait until nothing moves for stableMs (or the budget runs out).
-    window.__rmSettleStable = await settleView(left(), cfg.stableMs, false);
-
-    // 7. Element map from the same settled page the screenshot sees.
-    if (cfg.collectElements) {
-      try {
-        window.__rmElements = collectElements();
-        if (cfg.embedElements) {
-          const tag = document.createElement('script');
-          tag.type = 'application/json';
-          tag.id = '__rm-elements';
-          tag.textContent = JSON.stringify(window.__rmElements).replace(/</g, '\\u003c');
-          (document.body || document.documentElement).appendChild(tag);
-        }
-      } catch (e) {
-        window.__rmElements = null;
-      }
-    }
+    // 5–7. Consent banners out, stillness, element map.
+    await finalPass(left());
+    window.__rmSettleAgain = () => finalPass(cfg.settleBudgetMs);
 
     window.__rmSettleDone = true;
     return true;

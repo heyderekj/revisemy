@@ -30,14 +30,13 @@ class BrowsershotCaptureDriver implements CaptureDriver
         $hideConsent = (bool) config('revisemy.capture.hide_consent', true);
         $collect = (bool) config('revisemy.capture.collect_elements', true);
 
-        // Full-page at DPR 1 by default — matches hosted driver; avoids Cloud
-        // OOM on tall pages. Narrow viewports may ask for more.
+        // Browsershot can't measure the page before the shot, so wide
+        // viewports stay at 1×, as on the hosted /screenshot path.
         $shots = $this->capture(
             fn () => Browsershot::url($url),
-            $viewports,
+            array_map(fn (array $viewport) => ['dpr' => CaptureDevice::unmeasuredDpr($viewport)] + $viewport, $viewports),
             ['origin' => 'capture', 'page_url' => $url],
             fullPage: $fullPage,
-            deviceScaleFactor: max(1, (int) config('revisemy.capture.url_device_scale_factor', 1)),
             sweep: $sweep,
             hideConsent: $hideConsent,
         );
@@ -100,7 +99,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
     /**
      * Element map + DOM from a settled load of one viewport. Best-effort.
      *
-     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool}  $viewport
+     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
      * @return array{elements: array<string, mixed>|null, html: string|null}|null
      */
     protected function pageData(string $url, array $viewport, bool $sweep, bool $hideConsent): ?array
@@ -122,11 +121,11 @@ class BrowsershotCaptureDriver implements CaptureDriver
 
     /**
      * @param  callable(): Browsershot  $factory
-     * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool}>  $viewports
+     * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}>  $viewports
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage, bool $sweep, bool $hideConsent, ?int $deviceScaleFactor = null): array
+    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage, bool $sweep, bool $hideConsent): array
     {
         if (! $this->enabled()) {
             throw ValidationException::withMessages([
@@ -138,7 +137,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
 
         foreach ($viewports as $viewport) {
             ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
-            $dpr = $viewport['dpr'] ?? $deviceScaleFactor ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
+            $dpr = $viewport['dpr'] ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
 
             $shot = $this->configure($factory(), $sweep, $hideConsent);
             $this->emulate($shot, $viewport, $dpr);
@@ -195,15 +194,15 @@ class BrowsershotCaptureDriver implements CaptureDriver
     }
 
     /**
-     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool}  $viewport
+     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
      */
     protected function emulate(Browsershot $shot, array $viewport, int $dpr): void
     {
         $shot->windowSize($viewport['width'], $viewport['height'])
             ->deviceScaleFactor($dpr);
 
-        if ($viewport['mobile']) {
-            $shot->mobile()->touch()->userAgent((string) config('revisemy.capture.mobile_user_agent'));
+        if ($userAgent = CaptureDevice::userAgent($viewport)) {
+            $shot->mobile()->touch()->userAgent($userAgent);
         }
     }
 }

@@ -15,7 +15,7 @@ Take the Sermonary homepage (sermonary.com). It reads well, but most of it is te
 - Only the six-step workflow (Plan, Study, Write, Present, Recap, Multiply) is visual. Each step has a screenshot.
 - The problem section, the feature checklist, the FAQ and the pricing and Team details are text only.
 - Testimonials are named quotes with no logos, counts or ratings.
-- It's unclear whether the hero carries a real product screenshot.
+- The hero does carry the product: a live mockup of the editor in a laptop frame. An earlier capture didn't show it clearly, which is why capture quality comes first (see "Limits today").
 
 Most faith-tool sites follow the same shape. A faith pack would mark each of those sections and ask for something to look at: a real product shot in the hero, an illustration or before and after for the problem, a face and church name beside each quote, a comparison table for plans.
 
@@ -72,6 +72,7 @@ The rubric spine is shared: show, don't tell; text to visual ratio per section; 
 
 ## Limits today
 
+- A rubric is only as good as the shot it reads. A pack marks "show, don't tell", so a hero that hasn't loaded or text too soft to read sends it the wrong way. Captures now settle, wait for images, CSS backgrounds and video, and shoot at 2× through Browserless `/function`. On the `/screenshot` fallback, desktop and tablet are still 1×. Each shot's meta says `loaded` and `incomplete_images`, and a pack should say so in its findings instead of marking something missing that only didn't load.
 - No per-request rubric. `type` is a closed enum (`ui`, `website`, `presentation`, `email`) and lens prompts are fixed in `app/Support/TasteLenses.php` and `app/Services/SecondOpinionService.php`.
 - `context` reaches the vision prompt, but only as a soft hint.
 - Findings have no source field, so the prefix in the body is the only tag.
@@ -85,6 +86,7 @@ Once a rubric proves itself, move it server side:
 
 ## Sequencing
 
+0. Capture you can trust: production on `/function`, so shots are 2× and fully loaded. Check with `php artisan revisemy:probe-capture`.
 1. Shared spine, the faith pack, `/for/faith`, the sync command and the test changes.
 2. The other nine packs and pages.
 

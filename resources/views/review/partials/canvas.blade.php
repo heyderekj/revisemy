@@ -1,132 +1,123 @@
-        <section class="min-h-0 min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto overscroll-contain pt-4 sm:space-y-4 sm:pt-5 md:max-h-none md:overflow-hidden md:pt-6">
+        <section class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-well">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
-                <div class="grid gap-1.5 py-3 sm:grid-cols-[9.5rem_1fr] sm:gap-4 sm:py-4">
-                    <flux:heading size="sm" class="sm:pt-0.5">What to look at</flux:heading>
+                {{-- The brief floats over the shot's corner: there when you want it, gone with Hide. --}}
+                <div
+                    class="absolute left-3 top-3 z-20 w-[min(20rem,calc(100%-1.5rem))] rounded-2xl bg-lift p-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07] md:left-4 md:top-4"
+                    x-show="$store.rmPanel?.brief ?? true"
+                    x-transition.opacity.duration.120ms
+                    data-brief
+                    x-data="{
+                        more: false,
+                        clamped: false,
+                        measure() {
+                            const text = this.$refs.text;
+                            this.clamped = !! text && text.scrollHeight > text.clientHeight + 1;
+                        },
+                    }"
+                    x-init="$nextTick(() => measure())"
+                    x-on:resize.window.debounce.100ms="measure()"
+                >
+                    <div class="mb-1.5 flex items-center gap-3">
+                        <h2 class="min-w-0 flex-1 text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
+                        @if ($review->context && ! $editingContext)
+                            <button
+                                type="button"
+                                class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900"
+                                x-show="clamped || more"
+                                x-cloak
+                                x-on:click="more = ! more; $nextTick(() => measure())"
+                                x-text="more ? 'Show less' : 'Show all'"
+                            ></button>
+                        @endif
+                        <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900" x-on:click="$store.rmPanel.brief = false">Hide</button>
+                    </div>
 
-                    <div class="flex items-start gap-2">
-                        <div class="min-w-0 flex-1">
-                            @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
-                                <textarea
-                                    wire:key="context-editor"
-                                    wire:model="contextDraft"
-                                    rows="3"
-                                    maxlength="5000"
-                                    placeholder="What should they look at on this pass?"
-                                    class="w-full resize-y border-0 bg-transparent p-0 text-sm leading-relaxed text-pretty text-zinc-600 outline-none ring-0 placeholder:text-zinc-400 sm:text-base"
-                                    x-data
-                                    x-init="$el.focus()"
-                                    x-on:keydown.meta.enter.prevent="$wire.saveContext()"
-                                    x-on:keydown.ctrl.enter.prevent="$wire.saveContext()"
-                                    x-on:keydown.escape.prevent="$wire.cancelEditContext()"
-                                    x-on:blur="$wire.blurSaveContext()"
-                                ></textarea>
-                            @elseif ($this->isOwner() && $review->isOpenForFeedback())
+                    {{-- Clamped so the shot stays in view; Show all, up by Hide, opens the rest. --}}
+                    <div>
+                        @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
+                            <textarea
+                                wire:key="context-editor"
+                                wire:model="contextDraft"
+                                rows="5"
+                                maxlength="5000"
+                                placeholder="What should they look at on this pass?"
+                                class="block w-full resize-y rounded-lg border-0 bg-well px-2.5 py-2 text-sm leading-relaxed text-pretty text-zinc-800 outline-none ring-1 ring-black/[0.06] placeholder:text-zinc-400 focus:ring-2 focus:ring-key/50"
+                                x-data
+                                x-init="$el.focus(); $el.setSelectionRange($el.value.length, $el.value.length)"
+                                x-on:keydown.meta.enter.prevent="$wire.saveContext()"
+                                x-on:keydown.ctrl.enter.prevent="$wire.saveContext()"
+                                x-on:keydown.escape.prevent="$wire.cancelEditContext()"
+                                x-on:blur="$wire.blurSaveContext()"
+                            ></textarea>
+                            <div class="mt-2 flex items-center justify-end gap-1.5">
                                 <button
                                     type="button"
-                                    wire:click="startEditContext"
-                                    class="w-full text-left transition hover:text-zinc-800"
-                                    title="Click to edit"
+                                    wire:click="cancelEditContext"
+                                    x-on:mousedown.prevent
+                                    class="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-chip hover:text-zinc-900"
+                                    title="Cancel · Esc"
                                 >
-                                    @if ($review->context)
-                                        <p class="text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                                            {{ $review->context }}
-                                        </p>
-                                    @else
-                                        <p class="text-sm text-zinc-400 sm:text-base">
-                                            Add what to look at on this pass…
-                                        </p>
-                                    @endif
+                                    <flux:icon.x-mark variant="micro" class="size-3.5" /> Cancel
                                 </button>
-                            @elseif ($review->context)
-                                <p class="text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base">
-                                    {{ $review->context }}
-                                </p>
-                            @endif
-                        </div>
-
-                        @if ($this->isOwner() && $review->isOpenForFeedback())
-                            <div class="flex w-14 shrink-0 items-center justify-end gap-0.5 pt-0.5">
-                                @if ($editingContext)
-                                    <button
-                                        type="button"
-                                        wire:click="saveContext"
-                                        x-on:mousedown.prevent
-                                        class="inline-flex size-6 items-center justify-center rounded-md text-zinc-900 transition hover:bg-chip"
-                                        aria-label="Save"
-                                        title="Save · ⌘Enter"
-                                    >
-                                        <flux:icon.check variant="micro" class="size-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        wire:click="cancelEditContext"
-                                        x-on:mousedown.prevent
-                                        class="inline-flex size-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-                                        aria-label="Cancel"
-                                        title="Cancel · Esc"
-                                    >
-                                        <flux:icon.x-mark variant="micro" class="size-3.5" />
-                                    </button>
-                                @endif
+                                <button
+                                    type="button"
+                                    wire:click="saveContext"
+                                    x-on:mousedown.prevent
+                                    class="inline-flex h-7 items-center gap-1 rounded-full bg-foreground px-2.5 text-xs font-medium text-background transition-opacity hover:opacity-90"
+                                    title="Save · ⌘Enter"
+                                >
+                                    <flux:icon.check variant="micro" class="size-3.5" /> Save
+                                </button>
                             </div>
+                        @elseif ($this->isOwner() && $review->isOpenForFeedback())
+                            <button
+                                type="button"
+                                wire:click="startEditContext"
+                                class="w-full text-left transition hover:text-zinc-800"
+                                title="Click to edit"
+                            >
+                                @if ($review->context)
+                                    <p
+                                        x-ref="text"
+                                        x-bind:class="more ? 'max-h-[50svh] overflow-y-auto' : 'line-clamp-4'"
+                                        class="text-sm leading-relaxed text-pretty text-zinc-700"
+                                    >{{ $review->context }}</p>
+                                @else
+                                    <p class="text-sm text-zinc-400">
+                                        Add what to look at on this pass…
+                                    </p>
+                                @endif
+                            </button>
+                        @elseif ($review->context)
+                            <p
+                                x-ref="text"
+                                x-on:click="more = ! more"
+                                x-bind:class="more ? 'max-h-[50svh] overflow-y-auto' : 'line-clamp-4'"
+                                class="cursor-pointer text-sm leading-relaxed text-pretty text-zinc-700"
+                            >{{ $review->context }}</p>
                         @endif
+
                     </div>
                 </div>
             @endif
 
-            <div @class(['sm:flex sm:items-start sm:gap-3' => $review->screenshots->count() > 1])>
+            <div class="relative flex min-h-0 flex-1 flex-col">
 
-            @if ($review->screenshots->count() > 1)
-                <div
-                    class="mb-2 flex gap-2 overflow-x-auto p-1 sm:mb-0 sm:max-h-[min(70svh,560px)] sm:w-24 sm:shrink-0 sm:flex-col sm:overflow-y-auto sm:overflow-x-visible"
-                    role="tablist"
-                    aria-label="Screenshots"
-                    aria-orientation="vertical"
-                >
-                    @foreach ($review->screenshots as $index => $shotOption)
-                        <button
-                            type="button"
-                            role="tab"
-                            wire:key="rail-{{ $shotOption->id }}"
-                            wire:click="selectScreenshot({{ $index }})"
-                            x-on:click="$store.rmFocus && ($store.rmFocus.finding = null, $store.rmFocus.mark = null)"
-                            aria-label="{{ $shotOption->railLabel($index) }}"
-                            aria-selected="{{ $activeScreenshotIndex === $index ? 'true' : 'false' }}"
-                            title="{{ $shotOption->railLabel($index) }}"
-                            @class([
-                                'group relative w-16 shrink-0 overflow-hidden rounded-xl transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 active:scale-[0.97] sm:w-full',
-                                'shadow-sm ring-2 ring-key ring-offset-2' => $activeScreenshotIndex === $index,
-                                'opacity-80 ring-1 ring-zinc-200 hover:opacity-100 hover:ring-zinc-300' => $activeScreenshotIndex !== $index,
-                            ])
-                        >
-                            <img
-                                src="{{ $shotOption->thumbUrl() }}"
-                                alt=""
-                                loading="lazy"
-                                draggable="false"
-                                class="pointer-events-none block aspect-[4/5] w-full bg-zinc-100 object-cover object-top"
-                            />
-                            <span class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-900/70 to-transparent px-1.5 pb-1 pt-4 text-left text-xs font-medium text-white">
-                                {{ $shotOption->railLabel($index) }}
-                            </span>
-                        </button>
-                    @endforeach
-                </div>
-            @endif
-
-            <div class="min-w-0 flex-1">
+            <div class="relative flex min-h-0 min-w-0 flex-1 flex-col">
 
             @if ($shot)
                 <div
                     wire:key="shot-viewer-{{ $activeScreenshotIndex }}"
-                    class="min-w-0"
+                    class="relative flex min-h-0 min-w-0 flex-1 flex-col"
                     x-data="{
                         zoom: 1,
+                        fit: 'width',
                         zoomMin: 1,
                         zoomMax: 3,
                         zoomStep: 0.25,
                         naturalWidth: {{ (int) ($shot->width ?: 0) }},
                         naturalHeight: {{ (int) ($shot->height ?: 0) }},
+                        pixelRatio: {{ $shot->pixelRatio() }},
                         baseWidth: 0,
                         drawing: false,
                         panning: false,
@@ -167,9 +158,19 @@
                         measureLayout() {
                             const vp = this.$refs.viewport;
                             if (! vp) return;
-                            const containerWidth = vp.clientWidth;
-                            const natural = this.naturalWidth || containerWidth;
-                            this.baseWidth = natural > 0 ? Math.min(containerWidth, natural) : containerWidth;
+                            const cs = getComputedStyle(vp);
+                            const availWidth = Math.max(1, vp.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+                            const availHeight = Math.max(1, vp.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
+                            // A 2× capture's 100% is the size the page was drawn at.
+                            const actual = this.naturalWidth ? this.naturalWidth / this.pixelRatio : availWidth;
+                            const aspect = this.naturalWidth && this.naturalHeight ? this.naturalWidth / this.naturalHeight : 0;
+                            if (this.fit === 'actual') {
+                                this.baseWidth = actual;
+                            } else if (this.fit === 'page' && aspect) {
+                                this.baseWidth = Math.min(availWidth, actual, availHeight * aspect);
+                            } else {
+                                this.baseWidth = Math.min(availWidth, actual);
+                            }
                         },
                         canvasStyle() {
                             // Width only — height must come from the image so mark %
@@ -214,6 +215,12 @@
                         },
                         zoomOut() {
                             this.zoom = Math.max(this.zoomMin, +(this.zoom - this.zoomStep).toFixed(2));
+                        },
+                        setFit(mode) {
+                            this.fit = mode;
+                            this.zoom = 1;
+                            this.measureLayout();
+                            this.$refs.viewport?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
                         },
                         resetZoom() {
                             this.zoom = 1;
@@ -362,26 +369,28 @@
                     x-on:keyup.window="onKeyUp($event)"
                 >
                     <div @class([
-                        'relative overflow-hidden rounded-2xl bg-well',
+                        'relative flex min-h-0 flex-1 flex-col',
                     ])>
-                        <div data-zoom-controls class="absolute bottom-2 left-2 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
+                        <div data-zoom-controls class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
                             <button
                                 type="button"
-                                class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
+                                class="hidden size-7 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:flex"
                                 x-on:click="zoomOut()"
                                 x-bind:disabled="zoom <= zoomMin"
                                 aria-label="Zoom out"
                             >−</button>
+                            @foreach (['width' => ['Fit width', 'Width'], 'page' => ['Whole page', 'Page'], 'actual' => ['100%', '100%']] as $fitMode => [$fitLabel, $fitShort])
+                                <button
+                                    type="button"
+                                    class="h-7 rounded-full px-2.5 text-xs font-medium transition-colors"
+                                    x-bind:class="fit === '{{ $fitMode }}' && zoom === 1 ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                    x-bind:aria-pressed="(fit === '{{ $fitMode }}' && zoom === 1).toString()"
+                                    x-on:click="setFit('{{ $fitMode }}')"
+                                ><span class="hidden sm:inline">{{ $fitLabel }}</span><span class="sm:hidden">{{ $fitShort }}</span></button>
+                            @endforeach
                             <button
                                 type="button"
-                                class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-xs text-zinc-500 transition hover:bg-zinc-100"
-                                x-on:click="resetZoom()"
-                                x-text="Math.round(zoom * 100) + '%'"
-                                aria-label="Reset zoom"
-                            ></button>
-                            <button
-                                type="button"
-                                class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
+                                class="hidden size-7 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:flex"
                                 x-on:click="zoomIn()"
                                 x-bind:disabled="zoom >= zoomMax"
                                 aria-label="Zoom in"
@@ -390,7 +399,7 @@
 
                     <div
                         x-ref="viewport"
-                        class="relative max-h-[min(52svh,420px)] overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] lg:max-h-[min(70svh,560px)]"
+                        class="relative min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-3 pb-20 md:px-6 md:pt-6"
                         x-bind:class="{
                             'cursor-grab': canPan() && spaceHeld && !panning,
                             'cursor-grabbing': panning
@@ -402,14 +411,14 @@
                     >
                         <div
                             x-ref="canvas"
-                            class="relative mx-auto max-w-full select-none"
+                            class="relative mx-auto max-w-full select-none rounded-lg bg-raised shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]"
                             x-bind:style="canvasStyle()"
                             @if ($review->isOpenForFeedback())
-                                x-bind:class="(zoom > 1 ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair' : '')"
+                                x-bind:class="(zoom > 1 || fit === 'actual' ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair' : '')"
                                 x-on:mousedown="beginDraw($event)"
                                 x-on:keydown.escape.window="cancelDraw()"
                             @else
-                                x-bind:class="zoom > 1 ? '!max-w-none' : ''"
+                                x-bind:class="zoom > 1 || fit === 'actual' ? '!max-w-none' : ''"
                             @endif
                         >
                             <img
@@ -418,7 +427,7 @@
                                 alt="Screenshot {{ $activeScreenshotIndex + 1 }}"
                                 @if ($shot->width) width="{{ $shot->width }}" @endif
                                 @if ($shot->height) height="{{ $shot->height }}" @endif
-                                class="pointer-events-none block h-auto w-full max-w-full"
+                                class="pointer-events-none block h-auto w-full max-w-full rounded-lg"
                                 draggable="false"
                                 x-on:load="onImageLoad()"
                             />
@@ -595,8 +604,8 @@
                     </div>
 
                 @if ($review->isOpenForFeedback())
-                    <p class="mt-2 hidden text-center text-xs text-muted-foreground md:block">
-                        {{ $mode === 'guest' ? 'Drag to suggest a change, or click for a point.' : 'Drag to mark a region, or click for a point.' }} Space+drag pans.
+                    <p class="pointer-events-none absolute bottom-3 left-3 z-20 hidden rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] md:block xl:left-1/2 xl:-translate-x-1/2">
+                        {{ $mode === 'guest' ? 'Drag to suggest a change · click for a point' : 'Drag to mark · click for a point' }} · Space+drag pans
                     </p>
                 @endif
                 </div>
@@ -822,7 +831,7 @@
                 <div
                     x-ref="panel"
                     x-bind:style="panelStyle"
-                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(20rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
+                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(22rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
                     role="dialog"
                     aria-label="{{ $mode === 'guest' ? 'Suggest a change' : 'Leave a note' }}"
                     x-on:keydown.escape.window="$wire.cancelPin()"
@@ -862,10 +871,11 @@
                             <flux:error name="draftBody" />
                         </div>
                         @if ($mode === 'owner')
-                        <div class="flex flex-wrap gap-2">
+                        {{-- One row, like the viewport switch: what kind of mark this is. --}}
+                        <div class="flex w-full items-center gap-0.5 rounded-xl bg-chip p-0.5" role="radiogroup" aria-label="Kind of mark">
                             @foreach (\App\Models\Annotation::severityLabels() as $value => $label)
-                                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-chip px-2.5 py-1 text-sm has-[:checked]:bg-raised has-[:checked]:shadow-sm has-[:checked]:ring-1 has-[:checked]:ring-black/[0.08]">
-                                    <input type="radio" wire:model.live="draftSeverity" value="{{ $value }}" class="{{ \App\Models\Annotation::accentClass($value) }}">
+                                <label class="flex h-7 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-[0.6rem] px-1.5 text-xs font-medium whitespace-nowrap text-zinc-500 transition-colors hover:text-zinc-900 has-[:checked]:bg-raised has-[:checked]:text-zinc-900 has-[:checked]:shadow-xs has-[:checked]:ring-1 has-[:checked]:ring-black/[0.06] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-zinc-400">
+                                    <input type="radio" wire:model.live="draftSeverity" value="{{ $value }}" class="sr-only">
                                     {{ $label }}
                                 </label>
                             @endforeach

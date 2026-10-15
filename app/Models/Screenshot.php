@@ -143,6 +143,19 @@ class Screenshot extends Model
     }
 
     /**
+     * Image pixels per CSS px: 2 for a 2× capture, 1 for an upload we know
+     * nothing about. The board and the inline review show a shot at
+     * width / pixelRatio(), the size the page was drawn at, so 2× stays sharp
+     * and a phone shot isn't blown up.
+     */
+    public function pixelRatio(): float
+    {
+        $dpr = $this->meta['dpr'] ?? null;
+
+        return is_numeric($dpr) && $dpr > 0 ? (float) $dpr : 1.0;
+    }
+
+    /**
      * Short label for the thumbnail rail, derived from capture metadata:
      * viewport for URL/HTML captures, page number for PDFs, else the index.
      */

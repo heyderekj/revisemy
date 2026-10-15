@@ -77,7 +77,6 @@
                         <span class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="tone(reviewTone()[0]).tag"><span class="size-1.5 shrink-0 rounded-full" :class="tone(reviewTone()[0]).dot" aria-hidden="true"></span><span x-text="reviewTone()[1]"></span></span>
                     </template>
                 </div>
-                <p class="mt-1 text-sm text-zinc-500" x-show="payload.context" x-text="payload.context"></p>
 
                 {{-- toolbar: view toggle + verified progress + refresh --}}
                 <div class="mt-3 flex flex-wrap items-center gap-3">
@@ -102,18 +101,41 @@
 
                 {{-- SCREENSHOT VIEW --}}
                 <div class="mt-3" x-show="view === 'screenshot'">
-                    <div class="mb-2 flex flex-wrap gap-1.5" x-show="payload.screenshots.length > 1">
+                    {{-- Which shot: the same segmented control as the review page header. --}}
+                    <div class="mb-2 inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl bg-chip p-0.5" role="tablist" aria-label="Screenshots" x-show="payload.screenshots.length > 1">
                         <template x-for="(shot, i) in payload.screenshots" :key="shot.id">
-                            <button type="button" class="rounded-lg border px-2.5 py-1 text-xs font-medium transition"
-                                :class="i === activeIndex ? 'border-zinc-400 bg-white text-zinc-900 shadow-sm' : 'border-zinc-200 bg-white text-zinc-500 hover:text-zinc-800'"
+                            <button type="button" role="tab" class="h-7 shrink-0 whitespace-nowrap rounded-[0.6rem] px-2.5 text-xs font-medium transition-colors"
+                                :class="i === activeIndex ? 'bg-raised text-zinc-900 shadow-xs ring-1 ring-black/[0.06]' : 'text-zinc-500 hover:text-zinc-900'"
+                                :aria-selected="(i === activeIndex).toString()"
                                 @click="setActive(i)" x-text="shotLabel(shot, i)"></button>
                         </template>
                     </div>
 
-                    <div class="relative max-h-[min(70dvh,36rem)] overflow-auto overscroll-contain rounded-2xl bg-well"
-                        x-show="activeShot()">
-                        <div class="relative w-full" x-show="activeShot()">
-                            <img class="block w-full" :src="activeShot()?.url" :alt="payload.title" draggable="false">
+                    {{-- Canvas first, as on the review page: the brief floats over the
+                         corner and the fit modes sit bottom right. --}}
+                    <div class="relative" x-show="activeShot()" @resize.window.debounce.100ms="layoutTick++">
+                    <div class="pointer-events-auto absolute left-3 top-3 z-30 w-[min(18rem,calc(100%-1.5rem))] rounded-2xl bg-lift p-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07]"
+                        x-show="payload.context && brief" x-cloak>
+                        <div class="mb-1.5 flex items-center justify-between gap-2">
+                            <h2 class="text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
+                            <button type="button" class="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900" @click="brief = false">Hide</button>
+                        </div>
+                        <p class="line-clamp-4 text-sm leading-relaxed text-pretty text-zinc-700" x-text="payload.context"></p>
+                    </div>
+                    <div class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07]">
+                        <button type="button" class="h-7 rounded-full px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-chip"
+                            x-show="payload.context && !brief" @click="brief = true">Brief</button>
+                        <template x-for="mode in [['width', 'Fit width'], ['page', 'Whole page'], ['actual', '100%']]" :key="mode[0]">
+                            <button type="button" class="h-7 rounded-full px-2.5 text-xs font-medium transition-colors"
+                                :class="fit === mode[0] ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                :aria-pressed="(fit === mode[0]).toString()"
+                                @click="setFit(mode[0])" x-text="mode[1]"></button>
+                        </template>
+                    </div>
+                    <div class="relative max-h-[min(70dvh,36rem)] overflow-auto overscroll-contain rounded-2xl bg-well p-3 pb-14"
+                        x-ref="shotBox">
+                        <div class="relative w-full rounded-lg bg-raised shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]" x-show="activeShot()" :style="shotFrameStyle(activeShot())">
+                            <img class="block w-full rounded-lg" :src="activeShot()?.url" :alt="payload.title" draggable="false">
                             <div class="absolute inset-0 cursor-crosshair touch-pan-y" x-ref="overlay"
                                 @pointerdown="startDraw($event)" @pointermove="moveDraw($event)"
                                 @pointerup="endDraw($event)" @pointercancel="cancelDraw()" @pointerleave="cancelDraw()">
@@ -155,6 +177,8 @@
                         </div>
                     </div>
 
+                    </div>
+
                     <p class="mt-2 text-xs text-sky-700" x-show="activeShot() && activeShot().second_opinion_status === 'queued'">
                         Generating second-opinion hints…
                     </p>
@@ -179,15 +203,14 @@
 
                     {{-- mark composer --}}
                     <div class="mt-3 rounded-2xl bg-card px-3 py-3 sm:px-4" x-show="composer.open" @keydown.escape="closeComposer()">
-                        <div class="flex flex-wrap gap-1.5">
+                        {{-- One row, as on the review page: what kind of mark this is. --}}
+                        <div class="flex w-full max-w-md items-center gap-0.5 rounded-xl bg-chip p-0.5" role="radiogroup" aria-label="Kind of mark">
                             <template x-for="sev in severities" :key="sev.value">
-                                <button type="button"
-                                    class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-sm transition"
-                                    :class="composer.severity === sev.value ? 'bg-raised shadow-sm ring-1 ring-black/[0.08]' : 'bg-chip'"
-                                    @click="composer.severity = sev.value">
-                                    <span class="h-2.5 w-2.5 rounded-full" :class="markerBg(sev.value)"></span>
-                                    <span x-text="sev.label"></span>
-                                </button>
+                                <button type="button" role="radio"
+                                    class="h-7 min-w-0 flex-1 whitespace-nowrap rounded-[0.6rem] px-1.5 text-xs font-medium transition-colors"
+                                    :class="composer.severity === sev.value ? 'bg-raised text-zinc-900 shadow-xs ring-1 ring-black/[0.06]' : 'text-zinc-500 hover:text-zinc-900'"
+                                    :aria-checked="(composer.severity === sev.value).toString()"
+                                    @click="composer.severity = sev.value" x-text="sev.label"></button>
                             </template>
                         </div>
                         <textarea x-model="composer.body" rows="3" placeholder="What should change here?"
@@ -498,6 +521,9 @@
             payload: null,
             view: 'screenshot',
             activeIndex: 0,
+            fit: 'width',
+            brief: true,
+            layoutTick: 0,
             activePin: null,
             activeFinding: null,
             busy: false,
@@ -710,12 +736,41 @@
                 const v = shot.meta && shot.meta.viewport;
                 const page = shot.meta && shot.meta.page;
                 if (page) return 'Page ' + page;
-                if (v) return v.charAt(0).toUpperCase() + v.slice(1);
+                // Same as Screenshot::railLabel(): "desktop-1280" reads as "Desktop".
+                if (v) { const name = v.split('-')[0]; return name.charAt(0).toUpperCase() + name.slice(1); }
                 return 'Shot ' + (i + 1);
             },
 
             setActive(i) { this.activeIndex = i; this.closeComposer(); this.closeDetail(); },
             activeShot() { return this.payload ? this.payload.screenshots[this.activeIndex] : null; },
+            // Mirrors the review page's fit modes and Screenshot::pixelRatio():
+            // 100% is the size the page was drawn at, so 2× stays sharp and a
+            // phone isn't blown up. Fit width never goes past it; whole page fits
+            // the box's height too.
+            shotFrameStyle(shot) {
+                this.layoutTick;
+                const ratio = Number(shot && shot.meta && shot.meta.dpr) || 1;
+                const width = Number(shot && shot.width);
+                const height = Number(shot && shot.height);
+                if (! (width > 0)) return '';
+                const actual = Math.round(width / ratio);
+                if (this.fit === 'actual') return `width:${actual}px;max-width:none;margin-inline:auto;`;
+                const box = this.$refs.shotBox;
+                if (this.fit === 'page' && box && height > 0) {
+                    const cs = getComputedStyle(box);
+                    // The box's max height (min(70dvh, 36rem)), not its current
+                    // height, which shrinks with the shot.
+                    const availH = Math.min(window.innerHeight * 0.7, 576) - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+                    const availW = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+                    const fitted = Math.max(1, Math.min(actual, availW, availH * (width / height)));
+                    return `width:${Math.round(fitted)}px;margin-inline:auto;`;
+                }
+                return `max-width:${actual}px;margin-inline:auto;`;
+            },
+            setFit(mode) {
+                this.fit = mode;
+                this.$refs.shotBox?.scrollTo({ top: 0, left: 0 });
+            },
 
             pinStyle(p) {
                 if (! p || ! Number.isFinite(Number(p.x)) || ! Number.isFinite(Number(p.y))) return '';

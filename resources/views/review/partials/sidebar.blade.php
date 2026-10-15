@@ -1,7 +1,31 @@
         {{-- Three panels: My marks (what the agent works from), Hints (suggestions
              until accepted), and the decision. Weight over chrome: what needs you
-             sorts first, what's waiting is paler. --}}
-        <aside class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-0.5 pt-4 pb-28 [scroll-padding-top:1rem] sm:pt-5 md:min-h-0 md:overflow-y-auto md:pb-6 md:pl-5 md:pt-6 md:[scroll-padding-top:1.5rem] lg:pl-6">
+             sorts first, what's waiting is paler.
+
+             A drawer, so the shot gets the room: docked beside it on wide
+             screens, over it on narrow ones. --}}
+        <div
+            id="rm-drawer"
+            class="absolute inset-y-0 right-0 z-30 flex w-full flex-col sm:max-w-[22rem] border-l border-border bg-background shadow-[-16px_0_40px_-24px_rgba(0,0,0,0.35)] lg:static lg:z-auto lg:w-[22rem] lg:shrink-0 lg:shadow-none"
+            x-show="$store.rmPanel?.open"
+            x-cloak
+            x-transition:enter="transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            x-transition:enter-start="translate-x-4 opacity-0"
+            x-transition:leave="transition duration-150"
+            x-transition:leave-end="translate-x-4 opacity-0"
+        >
+            <div class="flex shrink-0 items-center justify-between gap-2 px-4 pt-3">
+                <p class="text-xs font-medium text-muted-foreground">{{ $mode === 'owner' ? 'Marks and hints' : 'Marks and suggestions' }}</p>
+                <button
+                    type="button"
+                    class="inline-flex size-7 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900"
+                    x-on:click="$store.rmPanel.toggle()"
+                    aria-label="Close marks and hints"
+                >
+                    <flux:icon.x-mark variant="micro" class="size-4" />
+                </button>
+            </div>
+        <aside class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-3 pt-2 pb-28 [scroll-padding-top:1rem] md:pb-4">
             @php($pins = $this->activeMarks->sortBy(fn ($p) => [$p->awaitsVerification() ? 0 : 1, $p->number])->values())
             @php($parent = $mode === 'owner' ? $review->parent : null)
             @php($previousMarks = $parent ? $parent->screenshots->flatMap->annotations->sortBy(fn ($p) => [$p->awaitsVerification() ? 0 : 1, $p->number])->values() : collect())
@@ -18,11 +42,13 @@
                     init() {
                         this.$watch(() => this.$store.rmFocus.mark, (id) => {
                             if (! id) return;
+                            this.$store.rmPanel?.show();
                             this.panels.marks = true;
                             this.$nextTick(() => document.getElementById('fb-mark-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                         });
                         this.$watch(() => this.$store.rmFocus.finding, (id) => {
                             if (! id) return;
+                            this.$store.rmPanel?.show();
                             this.panels.hints = true;
                             this.$nextTick(() => document.getElementById('fb-finding-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                         });
@@ -217,3 +243,4 @@
                 </div>
             @endif
         </aside>
+        </div>

@@ -113,15 +113,15 @@ class PageCaptureService
     }
 
     /**
-     * Configured viewports, each [width, height] plus optional 'dpr' and
-     * 'mobile' (touch, mobile user agent, isMobile) keys.
+     * Configured viewports, each [width, height] plus optional 'dpr',
+     * 'mobile' (touch, mobile user agent, isMobile) and 'device' keys.
      *
-     * @return list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool}>
+     * @return list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device: string}>
      */
-    protected function viewports(): array
+    public function viewports(): array
     {
         $configured = (array) config('revisemy.capture.viewports', [
-            'desktop' => [1280, 800],
+            'desktop' => [1280, 800, 'dpr' => 2],
             'mobile' => [375, 812, 'dpr' => 2, 'mobile' => true],
         ]);
 
@@ -134,12 +134,15 @@ class PageCaptureService
                 continue;
             }
 
+            $mobile = (bool) ($viewport['mobile'] ?? false);
+
             $viewports[] = [
                 'width' => $width,
                 'height' => $height,
                 'label' => $label.'-'.$width,
                 'dpr' => isset($viewport['dpr']) ? max(1, (int) $viewport['dpr']) : null,
-                'mobile' => (bool) ($viewport['mobile'] ?? false),
+                'mobile' => $mobile,
+                'device' => (string) ($viewport['device'] ?? ($mobile ? 'phone' : 'desktop')),
             ];
         }
 
@@ -152,7 +155,7 @@ class PageCaptureService
 
         if (! $driver || ! $driver->enabled()) {
             throw ValidationException::withMessages([
-                'capture' => '[capture_not_configured] Server-side capture is off. Set REVISEMY_CAPTURE_DRIVER=hosted plus REVISEMY_CAPTURE_ENDPOINT/KEY (Browserless) on Cloud, or browsershot locally. Fallback: call create_review with images as desktop+mobile data URLs instead of capture_url.',
+                'capture' => '[capture_not_configured] Server-side capture is off. Set REVISEMY_CAPTURE_DRIVER=hosted plus REVISEMY_CAPTURE_ENDPOINT/KEY (Browserless) on Cloud, or browsershot locally. Fallback: call create_review with images as desktop, mobile and tablet data URLs instead of capture_url.',
             ]);
         }
 

@@ -92,6 +92,10 @@ return [
         'function_endpoint' => env('REVISEMY_CAPTURE_FUNCTION_ENDPOINT'),
         'api_key' => env('REVISEMY_CAPTURE_KEY'),
         'timeout' => (int) env('REVISEMY_CAPTURE_TIMEOUT', 30),
+        // Longest Browserless session your plan allows (ms). The /function
+        // ?timeout= is clamped to it; a value over the plan's cap gets the
+        // request turned down and the capture falls back to /screenshot.
+        'session_max_ms' => (int) env('REVISEMY_CAPTURE_SESSION_MAX_MS', 0) ?: null,
         // Post-load pause before the settle script. Short: the settle script
         // itself waits until the page stops moving.
         'wait_ms' => max(0, (int) env('REVISEMY_CAPTURE_WAIT_MS', 1000)),
@@ -111,30 +115,45 @@ return [
         'freeze_animations' => filter_var(env('REVISEMY_CAPTURE_FREEZE_ANIMATIONS', true), FILTER_VALIDATE_BOOL),
         'settle_stable_ms' => max(100, (int) env('REVISEMY_CAPTURE_SETTLE_STABLE_MS', 400)),
         'settle_timeout_ms' => max(1_000, (int) env('REVISEMY_CAPTURE_SETTLE_TIMEOUT_MS', 4_000)),
+        // Load gate after the sweep: every image, CSS background, playing
+        // video's first frame and font, then a quiet network (giving up after
+        // load_timeout_ms). /function also waits for network idle this long.
+        'load_timeout_ms' => max(1_000, (int) env('REVISEMY_CAPTURE_LOAD_TIMEOUT_MS', 8_000)),
         // Hide cookie consent banners (OneTrust, Cookiebot, …) on URL captures.
         'hide_consent' => filter_var(env('REVISEMY_CAPTURE_HIDE_CONSENT', true), FILTER_VALIDATE_BOOL),
         // Record selector, kind, text and box for visible elements per shot.
         'collect_elements' => filter_var(env('REVISEMY_CAPTURE_COLLECT_ELEMENTS', true), FILTER_VALIDATE_BOOL),
         // Mobile viewports render as a phone: isMobile, touch, this user agent.
         'mobile_user_agent' => env('REVISEMY_CAPTURE_MOBILE_USER_AGENT', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'),
+        // Viewports with 'device' => 'tablet' render as an iPad instead.
+        'tablet_user_agent' => env('REVISEMY_CAPTURE_TABLET_USER_AGENT', 'Mozilla/5.0 (iPad; CPU OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'),
         'chrome_path' => env('REVISEMY_CAPTURE_CHROME_PATH', PHP_OS_FAMILY === 'Darwin'
             ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
             : null),
         'node_modules' => env('REVISEMY_CAPTURE_NODE_MODULES', base_path('node_modules')),
-        // [width, height] plus optional 'dpr' (overrides url_device_scale_factor)
-        // and 'mobile' (isMobile + touch + mobile user agent). Order is the
-        // screenshot order agents see; desktop first.
+        // [width, height] plus optional 'dpr' (overrides url_device_scale_factor),
+        // 'mobile' (isMobile + touch + mobile user agent) and 'device' => 'tablet'
+        // (the tablet user agent). Order is the screenshot order agents see;
+        // desktop first.
         'viewports' => [
-            'desktop' => [1280, 800],
+            'desktop' => [1280, 800, 'dpr' => 2],
             'mobile' => [375, 812, 'dpr' => 2, 'mobile' => true],
-            'tablet' => [768, 1024, 'mobile' => true],
+            'tablet' => [768, 1024, 'dpr' => 2, 'mobile' => true, 'device' => 'tablet'],
         ],
         // Retina captures: 2× device pixels (Browserless deviceScaleFactor / Browsershot DPR).
-        // Used for HTML/email (short pages). URL full-page uses url_device_scale_factor.
+        // Used for HTML/email (short pages). URL captures use each viewport's 'dpr'.
         'device_scale_factor' => max(1, (int) env('REVISEMY_CAPTURE_DPR', 2)),
-        // Full scroll height for website URL capture. DPR 1 avoids Cloud OOM on tall pages.
+        // Full scroll height for website URL capture.
         'url_full_page' => filter_var(env('REVISEMY_CAPTURE_URL_FULL_PAGE', true), FILTER_VALIDATE_BOOL),
+        // DPR for viewports without their own 'dpr', and for wide viewports on
+        // paths that can't measure the page first (/screenshot, Browsershot):
+        // a tall 2× PNG there can run Cloud's 256MB PHP out of memory.
         'url_device_scale_factor' => max(1, (int) env('REVISEMY_CAPTURE_URL_DPR', 1)),
+        // /function shoots at the viewport's DPR, scaled down only as far as
+        // it takes to stay under this many pixels and Chrome's 16,384px
+        // screenshot height. Long pages lose a little sharpness instead of
+        // memory or content.
+        'max_pixels' => max(1_000_000, (int) env('REVISEMY_CAPTURE_MAX_PIXELS', 24_000_000)),
     ],
 
     /*

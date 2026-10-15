@@ -15,6 +15,7 @@ We shouldn't copy their shape. A ticket system is the thing positioning says we 
 | | Lucidly | ReviseMy today |
 |---|---|---|
 | Who starts it | Client, on a live site | Agent, on anything visual |
+| Capture | Their own, of the live site | Server capture at 2×, waited until loaded; `/screenshot` fallback is 1× |
 | Sources | Live page pins | URL, email, deck, localhost images |
 | Review inside the chat | Not mentioned | Yes, MCP Apps |
 | Before and after proof | Not mentioned | `resolve_marks` with `after_image` |
@@ -31,6 +32,21 @@ We shouldn't copy their shape. A ticket system is the thing positioning says we 
 ## Proposed work
 
 Ordered by value for effort. Each item ships web and inline review together (`docs/CONNECTORS.md` § MCP ↔ web parity checklist).
+
+### 0. Capture you can trust
+
+Every item below leans on the shot. Proof is an after image, and the human marks what they can see, so a soft or half-loaded capture undercuts all of it. Shipped:
+
+- **Waiting:** a load gate waits for every image, CSS background, autoplaying video and font, then a quiet network, and `/function` adds a short network-idle wait. Each shot's meta records `loaded` and `incomplete_images`.
+- **Sharpness:** desktop, mobile and tablet at 2× through `/function`, scaled down only to stay under a pixel budget and Chrome's 16,000px height. Thumbnails come from the browser, so no tall image is decoded in PHP.
+- **Layout:** pages lay out at the full viewport width (no scrollbar strip), and tablet reads as an iPad.
+- **Display:** the board and the inline review show each shot at the size the page was drawn at.
+
+Still to do:
+
+- **Production on `/function`.** It has been falling back to `/screenshot`, which is 1× for desktop and tablet. `php artisan revisemy:probe-capture` shows Browserless's reason. `REVISEMY_CAPTURE_SESSION_MAX_MS` fixes it if the cause is the session timeout.
+- **A vision copy for tall captures.** Anthropic turns down images over 8000px on a side and shrinks the rest, and 2× makes tall shots common. Send the vision pass a smaller copy, or the page in slices. Production runs no vision key today, so the second opinion is the checklist only.
+- **One checklist per review, not per shot.** A URL capture repeats the same eight checklist hints on each of its three shots: 24 hints, most of them the same, in every `get_review`.
 
 ### 1. Let the agent reply on a mark
 
