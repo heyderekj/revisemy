@@ -7,8 +7,8 @@
                     x-transition.opacity.duration.120ms
                     data-brief
                 >
-                    <div class="mb-1 flex items-center justify-between gap-2">
-                        <flux:heading size="sm">What to look at</flux:heading>
+                    <div class="mb-1.5 flex items-center justify-between gap-2">
+                        <h2 class="text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
                         <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900" x-on:click="$store.rmPanel.brief = false">Hide</button>
                     </div>
 

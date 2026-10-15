@@ -116,8 +116,8 @@
                     <div class="relative" x-show="activeShot()" @resize.window.debounce.100ms="layoutTick++">
                     <div class="pointer-events-auto absolute left-3 top-3 z-30 w-[min(18rem,calc(100%-1.5rem))] rounded-2xl bg-lift p-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07]"
                         x-show="payload.context && brief" x-cloak>
-                        <div class="mb-1 flex items-center justify-between gap-2">
-                            <p class="text-sm font-medium text-zinc-900">What to look at</p>
+                        <div class="mb-1.5 flex items-center justify-between gap-2">
+                            <h2 class="text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
                             <button type="button" class="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900" @click="brief = false">Hide</button>
                         </div>
                         <p class="line-clamp-4 text-sm leading-relaxed text-pretty text-zinc-700" x-text="payload.context"></p>
