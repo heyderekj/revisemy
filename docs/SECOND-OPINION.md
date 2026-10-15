@@ -7,7 +7,7 @@ ReviseMy’s **human marks stay authoritative**. Second opinion is optional, lab
 ## What ships today (v1.1)
 
 On every screenshot upload:
-1. **Free checklist** runs immediately (no worker).
+1. **Free checklist** runs immediately (no worker). It is one set per review, kept on the first screenshot: it never looks at the pixels, so a desktop, mobile and tablet capture would otherwise repeat it three times. Its viewport notes come from every screenshot's shape.
 2. **Vision upgrade** — when `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` (or a custom OpenAI-compatible base URL) is set, vision runs **after the HTTP response** in the same app process. No separate queue worker is required — just the API key. Force a provider with `REVISEMY_VISION_PROVIDER=anthropic|openai` (default `auto`). **Only vision findings carry an `area` and render dashed regions on the screenshot.**
 
 Agents can also act as a **design-reviewer subagent** via `add_findings` before the human opens the link. Those land in the same review UI with an `Agent` badge.
@@ -17,7 +17,7 @@ Agents can also act as a **design-reviewer subagent** via `add_findings` before 
 1. Human marks = **intent** (`must-fix` / `wording` / `spacing` / `size` / `color` / `alignment` / `nit` / `question` / `keep` / decision). Exposed to agents as `work_packets.pins`.
 2. Findings = **suggestions** only (`suggestion` / `a11y` / `polish`) — never auto-flip review status.
 3. If a finding overlaps a human mark, enrich under `related_pin` — don’t invent a conflicting must-fix.
-4. Second opinion is scoped to **this screenshot** (+ optional `page_url`), not the whole product.
+4. Vision is scoped to **this screenshot** (+ optional `page_url`), not the whole product. The checklist covers the review.
 
 ### MCP tools
 
