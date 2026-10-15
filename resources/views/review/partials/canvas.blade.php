@@ -12,79 +12,91 @@
                         <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900" x-on:click="$store.rmPanel.brief = false">Hide</button>
                     </div>
 
-                    <div class="flex items-start gap-2">
-                        <div class="min-w-0 flex-1">
-                            @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
-                                <textarea
-                                    wire:key="context-editor"
-                                    wire:model="contextDraft"
-                                    rows="3"
-                                    maxlength="5000"
-                                    placeholder="What should they look at on this pass?"
-                                    class="w-full resize-y border-0 bg-transparent p-0 text-sm leading-relaxed text-pretty text-zinc-700 outline-none ring-0 placeholder:text-zinc-400"
-                                    x-data
-                                    x-init="$el.focus()"
-                                    x-on:keydown.meta.enter.prevent="$wire.saveContext()"
-                                    x-on:keydown.ctrl.enter.prevent="$wire.saveContext()"
-                                    x-on:keydown.escape.prevent="$wire.cancelEditContext()"
-                                    x-on:blur="$wire.blurSaveContext()"
-                                ></textarea>
-                            @elseif ($this->isOwner() && $review->isOpenForFeedback())
+                    {{-- Clamped so the shot stays in view; Show all opens the rest. --}}
+                    <div
+                        x-data="{
+                            more: false,
+                            clamped: false,
+                            measure() {
+                                const text = this.$refs.text;
+                                this.clamped = !! text && text.scrollHeight > text.clientHeight + 1;
+                            },
+                        }"
+                        x-init="$nextTick(() => measure())"
+                        x-on:resize.window.debounce.100ms="measure()"
+                    >
+                        @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
+                            <textarea
+                                wire:key="context-editor"
+                                wire:model="contextDraft"
+                                rows="5"
+                                maxlength="5000"
+                                placeholder="What should they look at on this pass?"
+                                class="block w-full resize-y rounded-lg border-0 bg-well px-2.5 py-2 text-sm leading-relaxed text-pretty text-zinc-800 outline-none ring-1 ring-black/[0.06] placeholder:text-zinc-400 focus:ring-2 focus:ring-key/50"
+                                x-data
+                                x-init="$el.focus(); $el.setSelectionRange($el.value.length, $el.value.length)"
+                                x-on:keydown.meta.enter.prevent="$wire.saveContext()"
+                                x-on:keydown.ctrl.enter.prevent="$wire.saveContext()"
+                                x-on:keydown.escape.prevent="$wire.cancelEditContext()"
+                                x-on:blur="$wire.blurSaveContext()"
+                            ></textarea>
+                            <div class="mt-2 flex items-center justify-end gap-1.5">
                                 <button
                                     type="button"
-                                    wire:click="startEditContext"
-                                    class="w-full text-left transition hover:text-zinc-800"
-                                    title="Click to edit"
+                                    wire:click="cancelEditContext"
+                                    x-on:mousedown.prevent
+                                    class="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-chip hover:text-zinc-900"
+                                    title="Cancel · Esc"
                                 >
-                                    @if ($review->context)
-                                        <p class="line-clamp-4 text-sm leading-relaxed text-pretty text-zinc-700">
-                                            {{ $review->context }}
-                                        </p>
-                                    @else
-                                        <p class="text-sm text-zinc-400">
-                                            Add what to look at on this pass…
-                                        </p>
-                                    @endif
+                                    <flux:icon.x-mark variant="micro" class="size-3.5" /> Cancel
                                 </button>
-                            @elseif ($review->context)
-                                {{-- Clamped so the shot stays in view; a click shows it all. --}}
-                                <p
-                                    x-data="{ open: false }"
-                                    x-on:click="open = ! open"
-                                    x-bind:class="open ? '' : 'line-clamp-4'"
-                                    class="line-clamp-4 cursor-pointer text-sm leading-relaxed text-pretty text-zinc-700"
+                                <button
+                                    type="button"
+                                    wire:click="saveContext"
+                                    x-on:mousedown.prevent
+                                    class="inline-flex h-7 items-center gap-1 rounded-full bg-foreground px-2.5 text-xs font-medium text-background transition-opacity hover:opacity-90"
+                                    title="Save · ⌘Enter"
                                 >
-                                    {{ $review->context }}
-                                </p>
-                            @endif
-                        </div>
-
-                        {{-- Save and cancel take room only while editing, so the brief uses the card's width. --}}
-                        @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
-                            <div class="flex shrink-0 items-center justify-end gap-0.5 pt-0.5">
-                                @if ($editingContext)
-                                    <button
-                                        type="button"
-                                        wire:click="saveContext"
-                                        x-on:mousedown.prevent
-                                        class="inline-flex size-6 items-center justify-center rounded-md text-zinc-900 transition hover:bg-chip"
-                                        aria-label="Save"
-                                        title="Save · ⌘Enter"
-                                    >
-                                        <flux:icon.check variant="micro" class="size-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        wire:click="cancelEditContext"
-                                        x-on:mousedown.prevent
-                                        class="inline-flex size-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-                                        aria-label="Cancel"
-                                        title="Cancel · Esc"
-                                    >
-                                        <flux:icon.x-mark variant="micro" class="size-3.5" />
-                                    </button>
-                                @endif
+                                    <flux:icon.check variant="micro" class="size-3.5" /> Save
+                                </button>
                             </div>
+                        @elseif ($this->isOwner() && $review->isOpenForFeedback())
+                            <button
+                                type="button"
+                                wire:click="startEditContext"
+                                class="w-full text-left transition hover:text-zinc-800"
+                                title="Click to edit"
+                            >
+                                @if ($review->context)
+                                    <p
+                                        x-ref="text"
+                                        x-bind:class="more ? 'max-h-[50svh] overflow-y-auto' : 'line-clamp-4'"
+                                        class="text-sm leading-relaxed text-pretty text-zinc-700"
+                                    >{{ $review->context }}</p>
+                                @else
+                                    <p class="text-sm text-zinc-400">
+                                        Add what to look at on this pass…
+                                    </p>
+                                @endif
+                            </button>
+                        @elseif ($review->context)
+                            <p
+                                x-ref="text"
+                                x-on:click="more = ! more"
+                                x-bind:class="more ? 'max-h-[50svh] overflow-y-auto' : 'line-clamp-4'"
+                                class="cursor-pointer text-sm leading-relaxed text-pretty text-zinc-700"
+                            >{{ $review->context }}</p>
+                        @endif
+
+                        @if ($review->context && ! $editingContext)
+                            <button
+                                type="button"
+                                class="mt-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900"
+                                x-show="clamped || more"
+                                x-cloak
+                                x-on:click="more = ! more; $nextTick(() => measure())"
+                                x-text="more ? 'Show less' : 'Show all'"
+                            ></button>
                         @endif
                     </div>
                 </div>
