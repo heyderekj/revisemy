@@ -59,8 +59,9 @@
                             @endif
                         </div>
 
-                        @if ($this->isOwner() && $review->isOpenForFeedback())
-                            <div class="flex w-14 shrink-0 items-center justify-end gap-0.5 pt-0.5">
+                        {{-- Save and cancel take room only while editing, so the brief uses the card's width. --}}
+                        @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
+                            <div class="flex shrink-0 items-center justify-end gap-0.5 pt-0.5">
                                 @if ($editingContext)
                                     <button
                                         type="button"
