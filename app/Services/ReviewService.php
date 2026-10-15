@@ -243,7 +243,7 @@ class ReviewService
 
         foreach (array_values($images) as $index => $image) {
             $shot = is_array($image)
-                ? $this->screenshots->storeRaw($review, $image['binary'], $index, $image['meta'] ?? null)
+                ? $this->screenshots->storeRaw($review, $image['binary'], $index, $image['meta'] ?? null, $image['thumb'] ?? null)
                 : $this->screenshots->store($review, $image, $index, binary: $resolved[$index]);
 
             if (is_array($image) && is_array($image['elements'] ?? null)) {

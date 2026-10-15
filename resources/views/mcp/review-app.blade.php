@@ -112,7 +112,7 @@
 
                     <div class="relative max-h-[min(70dvh,36rem)] overflow-auto overscroll-contain rounded-2xl bg-well"
                         x-show="activeShot()">
-                        <div class="relative w-full" x-show="activeShot()">
+                        <div class="relative w-full" x-show="activeShot()" :style="shotFrameStyle(activeShot())">
                             <img class="block w-full" :src="activeShot()?.url" :alt="payload.title" draggable="false">
                             <div class="absolute inset-0 cursor-crosshair touch-pan-y" x-ref="overlay"
                                 @pointerdown="startDraw($event)" @pointermove="moveDraw($event)"
@@ -716,6 +716,13 @@
 
             setActive(i) { this.activeIndex = i; this.closeComposer(); this.closeDetail(); },
             activeShot() { return this.payload ? this.payload.screenshots[this.activeIndex] : null; },
+            // Mirrors Screenshot::pixelRatio() on the board: a shot shows at the
+            // size the page was drawn at, so 2× stays sharp and a phone isn't blown up.
+            shotFrameStyle(shot) {
+                const ratio = Number(shot && shot.meta && shot.meta.dpr) || 1;
+                const width = Number(shot && shot.width);
+                return width > 0 ? `max-width:${Math.round(width / ratio)}px;margin-inline:auto;` : '';
+            },
 
             pinStyle(p) {
                 if (! p || ! Number.isFinite(Number(p.x)) || ! Number.isFinite(Number(p.y))) return '';

@@ -24,12 +24,12 @@ You are running a ReviseMy design checkup loop for: {$focus}
 ## The loop (do not skip steps)
 
 1. **Pick one ingest source** — `create_review` accepts exactly one. Choose before calling:
-   - **Public website** → `capture_url: true` + `page_url` (type `website`, **5 credits**). Server renders desktop + mobile. Do not put the page URL in `images`.
+   - **Public website** → `capture_url: true` + `page_url` (type `website`, **5 credits**). Server renders desktop, mobile and tablet. Do not put the page URL in `images`.
    - **Email HTML** → `html: "…"` (type `email`, **3 credits**). Server renders at ~600px.
    - **Slides / PDF** → `pdf: "…"` (type `presentation`, **1 credit**). One screenshot per page (max 5).
    - **Local or app UI** → `images: [data URL or base64]` (type `ui`, **1 credit**). Prefer this for localhost — never pass `http://localhost…` to remote capture; encode as data URLs.
    - `page_url` alone does **not** trigger capture. Use `capture_url: true` for live pages.
-   - If `create_review` returns `[capture_not_configured]` or `[capture_provider_failed]`, immediately fall back to `images` with desktop + mobile data URLs — do not keep retrying `capture_url`.
+   - If `create_review` returns `[capture_not_configured]` or `[capture_provider_failed]`, immediately fall back to `images` with desktop and mobile data URLs — do not keep retrying `capture_url`.
    - {$outOfCredits}
 2. **Open a review** — Call `create_review` with a short title, optional context (what the human should look at), and the source from step 1.
 3. **Optional subagent critique** — Call `add_findings` with suggestion/a11y/polish notes only (never must-fix). The human still decides.

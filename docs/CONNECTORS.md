@@ -41,6 +41,7 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Marker / status / severity colors & labels | `Annotation::markerClass()`, `statusBadgeClass()`, `severityLabels()`, `statusLabels()` |
 | Board column owners & empty copy | `Annotation::boardColumnMeta()` |
 | Mark focus crop | `MarkFocus` → pin `focus_preview` in `Review::markToArray()` |
+| Shot display size (width ÷ DPR, so 2× captures stay sharp) | `Screenshot::pixelRatio()` on the board; `shotFrameStyle()` reads `meta.dpr` inline |
 | Control height | Web Flux `size="sm"` (`h-8`) |
 
 **Intentionally web-only:** comment threads (inline shows `comment_count` + “View comments” → `board_url` / `review_url`), share/guest link management, the “Your reviews” link in the header, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.

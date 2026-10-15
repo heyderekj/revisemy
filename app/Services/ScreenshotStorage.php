@@ -15,6 +15,12 @@ class ScreenshotStorage
     /** Ceiling for a caller-supplied screenshot, however it arrives. */
     public const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
+    /** Ceiling for a server-side capture before it is downscaled to fit. */
+    public const MAX_CAPTURE_BYTES = 16 * 1024 * 1024;
+
+    /** Width of a rail thumbnail. */
+    public const THUMB_WIDTH = 320;
+
     /**
      * The disk every review artifact (screenshots, thumbs, DOM snapshots)
      * lives on.
@@ -48,11 +54,14 @@ class ScreenshotStorage
     /**
      * Store server-originated image bytes (captures, rendered PDF pages).
      * Unlike user uploads these are never rejected for size — anything over
-     * the 8MB cap is downscaled/re-encoded instead.
+     * the 16MB cap is downscaled/re-encoded instead.
+     *
+     * $thumb is a rail thumbnail the capture browser already made, so a tall
+     * 2× capture never has to be decoded here.
      *
      * @param  array<string, mixed>|null  $meta
      */
-    public function storeRaw(Review $review, string $binary, int $sortOrder = 0, ?array $meta = null): Screenshot
+    public function storeRaw(Review $review, string $binary, int $sortOrder = 0, ?array $meta = null, ?string $thumb = null): Screenshot
     {
         $binary = $this->normalizeSize($binary);
 
@@ -63,7 +72,7 @@ class ScreenshotStorage
             default => 'png',
         };
 
-        return $this->persist($review, $binary, $extension, $sortOrder, Screenshot::KIND_SOURCE, $meta);
+        return $this->persist($review, $binary, $extension, $sortOrder, Screenshot::KIND_SOURCE, $meta, $thumb);
     }
 
     /**
@@ -95,7 +104,7 @@ class ScreenshotStorage
     /**
      * @param  array<string, mixed>|null  $meta
      */
-    protected function persist(Review $review, string $binary, string $extension, int $sortOrder, string $kind, ?array $meta = null): Screenshot
+    protected function persist(Review $review, string $binary, string $extension, int $sortOrder, string $kind, ?array $meta = null, ?string $thumb = null): Screenshot
     {
         $disk = self::diskName();
         $path = 'reviews/'.$review->public_id.'/'.Str::ulid().'.'.$extension;
@@ -104,7 +113,9 @@ class ScreenshotStorage
 
         $thumbPath = null;
 
-        if ($thumb = $this->makeThumbnail($binary)) {
+        $thumb = $thumb !== null && $thumb !== '' ? $thumb : $this->makeThumbnail($binary);
+
+        if ($thumb !== null) {
             $thumbPath = preg_replace('/\.[a-z]+$/', '', $path).'.thumb.jpg';
             Storage::disk($disk)->put($thumbPath, $thumb);
         }
@@ -156,7 +167,7 @@ class ScreenshotStorage
         imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255));
         imagecopy($flat, $source, 0, 0, 0, 0, $width, $cropHeight);
 
-        $thumb = imagescale($flat, min(320, $width));
+        $thumb = imagescale($flat, min(self::THUMB_WIDTH, $width));
 
         if ($thumb === false) {
             return null;
@@ -175,7 +186,7 @@ class ScreenshotStorage
      */
     protected function normalizeSize(string $binary): string
     {
-        $cap = 16 * 1024 * 1024;
+        $cap = self::MAX_CAPTURE_BYTES;
 
         if (strlen($binary) <= $cap) {
             return $binary;

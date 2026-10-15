@@ -57,6 +57,9 @@ class CaptureIngestionTest extends TestCase
             ],
             'html' => $html,
             'stable' => true,
+            'loaded' => true,
+            'incomplete' => 0,
+            'scale' => 1,
         ];
     }
 
@@ -85,6 +88,10 @@ class CaptureIngestionTest extends TestCase
         $this->assertSame('capture', $shots[0]['meta']['origin']);
         $this->assertSame('same_load', $shots[0]['meta']['elements_source']);
         $this->assertTrue($shots[0]['meta']['settled']);
+        $this->assertTrue($shots[0]['meta']['loaded']);
+        $this->assertSame(0, $shots[0]['meta']['incomplete_images']);
+        $this->assertSame(2, $shots[0]['meta']['dpr']);
+        $this->assertSame(2, $shots[0]['meta']['requested_dpr']);
 
         Queue::assertNothingPushed();
         // One request per viewport; the DOM rides along, no separate /content.
@@ -98,15 +105,26 @@ class CaptureIngestionTest extends TestCase
             return str_contains($request->url(), 'capture.test/function?token=cap-key&timeout=')
                 && str_contains((string) ($body['code'] ?? ''), 'page.screenshot')
                 && ($context['url'] ?? null) === 'https://example.com'
+                && str_contains((string) ($body['code'] ?? ''), 'waitForNetworkIdle')
                 && ($context['viewport']['width'] ?? null) === 1280
-                && ($context['viewport']['deviceScaleFactor'] ?? null) === 1
+                && ($context['viewport']['deviceScaleFactor'] ?? null) === 2
                 && ($context['viewport']['isMobile'] ?? null) === false
                 && array_key_exists('userAgent', $context) && $context['userAgent'] === null
                 && ($context['fullPage'] ?? null) === true
+                && ($context['maxPixels'] ?? null) === 24_000_000
+                && ($context['maxHeight'] ?? null) === 16_000
+                && ($context['maxBytes'] ?? null) === 16 * 1024 * 1024
+                && ($context['thumbWidth'] ?? null) === 320
+                && ($context['idleMs'] ?? 0) > 0
                 && ($context['withHtml'] ?? null) === true
                 && ($context['waitMs'] ?? null) === (int) config('revisemy.capture.wait_ms')
                 && ($context['waitUntil'] ?? null) === (string) config('revisemy.capture.wait_until', 'networkidle2')
                 && str_contains($settle, '__rmSettleDone')
+                && str_contains($settle, '__rmSettleAgain')
+                && str_contains($settle, 'loadGate')
+                && str_contains($settle, 'iframe[loading="lazy"]')
+                && str_contains($settle, 'scrollbar-width:none')
+                && str_contains($settle, '"loadBudgetMs":8000')
                 && str_contains($settle, 'getAnimations')
                 && str_contains($settle, '"sweep":true')
                 && str_contains($settle, '"freeze":true')
@@ -124,6 +142,15 @@ class CaptureIngestionTest extends TestCase
                 && ($context['viewport']['hasTouch'] ?? null) === true
                 && str_contains((string) ($context['userAgent'] ?? ''), 'iPhone')
                 && ($context['withHtml'] ?? null) === false;
+        });
+
+        // The tablet renders as an iPad at 2×, not a stretched phone.
+        Http::assertSent(function ($request) {
+            $context = $request->data()['context'] ?? [];
+
+            return ($context['viewport']['width'] ?? null) === 768
+                && ($context['viewport']['deviceScaleFactor'] ?? null) === 2
+                && str_contains((string) ($context['userAgent'] ?? ''), 'iPad');
         });
 
         $review = Review::query()->firstOrFail();
@@ -182,6 +209,72 @@ class CaptureIngestionTest extends TestCase
                 && ($body['viewport']['deviceScaleFactor'] ?? null) === 2
                 && str_contains((string) ($body['userAgent']['userAgent'] ?? ''), 'iPhone');
         });
+
+        // /screenshot can't measure the page first, so the tablet stays at 1×.
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+
+            return str_contains($request->url(), '/screenshot')
+                && ($body['viewport']['width'] ?? null) === 768
+                && ($body['viewport']['deviceScaleFactor'] ?? null) === 1
+                && str_contains((string) ($body['userAgent']['userAgent'] ?? ''), 'iPad');
+        });
+    }
+
+    public function test_function_capture_keeps_the_thumbnail_the_browser_made(): void
+    {
+        $token = $this->setUpEnv();
+
+        // Over 4MP, so GD would skip it and the rail would load the full image.
+        $big = imagecreatetruecolor(2560, 2000);
+        ob_start();
+        imagepng($big, null, 9);
+        $png = (string) ob_get_clean();
+        $thumb = 'browser-made-thumbnail';
+
+        Http::fake([
+            'capture.test/function*' => Http::response([
+                'image' => base64_encode($png),
+                'thumb' => base64_encode($thumb),
+                'scale' => 0.75,
+                'loaded' => false,
+                'incomplete' => 2,
+                'stable' => true,
+            ]),
+        ]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Tall page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $desktop = Review::query()->firstOrFail()->screenshots()->orderBy('sort_order')->firstOrFail();
+
+        $this->assertNotNull($desktop->thumb_path);
+        $this->assertSame($thumb, Storage::disk('public')->get($desktop->thumb_path));
+        // Asked for 2×, scaled to fit the budget: 1.5 pixels per CSS px.
+        $this->assertSame(1.5, $desktop->meta['dpr']);
+        $this->assertSame(2, $desktop->meta['requested_dpr']);
+        $this->assertSame(1.5, $desktop->pixelRatio());
+        $this->assertFalse($desktop->meta['loaded']);
+        $this->assertSame(2, $desktop->meta['incomplete_images']);
+    }
+
+    public function test_function_session_timeout_is_clamped_to_the_plan(): void
+    {
+        $token = $this->setUpEnv();
+        config(['revisemy.capture.session_max_ms' => 60_000]);
+
+        Http::fake(['capture.test/function*' => Http::response($this->functionResult())]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '&timeout=60000'));
     }
 
     /** Current Browserless wants an object; an older one that wants the string is asked again. */

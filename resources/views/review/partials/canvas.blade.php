@@ -127,6 +127,7 @@
                         zoomStep: 0.25,
                         naturalWidth: {{ (int) ($shot->width ?: 0) }},
                         naturalHeight: {{ (int) ($shot->height ?: 0) }},
+                        pixelRatio: {{ $shot->pixelRatio() }},
                         baseWidth: 0,
                         drawing: false,
                         panning: false,
@@ -168,7 +169,8 @@
                             const vp = this.$refs.viewport;
                             if (! vp) return;
                             const containerWidth = vp.clientWidth;
-                            const natural = this.naturalWidth || containerWidth;
+                            // A 2× capture shows at the size the page was drawn at.
+                            const natural = this.naturalWidth ? this.naturalWidth / this.pixelRatio : containerWidth;
                             this.baseWidth = natural > 0 ? Math.min(containerWidth, natural) : containerWidth;
                         },
                         canvasStyle() {
