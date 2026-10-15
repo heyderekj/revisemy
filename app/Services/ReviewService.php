@@ -249,6 +249,9 @@ class ReviewService
             if (is_array($image) && is_array($image['elements'] ?? null)) {
                 $this->screenshots->storeElements($shot, $image['elements']);
             }
+            if (is_array($image) && is_string($image['vision']['binary'] ?? null)) {
+                $this->screenshots->storeVision($shot, $image['vision']['binary'], (float) ($image['vision']['crop'] ?? 1));
+            }
             $this->opinions->queue($shot);
         }
 

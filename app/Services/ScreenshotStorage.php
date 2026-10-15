@@ -22,6 +22,15 @@ class ScreenshotStorage
     public const THUMB_WIDTH = 320;
 
     /**
+     * Longest edge of a vision copy. Anthropic shrinks anything past 1568px
+     * or about 1.15MP before the model sees it, and turns down 8000px.
+     */
+    public const VISION_EDGE = 1568;
+
+    /** Pixel budget for a vision copy. */
+    public const VISION_PIXELS = 1_150_000;
+
+    /**
      * The disk every review artifact (screenshots, thumbs, DOM snapshots)
      * lives on.
      */
@@ -98,6 +107,32 @@ class ScreenshotStorage
             ...($shot->meta ?? []),
             'elements_path' => $path,
             'element_count' => count((array) ($elements['elements'] ?? [])),
+        ]]);
+    }
+
+    /**
+     * Keep the vision-sized copy the capture browser made (the top of the
+     * page, small enough for a vision model to read as sent) next to the
+     * shot. $crop is the share of the shot's height it covers, so regions
+     * found on it map back to the full shot. Best-effort: a failed write
+     * leaves the vision pass on the full image.
+     */
+    public function storeVision(Screenshot $shot, string $binary, float $crop): void
+    {
+        $path = preg_replace('/\.[a-z]+$/', '', $shot->path).'.vision.jpg';
+
+        try {
+            Storage::disk($shot->disk)->put($path, $binary);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return;
+        }
+
+        $shot->update(['meta' => [
+            ...($shot->meta ?? []),
+            'vision_path' => $path,
+            'vision_crop' => round(max(0.0, min(1.0, $crop)), 4),
         ]]);
     }
 

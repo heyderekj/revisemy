@@ -77,6 +77,10 @@ class ProbeCapture extends Command
                     File::put(preg_replace('/\.png$/', '.thumb.jpg', $file), $shot['thumb']);
                 }
 
+                if (is_string($shot['vision']['binary'] ?? null)) {
+                    File::put(preg_replace('/\.png$/', '.vision.jpg', $file), $shot['vision']['binary']);
+                }
+
                 [$width, $height] = @getimagesizefromstring($shot['binary']) ?: [0, 0];
                 $meta = $shot['meta'];
 
@@ -89,7 +93,10 @@ class ProbeCapture extends Command
                     $this->flag($meta['loaded'] ?? null, (int) ($meta['incomplete_images'] ?? 0)),
                     $this->flag($meta['settled'] ?? null),
                     $this->seconds($started),
-                    isset($shot['thumb']) ? 'thumb from browser' : '',
+                    implode(', ', array_filter([
+                        isset($shot['thumb']) ? 'thumb from browser' : null,
+                        isset($shot['vision']) ? 'vision copy covers '.round($shot['vision']['crop'] * 100).'%' : null,
+                    ])),
                 ];
             }
         }
@@ -103,7 +110,7 @@ class ProbeCapture extends Command
 
     /**
      * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device: string}  $viewport
-     * @return list<array{binary: string, meta: array<string, mixed>, thumb?: string|null}>
+     * @return list<array{binary: string, meta: array<string, mixed>, thumb?: string|null, vision?: array{binary: string, crop: float}|null}>
      */
     private function shoot(string $path, string $url, array $viewport): array
     {

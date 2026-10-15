@@ -59,6 +59,6 @@ class AnthropicVisionProvider extends BaseVisionProvider
 
         $content = data_get($response->json(), 'content.0.text');
 
-        return $this->parseFindings($this->decodeJson(is_string($content) ? $content : null));
+        return $this->parseFindings($this->decodeJson(is_string($content) ? $content : null), $image['crop']);
     }
 }
