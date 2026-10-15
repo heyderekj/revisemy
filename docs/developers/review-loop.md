@@ -82,7 +82,7 @@ Marks the person reopens on an earlier pass arrive in `work_packets.carried_over
 
 Two things can add notes that aren't the person's:
 
-- **The second opinion.** A checklist for the review's type runs on every screenshot. With a vision key set on the server, it can also draw dashed regions. `request_second_opinion` runs it again.
+- **The second opinion.** A checklist for the review's type runs once per review and sits on the first screenshot. With a vision key set on the server, it can also draw dashed regions. `request_second_opinion` runs it again.
 - **Your agent.** `add_findings` drops `suggestion`, `a11y` or `polish` notes into the review before the person looks. It can't add must-fix.
 
 Both arrive in `work_packets.second_opinion`. They're hints only. When the person accepts one it becomes a mark, with `source` saying where it came from. Until then, don't treat them as work.

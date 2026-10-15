@@ -249,8 +249,13 @@
                         </div>
                     </div>
                     {{-- Hints: second opinion, after the marks as on the web review --}}
-                    <div class="mt-3 flex flex-col gap-2" x-show="allFindings().length">
+                    <div class="mt-3 flex flex-col gap-2" x-show="allFindings().length || checklistElsewhere()">
                         <p class="text-sm font-medium text-zinc-700">Hints</p>
+                        {{-- The checklist covers the whole review, so it sits on the first shot. --}}
+                        <p class="text-xs text-zinc-500" x-show="checklistElsewhere()">
+                            The checklist covers every shot, so it sits on the first one.
+                            <button type="button" class="font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900" @click="setActive(0)">Show it</button>
+                        </p>
                         <template x-for="f in allFindings()" :key="findingKey(f)">
                             <button type="button"
                                 class="rounded-xl bg-raised p-3 text-left shadow-xs ring-1 ring-black/[0.04] transition-shadow hover:ring-sky-300"
@@ -626,6 +631,11 @@
             allFindings() {
                 const shot = this.activeShot();
                 return shot && Array.isArray(shot.second_opinion) ? shot.second_opinion : [];
+            },
+            checklistElsewhere() {
+                const first = this.payload && this.payload.screenshots[0];
+                return this.activeIndex > 0 && !! first && Array.isArray(first.second_opinion)
+                    && first.second_opinion.some((f) => (f.source || 'checklist') === 'checklist');
             },
             regionFindings() {
                 return this.allFindings().filter((f) => this.hasRegion(f));

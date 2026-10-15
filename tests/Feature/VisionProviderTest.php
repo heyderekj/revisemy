@@ -283,4 +283,106 @@ class VisionProviderTest extends TestCase
             $screenshot->fresh('findings')->findings->where('source', Finding::SOURCE_ANTHROPIC)->count(),
         );
     }
+
+    protected function giveVisionCopy(Screenshot $screenshot, float $crop): string
+    {
+        $path = preg_replace('/\.[a-z]+$/', '', $screenshot->path).'.vision.jpg';
+        Storage::disk($screenshot->disk)->put($path, 'vision-copy-bytes');
+        $screenshot->update(['meta' => [...($screenshot->meta ?? []), 'vision_path' => $path, 'vision_crop' => $crop]]);
+
+        return $path;
+    }
+
+    public function test_anthropic_gets_the_vision_copy_and_regions_map_to_the_full_shot(): void
+    {
+        config([
+            'revisemy.vision.provider' => 'anthropic',
+            'revisemy.anthropic.api_key' => 'test-key',
+            'revisemy.openai.api_key' => null,
+        ]);
+
+        Http::fake([
+            'api.anthropic.com/*' => Http::response($this->anthropicResponse([
+                ['severity' => 'a11y', 'body' => 'The footer links sit too close together.', 'area' => ['x' => 0.1, 'y' => 0.4, 'w' => 0.5, 'h' => 0.2]],
+            ])),
+        ]);
+
+        $screenshot = $this->makeScreenshot();
+        // The copy shows the top quarter of a tall shot.
+        $this->giveVisionCopy($screenshot, 0.25);
+        app(SecondOpinionService::class)->generate($screenshot->fresh());
+
+        $finding = $screenshot->fresh('findings')->findings->firstWhere('source', Finding::SOURCE_ANTHROPIC);
+
+        $this->assertEqualsWithDelta(0.1, $finding->area['x'], 0.001);
+        $this->assertEqualsWithDelta(0.5, $finding->area['w'], 0.001);
+        $this->assertEqualsWithDelta(0.1, $finding->area['y'], 0.001);
+        $this->assertEqualsWithDelta(0.05, $finding->area['h'], 0.001);
+
+        Http::assertSent(function ($request) {
+            $source = $request->data()['messages'][0]['content'][0]['source'] ?? [];
+
+            return ($source['media_type'] ?? null) === 'image/jpeg'
+                && ($source['data'] ?? null) === base64_encode('vision-copy-bytes');
+        });
+    }
+
+    public function test_openai_gets_the_vision_copy_too(): void
+    {
+        config([
+            'revisemy.vision.provider' => 'openai',
+            'revisemy.anthropic.api_key' => null,
+            'revisemy.openai.api_key' => 'openai-key',
+        ]);
+
+        Http::fake([
+            'api.openai.com/*' => Http::response([
+                'choices' => [
+                    ['message' => ['content' => json_encode(['findings' => [
+                        ['severity' => 'polish', 'body' => 'The hero image crops the product.', 'area' => ['x' => 0, 'y' => 0.5, 'w' => 1, 'h' => 0.5]],
+                    ]])]],
+                ],
+            ]),
+        ]);
+
+        $screenshot = $this->makeScreenshot();
+        $this->giveVisionCopy($screenshot, 0.5);
+        app(SecondOpinionService::class)->generate($screenshot->fresh());
+
+        $finding = $screenshot->fresh('findings')->findings->firstWhere('source', Finding::SOURCE_OPENAI);
+        $this->assertEqualsWithDelta(0.25, $finding->area['y'], 0.001);
+        $this->assertEqualsWithDelta(0.25, $finding->area['h'], 0.001);
+
+        Http::assertSent(fn ($request) => ($request->data()['messages'][0]['content'][1]['image_url']['url'] ?? null)
+            === 'data:image/jpeg;base64,'.base64_encode('vision-copy-bytes'));
+    }
+
+    public function test_a_missing_vision_copy_falls_back_to_the_full_shot(): void
+    {
+        config([
+            'revisemy.vision.provider' => 'anthropic',
+            'revisemy.anthropic.api_key' => 'test-key',
+            'revisemy.openai.api_key' => null,
+        ]);
+
+        Http::fake([
+            'api.anthropic.com/*' => Http::response($this->anthropicResponse([
+                ['severity' => 'a11y', 'body' => 'The form labels are placeholder-only.', 'area' => ['x' => 0.1, 'y' => 0.4, 'w' => 0.5, 'h' => 0.2]],
+            ])),
+        ]);
+
+        $screenshot = $this->makeScreenshot();
+        $path = $this->giveVisionCopy($screenshot, 0.25);
+        Storage::disk($screenshot->disk)->delete($path);
+        app(SecondOpinionService::class)->generate($screenshot->fresh());
+
+        $finding = $screenshot->fresh('findings')->findings->firstWhere('source', Finding::SOURCE_ANTHROPIC);
+        // The model saw the whole shot, so its region stands as given.
+        $this->assertEqualsWithDelta(0.4, $finding->area['y'], 0.001);
+        $this->assertEqualsWithDelta(0.2, $finding->area['h'], 0.001);
+
+        $full = base64_encode((string) Storage::disk($screenshot->disk)->get($screenshot->path));
+        Http::assertSent(fn ($request) => ($request->data()['messages'][0]['content'][0]['source']['media_type'] ?? null) === 'image/png'
+            && ($request->data()['messages'][0]['content'][0]['source']['data'] ?? null) === $full);
+    }
 }

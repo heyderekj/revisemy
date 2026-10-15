@@ -32,11 +32,7 @@ class SecondOpinionService
                 ->whereIn('source', [Finding::SOURCE_CHECKLIST, Finding::SOURCE_OPENAI, Finding::SOURCE_ANTHROPIC])
                 ->delete();
 
-            $this->persistFindings(
-                $screenshot,
-                $this->checklistFindings($screenshot),
-                Finding::SOURCE_CHECKLIST,
-            );
+            $this->syncChecklist($screenshot);
 
             if ($this->visionProvider()) {
                 $screenshot->update([
@@ -83,13 +79,12 @@ class SecondOpinionService
                 ->whereIn('source', [Finding::SOURCE_CHECKLIST, Finding::SOURCE_OPENAI, Finding::SOURCE_ANTHROPIC])
                 ->delete();
 
-            $checklist = $this->checklistFindings($screenshot);
-            $this->persistFindings($screenshot, $checklist, Finding::SOURCE_CHECKLIST);
+            $this->syncChecklist($screenshot);
 
             $provider = $this->visionProvider();
             if ($provider) {
                 $vision = $provider->findings($screenshot, $this->visionPrompt($screenshot->review));
-                $merged = $this->dedupeAgainstExisting($screenshot->fresh('findings'), $vision);
+                $merged = $this->dedupeAgainstExisting($screenshot, $vision);
                 $this->persistFindings(
                     $screenshot,
                     $merged,
@@ -208,33 +203,64 @@ class SecondOpinionService
     }
 
     /**
+     * The checklist belongs to the review, not to each shot: it never looks at
+     * the pixels, so a desktop/tablet/mobile capture would otherwise repeat
+     * the same notes on every shot. It lives on the first shot; queueing that
+     * shot rewrites it, later shots only drop any copy they still carry.
+     * Vision findings stay per shot.
+     */
+    protected function syncChecklist(Screenshot $screenshot): void
+    {
+        $review = $screenshot->review;
+        $first = $review?->screenshots()->first();
+
+        $screenshot->findings()->where('source', Finding::SOURCE_CHECKLIST)->delete();
+
+        if (! $review || ($first && $first->id !== $screenshot->id)) {
+            return;
+        }
+
+        $this->persistFindings(
+            $screenshot,
+            $this->checklistFindings($review, $review->screenshots()->get()->all() ?: [$screenshot]),
+            Finding::SOURCE_CHECKLIST,
+        );
+    }
+
+    /**
      * Free rule-based checklist, tuned to the review type. These are static
      * heuristics that never look at the pixels, so they carry no area — only
      * vision findings may point at a region. Taste credits are not stored on
      * findings; disclosure lives on the craft chip / taste payload.
      *
+     * Viewport notes come from every shot's shape, so one set covers a
+     * multi-viewport capture.
+     *
+     * @param  list<Screenshot>  $shots
      * @return list<array{severity: string, body: string, area: array<string, float>|null}>
      */
-    protected function checklistFindings(Screenshot $screenshot): array
+    protected function checklistFindings(Review $review, array $shots): array
     {
-        $review = $screenshot->review;
-        $type = $review?->type ?? Review::TYPE_UI;
-        $width = (int) ($screenshot->width ?: 0);
-        $height = (int) ($screenshot->height ?: 0);
-        $context = strtolower((string) ($review?->context ?? ''));
-        $title = strtolower((string) ($review?->title ?? ''));
+        $type = $review->type ?? Review::TYPE_UI;
+        $ratios = collect($shots)
+            ->filter(fn (Screenshot $shot) => (int) $shot->width > 0 && (int) $shot->height > 0)
+            ->map(fn (Screenshot $shot) => (float) $shot->width / max((int) $shot->height, 1))
+            ->values()
+            ->all();
+        $context = strtolower((string) ($review->context ?? ''));
+        $title = strtolower((string) ($review->title ?? ''));
         $haystack = $context.' '.$title;
 
         $findings = match ($type) {
-            Review::TYPE_WEBSITE => $this->websiteChecklist($review, $width, $height, $haystack),
+            Review::TYPE_WEBSITE => $this->websiteChecklist($review, $ratios, $haystack),
             Review::TYPE_PRESENTATION => $this->presentationChecklist(),
             Review::TYPE_EMAIL => $this->emailChecklist(),
-            default => $this->uiChecklist($width, $height, $haystack),
+            default => $this->uiChecklist($ratios, $haystack),
         };
 
         $findings = array_merge($findings, TasteLenses::checklistItems($type, $haystack));
 
-        if ($review?->page_url) {
+        if ($review->page_url) {
             $findings[] = [
                 'severity' => Finding::SEVERITY_POLISH,
                 'body' => 'A live page URL was provided — when implementing, ground these notes against the real DOM (roles/selectors), not the PNG alone.',
@@ -246,9 +272,10 @@ class SecondOpinionService
     }
 
     /**
+     * @param  list<float>  $ratios  width / height of each shot
      * @return list<array{severity: string, body: string, area: array<string, float>|null}>
      */
-    protected function uiChecklist(int $width, int $height, string $haystack): array
+    protected function uiChecklist(array $ratios, string $haystack): array
     {
         $findings = [
             [
@@ -268,21 +295,20 @@ class SecondOpinionService
             ],
         ];
 
-        if ($width > 0 && $height > 0) {
-            $ratio = $width / max($height, 1);
-            if ($ratio < 0.7) {
-                $findings[] = [
-                    'severity' => Finding::SEVERITY_SUGGESTION,
-                    'body' => 'This shot looks mobile-tall — confirm tap targets are at least ~44×44px and primary actions sit in the thumb zone.',
-                    'area' => null,
-                ];
-            } elseif ($ratio > 1.6) {
-                $findings[] = [
-                    'severity' => Finding::SEVERITY_SUGGESTION,
-                    'body' => 'Wide desktop frame — check that content doesn’t stretch edge-to-edge; confirm a readable measure for body text.',
-                    'area' => null,
-                ];
-            }
+        if (collect($ratios)->contains(fn (float $ratio) => $ratio < 0.7)) {
+            $findings[] = [
+                'severity' => Finding::SEVERITY_SUGGESTION,
+                'body' => 'This shot looks mobile-tall — confirm tap targets are at least ~44×44px and primary actions sit in the thumb zone.',
+                'area' => null,
+            ];
+        }
+
+        if (collect($ratios)->contains(fn (float $ratio) => $ratio > 1.6)) {
+            $findings[] = [
+                'severity' => Finding::SEVERITY_SUGGESTION,
+                'body' => 'Wide desktop frame — check that content doesn’t stretch edge-to-edge; confirm a readable measure for body text.',
+                'area' => null,
+            ];
         }
 
         if (str_contains($haystack, 'cta') || str_contains($haystack, 'button') || str_contains($haystack, 'signup') || str_contains($haystack, 'sign up')) {
@@ -305,9 +331,10 @@ class SecondOpinionService
     }
 
     /**
+     * @param  list<float>  $ratios  width / height of each shot
      * @return list<array{severity: string, body: string, area: array<string, float>|null}>
      */
-    protected function websiteChecklist(Review $review, int $width, int $height, string $haystack): array
+    protected function websiteChecklist(Review $review, array $ratios, string $haystack): array
     {
         $findings = [
             [
@@ -327,21 +354,19 @@ class SecondOpinionService
             ],
         ];
 
-        if ($width > 0 && $height > 0) {
-            $ratio = $width / max($height, 1);
-            if ($ratio < 0.7) {
-                $findings[] = [
-                    'severity' => Finding::SEVERITY_SUGGESTION,
-                    'body' => 'Mobile viewport — confirm the hero still leads with the value proposition, tap targets are ~44×44px, and nothing overflows horizontally.',
-                    'area' => null,
-                ];
-            } else {
-                $findings[] = [
-                    'severity' => Finding::SEVERITY_SUGGESTION,
-                    'body' => 'Desktop viewport — also review a mobile capture; most traffic will see the narrow breakpoint first.',
-                    'area' => null,
-                ];
-            }
+        // The mobile note when any shot is phone-shaped; otherwise ask for one.
+        if (collect($ratios)->contains(fn (float $ratio) => $ratio < 0.7)) {
+            $findings[] = [
+                'severity' => Finding::SEVERITY_SUGGESTION,
+                'body' => 'Mobile viewport — confirm the hero still leads with the value proposition, tap targets are ~44×44px, and nothing overflows horizontally.',
+                'area' => null,
+            ];
+        } elseif ($ratios !== []) {
+            $findings[] = [
+                'severity' => Finding::SEVERITY_SUGGESTION,
+                'body' => 'Desktop viewport — also review a mobile capture; most traffic will see the narrow breakpoint first.',
+                'area' => null,
+            ];
         }
 
         if (str_contains($haystack, 'cta') || str_contains($haystack, 'signup') || str_contains($haystack, 'sign up') || str_contains($haystack, 'pricing')) {
@@ -518,7 +543,16 @@ PROMPT;
      */
     protected function dedupeAgainstExisting(Screenshot $screenshot, array $candidates): array
     {
-        $existingBodies = $screenshot->findings->pluck('body')->map(fn ($b) => strtolower((string) $b))->all();
+        // This shot's findings plus the review's checklist, which sits on the first shot.
+        $checklist = Finding::query()
+            ->whereIn('screenshot_id', $screenshot->review?->screenshots()->pluck('id') ?? [])
+            ->where('source', Finding::SOURCE_CHECKLIST)
+            ->pluck('body');
+
+        $existingBodies = $screenshot->findings()->pluck('body')
+            ->concat($checklist)
+            ->map(fn ($b) => strtolower((string) $b))
+            ->all();
 
         return array_values(array_filter($candidates, function (array $item) use ($existingBodies) {
             $body = strtolower($item['body']);

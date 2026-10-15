@@ -15,8 +15,8 @@ use Illuminate\Validation\ValidationException;
  * plain HTTPS POST.
  *
  * URL captures prefer Browserless /function: one page session settles the
- * page, waits for the network to go quiet, takes the screenshot and its rail
- * thumbnail, and reads the element map and DOM, so all of them describe
+ * page, waits for the network to go quiet, takes the screenshot, its rail
+ * thumbnail and a vision-sized copy, and reads the element map and DOM, so all of them describe
  * exactly the same frame. It measures the page first, so it can shoot at the
  * viewport's full DPR within a pixel budget. Hosts without /function fall back
  * to /screenshot (bytes only, wide viewports at 1×) plus a separate, equally
@@ -30,7 +30,7 @@ class HostedCaptureDriver implements CaptureDriver
      */
     public const MAX_SHOT_HEIGHT = 16_000;
 
-    /** Time for the two screenshots and their encoding in /function (ms). */
+    /** Time for the three screenshots and their encoding in /function (ms). */
     protected const SHOOT_BUDGET_MS = 10_000;
 
     /**
@@ -97,6 +97,19 @@ export default async function ({ page, context }) {
     ? await shoot('jpeg', { width, height: Math.min(height, Math.ceil(width * 1.25)) }, Math.min(1, context.thumbWidth / (width * dpr)), { quality: 75 })
     : null;
 
+  // The vision copy: the top of the page at no more than 1x, small enough
+  // that a vision model reads it as sent. Regions found on it map back to
+  // the full shot through crop, the share of the shot's height it covers.
+  let vision = null;
+  if (context.visionEdge > 0) {
+    const visionHeight = Math.min(height, Math.max(context.viewport.height, context.visionEdge));
+    const fit = Math.min(1, context.visionEdge / Math.max(width, visionHeight), Math.sqrt(context.visionPixels / (width * visionHeight)));
+    vision = {
+      image: await shoot('jpeg', { width, height: visionHeight }, fit / dpr, { quality: 80 }),
+      crop: visionHeight / height,
+    };
+  }
+
   const state = await page.evaluate(() => ({
     elements: window.__rmElements || null,
     stable: window.__rmSettleStable === true,
@@ -109,6 +122,7 @@ export default async function ({ page, context }) {
     data: {
       image,
       thumb,
+      vision,
       scale,
       html,
       elements: context.collectElements ? state.elements : null,
@@ -145,7 +159,7 @@ JS;
      * does with a page.
      *
      * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}>  $viewports
-     * @return list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, html?: string|null, thumb?: string|null}>
+     * @return list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, html?: string|null, thumb?: string|null, vision?: array{binary: string, crop: float}|null}>
      *
      * @throws FunctionUnavailable when /function is missing or turns the request down
      */
@@ -230,14 +244,14 @@ JS;
      *
      * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
      * @param  array<string, mixed>  $baseMeta
-     * @return array{binary: string, meta: array<string, mixed>, elements: array<string, mixed>|null, html: string|null, thumb: string|null}
+     * @return array{binary: string, meta: array<string, mixed>, elements: array<string, mixed>|null, html: string|null, thumb: string|null, vision: array{binary: string, crop: float}|null}
      *
      * @throws FunctionUnavailable when the host has no /function or turns the request down
      */
     protected function captureViaFunction(string $endpoint, string $url, array $viewport, array $baseMeta, bool $fullPage, bool $sweep, bool $withHtml): array
     {
         $collect = (bool) config('revisemy.capture.collect_elements', true);
-        // Settle, then network idle and maybe a second settle, then two shots.
+        // Settle, then network idle and maybe a second settle, then three shots.
         $budgetMs = CaptureSettleScript::budgetMs($sweep, $collect)
             + self::IDLE_BUDGET_MS
             + CaptureSettleScript::againBudgetMs($collect)
@@ -270,6 +284,8 @@ JS;
             'maxHeight' => self::MAX_SHOT_HEIGHT,
             'maxBytes' => ScreenshotStorage::MAX_CAPTURE_BYTES,
             'thumbWidth' => ScreenshotStorage::THUMB_WIDTH,
+            'visionEdge' => ScreenshotStorage::VISION_EDGE,
+            'visionPixels' => ScreenshotStorage::VISION_PIXELS,
             'collectElements' => $collect,
             'withHtml' => $withHtml,
         ];
@@ -309,6 +325,8 @@ JS;
 
         $thumb = is_string($data['thumb'] ?? null) ? base64_decode($data['thumb'], true) : false;
         $scale = is_numeric($data['scale'] ?? null) ? min(1.0, max(0.0, (float) $data['scale'])) : 1.0;
+        $vision = is_string($data['vision']['image'] ?? null) ? base64_decode($data['vision']['image'], true) : false;
+        $crop = is_numeric($data['vision']['crop'] ?? null) ? min(1.0, (float) $data['vision']['crop']) : 0.0;
 
         return [
             'binary' => $binary,
@@ -326,6 +344,7 @@ JS;
             'elements' => is_array($data['elements'] ?? null) ? $data['elements'] : null,
             'html' => is_string($data['html'] ?? null) && $data['html'] !== '' ? $data['html'] : null,
             'thumb' => is_string($thumb) && $thumb !== '' ? $thumb : null,
+            'vision' => is_string($vision) && $vision !== '' && $crop > 0 ? ['binary' => $vision, 'crop' => $crop] : null,
         ];
     }
 

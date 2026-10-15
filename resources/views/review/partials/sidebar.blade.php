@@ -168,6 +168,13 @@
                             <p class="mb-3 text-sm text-problem-ink">The second opinion couldn’t run on this shot. Your marks are fine — try Refresh.</p>
                         @endif
 
+                        @if ($mode === 'owner' && $this->checklistElsewhereCount > 0)
+                            <p class="mb-3 text-xs text-muted-foreground">
+                                The checklist covers every shot, so it sits on the first one.
+                                <button type="button" class="link" wire:click="selectScreenshot(0)">Show it</button>
+                            </p>
+                        @endif
+
                         @php($kinds = collect([
                             \App\Models\Finding::SEVERITY_SUGGESTION => 'Suggestion',
                             \App\Models\Finding::SEVERITY_A11Y => 'A11y',

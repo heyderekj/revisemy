@@ -991,6 +991,22 @@ new class extends Component
     }
 
     /**
+     * Open checklist hints on the first shot, counted only while a later shot
+     * is showing. The checklist covers the whole review, so it lives there.
+     */
+    #[Computed]
+    public function checklistElsewhereCount(): int
+    {
+        if ($this->activeScreenshotIndex === 0) {
+            return 0;
+        }
+
+        return ($this->review->screenshots->first()?->findings ?? collect())
+            ->filter(fn (Finding $f) => $f->isOpen() && $f->isChecklistSource())
+            ->count();
+    }
+
+    /**
      * @return \Illuminate\Support\Collection<int, Finding>
      */
     #[Computed]

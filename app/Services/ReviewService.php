@@ -241,6 +241,7 @@ class ReviewService
             }
         }
 
+        $shots = [];
         foreach (array_values($images) as $index => $image) {
             $shot = is_array($image)
                 ? $this->screenshots->storeRaw($review, $image['binary'], $index, $image['meta'] ?? null, $image['thumb'] ?? null)
@@ -249,6 +250,14 @@ class ReviewService
             if (is_array($image) && is_array($image['elements'] ?? null)) {
                 $this->screenshots->storeElements($shot, $image['elements']);
             }
+            if (is_array($image) && is_string($image['vision']['binary'] ?? null)) {
+                $this->screenshots->storeVision($shot, $image['vision']['binary'], (float) ($image['vision']['crop'] ?? 1));
+            }
+            $shots[] = $shot;
+        }
+
+        // Every shot is stored first, so the review's one checklist sees all viewports.
+        foreach ($shots as $shot) {
             $this->opinions->queue($shot);
         }
 

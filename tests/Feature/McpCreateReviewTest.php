@@ -113,6 +113,52 @@ class McpCreateReviewTest extends TestCase
         Http::assertSentCount(4);
     }
 
+    /** Three viewports, one checklist: it sits on the first shot, not on all three. */
+    public function test_create_review_capture_url_adds_the_checklist_once(): void
+    {
+        $user = $this->setUpUser();
+        config([
+            'revisemy.second_opinion_enabled' => true,
+            'revisemy.vision.provider' => 'auto',
+            'revisemy.openai.api_key' => null,
+            'revisemy.openai.base_url' => null,
+            'revisemy.anthropic.api_key' => null,
+        ]);
+
+        Http::fake([
+            'capture.test/function*' => Http::response('Not Found', 404),
+            'capture.test/*' => Http::response($this->tinyPngBinary()),
+        ]);
+
+        ReviseMyServer::actingAs($user)->tool(CreateReviewTool::class, [
+            'title' => 'Landing page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertHasNoErrors();
+
+        $review = Review::query()->firstOrFail();
+
+        ReviseMyServer::actingAs($user)->tool(GetReviewTool::class, [
+            'id' => $review->public_id,
+        ])->assertHasNoErrors()->assertStructuredContent(function ($json) {
+            $json->has('screenshots', 3)
+                ->has('screenshots.1.second_opinion', 0)
+                ->has('screenshots.2.second_opinion', 0)
+                ->where('screenshots.0.second_opinion', function ($first) {
+                    return count($first) > 0
+                        && collect($first)->every(fn ($f) => $f['source'] === 'checklist');
+                })
+                ->where('work_packets.second_opinion', function ($all) {
+                    $all = collect($all);
+                    $bodies = $all->pluck('body');
+
+                    return $all->every(fn ($f) => $f['screenshot_index'] === 0)
+                        && $bodies->count() === $bodies->unique()->count();
+                })
+                ->etc();
+        });
+    }
+
     public function test_create_review_html_source_renders_an_email_review(): void
     {
         $user = $this->setUpUser();
