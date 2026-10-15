@@ -28,11 +28,16 @@ MCP has no keyword triggers: the model picks a tool from its description and the
 - **Board view**: marks grouped Open → In progress → Resolved → Verified (including previous-pass marks), with a detail panel, verify / reopen, and a link out when comments exist.
 - **Decision bar**: approve / request changes with an optional note (`h-8` controls aligned with web Flux `size="sm"`).
 - **While the review is made**: the host sends the call's arguments (`ui/notifications/tool-input`) before the result, so the board says what it's capturing (page host, which viewports) with an elapsed timer instead of a blank loading line. A failed call shows the tool's error, and a cancelled one says so. Hosts that send a `progressToken` also get `notifications/progress` from `create_review` for each step: opening the page, each viewport, saving (`App\Support\ToolProgress`). Without a token the call answers once, in JSON, as before.
-- A **Refresh** control plus a slow auto-poll while the review is `pending` or `changes_requested`, so the board updates as the agent resolves marks.
+- A **Refresh** control plus a slow auto-poll while the review is `pending` or `changes_requested`, so the board updates as the agent resolves marks. The poll pauses while the review is off-screen or the tab is hidden.
+- **Hand back on decide** (`ui/message`): approving or asking for changes posts one short message into the chat as the person ("I asked for changes on Pricing page, pass 2: 3 marks to fix. Go ahead."), so the agent starts now. If the host doesn't answer within a few seconds, the review says "Tell your agent in the chat to carry on."
+- **Model context** (`ui/update-model-context`): after any real change, the review replaces what the agent knows: id, title, pass, status, open marks and which wait on a reply. It never starts a turn.
+- **Full screen** (`ui/request-display-mode`): a Full screen control where `hostContext.availableDisplayModes` includes it; on `platform: mobile` starting a mark asks for it. Full screen uses Whole page fit and pads by `safeAreaInsets`.
+- **Size and teardown**: the review reports its height (`ui/notifications/size-changed`) and stops its timers on `ui/resource-teardown`.
+- **One live copy**: every `get_review` leaves another copy in the chat. Copies share an origin, so they compare the `snapshot_at` of their first result over a `BroadcastChannel`; older ones fold to a one-line card and stop polling and updating context.
 
 - Each mark's **timeline**: who marked it, every step after (started, resolved with an after image, reopened, verified) and every comment, with the agent's labelled **Agent**. "Talk only" folds the bare steps away. The owner replies from the same card.
 
-These are backed by the app-only `add_mark`, `add_comment`, `decide_review`, and `verify_mark` tools. Hosts without MCP Apps (Grok, Claude Code CLI, ChatGPT) ignore the UI metadata. `create_review` and `get_review` still return `review_url` as plain text, and the agent must paste that link. The loop is unchanged.
+These are backed by the app-only `add_mark`, `add_comment`, `decide_review`, and `verify_mark` tools. Hosts without MCP Apps (Grok, Claude Code CLI) ignore the UI metadata. `create_review` and `get_review` still return `review_url` as plain text, and the agent must paste that link. The loop is unchanged.
 
 ### MCP ↔ web parity checklist
 

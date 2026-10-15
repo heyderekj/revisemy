@@ -10,11 +10,13 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
+use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('list_reviews')]
+#[Title('List reviews')]
 #[Description('List recent design reviews for this try token only. Returns pass #, status, next_action, and outstanding / awaiting-verification counts — not full work packets. Call get_review for pins.')]
 #[IsReadOnly]
 #[IsOpenWorld(false)]

@@ -11,11 +11,13 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
+use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
 #[Name('reply_to_marks')]
+#[Title('Reply on marks')]
 #[Description('Reply in a mark\'s thread: answer a question mark, explain what you changed or why you didn\'t, or ask before guessing. The human and any guests see the reply, labelled as your agent\'s. A reply never changes a mark — set progress with resolve_marks, and the human still verifies. Works while the review waits on the human or after they ask for changes.')]
 #[IsDestructive(false)]
 #[IsOpenWorld(false)]

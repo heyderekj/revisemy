@@ -15,6 +15,7 @@ use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\RendersApp;
+use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
@@ -27,6 +28,7 @@ use Laravel\Mcp\Server\Ui\Enums\Visibility;
  * the token holder is the human, matching the token-gated web review page.
  */
 #[Name('add_mark')]
+#[Title('Add a mark')]
 #[Description('HUMAN-IN-THE-LOOP UI ONLY — agents must never call this. Drops a human mark (M#) on a screenshot from the inline review app.')]
 #[RendersApp(ReviewApp::class, visibility: [Visibility::App])]
 #[IsDestructive(false)]

@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'version' => '1.7.0',
+    'version' => '1.8.0',
 
     /*
     | Koati, the studio's other product. The footer names it as a sibling and
@@ -36,6 +36,17 @@ return [
     */
 
     'second_opinion_enabled' => env('REVISEMY_SECOND_OPINION', true),
+
+    /*
+    | wait_for_review holds one call open until the person acts on the review,
+    | checking every wait_poll_ms, and answers changed:false after
+    | wait_max_seconds so the agent can call again. Keep the hold under the
+    | host's tool timeout (Claude: 240s) and any proxy's request timeout. Set
+    | it to 0 to answer at once, like get_review.
+    */
+    'wait_max_seconds' => (int) env('REVISEMY_WAIT_MAX_SECONDS', 45),
+    'wait_poll_ms' => (int) env('REVISEMY_WAIT_POLL_MS', 2000),
+    'wait_heartbeat_ms' => (int) env('REVISEMY_WAIT_HEARTBEAT_MS', 10000),
 
     /*
     |--------------------------------------------------------------------------

@@ -11,12 +11,14 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
+use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 use RuntimeException;
 
 #[Name('create_checkout')]
+#[Title('Buy credits or Plus')]
 #[Description('Start a checkout link for the human: product "plus" (default — Plus subscription, monthly credits) or "credits_50" (one-time 50-credit pack that never expires; works on Try or Plus). If the workspace is already on Plus, use credits_50. Immediately paste share_markdown / checkout_url into chat (never only say “finish payment in the browser”).')]
 #[IsDestructive(false)]
 #[IsOpenWorld]

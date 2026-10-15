@@ -46,13 +46,27 @@ Claude Code also has a plugin that adds the server and a `design-checkup` skill:
 
 ## The checkup prompt
 
-The server offers one prompt, `design_checkup_loop`. It walks an agent through the whole loop: capture, `create_review`, share the link, poll `get_review`, follow `next_action`. Hosts that show prompts list it as a starting point.
+The server offers two prompts. `design_checkup_loop` walks an agent through the whole loop: capture, `create_review`, share the link, wait with `wait_for_review`, follow `next_action`. `check_page` reviews one live page. Hosts that show prompts list them as starting points.
+
+## Waiting and looking
+
+Two tools keep your agent from guessing:
+
+- `wait_for_review` holds one call until the person acts on the review (a decision, a mark, a comment, a verify), or about 45 seconds, instead of polling `get_review`. A host that sends a `progressToken` hears a heartbeat while it waits. Hosts don't support MCP Tasks yet, so this is a long-held call that works everywhere.
+- `look_at_marks` returns a cropped picture of each open mark with the person's box or point drawn on it, so your agent sees what they circled, not just coordinates. Up to 5 at a time, sized for vision models.
 
 ## Reviews inside the chat
 
-In hosts that support [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview), such as Claude and VS Code, `create_review` and `get_review` also render the review inline. The person marks and decides without leaving the conversation. Everywhere else your agent pastes `review_url`. The loop is the same either way, and your agent should always paste the link.
+In hosts that support [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview), such as Claude, ChatGPT and VS Code, `create_review` and `get_review` also render the review inline. The person marks, replies and decides without leaving the conversation. Everywhere else your agent pastes `review_url`. The loop is the same either way, and your agent should always paste the link.
 
-Three tools exist only for that inline view: `add_mark`, `decide_review` and `verify_mark`. They're hidden from the model, and an agent must never call them, because approving and verifying stay with the person.
+The inline review also talks to the host:
+
+- When the person approves or asks for changes, it posts a short message into the chat as them (`ui/message`), so your agent picks it up at once instead of on its next wait. Where the host doesn't take it, the review asks the person to tell their agent.
+- As they mark and reply, it keeps your agent's context current (`ui/update-model-context`) without starting a turn.
+- It opens full screen for marking where the host offers it, and on a phone it does so when a mark is started.
+- Each `get_review` leaves another copy of the review in the chat. Only the newest stays live; older copies fold away and stop checking for changes.
+
+Four tools exist only for that inline view: `add_mark`, `add_comment`, `decide_review` and `verify_mark`. They're hidden from the model, and an agent must never call them, because marking, approving and verifying stay with the person.
 
 ## Tool reference
 

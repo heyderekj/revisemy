@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.8.0',
+            'date' => '2026-10-15',
+            'title' => 'Your agent hears you the moment you decide',
+            'highlights' => [
+                'When you approve or ask for changes in the inline review, it tells your agent in the chat, so it starts right away',
+                'Your agent waits for you in one call instead of checking every 30 seconds, and knows the moment you mark, reply or decide',
+                'Your agent can see each mark as you drew it, cropped from the screenshot, before it fixes it',
+                'Mark in full screen inside the chat, and older copies of a review fold away so only the newest stays live',
+            ],
+        ],
+
+        [
             'version' => '1.7.0',
             'date' => '2026-10-15',
             'title' => 'Every mark has a timeline',

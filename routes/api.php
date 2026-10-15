@@ -15,6 +15,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::post('/reviews', [ReviewController::class, 'store']);
     Route::get('/reviews/{publicId}', [ReviewController::class, 'show']);
+    Route::get('/reviews/{publicId}/wait', [ReviewController::class, 'wait']);
     Route::post('/reviews/{publicId}/screenshots', [ReviewController::class, 'addScreenshot']);
     Route::post('/reviews/{publicId}/findings', [ReviewController::class, 'addFindings']);
     Route::post('/reviews/{publicId}/marks/resolve', [ReviewController::class, 'resolveMarks']);

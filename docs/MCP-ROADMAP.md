@@ -81,6 +81,22 @@ A one-command setup for SSH sessions and containers, where browser sign-in isn't
 
 Lucidly has ticket numbers and projects. We shouldn't add either, but a review chain is already a page's history. Make it easy to ask for "the last pass on this URL" so a new chat picks up where the old one stopped. This is a lookup on existing parent and child reviews, not a new object.
 
+## Closing the loop without polling (1.8.0)
+
+- `wait_for_review` holds a call until the person acts, with a progress heartbeat, instead of polling every 30 seconds. REST: `GET /api/reviews/{id}/wait`.
+- The inline review hands the decision back as a chat message (`ui/message`), keeps the model's context current (`ui/update-model-context`), opens full screen for marking, and keeps one live copy per review in the chat.
+- `look_at_marks` shows the agent a crop of each open mark with the person's box drawn on it.
+
+## Waiting on the platform
+
+Checked 2026-10-15 against MCP 2026-07-28, MCP Apps 2026-01-26 and laravel/mcp 0.9.6.
+
+- **Asking the person mid-call** (elicitation, now "input required" in 2026-07-28). A question mark could become a native form in Claude Code, VS Code and Goose. Blocked: laravel/mcp can't send requests to the client or speak 2026-07-28, and claude.ai doesn't support elicitation.
+- **Tasks** (`io.modelcontextprotocol/tasks`). "Wait for the decision" is the textbook human-approval task. No host supports it yet; `wait_for_review` stands in.
+- **Subscriptions** (`subscriptions/listen`, `notifications/resources/updated`). Would let a host learn of a decision with no call open. Claude doesn't support them and laravel/mcp has no push.
+- **Images in `ui/message`** (draft `hostCapabilities.message`). The handoff could carry the marked shot itself.
+- **Realtime in the inline review.** Reverb over `connectDomains` would replace the 12-second poll, if production runs Reverb.
+
 ## Decided against
 
 - **Tickets, assignees, a backlog.** Positioning rules them out.

@@ -433,6 +433,14 @@ class Review extends Model
     ];
 
     /**
+     * How long one wait_for_review call holds before answering changed:false.
+     */
+    public static function waitSeconds(): int
+    {
+        return max(0, (int) config('revisemy.wait_max_seconds', 45));
+    }
+
+    /**
      * What the agent should do next in the design checkup loop.
      *
      * @return array<string, mixed>
@@ -442,7 +450,11 @@ class Review extends Model
         return match ($this->effectiveStatus()) {
             self::STATUS_PENDING => [
                 'action' => 'wait_for_human',
-                'summary' => 'Share review_url with the human. Poll get_review about every '.self::POLL_AFTER_SECONDS.'s until they approve or request changes (compare updated_at to skip unchanged polls). Do not claim the UI is done.'.$this->awaitingReplyLine(),
+                'summary' => 'Share review_url with the human, then call wait_for_review with since set to updated_at: it returns the moment they act, or after about '.self::waitSeconds().'s with changed:false, and then you call it again. Without wait_for_review, poll get_review about every '.self::POLL_AFTER_SECONDS.'s (compare updated_at to skip unchanged polls). Do not claim the UI is done.'.$this->awaitingReplyLine(),
+                'wait_with' => [
+                    'tool' => 'wait_for_review',
+                    'since' => $this->activityStamp()?->toIso8601String(),
+                ],
                 'poll_after_seconds' => self::POLL_AFTER_SECONDS,
             ],
             self::STATUS_CHANGES_REQUESTED => $this->changesRequestedAction(),
@@ -498,7 +510,7 @@ class Review extends Model
             ] + $nextPass;
         }
 
-        $summary = 'Apply work_packets.pins (human marks) in order: must-fix → nit. Honor keep (do not change). As you work each mark, call resolve_marks with its id — status "in_progress" while editing, "resolved" (with a short note) once fixed. Never set "verified"; that is the human\'s call. Treat second_opinion as hints.';
+        $summary = 'Call look_at_marks to see each open mark as the person drew it. Apply work_packets.pins (human marks) in order: must-fix → nit. Honor keep (do not change). As you work each mark, call resolve_marks with its id — status "in_progress" while editing, "resolved" (with a short note) once fixed. Never set "verified"; that is the human\'s call. Treat second_opinion as hints.';
 
         if ($carried->isNotEmpty()) {
             $summary .= ' The human reopened '.$carried->count().' mark(s) from the previous pass ('.$this->markNumbers($carried).') — they are in work_packets.carried_over; fix and resolve those too.';
@@ -818,6 +830,10 @@ class Review extends Model
             // Changes whenever the human does anything — an unchanged value
             // means the poll can be skipped.
             'updated_at' => $this->lastActivityAt()?->toIso8601String(),
+            // When this payload was made, to the microsecond. The inline review
+            // uses the first one it was shown to tell its copies in the chat
+            // apart: the newest stays live.
+            'snapshot_at' => now('UTC')->format('Y-m-d\TH:i:s.u\Z'),
             'guidance' => 'Apply human marks first (work_packets.pins): must-fix, then nit. Honor keep (leave alone). When suggested_copy is set, prefer that exact string. When question_answer is set, treat the question as answered — do not invent a different answer. Read each pin\'s timeline for context; when awaiting_reply is true a person spoke last, so answer with reply_to_marks. Ask before inventing answers to unanswered question marks: reply_to_marks puts your question or explanation in the mark’s thread without changing the mark. Treat second_opinion as hints only until accepted (then they arrive as pins with source provenance).',
             'taste' => TasteLenses::forType($this->type),
             'next_action' => $this->nextAction(),
@@ -876,6 +892,34 @@ class Review extends Model
             ->merge($this->screenshots->flatMap->findings->pluck('updated_at'))
             ->filter()
             ->max();
+    }
+
+    /**
+     * The same moment lastActivityAt() reports, read with a few aggregate
+     * queries instead of loading the review — cheap enough for
+     * wait_for_review to ask every couple of seconds.
+     */
+    public function activityStamp(): ?Carbon
+    {
+        $reviewIds = array_filter([$this->id, $this->parent_id]);
+
+        $marks = Annotation::query()
+            ->join('screenshots', 'screenshots.id', '=', 'annotations.screenshot_id')
+            ->whereIn('screenshots.review_id', $reviewIds)
+            ->where('screenshots.kind', Screenshot::KIND_SOURCE);
+
+        $stamps = [
+            static::query()->whereKey($this->id)->value('updated_at'),
+            (clone $marks)->max('annotations.updated_at'),
+            AnnotationComment::query()
+                ->whereIn('annotation_id', (clone $marks)->select('annotations.id'))
+                ->max('created_at'),
+            Finding::query()
+                ->whereIn('screenshot_id', Screenshot::query()->where('review_id', $this->id)->where('kind', Screenshot::KIND_SOURCE)->select('id'))
+                ->max('updated_at'),
+        ];
+
+        return collect($stamps)->filter()->map(fn ($stamp) => Carbon::parse($stamp))->max();
     }
 
     /**
