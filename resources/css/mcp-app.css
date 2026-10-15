@@ -13,6 +13,7 @@
 @source '../../app/Models/Annotation.php';
 @source '../views/components/agent-tag.blade.php';
 @source '../views/components/signal-tag.blade.php';
+@source '../views/components/who-pill.blade.php';
 
 @theme {
     --font-sans: 'Figtree', ui-sans-serif, system-ui, -apple-system, sans-serif;

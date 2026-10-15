@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.7.0',
+            'date' => '2026-10-15',
+            'title' => 'Every mark has a timeline',
+            'highlights' => [
+                'Every mark has a timeline: who marked it, what your agent did, what you said back, in order. “Talk only” folds it down to the conversation',
+                'Your agent knows when you’ve spoken last on a mark and is asked to answer, and it can explain a fix in the same step it resolves it',
+                'Reply to your agent from the inline review in your chat, not just on the web',
+                'The Agent label is a round pill now, so it never reads as the In progress status',
+            ],
+        ],
+
+        [
             'version' => '1.6.0',
             'date' => '2026-10-15',
             'title' => 'Your agent answers on marks',

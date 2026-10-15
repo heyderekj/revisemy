@@ -22,9 +22,9 @@ We shouldn't copy their shape. A ticket system is the thing positioning says we 
 | Who verifies | Reviewer resolves | Human only, enforced |
 | Agent critique | Not mentioned | `add_findings`, second opinion |
 | Pipelines | Not mentioned | Decision webhooks, progress notifications |
-| Agent replies to a thread | Yes | Yes, `reply_to_marks`; threads show inline read-only |
+| Agent replies to a thread | Yes | Yes, `reply_to_marks` and `resolve_marks` `reply`, on a timeline per mark |
 | Query past feedback | Project, status, page, device, ticket | `list_reviews`, this token only |
-| AI actions labeled | Yes | Yes, an Agent tag on notes, statuses, after images, replies and findings |
+| AI actions labeled | Yes | Yes, an Agent pill on every step, reply, after image and finding |
 | Activity log, revoke | 90-day log, one-click disconnect | Not visible |
 | Setup over SSH | One-step command | Token paste |
 | Published rate limits | Per plan | Not stated |
@@ -53,9 +53,13 @@ Still to do:
 
 `reply_to_marks` puts the agent's reply in a mark's thread: an answer to a question, an explanation of a fix, or a question before it guesses. It works while the review waits on the person or after they ask for changes, respects comments being off, and never changes a mark's status. `get_review` already returned each pin's last 10 comments; they now carry `author_type`. The inline review shows threads read-only, and replying stays on the web.
 
+**1.7.0** puts every step and comment on one timeline per mark (`timeline`, `awaiting_reply` and `resolved_by` on each pin, `loop.awaiting_reply_count`), adds a `reply` field to `resolve_marks`, and lets the owner answer inline (`add_comment`). We explored five shapes for this on a design canvas (thread in the card, mark timeline, two lanes, pass recap first, on the shot) and three blends of the first two, and picked the mark timeline with a "Talk only" switch.
+
 ### 2. Label what the agent did (shipped)
 
 An Agent tag, in the sky agent tone, marks the agent's notes, the statuses it set (`status_by` on each pin), its after images, its replies and its findings. It reads the same on the review page, the board, guest links and the inline review, so a guest can tell a person from the agent at a glance. We said "Agent", not "AI", to match "your agent".
+
+**1.7.0** draws the tag as a round pill with a chip icon, so it never reads as the In progress status, and records every state change with who made it (`annotation_events`). Marks from before rebuild their steps from the timestamps they carry.
 
 ### 3. Make `list_reviews` a real query
 

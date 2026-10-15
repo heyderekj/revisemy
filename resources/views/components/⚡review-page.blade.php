@@ -1,7 +1,6 @@
 <?php
 
 use App\Livewire\Concerns\FindsReviewMarks;
-use App\Events\MarkUpdated;
 use App\Models\Annotation;
 use App\Models\AnnotationComment;
 use App\Models\Finding;
@@ -89,7 +88,7 @@ new class extends Component
     {
         $review = Review::query()
             ->where(fn ($q) => $q->where('token', $this->token)->orWhere('share_token', $this->token))
-            ->with(['screenshots.annotations.comments', 'screenshots.annotations.afterScreenshot', 'screenshots.findings'])
+            ->with(['screenshots.annotations.comments', 'screenshots.annotations.afterScreenshot', 'screenshots.annotations.events.afterScreenshot', 'screenshots.findings'])
             ->firstOrFail();
 
         $this->mode = hash_equals((string) $review->token, $this->token) ? 'owner' : 'guest';
@@ -101,6 +100,7 @@ new class extends Component
             $review->load([
                 'parent.screenshots.annotations.comments',
                 'parent.screenshots.annotations.afterScreenshot',
+                'parent.screenshots.annotations.events.afterScreenshot',
             ]);
         }
 
@@ -543,7 +543,7 @@ new class extends Component
      * Threaded notes on a mark. Guests must sign with a name (same as suggestions);
      * owners may leave the name blank and post as Owner.
      */
-    public function addMarkComment(int $annotationId): void
+    public function addMarkComment(int $annotationId, MarkLifecycleService $lifecycle): void
     {
         if (! $this->review->allowsComments()) {
             return;
@@ -576,14 +576,12 @@ new class extends Component
 
         $this->validate($rules, $messages);
 
-        $annotation->comments()->create([
-            'author' => $this->mode === 'guest' ? $this->guestName : 'Owner',
-            'author_type' => $this->mode === 'owner' ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST,
-            'from_owner' => $this->mode === 'owner',
-            'body' => $this->markCommentBody,
-        ]);
-        // Other open copies of the review pick the comment up at once.
-        MarkUpdated::dispatch($annotation);
+        $lifecycle->addComment(
+            $annotation,
+            $this->mode === 'owner' ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST,
+            $this->markCommentBody,
+            $this->guestName,
+        );
 
         $this->activeCommentMarkId = null;
         $this->markCommentBody = '';

@@ -137,6 +137,7 @@ class ReviewController extends Controller
             'marks.*.status' => ['nullable', 'string', 'in:in_progress,resolved'],
             'marks.*.note' => ['nullable', 'string', 'max:2000'],
             'marks.*.after_image' => ['nullable', 'string'],
+            'marks.*.reply' => ['nullable', 'string', 'max:2000'],
         ]);
 
         ['updated' => $updated, 'skipped' => $skipped] = $lifecycle->applyAgentUpdates($review, $data['marks']);
@@ -153,6 +154,45 @@ class ReviewController extends Controller
             // Named so a partial batch cannot be mistaken for a complete one.
             'skipped' => $skipped,
             'review' => $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent.screenshots.annotations'])?->toAgentPayload(),
+        ]);
+    }
+
+    public function replyToMarks(Request $request, string $publicId, ReviewService $reviews, MarkLifecycleService $lifecycle): JsonResponse
+    {
+        $this->throttle($request, 'reply-marks', 120);
+
+        $review = $reviews->findForWorkspace($request->user()->workspace, $publicId);
+
+        if (! $review) {
+            return response()->json(['message' => 'Review not found for this try token.'], 404);
+        }
+
+        if (! in_array($review->effectiveStatus(), [Review::STATUS_PENDING, Review::STATUS_CHANGES_REQUESTED], true)) {
+            return response()->json([
+                'message' => 'Replies are only open while the review is pending or has changes requested.',
+                'status' => $review->effectiveStatus(),
+            ], 422);
+        }
+
+        $data = $request->validate([
+            'replies' => ['required', 'array', 'min:1', 'max:20'],
+            'replies.*.id' => ['required', 'integer'],
+            'replies.*.body' => ['required', 'string', 'max:2000'],
+        ]);
+
+        ['replied' => $updated, 'skipped' => $skipped] = $lifecycle->replyAsAgent($review, $data['replies']);
+
+        if ($updated->isEmpty()) {
+            return response()->json([
+                'message' => 'No replies were posted — see skipped for why each one was refused.',
+                'skipped' => $skipped,
+            ], 422);
+        }
+
+        return response()->json([
+            'posted' => $updated->count(),
+            'skipped' => $skipped,
+            'review' => $review->fresh()?->toAgentPayload(),
         ]);
     }
 

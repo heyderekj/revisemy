@@ -29,6 +29,15 @@ class AnnotationComment extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (AnnotationComment $comment): void {
+            if ($comment->author_type === null || $comment->author_type === '') {
+                $comment->author_type = $comment->from_owner ? self::AUTHOR_OWNER : self::AUTHOR_GUEST;
+            }
+        });
+    }
+
     public function annotation(): BelongsTo
     {
         return $this->belongsTo(Annotation::class);
