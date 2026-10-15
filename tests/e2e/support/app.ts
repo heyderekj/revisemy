@@ -64,3 +64,17 @@ export function path(url: string): string {
     const u = new URL(url);
     return u.pathname + u.search;
 }
+
+/**
+ * One JSON-RPC call to the MCP server, as an assistant makes it with the
+ * same try token. Returns the result, or fails the spec on an error.
+ */
+export async function mcp(api: APIRequestContext, method: string, params: object = {}): Promise<any> {
+    const response = await api.post('/mcp/revisemy', {
+        headers: { Accept: 'application/json, text/event-stream' },
+        data: { jsonrpc: '2.0', id: 1, method, params },
+    });
+    const body = await response.json();
+    expect(body.error, JSON.stringify(body.error)).toBeUndefined();
+    return body.result;
+}
