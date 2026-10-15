@@ -42,6 +42,7 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Board column owners & empty copy | `Annotation::boardColumnMeta()` |
 | Mark focus crop | `MarkFocus` → pin `focus_preview` in `Review::markToArray()` |
 | Shot display size (width ÷ DPR, so 2× captures stay sharp) | `Screenshot::pixelRatio()` on the board; `shotFrameStyle()` reads `meta.dpr` inline |
+| Canvas first: viewport tabs, floating brief, fit width / whole page / 100% | `review.partials.viewport-tabs` and the canvas's `setFit()` on the web; `setFit()` and `shotFrameStyle()` inline |
 | Control height | Web Flux `size="sm"` (`h-8`) |
 
 **Intentionally web-only:** comment threads (inline shows `comment_count` + “View comments” → `board_url` / `review_url`), share/guest link management, the “Your reviews” link in the header, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.

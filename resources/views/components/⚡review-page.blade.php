@@ -1011,6 +1011,24 @@ new class extends Component
 
 <div
     class="rm-desk flex h-svh max-h-svh flex-col overflow-hidden"
+    x-data
+    x-init="
+        if (! Alpine.store('rmFocus')) {
+            Alpine.store('rmFocus', { finding: null, mark: null });
+        }
+        if (! Alpine.store('rmPanel')) {
+            let saved = null;
+            try { saved = localStorage.getItem('revisemy_drawer'); } catch (e) {}
+            Alpine.store('rmPanel', {
+                {{-- Below lg the drawer covers the shot, so it starts closed there. --}}
+                open: window.innerWidth < 1024 ? false : (saved ? saved === 'open' : window.innerWidth >= 1280),
+                brief: true,
+                remember() { try { localStorage.setItem('revisemy_drawer', this.open ? 'open' : 'closed'); } catch (e) {} },
+                toggle() { this.open = ! this.open; this.remember(); },
+                show() { this.open = true; },
+            });
+        }
+    "
     @if ($this->opinionPending)
         wire:poll.visible.3s="loadReview"
     @else
@@ -1030,20 +1048,20 @@ new class extends Component
             <p class="mt-1.5 text-sm text-muted-foreground">Ask whoever shared it for a new one.</p>
         </div>
     @else
-    <div
-        class="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 sm:px-6 md:grid md:grid-cols-[minmax(0,1fr)_18rem] md:gap-x-5 md:overflow-hidden lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-6"
-        x-data
-        x-init="
-            if (! Alpine.store('rmFocus')) {
-                Alpine.store('rmFocus', { finding: null, mark: null });
-            }
-        "
-    >
+    {{-- Canvas first: the shot takes the window. The marks drawer remembers
+         whether you keep it open, and the first time opens where there's room
+         beside the shot. --}}
+    <div class="relative flex min-h-0 w-full flex-1 overflow-hidden">
         {{-- Shared by both panes: @include passes locals down, never back up. --}}
         @php($shot = $this->activeScreenshot)
         @php($suggestionNumbers = $review->suggestionDisplayNumbers())
 
-        @include('review.partials.canvas')
+        <div @class([
+            'flex min-h-0 min-w-0 flex-1 flex-col',
+            'pb-[4.25rem] md:pb-0' => $this->isOwner() && $review->isOpenForFeedback(),
+        ])>
+            @include('review.partials.canvas')
+        </div>
 
         @include('review.partials.sidebar')
     </div>

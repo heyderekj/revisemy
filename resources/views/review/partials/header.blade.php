@@ -1,6 +1,6 @@
     <header class="relative z-40 shrink-0 border-b border-border bg-background">
-        <div class="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:px-6 lg:flex lg:gap-4">
-            <div class="col-start-1 row-start-1 flex shrink-0 items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
+            <div class="flex shrink-0 items-center gap-2 sm:gap-3">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                     <x-revisemy-logo size="sm" />
                 </a>
@@ -11,38 +11,11 @@
                     </a>
                     <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">/</span>
                 @endif
-                <h1 class="sr-only shrink-0 text-lg font-semibold tracking-tight text-zinc-900 sm:not-sr-only">Review</h1>
+                <h1 class="sr-only">Review</h1>
             </div>
 
-            <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 lg:col-span-1 lg:row-start-1 lg:flex-1 lg:flex-nowrap">
-                <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600">
-                    Pass {{ $review->pass }}
-                </span>
-                @php($sourceKind = $review->sourceKind())
-                @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
-                    <span
-                        class="inline-flex shrink-0 items-center gap-1 rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium text-zinc-600"
-                        title="Snapshot of {{ $review->page_url }}{{ $review->capturedAt() ? ' · '.$review->capturedAt()->timezone(config('app.timezone'))->toDayDateTimeString() : '' }}"
-                    >
-                        <flux:icon.link variant="micro" class="size-3 text-zinc-400" />
-                        <span class="max-w-40 truncate">{{ $review->sourceDomain() }}</span>
-                        @if ($review->capturedAt())
-                            <span class="hidden font-normal text-zinc-400 sm:inline">· captured {{ $review->capturedAt()->diffForHumans() }}</span>
-                        @endif
-                    </span>
-                @else
-                    <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium text-zinc-600">
-                        {{ $review->sourceKindLabel() }}
-                    </span>
-                @endif
-                @if ($review->effectiveStatus() === 'changes_requested')
-                    <x-signal-tag tone="attention" class="shrink-0">Changes requested</x-signal-tag>
-                @elseif ($review->effectiveStatus() === 'approved')
-                    <x-signal-tag tone="done" class="shrink-0">Approved</x-signal-tag>
-                @elseif ($review->effectiveStatus() === 'expired')
-                    <x-signal-tag class="shrink-0">Expired</x-signal-tag>
-                @endif
-                <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
+            {{-- Title over one quiet line of facts: pass, page, when. --}}
+            <div class="min-w-0 flex-1 xl:max-w-[28rem]">
                 @if ($this->isOwner() && $review->isOpenForFeedback())
                     <div class="flex min-w-0 flex-1 items-center gap-1" wire:key="title-field">
                         @if ($editingTitle)
@@ -50,7 +23,7 @@
                                 type="text"
                                 wire:model="titleDraft"
                                 maxlength="200"
-                                class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-zinc-800 outline-none ring-0 placeholder:text-zinc-400"
+                                class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold text-zinc-900 outline-none ring-0 placeholder:text-zinc-400"
                                 placeholder="Review title"
                                 x-data
                                 x-init="$el.focus(); $el.select()"
@@ -63,7 +36,7 @@
                             <button
                                 type="button"
                                 wire:click="startEditTitle"
-                                class="min-w-0 truncate text-left text-sm text-zinc-500 transition hover:text-zinc-800"
+                                class="min-w-0 truncate text-left text-sm font-semibold text-zinc-900 transition hover:text-zinc-600"
                                 title="Click to edit title"
                             >
                                 {{ $review->title }}
@@ -95,18 +68,44 @@
                         </div>
                     </div>
                 @else
-                    <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
+                    <p class="min-w-0 truncate text-sm font-semibold text-zinc-900" title="{{ $review->title }}">{{ $review->title }}</p>
                 @endif
+                @php($sourceKind = $review->sourceKind())
+                <p class="flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
+                    <span class="shrink-0 tabular-nums">Pass {{ $review->pass }}</span>
+                    <span aria-hidden="true">·</span>
+                    @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
+                        <span
+                            class="min-w-0 truncate"
+                            title="Snapshot of {{ $review->page_url }}{{ $review->capturedAt() ? ' · '.$review->capturedAt()->timezone(config('app.timezone'))->toDayDateTimeString() : '' }}"
+                        >{{ $review->sourceDomain() }}@if ($review->capturedAt())<span class="hidden lg:inline"> · captured {{ $review->capturedAt()->diffForHumans() }}</span>@endif</span>
+                    @else
+                        <span class="min-w-0 truncate">{{ $review->sourceKindLabel() }}</span>
+                    @endif
+                    @if ($review->effectiveStatus() === 'changes_requested')
+                        <x-signal-tag tone="attention" class="ms-1 shrink-0">Changes requested</x-signal-tag>
+                    @elseif ($review->effectiveStatus() === 'approved')
+                        <x-signal-tag tone="done" class="ms-1 shrink-0">Approved</x-signal-tag>
+                    @elseif ($review->effectiveStatus() === 'expired')
+                        <x-signal-tag class="ms-1 shrink-0">Expired</x-signal-tag>
+                    @endif
+                </p>
             </div>
 
+            @include('review.partials.viewport-tabs', ['class' => 'hidden md:flex'])
+
+            <div class="hidden flex-1 xl:block"></div>
+
+            @include('review.partials.panel-toggles')
+
             @if ($mode === 'guest')
-                <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-self-end">
+                <div class="flex shrink-0 items-center">
                     @if ($review->allowsGuestAccess())
                         <x-signal-tag>Guest</x-signal-tag>
                     @endif
                 </div>
             @elseif ($this->isOwner())
-                <div class="col-start-3 row-start-1 flex shrink-0 flex-nowrap items-center justify-end justify-self-end gap-1.5 sm:gap-2">
+                <div class="flex shrink-0 flex-nowrap items-center justify-end gap-1.5">
                     <div
                         class="relative"
                         x-data="{
@@ -165,9 +164,9 @@
                                 class="!bg-chip hover:!bg-chip-hover"
                                 aria-label="Share"
                             >
-                                <span class="hidden sm:inline" x-show="! copied">Share</span>
-                                <span class="hidden sm:inline" x-show="copied" x-cloak>Copied!</span>
-                                <flux:icon.chevron-down variant="micro" class="hidden size-3.5 sm:inline" />
+                                <span class="hidden xl:inline" x-show="! copied">Share</span>
+                                <span class="hidden xl:inline" x-show="copied" x-cloak>Copied!</span>
+                                <flux:icon.chevron-down variant="micro" class="hidden size-3.5 xl:inline" />
                             </flux:button>
 
                             <flux:menu class="min-w-60">
@@ -285,14 +284,15 @@
                             <flux:error name="shareExpiryDate" />
                         </div>
                     </div>
-                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-chip hover:!bg-chip-hover" aria-label="Board"><span class="hidden sm:inline">Board</span></flux:button>
+                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-chip hover:!bg-chip-hover" aria-label="Board"><span class="hidden xl:inline">Board</span></flux:button>
                     @if ($review->isOpenForFeedback())
                         <div class="hidden items-center gap-2 md:flex">
-                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" x-on:click="$dispatch('rm-decide', { kind: 'changes' })" class="!bg-chip hover:!bg-chip-hover">Changes</flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" x-on:click="$dispatch('rm-decide', { kind: 'changes' })" class="!bg-chip hover:!bg-chip-hover" aria-label="Changes"><span class="hidden lg:inline">Changes</span></flux:button>
                             <flux:button size="sm" variant="primary" icon="check" x-on:click="$dispatch('rm-decide', { kind: 'approve' })">Approve</flux:button>
                         </div>
                     @endif
                 </div>
             @endif
         </div>
+        @include('review.partials.viewport-tabs', ['class' => 'mx-3 mb-2 flex w-fit md:hidden'])
     </header>

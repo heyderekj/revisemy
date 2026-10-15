@@ -1,7 +1,16 @@
-        <section class="min-h-0 min-w-0 shrink-0 max-h-[52svh] space-y-3 overflow-y-auto overscroll-contain pt-4 sm:space-y-4 sm:pt-5 md:flex md:max-h-none md:flex-col md:space-y-0 md:gap-3 md:pb-3 md:pt-4">
+        <section class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-well">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
-                <div class="grid shrink-0 gap-1 py-1 lg:grid-cols-[9.5rem_1fr] lg:gap-4">
-                    <flux:heading size="sm" class="lg:pt-0.5">What to look at</flux:heading>
+                {{-- The brief floats over the shot's corner: there when you want it, gone with Hide. --}}
+                <div
+                    class="absolute left-3 top-3 z-20 w-[min(20rem,calc(100%-1.5rem))] rounded-2xl bg-lift p-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07] md:left-4 md:top-4"
+                    x-show="$store.rmPanel?.brief ?? true"
+                    x-transition.opacity.duration.120ms
+                    data-brief
+                >
+                    <div class="mb-1 flex items-center justify-between gap-2">
+                        <flux:heading size="sm">What to look at</flux:heading>
+                        <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900" x-on:click="$store.rmPanel.brief = false">Hide</button>
+                    </div>
 
                     <div class="flex items-start gap-2">
                         <div class="min-w-0 flex-1">
@@ -12,7 +21,7 @@
                                     rows="3"
                                     maxlength="5000"
                                     placeholder="What should they look at on this pass?"
-                                    class="w-full resize-y border-0 bg-transparent p-0 text-sm leading-relaxed text-pretty text-zinc-600 outline-none ring-0 placeholder:text-zinc-400 sm:text-base"
+                                    class="w-full resize-y border-0 bg-transparent p-0 text-sm leading-relaxed text-pretty text-zinc-700 outline-none ring-0 placeholder:text-zinc-400"
                                     x-data
                                     x-init="$el.focus()"
                                     x-on:keydown.meta.enter.prevent="$wire.saveContext()"
@@ -28,11 +37,11 @@
                                     title="Click to edit"
                                 >
                                     @if ($review->context)
-                                        <p class="line-clamp-3 text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base">
+                                        <p class="line-clamp-4 text-sm leading-relaxed text-pretty text-zinc-700">
                                             {{ $review->context }}
                                         </p>
                                     @else
-                                        <p class="text-sm text-zinc-400 sm:text-base">
+                                        <p class="text-sm text-zinc-400">
                                             Add what to look at on this pass…
                                         </p>
                                     @endif
@@ -42,8 +51,8 @@
                                 <p
                                     x-data="{ open: false }"
                                     x-on:click="open = ! open"
-                                    x-bind:class="open ? '' : 'line-clamp-3'"
-                                    class="line-clamp-3 cursor-pointer text-sm leading-relaxed text-pretty text-zinc-600 sm:text-base"
+                                    x-bind:class="open ? '' : 'line-clamp-4'"
+                                    class="line-clamp-4 cursor-pointer text-sm leading-relaxed text-pretty text-zinc-700"
                                 >
                                     {{ $review->context }}
                                 </p>
@@ -80,57 +89,17 @@
                 </div>
             @endif
 
-            <div @class([
-                'md:flex md:min-h-0 md:flex-1',
-                'sm:flex sm:items-start sm:gap-3 md:items-stretch' => $review->screenshots->count() > 1,
-            ])>
+            <div class="relative flex min-h-0 flex-1 flex-col">
 
-            @if ($review->screenshots->count() > 1)
-                <div
-                    class="mb-2 flex gap-2 overflow-x-auto p-1 sm:mb-0 sm:max-h-[min(70svh,560px)] sm:w-24 sm:shrink-0 sm:flex-col sm:overflow-y-auto sm:overflow-x-visible md:max-h-full"
-                    role="tablist"
-                    aria-label="Screenshots"
-                    aria-orientation="vertical"
-                >
-                    @foreach ($review->screenshots as $index => $shotOption)
-                        <button
-                            type="button"
-                            role="tab"
-                            wire:key="rail-{{ $shotOption->id }}"
-                            wire:click="selectScreenshot({{ $index }})"
-                            x-on:click="$store.rmFocus && ($store.rmFocus.finding = null, $store.rmFocus.mark = null)"
-                            aria-label="{{ $shotOption->railLabel($index) }}"
-                            aria-selected="{{ $activeScreenshotIndex === $index ? 'true' : 'false' }}"
-                            title="{{ $shotOption->railLabel($index) }}"
-                            @class([
-                                'group relative w-16 shrink-0 overflow-hidden rounded-xl transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 active:scale-[0.97] sm:w-full',
-                                'shadow-sm ring-2 ring-key ring-offset-2' => $activeScreenshotIndex === $index,
-                                'opacity-80 ring-1 ring-zinc-200 hover:opacity-100 hover:ring-zinc-300' => $activeScreenshotIndex !== $index,
-                            ])
-                        >
-                            <img
-                                src="{{ $shotOption->thumbUrl() }}"
-                                alt=""
-                                loading="lazy"
-                                draggable="false"
-                                class="pointer-events-none block aspect-[4/5] w-full bg-zinc-100 object-cover object-top"
-                            />
-                            <span class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-900/70 to-transparent px-1.5 pb-1 pt-4 text-left text-xs font-medium text-white">
-                                {{ $shotOption->railLabel($index) }}
-                            </span>
-                        </button>
-                    @endforeach
-                </div>
-            @endif
-
-            <div class="min-w-0 flex-1 md:flex md:min-h-0 md:flex-col">
+            <div class="relative flex min-h-0 min-w-0 flex-1 flex-col">
 
             @if ($shot)
                 <div
                     wire:key="shot-viewer-{{ $activeScreenshotIndex }}"
-                    class="min-w-0 md:flex md:min-h-0 md:flex-1 md:flex-col"
+                    class="relative flex min-h-0 min-w-0 flex-1 flex-col"
                     x-data="{
                         zoom: 1,
+                        fit: 'width',
                         zoomMin: 1,
                         zoomMax: 3,
                         zoomStep: 0.25,
@@ -177,10 +146,19 @@
                         measureLayout() {
                             const vp = this.$refs.viewport;
                             if (! vp) return;
-                            const containerWidth = vp.clientWidth;
-                            // A 2× capture shows at the size the page was drawn at.
-                            const natural = this.naturalWidth ? this.naturalWidth / this.pixelRatio : containerWidth;
-                            this.baseWidth = natural > 0 ? Math.min(containerWidth, natural) : containerWidth;
+                            const cs = getComputedStyle(vp);
+                            const availWidth = Math.max(1, vp.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+                            const availHeight = Math.max(1, vp.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
+                            // A 2× capture's 100% is the size the page was drawn at.
+                            const actual = this.naturalWidth ? this.naturalWidth / this.pixelRatio : availWidth;
+                            const aspect = this.naturalWidth && this.naturalHeight ? this.naturalWidth / this.naturalHeight : 0;
+                            if (this.fit === 'actual') {
+                                this.baseWidth = actual;
+                            } else if (this.fit === 'page' && aspect) {
+                                this.baseWidth = Math.min(availWidth, actual, availHeight * aspect);
+                            } else {
+                                this.baseWidth = Math.min(availWidth, actual);
+                            }
                         },
                         canvasStyle() {
                             // Width only — height must come from the image so mark %
@@ -225,6 +203,12 @@
                         },
                         zoomOut() {
                             this.zoom = Math.max(this.zoomMin, +(this.zoom - this.zoomStep).toFixed(2));
+                        },
+                        setFit(mode) {
+                            this.fit = mode;
+                            this.zoom = 1;
+                            this.measureLayout();
+                            this.$refs.viewport?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
                         },
                         resetZoom() {
                             this.zoom = 1;
@@ -373,26 +357,28 @@
                     x-on:keyup.window="onKeyUp($event)"
                 >
                     <div @class([
-                        'relative overflow-hidden rounded-2xl bg-well md:flex md:min-h-0 md:flex-col',
+                        'relative flex min-h-0 flex-1 flex-col',
                     ])>
-                        <div data-zoom-controls class="absolute bottom-2 left-2 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
+                        <div data-zoom-controls class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
                             <button
                                 type="button"
-                                class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
+                                class="hidden size-7 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:flex"
                                 x-on:click="zoomOut()"
                                 x-bind:disabled="zoom <= zoomMin"
                                 aria-label="Zoom out"
                             >−</button>
+                            @foreach (['width' => ['Fit width', 'Width'], 'page' => ['Whole page', 'Page'], 'actual' => ['100%', '100%']] as $fitMode => [$fitLabel, $fitShort])
+                                <button
+                                    type="button"
+                                    class="h-7 rounded-full px-2.5 text-xs font-medium transition-colors"
+                                    x-bind:class="fit === '{{ $fitMode }}' && zoom === 1 ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                    x-bind:aria-pressed="(fit === '{{ $fitMode }}' && zoom === 1).toString()"
+                                    x-on:click="setFit('{{ $fitMode }}')"
+                                ><span class="hidden sm:inline">{{ $fitLabel }}</span><span class="sm:hidden">{{ $fitShort }}</span></button>
+                            @endforeach
                             <button
                                 type="button"
-                                class="min-w-[2.75rem] rounded-md px-1.5 py-1 font-mono text-xs text-zinc-500 transition hover:bg-zinc-100"
-                                x-on:click="resetZoom()"
-                                x-text="Math.round(zoom * 100) + '%'"
-                                aria-label="Reset zoom"
-                            ></button>
-                            <button
-                                type="button"
-                                class="flex h-7 w-7 items-center justify-center rounded-md text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-40"
+                                class="hidden size-7 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:flex"
                                 x-on:click="zoomIn()"
                                 x-bind:disabled="zoom >= zoomMax"
                                 aria-label="Zoom in"
@@ -401,7 +387,7 @@
 
                     <div
                         x-ref="viewport"
-                        class="relative max-h-[min(52svh,420px)] overflow-auto overscroll-contain sm:max-h-[min(65svh,520px)] md:max-h-none md:min-h-0"
+                        class="relative min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-3 pb-20 md:px-6 md:pt-6"
                         x-bind:class="{
                             'cursor-grab': canPan() && spaceHeld && !panning,
                             'cursor-grabbing': panning
@@ -413,14 +399,14 @@
                     >
                         <div
                             x-ref="canvas"
-                            class="relative mx-auto max-w-full select-none"
+                            class="relative mx-auto max-w-full select-none rounded-lg bg-raised shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]"
                             x-bind:style="canvasStyle()"
                             @if ($review->isOpenForFeedback())
-                                x-bind:class="(zoom > 1 ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair' : '')"
+                                x-bind:class="(zoom > 1 || fit === 'actual' ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair' : '')"
                                 x-on:mousedown="beginDraw($event)"
                                 x-on:keydown.escape.window="cancelDraw()"
                             @else
-                                x-bind:class="zoom > 1 ? '!max-w-none' : ''"
+                                x-bind:class="zoom > 1 || fit === 'actual' ? '!max-w-none' : ''"
                             @endif
                         >
                             <img
@@ -429,7 +415,7 @@
                                 alt="Screenshot {{ $activeScreenshotIndex + 1 }}"
                                 @if ($shot->width) width="{{ $shot->width }}" @endif
                                 @if ($shot->height) height="{{ $shot->height }}" @endif
-                                class="pointer-events-none block h-auto w-full max-w-full"
+                                class="pointer-events-none block h-auto w-full max-w-full rounded-lg"
                                 draggable="false"
                                 x-on:load="onImageLoad()"
                             />
@@ -606,8 +592,8 @@
                     </div>
 
                 @if ($review->isOpenForFeedback())
-                    <p class="mt-2 hidden shrink-0 text-center text-xs text-muted-foreground md:block">
-                        {{ $mode === 'guest' ? 'Drag to suggest a change, or click for a point.' : 'Drag to mark a region, or click for a point.' }} Space+drag pans.
+                    <p class="pointer-events-none absolute bottom-3 left-3 z-20 hidden rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] md:block xl:left-1/2 xl:-translate-x-1/2">
+                        {{ $mode === 'guest' ? 'Drag to suggest a change · click for a point' : 'Drag to mark · click for a point' }} · Space+drag pans
                     </p>
                 @endif
                 </div>
