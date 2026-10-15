@@ -115,6 +115,9 @@ class CaptureIngestionTest extends TestCase
                 && ($context['maxHeight'] ?? null) === 16_000
                 && ($context['maxBytes'] ?? null) === 16 * 1024 * 1024
                 && ($context['thumbWidth'] ?? null) === 320
+                && ($context['visionEdge'] ?? null) === 1568
+                && ($context['visionPixels'] ?? null) === 1_150_000
+                && str_contains((string) ($body['code'] ?? ''), 'visionHeight')
                 && ($context['idleMs'] ?? 0) > 0
                 && ($context['withHtml'] ?? null) === true
                 && ($context['waitMs'] ?? null) === (int) config('revisemy.capture.wait_ms')
@@ -510,6 +513,55 @@ class CaptureIngestionTest extends TestCase
         $this->assertSame('presentation', $response->json('type'));
         $this->assertSame('pdf', $response->json('screenshots.0.meta.origin'));
         $this->assertSame(1, $response->json('screenshots.0.meta.page'));
+    }
+
+    public function test_function_capture_keeps_the_vision_copy_the_browser_made(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake([
+            'capture.test/function*' => Http::response([
+                'image' => base64_encode($this->tinyPngBinary()),
+                'vision' => ['image' => base64_encode('browser-made-vision-copy'), 'crop' => 0.25],
+                'scale' => 1,
+                'stable' => true,
+            ]),
+        ]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Tall page',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $desktop = Review::query()->firstOrFail()->screenshots()->orderBy('sort_order')->firstOrFail();
+
+        $this->assertStringEndsWith('.vision.jpg', $desktop->meta['vision_path']);
+        $this->assertSame('browser-made-vision-copy', Storage::disk('public')->get($desktop->meta['vision_path']));
+        $this->assertSame(0.25, $desktop->meta['vision_crop']);
+    }
+
+    public function test_function_capture_without_a_vision_copy_stores_none(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake([
+            'capture.test/function*' => Http::response([
+                'image' => base64_encode($this->tinyPngBinary()),
+                'vision' => ['image' => base64_encode('no-crop'), 'crop' => 0],
+                'stable' => true,
+            ]),
+        ]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Old host',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $desktop = Review::query()->firstOrFail()->screenshots()->orderBy('sort_order')->firstOrFail();
+
+        $this->assertArrayNotHasKey('vision_path', $desktop->meta);
     }
 
     public function test_screenshots_get_rail_thumbnails(): void

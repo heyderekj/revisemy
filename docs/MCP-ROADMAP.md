@@ -41,12 +41,13 @@ Every item below leans on the shot. Proof is an after image, and the human marks
 - **Sharpness:** desktop, mobile and tablet at 2× through `/function`, scaled down only to stay under a pixel budget and Chrome's 16,000px height. Thumbnails come from the browser, so no tall image is decoded in PHP.
 - **Layout:** pages lay out at the full viewport width (no scrollbar strip), and tablet reads as an iPad.
 - **Display:** the board and the inline review show each shot at the size the page was drawn at.
+- **A vision copy:** `/function` also shoots the top of the page at 1× or less, within 1568px on the long edge and about 1.15MP, so Anthropic reads it as sent. The second opinion sends that copy, and its regions map back onto the full shot.
+- **One checklist per review:** the checklist never looks at the pixels, so it now runs once, on the first shot, and takes its viewport notes from every shot. A URL capture gets one set of hints instead of the same set on each of its three shots. Vision findings stay per shot. On a later shot, the web review and the inline review both say where the checklist is.
 
 Still to do:
 
 - **Production on `/function`.** It has been falling back to `/screenshot`, which is 1× for desktop and tablet. `php artisan revisemy:probe-capture` shows Browserless's reason. `REVISEMY_CAPTURE_SESSION_MAX_MS` fixes it if the cause is the session timeout.
-- **A vision copy for tall captures.** Anthropic turns down images over 8000px on a side and shrinks the rest, and 2× makes tall shots common. Send the vision pass a smaller copy, or the page in slices. Production runs no vision key today, so the second opinion is the checklist only.
-- **One checklist per review, not per shot.** A URL capture repeats the same eight checklist hints on each of its three shots: 24 hints, most of them the same, in every `get_review`.
+- **Vision below the fold, and off `/function`.** The vision copy covers the top 1568 CSS px of the page only (about two screens on desktop and phone), so the second opinion says nothing about the rest. Slices would cover it. Shots from `/screenshot`, Browsershot and uploads have no copy and still go in whole, so a tall one can be turned down. Production runs no vision key today, so the second opinion is the checklist only.
 
 ### 1. Let the agent reply on a mark
 
