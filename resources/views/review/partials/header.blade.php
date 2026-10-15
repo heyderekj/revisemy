@@ -161,7 +161,7 @@
                                 size="sm"
                                 variant="ghost"
                                 icon="link"
-                                class="!bg-chip hover:!bg-chip-hover"
+                                class="!bg-chip hover:!bg-chip-hover max-xl:!w-8 max-xl:!gap-0 max-xl:!px-0"
                                 aria-label="Share"
                             >
                                 <span class="hidden xl:inline" x-show="! copied">Share</span>
@@ -284,10 +284,10 @@
                             <flux:error name="shareExpiryDate" />
                         </div>
                     </div>
-                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-chip hover:!bg-chip-hover" aria-label="Board"><span class="hidden xl:inline">Board</span></flux:button>
+                    <flux:button size="sm" variant="ghost" icon="view-columns" href="{{ $review->boardUrl() }}" class="!bg-chip hover:!bg-chip-hover max-xl:!w-8 max-xl:!gap-0 max-xl:!px-0" aria-label="Board"><span class="hidden xl:inline">Board</span></flux:button>
                     @if ($review->isOpenForFeedback())
                         <div class="hidden items-center gap-2 md:flex">
-                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" x-on:click="$dispatch('rm-decide', { kind: 'changes' })" class="!bg-chip hover:!bg-chip-hover" aria-label="Changes"><span class="hidden lg:inline">Changes</span></flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-uturn-left" x-on:click="$dispatch('rm-decide', { kind: 'changes' })" class="!bg-chip hover:!bg-chip-hover max-lg:!w-8 max-lg:!gap-0 max-lg:!px-0" aria-label="Changes"><span class="hidden lg:inline">Changes</span></flux:button>
                             <flux:button size="sm" variant="primary" icon="check" x-on:click="$dispatch('rm-decide', { kind: 'approve' })">Approve</flux:button>
                         </div>
                     @endif
