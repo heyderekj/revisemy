@@ -224,6 +224,37 @@ class CaptureIngestionTest extends TestCase
         });
     }
 
+    public function test_function_capture_reads_a_reply_still_wrapped_in_data(): void
+    {
+        $token = $this->setUpEnv();
+
+        // Production's Browserless sends the function's whole {data, type}
+        // back instead of unwrapping it; that used to fail every capture.
+        Http::fake([
+            'capture.test/function*' => Http::response([
+                'data' => [
+                    'image' => base64_encode($this->tinyPngBinary()),
+                    'loaded' => true,
+                    'stable' => true,
+                    'elements' => ['elements' => []],
+                ],
+                'type' => 'application/json',
+            ]),
+        ]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Wrapped reply',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+
+        $desktop = Review::query()->firstOrFail()->screenshots()->orderBy('sort_order')->firstOrFail();
+
+        $this->assertSame('capture', $desktop->meta['origin']);
+        $this->assertTrue($desktop->meta['loaded']);
+        $this->assertSame('same_load', $desktop->meta['elements_source']);
+    }
+
     public function test_function_capture_keeps_the_thumbnail_the_browser_made(): void
     {
         $token = $this->setUpEnv();
