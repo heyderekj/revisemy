@@ -315,6 +315,13 @@ JS;
         }
 
         $data = $response->successful() ? $response->json() : null;
+
+        // The function returns {data, type}. Some Browserless versions send
+        // back only `data`; others send the whole wrapper, so unwrap it.
+        if (is_array($data) && ! isset($data['image']) && is_array($data['data'] ?? null)) {
+            $data = $data['data'];
+        }
+
         $binary = is_array($data) && is_string($data['image'] ?? null) ? base64_decode($data['image'], true) : false;
 
         if ($binary === false || $binary === '') {
