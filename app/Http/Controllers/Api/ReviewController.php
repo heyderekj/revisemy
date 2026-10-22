@@ -46,6 +46,13 @@ class ReviewController extends Controller
             'parent_id' => ['nullable', 'string'],
             'images' => ['nullable', 'array', 'min:1', 'max:5'],
             'images.*' => ['required'],
+            // Per image, same order: its DPR and the page's element map (an
+            // object, or JSON text in a multipart form). Maps are cleaned by
+            // ElementMap when stored.
+            'image_details' => ['nullable', 'array', 'max:5'],
+            'image_details.*' => ['nullable', 'array'],
+            'image_details.*.dpr' => ['nullable', 'numeric', 'between:0.5,4'],
+            'image_details.*.elements' => ['nullable'],
             'capture_url' => ['nullable', 'boolean'],
             'pdf' => ['nullable', 'string'],
             'html' => ['nullable', 'string', 'max:500000'],
@@ -101,9 +108,16 @@ class ReviewController extends Controller
 
         $data = $request->validate([
             'image' => ['required'],
+            'dpr' => ['nullable', 'numeric', 'between:0.5,4'],
+            'elements' => ['nullable'],
         ]);
 
-        $reviews->addScreenshot($review, $data['image']);
+        $reviews->addScreenshot(
+            $review,
+            $data['image'],
+            isset($data['dpr']) ? (float) $data['dpr'] : null,
+            ReviewService::elementsFrom($data['elements'] ?? null),
+        );
 
         return response()->json($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload());
     }

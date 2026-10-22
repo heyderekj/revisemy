@@ -52,6 +52,7 @@ curl -s -X POST https://revisemy.com/api/reviews \
 | `context` | What the person should look at on this pass |
 | `type` | `ui` (default), `website`, `presentation` or `email`. It sets the second opinion's checklist. |
 | `images` | 1 to 5 screenshots: https image URLs, data URLs or base64 |
+| `image_details` | Optional, one per image in the same order: `dpr` (device pixels per CSS px, 0.5 to 4) and `elements`, the element map for that shot. See [Element maps](#element-maps). |
 | `capture_url` + `page_url` | `true` and a public URL: ReviseMy captures desktop and mobile |
 | `pdf` | An https URL or base64. One shot per page, up to 5. |
 | `html` | An email's HTML, rendered at mail-client width |
@@ -85,6 +86,23 @@ curl -s -X POST https://revisemy.com/api/reviews/$REVIEW_ID/screenshots \
   -H "Authorization: Bearer $REVISEMY_TOKEN" -H "Content-Type: application/json" \
   -d '{"image": "data:image/png;base64,iVBORw0…"}'
 ```
+
+Send `dpr` and `elements` too, as on `image_details`.
+
+## Element maps
+
+A capture ReviseMy makes itself knows the page's elements, so the person can click a button or a heading to mark it, and each mark tells your agent its selector, text and styles. Your own screenshots (localhost, a staging build, an app screen in a browser) can do the same. Run the collector in the browser you screenshot, at the top of the page, right after a full-page shot:
+
+```js
+const shot = await page.screenshot({ fullPage: true });
+const script = await (await fetch('https://revisemy.com/capture/elements.js')).text();
+const elements = await page.evaluate(script);
+// POST /reviews with images: [dataUrl(shot)], image_details: [{ dpr: 2, elements }]
+```
+
+It's the same code ReviseMy runs on its own captures, also served to MCP clients as the `revisemy://capture/elements.js` resource. It returns up to 2,500 elements in under 3 seconds and sends nothing anywhere. In a multipart request, send `elements` as JSON text.
+
+A map is checked before it's kept: sizes are capped, boxes are clamped to the shot, and colours must be hex. When it doesn't match the image (its page width times `dpr` should be the image width, within 2%), the shot is kept without it and `meta.elements_skipped` says why. Without a `dpr`, the map's page width works it out.
 
 ## POST /reviews/{id}/marks/resolve
 

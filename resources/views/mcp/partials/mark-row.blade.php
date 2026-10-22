@@ -16,6 +16,7 @@
             <span class="text-xs tabular-nums text-zinc-400" x-show="pin.comment_count > 0" x-text="pin.comment_count + (pin.comment_count === 1 ? ' comment' : ' comments')"></span>
             <span class="text-xs text-zinc-400" x-show="pin.awaiting_reply">Waiting on your agent</span>
         </div>
+        <div class="mb-1.5" x-show="pin.element">@include('mcp.partials.element-chip', ['source' => 'pin.element'])</div>
         <p class="text-sm leading-relaxed text-zinc-700" x-text="pin.body"></p>
     </button>
     <p class="mt-2 flex items-start gap-1.5 rounded-lg bg-done-soft px-2.5 py-1.5 text-xs leading-relaxed text-done-ink" x-show="pin.resolution_note">

@@ -39,6 +39,7 @@ class Finding extends Model
         'x',
         'y',
         'area',
+        'target',
         'related_pin',
         'status',
     ];
@@ -49,6 +50,7 @@ class Finding extends Model
             'x' => 'float',
             'y' => 'float',
             'area' => 'array',
+            'target' => 'array',
             'related_pin' => 'integer',
         ];
     }
@@ -120,7 +122,8 @@ class Finding extends Model
      */
     public function region(): ?array
     {
-        return NormalizedArea::from($this->area);
+        // A guest drew it, so it may be as small as a person's mark.
+        return NormalizedArea::from($this->area, $this->isGuest() ? NormalizedArea::MIN_MARK_SIDE : NormalizedArea::MIN_SIDE);
     }
 
     public function hasRegion(): bool
