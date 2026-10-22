@@ -1,17 +1,19 @@
 # Positioning and voice
 
-Last updated: 2026-10-02
+Last updated: 2026-10-22
 
 ## What ReviseMy is
 
 Visual feedback for your agent. Your agent captures the work — a screenshot, a URL, a PDF, an email — and sends you a review link. You mark what matters, approve or ask for changes, and the agent reads your marks as work and keeps going.
+
+You can also start the other way round: paste a link or add a file at `/new`, mark it up, then paste the review link to your agent. The first agent to open it takes the review as its own.
 
 ReviseMy is made by Testament Made, LLC, the studio behind Koati. The two are separate products with no connection between them: no linked reviews, no webhook, nothing sent either way. They share a look and a vocabulary for marks (must fix, nice to have, question, keep this), and each draws them in its own chrome. Name Koati as a sibling, never as somewhere ReviseMy sends things.
 
 ## What ReviseMy is not
 
 - Not a project tracker. A review has marks and passes; it does not have assignees, due dates or a backlog.
-- Not an account. Nobody signs up. A try token or a one-click Connect is the whole setup, and the review link is the whole login.
+- Not an account. Nobody signs up. A try token, a one-click Connect or starting a review at `/new` is the whole setup, and the review link is the whole login.
 - Not an AI reviewer. The second opinion offers hints; a person's marks are the only ones that count.
 
 ## Voice

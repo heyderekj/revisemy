@@ -960,6 +960,7 @@ new class extends Component
         return [
             "echo:review.{$this->token},.MarkUpdated" => 'loadReview',
             "echo:review.{$this->token},.ReviewDecided" => 'loadReview',
+            "echo:review.{$this->token},.ReviewHandedOff" => 'loadReview',
         ];
     }
 

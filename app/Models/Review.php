@@ -58,6 +58,9 @@ class Review extends Model
 
     public const SOURCE_HTML = 'html';
 
+    /** Started on the site at /new, without an agent. */
+    public const ORIGIN_WEB = 'web';
+
     protected $fillable = [
         'workspace_id',
         'parent_id',
@@ -67,6 +70,8 @@ class Review extends Model
         'title',
         'context',
         'type',
+        'origin',
+        'handed_off_at',
         'page_url',
         'webhook_url',
         'webhook_failures',
@@ -99,6 +104,7 @@ class Review extends Model
             'expires_at' => 'datetime',
             'webhook_paused_at' => 'datetime',
             'share_expires_at' => 'datetime',
+            'handed_off_at' => 'datetime',
             'comments_enabled' => 'boolean',
             'pass' => 'integer',
         ];
@@ -380,6 +386,15 @@ class Review extends Model
     public function allowsComments(): bool
     {
         return (bool) $this->comments_enabled;
+    }
+
+    /**
+     * Made on the site and not yet picked up by an agent. The first agent to
+     * present its review link takes it into its own workspace.
+     */
+    public function isAwaitingAgent(): bool
+    {
+        return $this->origin === self::ORIGIN_WEB && $this->handed_off_at === null;
     }
 
     public function isExpired(): bool

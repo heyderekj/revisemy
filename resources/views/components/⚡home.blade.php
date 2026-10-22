@@ -51,6 +51,40 @@ new class extends Component
             Your agent captures the work — a screenshot, a page, a PDF or an email — and sends you a review. You mark what matters and approve or ask for changes. It reads your marks and keeps going.
         </p>
 
+        {{-- Start a review here instead, and hand its link to an agent later.
+             Errors land on /new, which also takes files. --}}
+        <form
+            method="POST"
+            action="{{ route('reviews.submit') }}"
+            class="rm-fade-up-delay mt-6 w-full max-w-xl"
+            x-data="{ busy: false }"
+            x-on:submit="busy = true"
+        >
+            @csrf
+            <input type="hidden" name="kind" value="link">
+            <label for="hero-page-url" class="sr-only">Page address to review</label>
+            <div class="flex flex-col gap-2 rounded-2xl bg-card p-2 sm:flex-row">
+                <input
+                    id="hero-page-url"
+                    name="page_url"
+                    type="text"
+                    inputmode="url"
+                    autocomplete="url"
+                    spellcheck="false"
+                    required
+                    placeholder="Paste a page to review"
+                    class="min-w-0 flex-1 rounded-xl bg-well px-3 py-2.5 text-sm text-foreground outline-none ring-1 ring-transparent placeholder:text-zinc-400 focus:ring-zinc-400"
+                >
+                <button type="submit" class="btn-lit inline-flex h-10 shrink-0 items-center justify-center rounded-full px-5 text-sm font-medium disabled:opacity-70" x-bind:disabled="busy">
+                    <span x-show="! busy">Start a review</span>
+                    <span x-show="busy" x-cloak>Capturing the page…</span>
+                </button>
+            </div>
+            <p class="mt-2 px-1 text-xs text-muted-foreground">
+                No agent needed to start. Or <a href="{{ route('reviews.new', ['kind' => 'images']) }}" class="link">add screenshots, a PDF or an email</a>.
+            </p>
+        </form>
+
         <x-pitch-video class="rm-fade-up-delay mt-6" />
 
         <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
