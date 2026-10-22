@@ -55,6 +55,12 @@ Two tools keep your agent from guessing:
 - `wait_for_review` holds one call until the person acts on the review (a decision, a mark, a comment, a verify), or about 45 seconds, instead of polling `get_review`. A host that sends a `progressToken` hears a heartbeat while it waits. Hosts don't support MCP Tasks yet, so this is a long-held call that works everywhere.
 - `look_at_marks` returns a cropped picture of each open mark with the person's box or point drawn on it, so your agent sees what they circled, not just coordinates. Up to 5 at a time, sized for vision models.
 
+## Marks on elements
+
+When a shot comes with an element map, the person can click a button, a heading or a card to mark the whole thing, see its size, type, colours and spacing, and step out to the part around it. Each of those marks reaches your agent with an `element` (see [Marks](/docs/review-loop#marks)).
+
+`capture_url` reviews have one already. For screenshots your agent takes itself, read the `revisemy://capture/elements.js` resource (or fetch `/capture/elements.js`), run it with `page.evaluate` in the same browser right after a full-page shot, and pass the result as `image_details[].elements` on `create_review`, or `elements` on `add_screenshot`, with the shot's `dpr`. A large map costs tokens to send through a tool call; the [REST API](/docs/rest-api#element-maps) takes it without that cost.
+
 ## Reviews inside the chat
 
 In hosts that support [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview), such as Claude, ChatGPT and VS Code, `create_review` and `get_review` also render the review inline. The person marks, replies and decides without leaving the conversation. Everywhere else your agent pastes `review_url`. The loop is the same either way, and your agent should always paste the link.
@@ -66,7 +72,7 @@ The inline review also talks to the host:
 - It opens full screen for marking where the host offers it, and on a phone it does so when a mark is started.
 - Each `get_review` leaves another copy of the review in the chat. Only the newest stays live; older copies fold away and stop checking for changes.
 
-Four tools exist only for that inline view: `add_mark`, `add_comment`, `decide_review` and `verify_mark`. They're hidden from the model, and an agent must never call them, because marking, approving and verifying stay with the person.
+Five tools exist only for that inline view: `add_mark`, `add_comment`, `decide_review`, `verify_mark` and `get_shot_elements`. They're hidden from the model, and an agent must never call them, because marking, approving and verifying stay with the person.
 
 ## Tool reference
 

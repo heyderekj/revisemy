@@ -10,6 +10,7 @@ use App\Http\Controllers\PolarWebhookController;
 use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\UseCaseController;
+use App\Services\Capture\CaptureSettleScript;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -116,6 +117,22 @@ Route::get('/r/{token}/shots/{screenshot}', [ScreenshotController::class, 'showF
 Route::get('/r/{token}/shots/{screenshot}/thumb', [ScreenshotController::class, 'thumbForReview'])
     ->middleware('noindex')
     ->name('reviews.screenshot.thumb');
+
+// The element map collector, for an agent to run in its own browser on the
+// page it screenshots (same code as the revisemy://capture/elements.js resource).
+Route::get('/capture/elements.js', fn () => response(CaptureSettleScript::collector(), headers: [
+    'Content-Type' => 'text/javascript; charset=utf-8',
+    'Cache-Control' => 'public, max-age=3600',
+    'Access-Control-Allow-Origin' => '*',
+]))->middleware('noindex')->name('capture.elements');
+
+Route::get('/r/{token}/shots/{screenshot}/elements', [ScreenshotController::class, 'elementsForReview'])
+    ->middleware('noindex')
+    ->name('reviews.screenshot.elements');
+
+Route::get('/shots/{screenshot}/elements', [ScreenshotController::class, 'elements'])
+    ->middleware(['signed', 'noindex'])
+    ->name('screenshots.elements');
 
 Route::get('/shots/{screenshot}', [ScreenshotController::class, 'show'])
     ->middleware(['signed', 'noindex'])
