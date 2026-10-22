@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.9.0',
+            'date' => '2026-10-22',
+            'title' => 'Long pages stay sharp',
+            'highlights' => [
+                'A long page stays sharp at 2× much further down, and loads faster on the review — big shots are WebP now',
+                'Your agent gets a picture of every mark, however far down the page it sits',
+                'Chat bubbles stay out of the shot, like cookie banners, and fewer sites turn the capture away',
+                'Slides from a PDF are sharper and show at their real size',
+            ],
+        ],
+
+        [
             'version' => '1.8.0',
             'date' => '2026-10-15',
             'title' => 'Your agent hears you the moment you decide',

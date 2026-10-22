@@ -252,6 +252,37 @@ class CloseTheLoopTest extends TestCase
         $this->assertStringContainsString('No picture for this one', $content->last()['text']);
     }
 
+    public function test_a_tall_capture_is_cropped_from_its_slices_anywhere_on_the_page(): void
+    {
+        [, $review, $token] = $this->setUpReview(image: $this->png(1200, 4000));
+        $shot = $review->screenshots()->firstOrFail();
+        $this->mark($review, ['area' => ['x' => 0.2, 'y' => 0.9, 'w' => 0.3, 'h' => 0.02], 'y' => 0.91, 'body' => 'Footer link is too small.']);
+        // Across the seam between the two slices.
+        $this->mark($review, ['number' => 2, 'area' => ['x' => 0.2, 'y' => 0.48, 'w' => 0.3, 'h' => 0.04], 'y' => 0.5, 'body' => 'This card is cut in two.']);
+
+        // Two slices at half the shot's density, each half the page.
+        $slices = [];
+        foreach ([0, 1] as $index) {
+            $slice = imagecreatetruecolor(600, 1000);
+            ob_start();
+            imagejpeg($slice);
+            Storage::disk($shot->disk)->put("slice-{$index}.jpg", (string) ob_get_clean());
+            $slices[] = ['path' => "slice-{$index}.jpg", 'top' => $index * 0.5, 'height' => 0.5];
+        }
+        $shot->update(['meta' => [...($shot->meta ?? []), 'slices' => $slices]]);
+
+        $content = collect($this->mcp($token, 'look_at_marks', ['id' => $review->public_id])[0]['result']['content']);
+        $images = $content->where('type', 'image')->values();
+
+        $this->assertCount(2, $images, 'both marks get a picture, far down the page and across the seam');
+        $this->assertStringNotContainsString('No picture for this one', $content->pluck('text')->implode("\n"));
+
+        foreach ($images as $image) {
+            [$width] = getimagesizefromstring(base64_decode($image['data']));
+            $this->assertSame(600, $width, 'the band is the full width of the slice');
+        }
+    }
+
     // ── the inline review ─────────────────────────────────────────────
 
     public function test_the_inline_review_talks_back_to_the_host(): void

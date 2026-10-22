@@ -142,7 +142,7 @@ class ReviewService
     }
 
     /**
-     * @param  list<string|UploadedFile|array{binary: string, meta: array<string, mixed>|null, elements?: array<string, mixed>|null}>  $images
+     * @param  list<string|UploadedFile|array{binary: string, meta: array<string, mixed>|null, elements?: array<string, mixed>|null, thumb?: string|null, vision?: array{binary: string, crop: float}|null, slices?: list<array{binary: string, top: float, height: float}>}>  $images
      */
     public function create(
         Workspace $workspace,
@@ -252,6 +252,9 @@ class ReviewService
             }
             if (is_array($image) && is_string($image['vision']['binary'] ?? null)) {
                 $this->screenshots->storeVision($shot, $image['vision']['binary'], (float) ($image['vision']['crop'] ?? 1));
+            }
+            if (is_array($image) && ! empty($image['slices'])) {
+                $this->screenshots->storeSlices($shot, $image['slices']);
             }
             $shots[] = $shot;
         }

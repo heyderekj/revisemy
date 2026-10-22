@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Review;
 use App\Models\Screenshot;
+use App\Support\ElementMap;
 use App\Support\OutboundUrl;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -29,6 +31,13 @@ class ScreenshotStorage
 
     /** Pixel budget for a vision copy. */
     public const VISION_PIXELS = 1_150_000;
+
+    /**
+     * Largest image GD may decode to shrink an oversized capture. A 40MP
+     * truecolor image is about 160MB in GD, as much as Cloud's 256MB PHP can
+     * spare; past it the capture is kept as it came.
+     */
+    public const MAX_SHRINK_PIXELS = 40_000_000;
 
     /**
      * The disk every review artifact (screenshots, thumbs, DOM snapshots)
@@ -72,7 +81,7 @@ class ScreenshotStorage
      */
     public function storeRaw(Review $review, string $binary, int $sortOrder = 0, ?array $meta = null, ?string $thumb = null): Screenshot
     {
-        $binary = $this->normalizeSize($binary);
+        [$binary, $scale] = $this->normalizeSize($binary);
 
         $extension = match (@getimagesizefromstring($binary)['mime'] ?? null) {
             'image/jpeg' => 'jpg',
@@ -81,33 +90,78 @@ class ScreenshotStorage
             default => 'png',
         };
 
+        if ($meta !== null) {
+            $meta['format'] = $extension === 'jpg' ? 'jpeg' : $extension;
+
+            // Shrunk here to fit the cap: the pixels now hold less per CSS px.
+            if ($scale < 1.0 && is_numeric($meta['dpr'] ?? null)) {
+                $meta['dpr'] = round((float) $meta['dpr'] * $scale, 2);
+            }
+        }
+
         return $this->persist($review, $binary, $extension, $sortOrder, Screenshot::KIND_SOURCE, $meta, $thumb);
     }
 
     /**
-     * Keep a capture's element map (selector, kind, text, box per visible
-     * element) next to its image and point the screenshot's meta at it.
-     * Best-effort: a failed write never blocks the review.
+     * Whether this PHP's GD can decode an image of this MIME type. WebP
+     * support depends on how GD was built.
+     */
+    public static function gdReads(?string $mime): bool
+    {
+        $type = match ($mime) {
+            'image/png' => IMG_PNG,
+            'image/jpeg' => IMG_JPG,
+            'image/webp' => IMG_WEBP,
+            'image/gif' => IMG_GIF,
+            default => 0,
+        };
+
+        return $type !== 0 && (imagetypes() & $type) !== 0;
+    }
+
+    /**
+     * Keep a shot's element map (see CaptureSettleScript::COLLECTOR) next to
+     * its image, cleaned by ElementMap, with the compact pick list the review
+     * canvas hit-tests against, and point the screenshot's meta at both.
+     * Returns why the map was left out, or null when it was kept. Best-effort:
+     * a failed write never blocks the review.
      *
      * @param  array<string, mixed>  $elements
      */
-    public function storeElements(Screenshot $shot, array $elements): void
+    public function storeElements(Screenshot $shot, array $elements, string $source = 'capture'): ?string
     {
-        $path = preg_replace('/\.[a-z]+$/', '', $shot->path).'.elements.json';
+        $css = $shot->cssSize();
+        ['map' => $map, 'note' => $note] = ElementMap::sanitize($elements, $css);
+
+        if ($map === null) {
+            $shot->update(['meta' => [...($shot->meta ?? []), 'elements_skipped' => $note]]);
+
+            return $note;
+        }
+
+        $base = preg_replace('/\.[a-z]+$/', '', $shot->path);
+        $path = $base.'.elements.json';
+        $pickPath = $base.'.elements.pick.json';
+        $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR;
 
         try {
-            Storage::disk($shot->disk)->put($path, json_encode($elements, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            Storage::disk($shot->disk)->put($path, json_encode($map, $flags));
+            Storage::disk($shot->disk)->put($pickPath, json_encode(ElementMap::pickList($map, $css), $flags));
         } catch (\Throwable $e) {
             report($e);
 
-            return;
+            return null;
         }
 
         $shot->update(['meta' => [
             ...($shot->meta ?? []),
             'elements_path' => $path,
-            'element_count' => count((array) ($elements['elements'] ?? [])),
-        ]]);
+            'elements_pick_path' => $pickPath,
+            'element_count' => count($map['elements']),
+            'elements_version' => $map['version'],
+        ] + ($source === 'upload' ? ['elements_source' => 'upload'] : [])]);
+
+        return null;
     }
 
     /**
@@ -134,6 +188,41 @@ class ScreenshotStorage
             'vision_path' => $path,
             'vision_crop' => round(max(0.0, min(1.0, $crop)), 4),
         ]]);
+    }
+
+    /**
+     * Keep the crop slices the capture browser made (the whole page at no
+     * more than 1x, in pieces GD can decode) next to the shot, so a mark
+     * anywhere on a long page can be cropped for the agent. Each slice
+     * carries the share of the shot's height it starts at and covers.
+     * Best-effort: a slice that fails to write is left out.
+     *
+     * @param  list<array{binary: string, top: float, height: float}>  $slices
+     */
+    public function storeSlices(Screenshot $shot, array $slices): void
+    {
+        $base = preg_replace('/\.[a-z]+$/', '', $shot->path);
+        $kept = [];
+
+        foreach (array_values($slices) as $index => $slice) {
+            $path = $base.'.slice-'.$index.'.jpg';
+
+            try {
+                Storage::disk($shot->disk)->put($path, $slice['binary']);
+            } catch (\Throwable $e) {
+                report($e);
+
+                continue;
+            }
+
+            $kept[] = ['path' => $path, 'top' => $slice['top'], 'height' => $slice['height']];
+        }
+
+        if ($kept === []) {
+            return;
+        }
+
+        $shot->update(['meta' => [...($shot->meta ?? []), 'slices' => $kept]]);
     }
 
     /**
@@ -183,6 +272,9 @@ class ScreenshotStorage
         if (is_array($info) && (($info[0] ?? 0) * ($info[1] ?? 0)) > 4_000_000) {
             return null;
         }
+        if (is_array($info) && ! self::gdReads($info['mime'] ?? null)) {
+            return null;
+        }
 
         $source = @imagecreatefromstring($binary);
 
@@ -215,16 +307,38 @@ class ScreenshotStorage
         return $encoded !== '' ? $encoded : null;
     }
 
+    /** Bytes a server-side capture may keep before it is shrunk. */
+    protected function captureCap(): int
+    {
+        return self::MAX_CAPTURE_BYTES;
+    }
+
     /**
      * GD downscale for oversized server-side captures: shrink until the
-     * encoded image fits the cap, preferring PNG before JPEG re-encode.
+     * encoded image fits the cap, trying PNG, then WebP, then JPEG at each
+     * size. Returns the bytes and the scale they were shrunk by, so the
+     * shot's DPR can say what its pixels now hold.
+     *
+     * @return array{0: string, 1: float}
      */
-    protected function normalizeSize(string $binary): string
+    protected function normalizeSize(string $binary): array
     {
-        $cap = self::MAX_CAPTURE_BYTES;
+        $cap = $this->captureCap();
 
         if (strlen($binary) <= $cap) {
-            return $binary;
+            return [$binary, 1.0];
+        }
+
+        $info = @getimagesizefromstring($binary);
+
+        if (is_array($info) && (($info[0] ?? 0) * ($info[1] ?? 0)) > self::MAX_SHRINK_PIXELS) {
+            Log::warning('Capture over the byte cap is too big to shrink in GD; kept as it came', [
+                'width' => $info[0] ?? null,
+                'height' => $info[1] ?? null,
+                'bytes' => strlen($binary),
+            ]);
+
+            return [$binary, 1.0];
         }
 
         $image = @imagecreatefromstring($binary);
@@ -235,8 +349,14 @@ class ScreenshotStorage
             ]);
         }
 
+        $encoders = [
+            fn (\GdImage $working) => imagepng($working, null, 6),
+            ...((imagetypes() & IMG_WEBP) !== 0 ? [fn (\GdImage $working) => imagewebp($working, null, 90)] : []),
+            fn (\GdImage $working) => imagejpeg($working, null, 88),
+        ];
+
         $scale = 1.0;
-        $best = $binary;
+        $best = [$binary, 1.0];
 
         do {
             $working = $scale < 1.0
@@ -247,38 +367,25 @@ class ScreenshotStorage
                 break;
             }
 
-            ob_start();
-            imagepng($working, null, 6);
-            $png = (string) ob_get_clean();
+            foreach ($encoders as $encode) {
+                ob_start();
+                $encode($working);
+                $encoded = (string) ob_get_clean();
 
-            if ($png !== '' && strlen($png) <= $cap) {
-                if ($working !== $image) {
-                    imagedestroy($working);
+                if ($encoded === '') {
+                    continue;
                 }
-                imagedestroy($image);
 
-                return $png;
-            }
+                $best = [$encoded, $scale];
 
-            if ($png !== '') {
-                $best = $png;
-            }
+                if (strlen($encoded) <= $cap) {
+                    if ($working !== $image) {
+                        imagedestroy($working);
+                    }
+                    imagedestroy($image);
 
-            ob_start();
-            imagejpeg($working, null, 88);
-            $jpeg = (string) ob_get_clean();
-
-            if ($jpeg !== '' && strlen($jpeg) <= $cap) {
-                if ($working !== $image) {
-                    imagedestroy($working);
+                    return $best;
                 }
-                imagedestroy($image);
-
-                return $jpeg;
-            }
-
-            if ($jpeg !== '') {
-                $best = $jpeg;
             }
 
             if ($working !== $image) {

@@ -30,8 +30,35 @@ class HostedCaptureDriver implements CaptureDriver
      */
     public const MAX_SHOT_HEIGHT = 16_000;
 
-    /** Time for the three screenshots and their encoding in /function (ms). */
-    protected const SHOOT_BUDGET_MS = 10_000;
+    /**
+     * Widest shot in device pixels: WebP holds at most 16,383px a side, and a
+     * page that scrolls sideways can measure wider than its viewport.
+     */
+    public const MAX_SHOT_WIDTH = 16_000;
+
+    /**
+     * Shots up to this many pixels stay lossless PNG. Past it, WebP at
+     * WEBP_QUALITY keeps text crisp at a fraction of the bytes, so a long
+     * page keeps its density instead of being scaled down to fit the cap.
+     */
+    public const PNG_MAX_PIXELS = 4_000_000;
+
+    public const WEBP_QUALITY = 92;
+
+    /**
+     * Crop slices: the whole page at no more than 1x, cut into pieces small
+     * enough for PHP to decode (MarkCrop reads 4MP at most), so a mark
+     * anywhere on a long page gets a picture.
+     */
+    public const SLICE_PIXELS = 4_000_000;
+
+    public const MAX_SLICES = 8;
+
+    /**
+     * Time for the main shot, thumbnail, vision copy and slices, and their
+     * encoding, in /function (ms).
+     */
+    protected const SHOOT_BUDGET_MS = 16_000;
 
     /**
      * Longest /function waits for network idle after the settle (ms). The
@@ -40,36 +67,69 @@ class HostedCaptureDriver implements CaptureDriver
     protected const IDLE_BUDGET_MS = 3_000;
 
     /**
+     * What each budget may be cut to when the plan's session cap is shorter
+     * than they add up to, in the order they give way (ms).
+     */
+    protected const BUDGET_FLOORS = [
+        'sweepMs' => 10_000,
+        'loadMs' => 3_000,
+        'idleMs' => 1_000,
+        'shootMs' => 8_000,
+    ];
+
+    /**
      * Runs inside Browserless /function (Puppeteer). Kept free of PHP
      * interpolation; every value arrives through `context`.
      */
     protected const FUNCTION_CODE = <<<'JS'
 export default async function ({ page, context }) {
-  if (context.userAgent) {
-    await page.setUserAgent(context.userAgent);
+  // Everything before the shots must be done by stopAt, so the session
+  // always ends with a picture rather than being cut off mid-settle.
+  const stopAt = Date.now() + context.sessionMs - context.reserveMs;
+  const left = () => Math.max(0, stopAt - Date.now());
+
+  let userAgent = context.userAgent;
+  if (userAgent && !context.viewport.isMobile) {
+    // Desktop reads as the Chrome it is, minus "Headless", at the version
+    // this browser really runs so its client hints agree.
+    const own = await page.browser().userAgent().catch(() => '');
+    const major = (own.match(/Chrome\/(\d+)/) || [])[1];
+    if (major) {
+      userAgent = userAgent.replace(/Chrome\/[\d.]+/, 'Chrome/' + major + '.0.0.0');
+    }
+  }
+  if (userAgent) {
+    await page.setUserAgent(userAgent);
   }
   await page.setViewport(context.viewport);
-  await page.goto(context.url, { waitUntil: context.waitUntil, timeout: context.timeout });
+  // A page that never goes quiet still has something to shoot.
+  await page.goto(context.url, { waitUntil: context.waitUntil, timeout: context.timeout }).catch((e) => {
+    if (!e || e.name !== 'TimeoutError') {
+      throw e;
+    }
+  });
   if (context.waitMs > 0) {
-    await new Promise((resolve) => setTimeout(resolve, context.waitMs));
+    await new Promise((resolve) => setTimeout(resolve, Math.min(context.waitMs, left())));
   }
-  await page.evaluate('(' + context.settle + ')()');
+  await page.evaluate('(' + context.settle + ')(' + Math.max(1000, left() - context.idleMs - context.againMs) + ')');
 
   // The sweep and the load gate start fetches the first load never made.
   // Let them land and, if any did, bring the page to rest once more. Pages
   // with an open chat or analytics socket never go idle, so this is short.
-  if (context.idleMs > 0) {
+  const idleMs = Math.min(context.idleMs, Math.max(0, left() - context.againMs));
+  if (idleMs > 0) {
     const finished = () => page.evaluate(() => performance.getEntriesByType('resource').length);
     const before = await finished();
-    await page.waitForNetworkIdle({ idleTime: 500, timeout: context.idleMs, concurrency: 2 }).catch(() => {});
-    if ((await finished()) !== before) {
-      await page.evaluate(() => (window.__rmSettleAgain ? window.__rmSettleAgain() : null));
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: idleMs, concurrency: 2 }).catch(() => {});
+    if ((await finished()) !== before && left() > 500) {
+      await page.evaluate((ms) => (window.__rmSettleAgain ? window.__rmSettleAgain(ms) : null), left());
     }
   }
 
   // The whole document at the viewport's DPR, scaled down only as far as the
-  // pixel budget and Chrome's screenshot height need, and again if the PNG
-  // would still be over the storage cap.
+  // pixel budget and Chrome's screenshot size need. Past PNG_MAX_PIXELS it is
+  // WebP, which holds the density in far fewer bytes; only a shot still over
+  // the storage cap is scaled down further.
   const doc = await page.evaluate(() => ({
     width: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0, window.innerWidth),
     height: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0, window.innerHeight),
@@ -81,15 +141,31 @@ export default async function ({ page, context }) {
     type,
     encoding: 'base64',
     captureBeyondViewport: true,
-    clip: { x: 0, y: 0, width: clip.width, height: clip.height, scale },
+    clip: { x: 0, y: clip.y || 0, width: clip.width, height: clip.height, scale },
     ...extra,
   });
-  let scale = Math.min(1, Math.sqrt(context.maxPixels / (width * dpr * height * dpr)), context.maxHeight / (height * dpr));
-  let image = await shoot('png', { width, height }, scale, {});
-  while (image.length * 0.75 > context.maxBytes && scale > 0.25) {
-    scale *= 0.8;
-    image = await shoot('png', { width, height }, scale, {});
+  const pixels = (s) => width * dpr * s * height * dpr * s;
+  const encode = async (s) => {
+    if (pixels(s) <= context.pngMaxPixels) {
+      const png = await shoot('png', { width, height }, s, {});
+      if (png.length * 0.75 <= context.maxBytes) {
+        return { image: png, format: 'png' };
+      }
+    }
+    try {
+      return { image: await shoot('webp', { width, height }, s, { quality: context.webpQuality }), format: 'webp' };
+    } catch (e) {
+      return { image: await shoot('png', { width, height }, s, {}), format: 'png' };
+    }
+  };
+  let scale = Math.min(1, Math.sqrt(context.maxPixels / pixels(1)), context.maxHeight / (height * dpr), context.maxWidth / (width * dpr));
+  let shot = await encode(scale);
+  while (shot.image.length * 0.75 > context.maxBytes && scale > 0.25) {
+    scale *= 0.85;
+    shot = await encode(scale);
   }
+  const image = shot.image;
+  const shootStarted = Date.now();
 
   // The rail thumbnail: the top of the page, already small, so the app
   // never decodes a tall capture to make one.
@@ -110,6 +186,29 @@ export default async function ({ page, context }) {
     };
   }
 
+  // Crop slices: the whole page top to bottom at no more than 1x, in pieces
+  // PHP can decode, so a crop for a mark far down a long page has a source.
+  // Only needed when the main shot is too big to decode itself.
+  const slices = [];
+  if (context.slicePixels > 0 && pixels(scale) > context.slicePixels) {
+    const sliceHeight = Math.max(
+      Math.min(Math.max(Math.floor(context.slicePixels / width), 1600), 4000),
+      Math.ceil(height / context.maxSlices),
+    );
+    const fit = Math.min(1, Math.sqrt(context.slicePixels / (width * sliceHeight)));
+    for (let top = 0; top < height && slices.length < context.maxSlices; top += sliceHeight) {
+      if (Date.now() - shootStarted > context.shootMs - 1500) {
+        break;
+      }
+      const sliceTall = Math.min(sliceHeight, height - top);
+      slices.push({
+        image: await shoot('jpeg', { y: top, width, height: sliceTall }, fit / dpr, { quality: 82 }),
+        top,
+        height: sliceTall,
+      });
+    }
+  }
+
   const state = await page.evaluate(() => ({
     elements: window.__rmElements || null,
     stable: window.__rmSettleStable === true,
@@ -121,8 +220,11 @@ export default async function ({ page, context }) {
   return {
     data: {
       image,
+      format: shot.format,
+      css: { width, height },
       thumb,
       vision,
+      slices,
       scale,
       html,
       elements: context.collectElements ? state.elements : null,
@@ -170,14 +272,7 @@ JS;
         $baseMeta = ['origin' => 'capture', 'page_url' => $url];
 
         if ($path !== 'function') {
-            return $this->captureViaScreenshot(
-                ['url' => $url],
-                $viewports,
-                $baseMeta,
-                fullPage: $fullPage,
-                sweep: $sweep,
-                hideConsent: (bool) config('revisemy.capture.hide_consent', true),
-            );
+            return $this->captureMeasuredScreenshots($url, $viewports, $baseMeta, $fullPage, $sweep);
         }
 
         $endpoint = $this->functionEndpoint() ?? throw new FunctionUnavailable(0, 'no /function endpoint is configured');
@@ -186,6 +281,59 @@ JS;
         foreach ($viewports as $index => $viewport) {
             ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
             $shots[] = $this->captureViaFunction($endpoint, $url, $viewport, $baseMeta, $fullPage, $sweep, withHtml: $index === 0);
+        }
+
+        return $shots;
+    }
+
+    /**
+     * /screenshot can't measure a page before shooting it, so the /content
+     * load it needs anyway for the DOM runs first: its element map knows the
+     * page's height, which lets a wide viewport shoot at its own DPR when the
+     * page is short enough. The DOM and map ride on the first shot, so
+     * PageCaptureService doesn't load the page a third time.
+     *
+     * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}>  $viewports
+     * @param  array<string, mixed>  $baseMeta
+     * @return list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, html?: string|null}>
+     */
+    protected function captureMeasuredScreenshots(string $url, array $viewports, array $baseMeta, bool $fullPage, bool $sweep): array
+    {
+        $html = null;
+        $elements = null;
+
+        try {
+            $dom = $this->captureDom($url);
+        } catch (\Throwable $e) {
+            Log::warning('Hosted DOM capture failed', ['url' => $url, 'error' => $e->getMessage()]);
+            $dom = null;
+        }
+
+        if ($dom !== null) {
+            [$html, $elements] = PageCaptureService::extractEmbeddedElements($dom);
+        }
+
+        $measured = is_numeric($elements['docHeight'] ?? null) && $fullPage
+            ? ['width' => (int) ($elements['viewport']['width'] ?? $this->primaryViewport()['width']), 'height' => (int) $elements['docHeight']]
+            : null;
+
+        $shots = $this->captureViaScreenshot(
+            ['url' => $url],
+            $viewports,
+            $baseMeta,
+            fullPage: $fullPage,
+            sweep: $sweep,
+            hideConsent: (bool) config('revisemy.capture.hide_consent', true),
+            measured: $measured,
+        );
+
+        if ($shots !== [] && $html !== null) {
+            $shots[0]['html'] = $html;
+
+            if ($elements !== null) {
+                $shots[0]['elements'] = $elements;
+                $shots[0]['meta']['elements_source'] = 'separate_load';
+            }
         }
 
         return $shots;
@@ -225,6 +373,7 @@ JS;
                         hideConsent: (bool) config('revisemy.capture.hide_consent', true),
                         collectElements: $collect,
                         embedElements: $collect,
+                        hideChat: (bool) config('revisemy.capture.hide_chat', true),
                     ),
                     'timeout' => $budgetMs + CaptureSettleScript::OUTER_HEADROOM_MS,
                 ],
@@ -251,14 +400,11 @@ JS;
     protected function captureViaFunction(string $endpoint, string $url, array $viewport, array $baseMeta, bool $fullPage, bool $sweep, bool $withHtml): array
     {
         $collect = (bool) config('revisemy.capture.collect_elements', true);
-        // Settle, then network idle and maybe a second settle, then three shots.
-        $budgetMs = CaptureSettleScript::budgetMs($sweep, $collect)
-            + self::IDLE_BUDGET_MS
-            + CaptureSettleScript::againBudgetMs($collect)
-            + self::SHOOT_BUDGET_MS;
-        $httpTimeout = $this->requestTimeout($budgetMs);
+        $budget = $this->functionBudget($sweep, $collect);
+        $httpTimeout = $budget['httpTimeout'];
         $dpr = $viewport['dpr'] ?? $this->urlDeviceScaleFactor();
         $label = $viewport['label'];
+        $started = microtime(true);
 
         $context = [
             'url' => $url,
@@ -277,27 +423,36 @@ JS;
                 sweep: $sweep,
                 hideConsent: (bool) config('revisemy.capture.hide_consent', true),
                 collectElements: $collect,
+                hideChat: (bool) config('revisemy.capture.hide_chat', true),
+                sweepBudgetMs: $budget['sweepMs'],
+                loadBudgetMs: $budget['loadMs'],
             ),
-            'idleMs' => min(self::IDLE_BUDGET_MS, CaptureSettleScript::loadTimeoutMs()),
+            'sessionMs' => $budget['sessionMs'],
+            // Kept back from stopAt for the shots and the reply.
+            'reserveMs' => $budget['shootMs'] + CaptureSettleScript::OUTER_HEADROOM_MS,
+            'idleMs' => $budget['idleMs'],
+            'againMs' => CaptureSettleScript::againBudgetMs($collect),
+            'shootMs' => $budget['shootMs'],
             'fullPage' => $fullPage,
-            'maxPixels' => max(1_000_000, (int) config('revisemy.capture.max_pixels', 24_000_000)),
+            'maxPixels' => max(1_000_000, (int) config('revisemy.capture.max_pixels', 41_000_000)),
             'maxHeight' => self::MAX_SHOT_HEIGHT,
+            'maxWidth' => self::MAX_SHOT_WIDTH,
             'maxBytes' => ScreenshotStorage::MAX_CAPTURE_BYTES,
+            'pngMaxPixels' => self::PNG_MAX_PIXELS,
+            'webpQuality' => self::WEBP_QUALITY,
             'thumbWidth' => ScreenshotStorage::THUMB_WIDTH,
             'visionEdge' => ScreenshotStorage::VISION_EDGE,
             'visionPixels' => ScreenshotStorage::VISION_PIXELS,
+            'slicePixels' => self::SLICE_PIXELS,
+            'maxSlices' => self::MAX_SLICES,
             'collectElements' => $collect,
             'withHtml' => $withHtml,
         ];
 
-        // Browserless ends a session at its own timeout; give it the same
-        // budget, but never more than the plan allows — over the cap, the
-        // whole request is turned down.
-        $sessionMs = $httpTimeout * 1000;
-        if (($maxMs = (int) config('revisemy.capture.session_max_ms')) > 0) {
-            $sessionMs = min($sessionMs, $maxMs);
-        }
-        $target = $endpoint.(str_contains($endpoint, '?') ? '&' : '?').'timeout='.$sessionMs;
+        // Browserless ends a session at its own timeout, and turns the whole
+        // request down when that is over the plan's cap; functionBudget()
+        // has already fitted every wait inside it.
+        $target = $endpoint.(str_contains($endpoint, '?') ? '&' : '?').'timeout='.$budget['sessionMs'];
 
         $response = $this->send($target, ['code' => self::FUNCTION_CODE, 'context' => $context], $httpTimeout, $label);
 
@@ -334,6 +489,7 @@ JS;
         $scale = is_numeric($data['scale'] ?? null) ? min(1.0, max(0.0, (float) $data['scale'])) : 1.0;
         $vision = is_string($data['vision']['image'] ?? null) ? base64_decode($data['vision']['image'], true) : false;
         $crop = is_numeric($data['vision']['crop'] ?? null) ? min(1.0, (float) $data['vision']['crop']) : 0.0;
+        $cssHeight = is_numeric($data['css']['height'] ?? null) ? (int) $data['css']['height'] : 0;
 
         return [
             'binary' => $binary,
@@ -347,11 +503,93 @@ JS;
                 'settled' => (bool) ($data['stable'] ?? false),
                 'loaded' => (bool) ($data['loaded'] ?? false),
                 'incomplete_images' => (int) ($data['incomplete'] ?? 0),
-            ] + (is_array($data['elements'] ?? null) ? ['elements_source' => 'same_load'] : []),
+                'capture_ms' => (int) round((microtime(true) - $started) * 1000),
+            ] + (is_array($data['elements'] ?? null) ? ['elements_source' => 'same_load'] : [])
+              + (is_numeric($data['css']['width'] ?? null) && $cssHeight > 0
+                  ? ['doc_width' => (int) $data['css']['width'], 'doc_height' => $cssHeight]
+                  : []),
             'elements' => is_array($data['elements'] ?? null) ? $data['elements'] : null,
             'html' => is_string($data['html'] ?? null) && $data['html'] !== '' ? $data['html'] : null,
             'thumb' => is_string($thumb) && $thumb !== '' ? $thumb : null,
             'vision' => is_string($vision) && $vision !== '' && $crop > 0 ? ['binary' => $vision, 'crop' => $crop] : null,
+            'slices' => $this->decodeSlices($data['slices'] ?? null, $cssHeight),
+        ];
+    }
+
+    /**
+     * Crop slices from the reply, each with the share of the shot's height
+     * it starts at and covers. Anything malformed is dropped.
+     *
+     * @return list<array{binary: string, top: float, height: float}>
+     */
+    protected function decodeSlices(mixed $slices, int $cssHeight): array
+    {
+        if (! is_array($slices) || $cssHeight < 1) {
+            return [];
+        }
+
+        $decoded = [];
+
+        foreach (array_slice($slices, 0, self::MAX_SLICES) as $slice) {
+            $binary = is_string($slice['image'] ?? null) ? base64_decode($slice['image'], true) : false;
+
+            if (! is_string($binary) || $binary === '' || ! is_numeric($slice['top'] ?? null) || ! is_numeric($slice['height'] ?? null)) {
+                continue;
+            }
+
+            $decoded[] = [
+                'binary' => $binary,
+                'top' => round(max(0.0, min(1.0, (float) $slice['top'] / $cssHeight)), 5),
+                'height' => round(max(0.0, min(1.0, (float) $slice['height'] / $cssHeight)), 5),
+            ];
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * How long each part of a /function session may take, fitted inside the
+     * plan's session cap. When the waits add up to more than the cap, the
+     * scroll sweep gives way first, then the load gate, the network-idle
+     * wait and the shots, each only down to its floor.
+     *
+     * @return array{sweepMs: int, loadMs: int, idleMs: int, shootMs: int, sessionMs: int, httpTimeout: int}
+     */
+    public function functionBudget(bool $sweep, bool $collect): array
+    {
+        $budget = [
+            'sweepMs' => $sweep ? CaptureSettleScript::timeoutMs() : 0,
+            'loadMs' => CaptureSettleScript::loadTimeoutMs(),
+            'idleMs' => min(self::IDLE_BUDGET_MS, CaptureSettleScript::loadTimeoutMs()),
+            'shootMs' => self::SHOOT_BUDGET_MS,
+        ];
+
+        // Navigation, settle, network idle, a second settle, then the shots.
+        $needed = fn (): int => $this->gotoOptions()['timeout'] + $this->waitMs()
+            + CaptureSettleScript::budgetMs($sweep, $collect, $budget['sweepMs'], $budget['loadMs'])
+            + $budget['idleMs']
+            + CaptureSettleScript::againBudgetMs($collect)
+            + $budget['shootMs']
+            + CaptureSettleScript::OUTER_HEADROOM_MS;
+
+        $cap = (int) config('revisemy.capture.session_max_ms');
+        $over = $cap > 0 ? $needed() - $cap : 0;
+
+        foreach (self::BUDGET_FLOORS as $key => $floor) {
+            if ($over <= 0) {
+                break;
+            }
+
+            $cut = min($over, max(0, $budget[$key] - $floor));
+            $budget[$key] -= $cut;
+            $over -= $cut;
+        }
+
+        $sessionMs = $cap > 0 ? min($needed(), $cap) : $needed();
+
+        return $budget + [
+            'sessionMs' => $sessionMs,
+            'httpTimeout' => (int) ceil($sessionMs / 1000) + 5,
         ];
     }
 
@@ -359,9 +597,10 @@ JS;
      * @param  array<string, string>  $source
      * @param  list<array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}>  $viewports
      * @param  array<string, mixed>  $baseMeta
+     * @param  array{width: int, height: int}|null  $measured  the page's CSS size from a load before the shots
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function captureViaScreenshot(array $source, array $viewports, array $baseMeta, bool $fullPage, bool $sweep, bool $hideConsent): array
+    protected function captureViaScreenshot(array $source, array $viewports, array $baseMeta, bool $fullPage, bool $sweep, bool $hideConsent, ?array $measured = null): array
     {
         $endpoint = $this->authenticatedUrl((string) config('revisemy.capture.endpoint'));
         // Browserless runs waitForTimeout before waitForFunction, so the
@@ -374,10 +613,11 @@ JS;
         foreach ($viewports as $viewport) {
             ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
 
-            // A full-page URL shot here can't be measured first, so wide
-            // viewports stay at 1× (see CaptureDevice::unmeasuredDpr).
+            // A full-page URL shot here can't be scaled to fit, so a wide
+            // viewport only gets its own DPR when the measured page is short
+            // enough (see CaptureDevice::measuredDpr).
             $dpr = $isUrl
-                ? CaptureDevice::unmeasuredDpr($viewport)
+                ? CaptureDevice::measuredDpr($viewport, $measured)
                 : ($viewport['dpr'] ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2)));
             $label = $viewport['label'];
             $userAgent = CaptureDevice::userAgent($viewport);
@@ -392,7 +632,8 @@ JS;
                 'gotoOptions' => $this->gotoOptions(),
                 'waitForTimeout' => $this->waitMs(),
                 'waitForFunction' => [
-                    'fn' => CaptureSettleScript::functionBody(sweep: $sweep, hideConsent: $hideConsent),
+                    // Chat launchers only float over pages, never over email.
+                    'fn' => CaptureSettleScript::functionBody(sweep: $sweep, hideConsent: $hideConsent, hideChat: $isUrl && (bool) config('revisemy.capture.hide_chat', true)),
                     'timeout' => $budgetMs + CaptureSettleScript::OUTER_HEADROOM_MS,
                 ],
             ];

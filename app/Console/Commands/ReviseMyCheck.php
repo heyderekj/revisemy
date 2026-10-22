@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\ScreenshotStorage;
 use App\Support\PassportKeys;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -59,6 +60,12 @@ class ReviseMyCheck extends Command
         $capture = config('revisemy.capture.driver');
         if ($capture === 'hosted') {
             $this->check(filled(config('revisemy.capture.endpoint')) && filled(config('revisemy.capture.api_key')), 'URL and email capture is set up.', 'REVISEMY_CAPTURE_DRIVER is hosted, but the endpoint or key is blank, so capture_url and html fail.');
+            $this->note(config('revisemy.capture.session_max_ms')
+                ? 'Capture sessions fit inside '.round(config('revisemy.capture.session_max_ms') / 1000).'s (REVISEMY_CAPTURE_SESSION_MAX_MS).'
+                : 'Capture sessions have no cap (REVISEMY_CAPTURE_SESSION_MAX_MS=0). A plan with one turns down /function and captures fall back to 1×.');
+            $this->note(ScreenshotStorage::gdReads('image/webp')
+                ? 'GD reads WebP, so long captures get thumbnails and crops from the shot itself when it is small enough.'
+                : 'GD here can’t read WebP. Long captures still show; crops come from their slices.');
         } else {
             $this->note($capture ? "Capture runs on {$capture}." : 'capture_url and html are off (no REVISEMY_CAPTURE_DRIVER). Screenshots and PDFs still work.');
         }
