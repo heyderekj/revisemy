@@ -264,4 +264,24 @@ class CaptureQualityTest extends TestCase
         $this->assertSame(round(2 * $shot->width / 300, 2), $shot->meta['dpr']);
         $this->assertContains($shot->meta['format'], ['png', 'webp', 'jpeg']);
     }
+
+    public function test_a_capture_gets_the_time_its_sessions_can_take(): void
+    {
+        $token = $this->setUpEnv();
+        Http::fake(['capture.test/function*' => Http::response(['image' => base64_encode($this->encoded('png', 4, 4))])]);
+
+        $previous = ini_get('max_execution_time');
+        $this->beforeApplicationDestroyed(fn () => set_time_limit((int) $previous));
+
+        set_time_limit(30);
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Images only',
+            'images' => ['data:image/png;base64,'.base64_encode($this->encoded('png', 4, 4))],
+        ])->assertCreated();
+        $this->assertSame('30', ini_get('max_execution_time'), 'an upload needs no more time');
+
+        $this->capture($token);
+        // Three viewports and the DOM load, each a whole session (125s).
+        $this->assertSame((string) (125 * 4 + 60), ini_get('max_execution_time'));
+    }
 }
