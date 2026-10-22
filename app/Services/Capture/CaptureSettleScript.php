@@ -13,10 +13,10 @@ namespace App\Services\Capture;
  * reveals so they can't play back out when we return to the top; fast-forward
  * every CSS/WAAPI animation and transition to its end; wait until everything a
  * visitor would see has loaded (images, CSS backgrounds, autoplaying video,
- * fonts, then a quiet network); optionally hide cookie consent banners; then
- * wait until nothing on the page moves. It notes how many images never
- * loaded on window.__rmIncomplete, and optionally records an element map
- * (selector, kind, text, box) on window.__rmElements.
+ * fonts, then a quiet network); optionally hide cookie consent banners and
+ * chat launchers; then wait until nothing on the page moves. It notes how
+ * many images never loaded on window.__rmIncomplete, and optionally records
+ * an element map (see COLLECTOR) on window.__rmElements.
  *
  * window.__rmSettleAgain() repeats only the last steps, for a caller that
  * waited on the network after the first pass (Browserless /function).
@@ -80,12 +80,12 @@ class CaptureSettleScript
     /**
      * Total time the function may take; callers use it for their timeouts.
      */
-    public static function budgetMs(bool $sweep, bool $collectElements = false): int
+    public static function budgetMs(bool $sweep, bool $collectElements = false, ?int $sweepMs = null, ?int $loadMs = null): int
     {
         // The sweep gets its own budget and restarts the settle budget after it.
         return self::settleTimeoutMs()
-            + ($sweep ? self::timeoutMs() + self::settleTimeoutMs() : 0)
-            + self::loadTimeoutMs()
+            + ($sweep ? ($sweepMs ?? self::timeoutMs()) + self::settleTimeoutMs() : 0)
+            + ($loadMs ?? self::loadTimeoutMs())
             + ($collectElements ? self::ELEMENTS_BUDGET_MS : 0);
     }
 
@@ -105,47 +105,84 @@ class CaptureSettleScript
 
     protected const ELEMENTS_BUDGET_MS = 3_000;
 
+    /** Most elements one map holds. */
+    public const MAX_ELEMENTS = 2_500;
+
     /**
      * Most CSS background images the load gate waits on.
      */
     protected const MAX_BACKGROUNDS = 60;
 
     /**
-     * Async page function (returns true once settled).
+     * Async page function (returns true once settled). It takes one optional
+     * argument, a hard limit in ms that every wait inside it stops at; the
+     * waitForFunction callers pass none and keep the budgets alone.
      *
      * $embedElements also writes the element map into the DOM as a JSON
      * script tag, for providers that only hand back the page's HTML.
+     * $sweepBudgetMs and $loadBudgetMs replace the configured budgets when a
+     * session cap leaves less time than they add up to.
      */
     public static function functionBody(
         bool $sweep = true,
         bool $hideConsent = false,
         bool $collectElements = false,
         bool $embedElements = false,
+        bool $hideChat = false,
+        ?int $sweepBudgetMs = null,
+        ?int $loadBudgetMs = null,
     ): string {
         $config = [
             'sweep' => $sweep,
             'freeze' => (bool) config('revisemy.capture.freeze_animations', true),
             'hideConsent' => $hideConsent,
+            'hideChat' => $hideChat,
             'collectElements' => $collectElements,
             'embedElements' => $embedElements,
             'stepMs' => self::stepMs(),
             'endSettleMs' => max(200, (int) config('revisemy.capture.scroll_end_settle_ms', 450)),
             'topSettleMs' => max(100, (int) config('revisemy.capture.scroll_top_settle_ms', 250)),
             'stableMs' => self::stableMs(),
-            'sweepBudgetMs' => $sweep ? self::timeoutMs() : 0,
+            'sweepBudgetMs' => $sweep ? ($sweepBudgetMs ?? self::timeoutMs()) : 0,
             'settleBudgetMs' => self::settleTimeoutMs(),
-            'loadBudgetMs' => self::loadTimeoutMs(),
+            'loadBudgetMs' => $loadBudgetMs ?? self::loadTimeoutMs(),
             'maxBackgrounds' => self::MAX_BACKGROUNDS,
             'elementsBudgetMs' => self::ELEMENTS_BUDGET_MS,
-            'maxElements' => 2000,
+            'maxElements' => self::MAX_ELEMENTS,
             'consentSelectors' => implode(',', self::CONSENT_SELECTORS),
+            'chatSelectors' => implode(',', self::CHAT_SELECTORS),
         ];
 
         return str_replace(
-            '__RM_CONFIG__',
-            json_encode($config, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            ['__RM_CONFIG__', '__RM_COLLECTOR__'],
+            [json_encode($config, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), self::COLLECTOR],
             self::SCRIPT,
         );
+    }
+
+    /**
+     * The element collector's source: a function of cfg, as the settle
+     * script embeds it.
+     */
+    public static function collectorSource(): string
+    {
+        return self::COLLECTOR;
+    }
+
+    /**
+     * The element collector as one expression that evaluates to the map,
+     * for an agent to run in its own browser on the page it screenshots
+     * (Playwright or Puppeteer `page.evaluate(script)`), at the top of the
+     * page and right after a full-page shot.
+     */
+    public static function collector(int $maxElements = self::MAX_ELEMENTS): string
+    {
+        $config = json_encode([
+            'maxElements' => max(1, min(self::MAX_ELEMENTS, $maxElements)),
+            'elementsBudgetMs' => self::ELEMENTS_BUDGET_MS,
+        ], JSON_THROW_ON_ERROR);
+
+        return '('.self::COLLECTOR.')('.$config.')';
     }
 
     /**
@@ -159,8 +196,9 @@ class CaptureSettleScript
         bool $sweep = true,
         bool $hideConsent = false,
         bool $collectElements = false,
+        bool $hideChat = false,
     ): string {
-        return '('.self::functionBody($sweep, $hideConsent, $collectElements).')()';
+        return '('.self::functionBody($sweep, $hideConsent, $collectElements, hideChat: $hideChat).')()';
     }
 
     /**
@@ -183,8 +221,349 @@ class CaptureSettleScript
         '[role="alertdialog"][aria-label*="cookie" i]', '[role="region"][aria-label*="cookie" i]',
     ];
 
+    /**
+     * Chat launchers. In a full-page shot a fixed bubble lands wherever the
+     * first screen put it, over whatever the page has there.
+     *
+     * @var list<string>
+     */
+    protected const CHAT_SELECTORS = [
+        '#intercom-container', '.intercom-lightweight-app', '.intercom-launcher-frame', '#intercom-frame',
+        '#drift-widget-container', '#drift-frame-controller', '#drift-frame-chat',
+        '#hubspot-messages-iframe-container',
+        '#crisp-chatbox', '.crisp-client',
+        'iframe#launcher', 'iframe#webWidget', '#launcher-frame',
+        'iframe[src*="tawk.to"]', '.tawk-min-container', '#tawkchat-container',
+        '#tidio-chat', '#tidio-chat-iframe',
+        '#chat-widget-container', '#livechat-compact-container',
+        '#fc_frame', '#freshworks-container',
+        '.zsiq_floatmain', '#zsiq_float',
+        '#olark-wrapper', '#gorgias-chat-container', '#chatra',
+    ];
+
+    /**
+     * The element map collector, on its own so a capture and an agent's own
+     * browser run the same code: (cfg) => {docWidth, docHeight, viewport,
+     * version, elements}. cfg needs maxElements and elementsBudgetMs.
+     *
+     * Each element: selector, tag, kind, text, label, role, src, box (CSS px
+     * from the top of the document), parent (index of the nearest element
+     * above it in the list that contains it), fixed ('top' or 'bottom' for a
+     * position: fixed element or one inside it) and the styles that differ
+     * from the defaults, short-keyed: fs font size, lh line height, fw
+     * weight, ff first family, c colour, bg background, p padding [t, r, b, l],
+     * r radius, b border [width, colour], g gap, d flex or grid. Colours are
+     * hex.
+     */
+    protected const COLLECTOR = <<<'JS'
+(cfg) => {
+  const KINDS = {
+    h1: 'Heading', h2: 'Heading', h3: 'Heading', h4: 'Heading', h5: 'Heading', h6: 'Heading',
+    p: 'Paragraph', a: 'Link', button: 'Button', img: 'Image', picture: 'Image', svg: 'Graphic',
+    video: 'Video', ul: 'List', ol: 'List', li: 'List item', nav: 'Navigation', header: 'Header',
+    footer: 'Footer', section: 'Section', form: 'Form', input: 'Field', textarea: 'Field', select: 'Field',
+    label: 'Label', blockquote: 'Quote', figure: 'Figure', table: 'Table',
+    main: 'Main', article: 'Article', aside: 'Aside', dialog: 'Dialog',
+  };
+  const ROLE_KINDS = {
+    button: 'Button', link: 'Link', tab: 'Tab', img: 'Image', heading: 'Heading', navigation: 'Navigation',
+    dialog: 'Dialog', alertdialog: 'Dialog', checkbox: 'Field', switch: 'Field', textbox: 'Field', combobox: 'Field',
+  };
+  const ROLES = {
+    a: 'link', button: 'button', nav: 'navigation', main: 'main', header: 'banner', footer: 'contentinfo',
+    aside: 'complementary', form: 'form', img: 'img', ul: 'list', ol: 'list', li: 'listitem', table: 'table',
+    dialog: 'dialog', select: 'combobox', textarea: 'textbox', h1: 'heading', h2: 'heading', h3: 'heading',
+    h4: 'heading', h5: 'heading', h6: 'heading',
+  };
+  const TEXT_KINDS = new Set(['Heading', 'Paragraph', 'Link', 'Button', 'Text', 'Label', 'List item', 'Quote', 'Field', 'Tab']);
+  const SKIP = new Set(['script', 'style', 'noscript', 'template', 'meta', 'link', 'br', 'wbr', 'source', 'track', 'path', 'g', 'defs', 'use', 'iframe']);
+  const ATTRIBUTES = ['data-w-id', 'data-testid'];
+
+  // In order of how long it stays true: an id somebody chose, a builder's own
+  // element id (Webflow's data-w-id) or a test id, then the shortest unique
+  // path up to the nearest ancestor with a stable handle.
+  const isStableId = (id) => id.length > 0 && id.length < 64 && !/\d{4,}|^[a-f0-9-]{16,}$|^(ember|react|radix|headlessui|:r)/i.test(id);
+  const unique = (selector, el) => {
+    try {
+      const found = document.querySelectorAll(selector);
+      return found.length === 1 && found[0] === el;
+    } catch (e) {
+      return false;
+    }
+  };
+  const segment = (el) => {
+    const tag = el.tagName.toLowerCase();
+    const parent = el.parentElement;
+    if (!parent) {
+      return tag;
+    }
+    const same = Array.from(parent.children).filter((c) => c.tagName === el.tagName);
+    return same.length === 1 ? tag : tag + ':nth-of-type(' + (same.indexOf(el) + 1) + ')';
+  };
+  const handleOf = (node) => {
+    if (node.id && isStableId(node.id)) {
+      return '#' + CSS.escape(node.id);
+    }
+    for (const attr of ATTRIBUTES) {
+      const value = node.getAttribute(attr);
+      if (value) {
+        return '[' + attr + '="' + CSS.escape(value) + '"]';
+      }
+    }
+    return null;
+  };
+  const selectorFor = (el) => {
+    const own = handleOf(el);
+    if (own && unique(own, el)) {
+      return own;
+    }
+    const parts = [];
+    let node = el;
+    while (node && node !== document.documentElement) {
+      const anchor = node !== el ? handleOf(node) : null;
+      if (anchor && unique(anchor, node)) {
+        parts.unshift(anchor);
+        break;
+      }
+      parts.unshift(segment(node));
+      const candidate = parts.join(' > ');
+      if (unique(candidate, el)) {
+        return candidate;
+      }
+      node = node.parentElement;
+    }
+    return parts.join(' > ');
+  };
+  const ownText = (el) => {
+    for (const child of el.childNodes) {
+      if (child.nodeType === 3 && child.textContent.trim() !== '') {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Computed colours come back as rgb(), or in the space they were written
+  // in (oklch, color()). A 1x1 canvas turns any of them into sRGB bytes.
+  const hexes = new Map();
+  let ink = null;
+  const toHex = (value) => {
+    if (!value || value === 'transparent' || value === 'rgba(0, 0, 0, 0)') {
+      return null;
+    }
+    if (hexes.has(value)) {
+      return hexes.get(value);
+    }
+    let rgba = null;
+    const m = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
+    if (m) {
+      rgba = [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]];
+    } else {
+      try {
+        if (!ink) {
+          const canvas = document.createElement('canvas');
+          canvas.width = canvas.height = 1;
+          ink = canvas.getContext('2d', { willReadFrequently: true });
+        }
+        ink.clearRect(0, 0, 1, 1);
+        ink.fillStyle = '#000';
+        ink.fillStyle = value;
+        ink.fillRect(0, 0, 1, 1);
+        const d = ink.getImageData(0, 0, 1, 1).data;
+        rgba = [d[0], d[1], d[2], d[3] / 255];
+      } catch (e) {}
+    }
+    let hex = null;
+    if (rgba && rgba[3] > 0.01) {
+      const byte = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+      hex = '#' + byte(rgba[0]) + byte(rgba[1]) + byte(rgba[2]) + (rgba[3] < 0.995 ? byte(rgba[3] * 255) : '');
+    }
+    hexes.set(value, hex);
+    return hex;
+  };
+  const px = (value) => {
+    const n = parseFloat(value);
+    return Number.isFinite(n) ? Math.round(n * 10) / 10 : 0;
+  };
+
+  const kindOf = (el, cs, tag) => {
+    const role = el.getAttribute('role');
+    if (role && ROLE_KINDS[role]) {
+      return ROLE_KINDS[role];
+    }
+    if (tag === 'a' && el.matches('.w-button, .btn, .button')) {
+      return 'Button';
+    }
+    if (KINDS[tag]) {
+      return KINDS[tag];
+    }
+    if (cs.backgroundImage.startsWith('url(')) {
+      return 'Image';
+    }
+    return null;
+  };
+  const painted = (cs) => toHex(cs.backgroundColor) !== null
+    || (px(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none')
+    || (cs.boxShadow && cs.boxShadow !== 'none');
+
+  const stylesOf = (cs, kind) => {
+    const styles = {};
+    if (TEXT_KINDS.has(kind)) {
+      styles.fs = px(cs.fontSize);
+      if (cs.lineHeight !== 'normal') {
+        styles.lh = px(cs.lineHeight);
+      }
+      styles.fw = parseInt(cs.fontWeight, 10) || 400;
+      const family = (cs.fontFamily.split(',')[0] || '').replace(/["']/g, '').trim();
+      if (family) {
+        styles.ff = family.slice(0, 40);
+      }
+      const color = toHex(cs.color);
+      if (color) {
+        styles.c = color;
+      }
+    }
+    const background = toHex(cs.backgroundColor);
+    if (background) {
+      styles.bg = background;
+    }
+    const padding = [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map(px);
+    if (padding.some((n) => n > 0)) {
+      styles.p = padding;
+    }
+    const corners = [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius].map(px);
+    if (corners.some((n) => n > 0)) {
+      styles.r = corners.every((n) => n === corners[0]) ? corners[0] : corners;
+    }
+    const border = px(cs.borderTopWidth);
+    if (border > 0 && cs.borderTopStyle !== 'none') {
+      styles.b = [border, toHex(cs.borderTopColor)];
+    }
+    if (/flex|grid/.test(cs.display)) {
+      styles.d = cs.display;
+      const gap = px(cs.rowGap) || px(cs.columnGap);
+      if (gap > 0) {
+        styles.g = gap;
+      }
+    }
+    return styles;
+  };
+
+  // A position: fixed element, and everything inside it, sits where the
+  // first screen put it, not where the document would.
+  const fixedOf = new Map();
+  const fixedFor = (el) => {
+    if (!el || el === document.body || el === document.documentElement) {
+      return null;
+    }
+    if (fixedOf.has(el)) {
+      return fixedOf.get(el);
+    }
+    const cs = getComputedStyle(el);
+    const own = cs.position === 'fixed'
+      ? (cs.top === 'auto' && cs.bottom !== 'auto' ? 'bottom' : 'top')
+      : null;
+    const value = own || fixedFor(el.parentElement);
+    fixedOf.set(el, value);
+    return value;
+  };
+
+  const started = Date.now();
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
+  const docWidth = Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0);
+  const docHeight = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
+  const docArea = Math.max(1, docWidth * docHeight);
+  const kept = new Map();
+  const elements = [];
+  const nodes = document.body ? document.body.getElementsByTagName('*') : [];
+  for (let i = 0; i < nodes.length && elements.length < cfg.maxElements; i++) {
+    if (Date.now() - started > cfg.elementsBudgetMs) {
+      break;
+    }
+    const el = nodes[i];
+    const tag = el.tagName.toLowerCase();
+    if (SKIP.has(tag) || el.closest('[data-rm-capture]')) {
+      continue;
+    }
+    const r = el.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) {
+      continue;
+    }
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) {
+      continue;
+    }
+    const box = {
+      x: Math.round(r.left + scrollX),
+      y: Math.round(r.top + scrollY),
+      w: Math.round(r.width),
+      h: Math.round(r.height),
+    };
+    let kind = kindOf(el, cs, tag) || (ownText(el) ? 'Text' : null);
+    if (!kind && painted(cs) && box.w >= 24 && box.h >= 24 && box.w * box.h < docArea * 0.6) {
+      kind = 'Box';
+    }
+    if (!kind) {
+      continue;
+    }
+
+    let parent = null;
+    for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+      if (kept.has(node)) {
+        parent = kept.get(node);
+        break;
+      }
+    }
+    // A painted wrapper the same size as the element around it adds nothing.
+    if (kind === 'Box' && parent !== null) {
+      const outer = elements[parent].box;
+      if (Math.abs(outer.x - box.x) <= 2 && Math.abs(outer.y - box.y) <= 2 && Math.abs(outer.w - box.w) <= 2 && Math.abs(outer.h - box.h) <= 2) {
+        continue;
+      }
+    }
+
+    const raw = el.children.length > 20 ? el.textContent : (el.innerText || el.textContent);
+    const image = tag === 'img'
+      ? (el.currentSrc || el.src || null)
+      : ((cs.backgroundImage.match(/url\(["']?(.*?)["']?\)/) || [])[1] || null);
+    const label = (el.getAttribute('aria-label') || el.getAttribute('alt') || el.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
+    const role = el.getAttribute('role') || (tag === 'a' && !el.hasAttribute('href') ? null : ROLES[tag]) || null;
+    const fixed = fixedFor(el);
+    const entry = {
+      selector: selectorFor(el),
+      tag,
+      kind,
+      text: (raw || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+      src: image && !image.startsWith('data:') ? image.slice(0, 500) : null,
+      box,
+      parent,
+      styles: stylesOf(cs, kind),
+    };
+    if (label) {
+      entry.label = label.slice(0, 120);
+    }
+    if (role) {
+      entry.role = role;
+    }
+    if (fixed) {
+      entry.fixed = fixed;
+    }
+    kept.set(el, elements.length);
+    elements.push(entry);
+  }
+  return {
+    version: 2,
+    docWidth,
+    docHeight,
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    elements,
+  };
+}
+JS;
+
     protected const SCRIPT = <<<'JS'
-async () => {
+async (hardMs) => {
   if (window.__rmSettleDone) {
     return true;
   }
@@ -193,6 +572,10 @@ async () => {
   }
   window.__rmSettleRunning = true;
   const cfg = __RM_CONFIG__;
+  // A caller with a session to fit inside sets a hard limit; every wait
+  // below stops there. Without one, the budgets alone decide.
+  let hardStop = Date.now() + (Number(hardMs) > 0 ? Number(hardMs) : 1e9);
+  const deadlineIn = (ms) => Math.min(Date.now() + Math.max(0, ms), hardStop);
   const sleep = (ms) => new Promise((r) => setTimeout(r, Math.max(0, ms)));
   const capped = (promise, ms) => Promise.race([Promise.resolve(promise).catch(() => {}), sleep(ms)]);
 
@@ -249,7 +632,7 @@ async () => {
   // Resource timing lists a request once it finishes. When none has
   // finished for quietMs, the page has stopped fetching.
   const networkQuiet = async (quietMs, maxMs) => {
-    const until = Date.now() + maxMs;
+    const until = deadlineIn(maxMs);
     const count = () => performance.getEntriesByType('resource').length;
     let last = count();
     let since = Date.now();
@@ -268,7 +651,7 @@ async () => {
 
   // Everything a visitor would see, loaded — or the budget runs out.
   const loadGate = async (maxMs) => {
-    const until = Date.now() + maxMs;
+    const until = deadlineIn(maxMs);
     const left = () => Math.max(0, until - Date.now());
     loadEagerly();
     await capped(Promise.all([
@@ -377,12 +760,21 @@ async () => {
     window.__rmRevealLock = lock;
   };
 
-  const hideConsent = () => {
-    let hit = false;
+  const present = (selectors) => {
     try {
-      hit = document.querySelector(cfg.consentSelectors) !== null;
-    } catch (e) {}
-    if (!hit) {
+      return selectors !== '' && document.querySelector(selectors) !== null;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // Consent banners cover the hero and lock the page's scroll; chat
+  // launchers float over whatever the first screen had under them.
+  const hideOverlays = () => {
+    if (cfg.hideChat && present(cfg.chatSelectors)) {
+      addStyle(cfg.chatSelectors + '{display:none!important}');
+    }
+    if (!cfg.hideConsent || !present(cfg.consentSelectors)) {
       return;
     }
     addStyle(cfg.consentSelectors + '{display:none!important}');
@@ -416,7 +808,7 @@ async () => {
 
   // Wait until nothing in view moves for stableMs, or maxMs passes.
   const settleView = async (maxMs, stableMs, inViewOnly) => {
-    const until = Date.now() + Math.max(maxMs, stableMs);
+    const until = deadlineIn(Math.max(maxMs, stableMs));
     let last = signature(inViewOnly);
     let stableSince = Date.now();
     while (Date.now() < until) {
@@ -433,153 +825,13 @@ async () => {
     return last === signature(inViewOnly);
   };
 
-  const KINDS = {
-    h1: 'Heading', h2: 'Heading', h3: 'Heading', h4: 'Heading', h5: 'Heading', h6: 'Heading',
-    p: 'Paragraph', a: 'Link', button: 'Button', img: 'Image', picture: 'Image', svg: 'Graphic',
-    video: 'Video', ul: 'List', ol: 'List', li: 'List item', nav: 'Navigation', header: 'Header',
-    footer: 'Footer', section: 'Section', form: 'Form', input: 'Field', textarea: 'Field', select: 'Field',
-    label: 'Label', blockquote: 'Quote', figure: 'Figure', table: 'Table',
-  };
-  const SKIP = new Set(['script', 'style', 'noscript', 'template', 'meta', 'link', 'br', 'wbr', 'source', 'track', 'path', 'g', 'defs', 'use', 'iframe']);
-  const ATTRIBUTES = ['data-w-id', 'data-testid'];
+  const collectElements = () => (__RM_COLLECTOR__)(cfg);
 
-  // In order of how long it stays true: an id somebody chose, a builder's own
-  // element id (Webflow's data-w-id) or a test id, then the shortest unique
-  // path up to the nearest ancestor with a stable handle.
-  const isStableId = (id) => id.length > 0 && id.length < 64 && !/\d{4,}|^[a-f0-9-]{16,}$|^(ember|react|radix|headlessui|:r)/i.test(id);
-  const unique = (selector, el) => {
-    try {
-      const found = document.querySelectorAll(selector);
-      return found.length === 1 && found[0] === el;
-    } catch (e) {
-      return false;
-    }
-  };
-  const segment = (el) => {
-    const tag = el.tagName.toLowerCase();
-    const parent = el.parentElement;
-    if (!parent) {
-      return tag;
-    }
-    const same = Array.from(parent.children).filter((c) => c.tagName === el.tagName);
-    return same.length === 1 ? tag : tag + ':nth-of-type(' + (same.indexOf(el) + 1) + ')';
-  };
-  const handleOf = (node) => {
-    if (node.id && isStableId(node.id)) {
-      return '#' + CSS.escape(node.id);
-    }
-    for (const attr of ATTRIBUTES) {
-      const value = node.getAttribute(attr);
-      if (value) {
-        return '[' + attr + '="' + CSS.escape(value) + '"]';
-      }
-    }
-    return null;
-  };
-  const selectorFor = (el) => {
-    const own = handleOf(el);
-    if (own && unique(own, el)) {
-      return own;
-    }
-    const parts = [];
-    let node = el;
-    while (node && node !== document.documentElement) {
-      const anchor = node !== el ? handleOf(node) : null;
-      if (anchor && unique(anchor, node)) {
-        parts.unshift(anchor);
-        break;
-      }
-      parts.unshift(segment(node));
-      const candidate = parts.join(' > ');
-      if (unique(candidate, el)) {
-        return candidate;
-      }
-      node = node.parentElement;
-    }
-    return parts.join(' > ');
-  };
-  const kindOf = (el, cs) => {
-    const tag = el.tagName.toLowerCase();
-    if (el.getAttribute('role') === 'button' || (tag === 'a' && el.matches('.w-button, .btn, .button'))) {
-      return 'Button';
-    }
-    if (KINDS[tag]) {
-      return KINDS[tag];
-    }
-    if (cs.backgroundImage.startsWith('url(')) {
-      return 'Image';
-    }
-    return null;
-  };
-  const ownText = (el) => {
-    for (const child of el.childNodes) {
-      if (child.nodeType === 3 && child.textContent.trim() !== '') {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  const collectElements = () => {
-    const started = Date.now();
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    const elements = [];
-    const nodes = document.body ? document.body.getElementsByTagName('*') : [];
-    for (let i = 0; i < nodes.length && elements.length < cfg.maxElements; i++) {
-      if (Date.now() - started > cfg.elementsBudgetMs) {
-        break;
-      }
-      const el = nodes[i];
-      const tag = el.tagName.toLowerCase();
-      if (SKIP.has(tag) || el.closest('[data-rm-capture]')) {
-        continue;
-      }
-      const r = el.getBoundingClientRect();
-      if (r.width < 4 || r.height < 4) {
-        continue;
-      }
-      const cs = getComputedStyle(el);
-      if (cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) {
-        continue;
-      }
-      const kind = kindOf(el, cs) || (ownText(el) ? 'Text' : null);
-      if (!kind) {
-        continue;
-      }
-      const raw = el.children.length > 20 ? el.textContent : (el.innerText || el.textContent);
-      const image = tag === 'img'
-        ? (el.currentSrc || el.src || null)
-        : ((cs.backgroundImage.match(/url\(["']?(.*?)["']?\)/) || [])[1] || null);
-      elements.push({
-        selector: selectorFor(el),
-        tag,
-        kind,
-        text: (raw || '').replace(/\s+/g, ' ').trim().slice(0, 300),
-        src: image && !image.startsWith('data:') ? image.slice(0, 500) : null,
-        box: {
-          x: Math.round(r.left + scrollX),
-          y: Math.round(r.top + scrollY),
-          w: Math.round(r.width),
-          h: Math.round(r.height),
-        },
-      });
-    }
-    return {
-      docWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
-      docHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
-      viewport: { width: window.innerWidth, height: window.innerHeight },
-      elements,
-    };
-  };
-
-  // The last word before the shot. Consent banners cover the hero, so they
+  // The last word before the shot. Consent banners and chat launchers
   // go; then wait until nothing moves for stableMs (or the budget runs out),
   // note what never loaded, and take the element map from this exact state.
   const finalPass = async (maxMs) => {
-    if (cfg.hideConsent) {
-      hideConsent();
-    }
+    hideOverlays();
     window.__rmSettleStable = await settleView(maxMs, cfg.stableMs, false);
     window.__rmIncomplete = pendingImages();
     window.__rmLoadComplete = window.__rmIncomplete === 0;
@@ -606,7 +858,7 @@ async () => {
   };
 
   try {
-    let settleDeadline = Date.now() + cfg.settleBudgetMs;
+    let settleDeadline = deadlineIn(cfg.settleBudgetMs);
     const left = () => Math.max(0, settleDeadline - Date.now());
 
     // 1. Lay out at the full viewport width: a headless scrollbar takes 15px
@@ -636,7 +888,7 @@ async () => {
       if (cfg.freeze) {
         lockOutOfView();
       }
-      const sweepDeadline = Date.now() + cfg.sweepBudgetMs;
+      const sweepDeadline = deadlineIn(cfg.sweepBudgetMs);
       const height = Math.max(
         document.body ? document.body.scrollHeight : 0,
         document.documentElement ? document.documentElement.scrollHeight : 0,
@@ -660,11 +912,16 @@ async () => {
     // 4. Load everything a visitor would see, then land what that started.
     await loadGate(cfg.loadBudgetMs);
     finishAnimations();
-    settleDeadline = Date.now() + cfg.settleBudgetMs;
+    settleDeadline = deadlineIn(cfg.settleBudgetMs);
 
-    // 5–7. Consent banners out, stillness, element map.
+    // 5–7. Consent banners and chat launchers out, stillness, element map.
     await finalPass(left());
-    window.__rmSettleAgain = () => finalPass(cfg.settleBudgetMs);
+    // A second pass after the caller's network wait gets its own limit.
+    window.__rmSettleAgain = (ms) => {
+      const limit = Number(ms) > 0 ? Math.min(Number(ms), cfg.settleBudgetMs) : cfg.settleBudgetMs;
+      hardStop = Date.now() + limit;
+      return finalPass(limit);
+    };
 
     window.__rmSettleDone = true;
     return true;

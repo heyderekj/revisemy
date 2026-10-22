@@ -15,7 +15,7 @@ We shouldn't copy their shape. A ticket system is the thing positioning says we 
 | | Lucidly | ReviseMy today |
 |---|---|---|
 | Who starts it | Client, on a live site | Agent, on anything visual |
-| Capture | Their own, of the live site | Server capture at 2×, waited until loaded; `/screenshot` fallback is 1× |
+| Capture | Their own, of the live site | Server capture at 2× (WebP past 4MP, 2× to 8,000px tall), waited until loaded; the `/screenshot` fallback measures first |
 | Sources | Live page pins | URL, email, deck, localhost images |
 | Review inside the chat | Not mentioned | Yes, MCP Apps |
 | Before and after proof | Not mentioned | `resolve_marks` with `after_image` |
@@ -43,11 +43,17 @@ Every item below leans on the shot. Proof is an after image, and the human marks
 - **Display:** the board and the inline review show each shot at the size the page was drawn at.
 - **A vision copy:** `/function` also shoots the top of the page at 1× or less, within 1568px on the long edge and about 1.15MP, so Anthropic reads it as sent. The second opinion sends that copy, and its regions map back onto the full shot.
 - **One checklist per review:** the checklist never looks at the pixels, so it now runs once, on the first shot, and takes its viewport notes from every shot. A URL capture gets one set of hints instead of the same set on each of its three shots. Vision findings stay per shot. On a later shot, the web review and the inline review both say where the checklist is.
+- **Long pages stay sharp (1.9.0):** the pixel budget is 41M, so desktop holds 2× down to 8,000 CSS px. Shots past 4MP are WebP at quality 92 instead of a PNG shrunk to fit 16MB. A shot that PHP shrinks says so in its `dpr`.
+- **Every mark gets a picture (1.9.0):** `/function` also shoots crop slices, the whole page at 1× in pieces GD can decode, so `look_at_marks` crops a mark anywhere on a long page, joining slices across a seam.
+- **Sessions that fit the plan (1.9.0):** `session_max_ms` defaults to 120000. Every wait is fitted inside it, the sweep giving way first, and a page that never goes quiet still ends with a shot.
+- **Fewer walls and overlays (1.9.0):** desktop reads as Chrome, not HeadlessChrome, at the browser's own version. Chat launchers are hidden like consent banners.
+- **A measured fallback (1.9.0):** `/screenshot` now loads the page through `/content` first, so a short page gets 2× on desktop and tablet there too. PDFs render at 192 DPI and show at their screen size.
+- **Element map v2 (1.9.0):** each element also carries its label, role, the element it sits in, whether it's fixed, and its type, colour and spacing. Maps are cleaned before they're stored, and the agent's meta no longer lists storage paths.
 
 Still to do:
 
-- **Production on `/function`.** It has been falling back to `/screenshot`, which is 1× for desktop and tablet. `php artisan revisemy:probe-capture` shows Browserless's reason. `REVISEMY_CAPTURE_SESSION_MAX_MS` fixes it if the cause is the session timeout.
-- **Vision below the fold, and off `/function`.** The vision copy covers the top 1568 CSS px of the page only (about two screens on desktop and phone), so the second opinion says nothing about the rest. Slices would cover it. Shots from `/screenshot`, Browsershot and uploads have no copy and still go in whole, so a tall one can be turned down. Production runs no vision key today, so the second opinion is the checklist only.
+- **Production on `/function`.** Confirm it with `php artisan revisemy:probe-capture` after 1.9.0 deploys: desktop around 2560 wide at DPR 2, WebP, slices, map v2.
+- **Vision below the fold, and off `/function`.** The vision copy covers the top 1568 CSS px of the page only (about two screens on desktop and phone), so the second opinion says nothing about the rest. The crop slices could feed it next. Shots from `/screenshot`, Browsershot and uploads have no copy and still go in whole, so a tall one can be turned down. Production runs no vision key today, so the second opinion is the checklist only.
 
 ### 1. Let the agent reply on a mark (shipped)
 

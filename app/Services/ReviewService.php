@@ -8,6 +8,7 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
+use App\Services\Capture\HostedCaptureDriver;
 use App\Services\Capture\PageCaptureService;
 use App\Support\OutboundUrl;
 use App\Support\ToolProgress;
@@ -73,6 +74,20 @@ class ReviewService
         $cost = $this->credits->costForSources($sources);
         $debited = $this->credits->debit($workspace, $cost);
 
+        // A capture can run past PHP's time limit, and a fatal error skips
+        // every catch below. Give it the time its own budget allows, and if
+        // the request still dies before it's settled, hand the credits back.
+        $settled = false;
+        register_shutdown_function(function () use (&$settled, $workspace, $debited): void {
+            if (! $settled) {
+                $this->credits->refund($workspace, $debited);
+            }
+        });
+
+        if (! isset($sources['images'])) {
+            $this->allowTimeFor($sources);
+        }
+
         $type = $data['type'] ?? null;
         $domHtml = null;
 
@@ -94,7 +109,7 @@ class ReviewService
 
             ToolProgress::report('Saving the review and its second opinion');
 
-            return $this->create(
+            $review = $this->create(
                 $workspace,
                 $data['title'],
                 $data['context'] ?? null,
@@ -106,8 +121,12 @@ class ReviewService
                 $data['webhook_url'] ?? null,
                 $origin,
             );
+            $settled = true;
+
+            return $review;
         } catch (ValidationException $e) {
             $this->credits->refund($workspace, $debited);
+            $settled = true;
 
             if (! isset($sources['capture_url']) || ! $this->captureCanFallOpen($e)) {
                 throw $e;
@@ -132,8 +151,33 @@ class ReviewService
             );
         } catch (Throwable $e) {
             $this->credits->refund($workspace, $debited);
+            $settled = true;
 
             throw $e;
+        }
+    }
+
+    /**
+     * Raise PHP's time limit to what this source can take: every viewport's
+     * capture session one after another, plus the DOM load and saving. Only
+     * ever raised, never lowered, and left alone where there is no limit.
+     *
+     * @param  array<string, bool>  $sources
+     */
+    protected function allowTimeFor(array $sources): void
+    {
+        $limit = (int) ini_get('max_execution_time');
+
+        if ($limit <= 0 || ! function_exists('set_time_limit')) {
+            return;
+        }
+
+        $perLoad = app(HostedCaptureDriver::class)->functionBudget(sweep: true, collect: true)['httpTimeout'];
+        $loads = isset($sources['capture_url']) ? count($this->capture->viewports()) + 1 : 1;
+        $needed = $perLoad * $loads + 60;
+
+        if ($needed > $limit) {
+            @set_time_limit($needed);
         }
     }
 
@@ -146,7 +190,7 @@ class ReviewService
     }
 
     /**
-     * @param  list<string|UploadedFile|array{binary: string, meta: array<string, mixed>|null, elements?: array<string, mixed>|null}>  $images
+     * @param  list<string|UploadedFile|array{binary: string, meta: array<string, mixed>|null, elements?: array<string, mixed>|null, thumb?: string|null, vision?: array{binary: string, crop: float}|null, slices?: list<array{binary: string, top: float, height: float}>}>  $images
      */
     public function create(
         Workspace $workspace,
@@ -258,6 +302,9 @@ class ReviewService
             }
             if (is_array($image) && is_string($image['vision']['binary'] ?? null)) {
                 $this->screenshots->storeVision($shot, $image['vision']['binary'], (float) ($image['vision']['crop'] ?? 1));
+            }
+            if (is_array($image) && ! empty($image['slices'])) {
+                $this->screenshots->storeSlices($shot, $image['slices']);
             }
             $shots[] = $shot;
         }

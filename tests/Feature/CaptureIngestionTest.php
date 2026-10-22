@@ -47,7 +47,10 @@ class CaptureIngestionTest extends TestCase
     {
         return [
             'image' => base64_encode($this->tinyPngBinary()),
+            'format' => 'png',
+            'css' => ['width' => 1280, 'height' => 2400],
             'elements' => [
+                'version' => 2,
                 'docWidth' => 1280,
                 'docHeight' => 2400,
                 'viewport' => ['width' => 1280, 'height' => 800],
@@ -109,9 +112,21 @@ class CaptureIngestionTest extends TestCase
                 && ($context['viewport']['width'] ?? null) === 1280
                 && ($context['viewport']['deviceScaleFactor'] ?? null) === 2
                 && ($context['viewport']['isMobile'] ?? null) === false
-                && array_key_exists('userAgent', $context) && $context['userAgent'] === null
+                // Desktop reads as Chrome, not HeadlessChrome, which bot walls turn away.
+                && str_contains((string) ($context['userAgent'] ?? ''), 'Chrome/')
+                && ! str_contains((string) ($context['userAgent'] ?? ''), 'Headless')
                 && ($context['fullPage'] ?? null) === true
-                && ($context['maxPixels'] ?? null) === 24_000_000
+                // 2× desktop holds to 8,000 CSS px; past 4MP it's WebP, not a shrunk PNG.
+                && ($context['maxPixels'] ?? null) === 41_000_000
+                && ($context['pngMaxPixels'] ?? null) === 4_000_000
+                && ($context['webpQuality'] ?? null) === 92
+                && ($context['maxWidth'] ?? null) === 16_000
+                && ($context['slicePixels'] ?? null) === 4_000_000
+                && str_contains((string) ($body['code'] ?? ''), "'webp'")
+                // The session fits the plan's two-minute cap, with the shots held back.
+                && str_ends_with($request->url(), '&timeout=120000')
+                && ($context['sessionMs'] ?? null) === 120_000
+                && ($context['reserveMs'] ?? 0) > ($context['shootMs'] ?? 0)
                 && ($context['maxHeight'] ?? null) === 16_000
                 && ($context['maxBytes'] ?? null) === 16 * 1024 * 1024
                 && ($context['thumbWidth'] ?? null) === 320
@@ -132,6 +147,10 @@ class CaptureIngestionTest extends TestCase
                 && str_contains($settle, '"sweep":true')
                 && str_contains($settle, '"freeze":true')
                 && str_contains($settle, '"hideConsent":true')
+                && str_contains($settle, '"hideChat":true')
+                && str_contains($settle, '#intercom-container')
+                && str_contains($settle, 'version: 2')
+                && str_contains($settle, 'hardStop')
                 && str_contains($settle, '"collectElements":true');
         });
 
@@ -161,8 +180,17 @@ class CaptureIngestionTest extends TestCase
 
         $desktop = $review->screenshots()->orderBy('sort_order')->firstOrFail();
         $this->assertSame(1, $desktop->meta['element_count']);
+        $this->assertSame(2, $desktop->meta['elements_version']);
+        $this->assertSame(['doc_width' => 1280, 'doc_height' => 2400], array_intersect_key($desktop->meta, ['doc_width' => 1, 'doc_height' => 1]));
+        $this->assertSame('png', $desktop->meta['format']);
         Storage::disk('public')->assertExists($desktop->meta['elements_path']);
+        Storage::disk('public')->assertExists($desktop->meta['elements_pick_path']);
         $this->assertSame('#hero > h1', $desktop->elementMap()['elements'][0]['selector']);
+
+        // The agent sees what was captured, never where the app keeps it.
+        $this->assertArrayNotHasKey('elements_path', $shots[0]['meta']);
+        $this->assertArrayNotHasKey('elements_pick_path', $shots[0]['meta']);
+        $this->assertSame(1, $shots[0]['meta']['element_count']);
     }
 
     public function test_capture_url_falls_back_to_screenshot_when_function_is_missing(): void

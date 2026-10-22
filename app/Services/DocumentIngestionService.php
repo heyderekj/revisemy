@@ -12,6 +12,19 @@ class DocumentIngestionService
     public const MAX_PDF_BYTES = 20 * 1024 * 1024;
 
     /**
+     * Pages render at 2x a screen's 96 DPI, so slide text is as sharp as a
+     * 2x capture and the review shows each page at its screen size.
+     */
+    public const RENDER_DPI = 192;
+
+    /**
+     * Most pixels a rendered page may have. A 16:9 slide at 192 DPI is
+     * 2560x1440 (3.7MP); a poster renders at a lower DPI instead, so GD can
+     * still make its thumbnail and crop marks from it.
+     */
+    public const MAX_PAGE_PIXELS = 4_000_000;
+
+    /**
      * Whether this server can actually rasterise a PDF.
      *
      * The extension being loaded is not enough: Debian and Ubuntu ship an
@@ -30,8 +43,9 @@ class DocumentIngestionService
     }
 
     /**
-     * Render a PDF (base64 string or https URL) into one PNG per page,
-     * capped at the review's screenshot limit.
+     * Render a PDF (base64 string or https URL) into one PNG per page at
+     * RENDER_DPI (less for a page that would pass MAX_PAGE_PIXELS), capped
+     * at the review's screenshot limit.
      *
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
@@ -52,15 +66,23 @@ class DocumentIngestionService
             $probe->pingImageBlob($binary);
             $total = $probe->getNumberImages();
             $pages = min($total, self::MAX_PAGES);
+
+            // Pinged at ImageMagick's default 72 DPI, a page's size is in points.
+            $sizes = [];
+            for ($page = 0; $page < $pages; $page++) {
+                $probe->setIteratorIndex($page);
+                $sizes[$page] = [$probe->getImageWidth(), $probe->getImageHeight()];
+            }
             $probe->clear();
 
             $shots = [];
 
             for ($page = 0; $page < $pages; $page++) {
                 $imagick = new \Imagick;
+                $dpi = self::renderDpi(...$sizes[$page]);
                 // Before the read: render at the slide's visible (crop) box,
                 // with anti-aliased text and graphics, as a viewer shows it.
-                $imagick->setResolution(150, 150);
+                $imagick->setResolution($dpi, $dpi);
                 $imagick->setOption('pdf:use-cropbox', 'true');
                 $imagick->setOption('pdf:use-trimbox', 'false');
                 $imagick->setOption('dither', 'false');
@@ -78,7 +100,8 @@ class DocumentIngestionService
 
                 $shots[] = [
                     'binary' => $imagick->getImageBlob(),
-                    'meta' => ['origin' => 'pdf', 'page' => $page + 1, 'total_pages' => $total]
+                    // Pixels per CSS px, so the review shows the page at its screen size.
+                    'meta' => ['origin' => 'pdf', 'page' => $page + 1, 'total_pages' => $total, 'dpr' => round($dpi / 96, 2)]
                         + ($total > $pages ? ['truncated' => true] : []),
                 ];
 
@@ -98,6 +121,22 @@ class DocumentIngestionService
                     : 'Could not render that PDF: '.$e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * DPI for a page of this size in points: RENDER_DPI, or less for a page
+     * that would pass MAX_PAGE_PIXELS there, never under 72.
+     */
+    public static function renderDpi(int $widthPt, int $heightPt): int
+    {
+        if ($widthPt < 1 || $heightPt < 1) {
+            return self::RENDER_DPI;
+        }
+
+        $pixels = ($widthPt * self::RENDER_DPI / 72) * ($heightPt * self::RENDER_DPI / 72);
+        $fit = min(1.0, sqrt(self::MAX_PAGE_PIXELS / $pixels));
+
+        return max(72, (int) floor(self::RENDER_DPI * $fit));
     }
 
     protected static function looksLikeBlockedCoder(\ImagickException $e): bool
