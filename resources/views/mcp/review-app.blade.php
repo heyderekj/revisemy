@@ -229,7 +229,7 @@
                         <p class="mt-1.5 text-sm leading-relaxed text-zinc-700" x-text="activeFinding && activeFinding.body"></p>
                     </div>
 
-                    <p class="mt-2 text-center text-xs text-muted-foreground" x-text="!isPending ? 'Click a numbered mark to read it.' : (elementsFor(activeShot()) ? 'Click a part of the page to mark it, drag for an area, or Alt-click for a spot.' : 'Drag to mark a region, or click for a point.')"></p>
+                    <p class="mt-2 text-center text-xs text-muted-foreground" x-text="!isPending ? 'Click a numbered mark to read it.' : (elementsFor(activeShot()) ? 'Click a part to mark it, drag for an area, or Alt-click for a spot.' : 'Drag to mark a region, or click for a point.')"></p>
 
                     {{-- mark composer --}}
                     <div class="mt-3 rounded-2xl bg-card px-3 py-3 sm:px-4" x-show="composer.open" @keydown.escape="closeComposer()">

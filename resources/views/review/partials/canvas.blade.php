@@ -681,13 +681,13 @@
                     </div>
 
                 @if ($review->isOpenForFeedback())
-                    <p class="pointer-events-none absolute bottom-3 left-3 z-20 hidden rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] md:block xl:left-1/2 xl:-translate-x-1/2">
-                        @if ($shot->elementsUrl())
-                            {{ $mode === 'guest' ? 'Click a part of the page to suggest a change · drag for an area · Alt-click for a spot' : 'Click a part of the page to mark it · drag for an area · Alt-click for a spot' }} · Space+drag pans
-                        @else
-                            {{ $mode === 'guest' ? 'Drag to suggest a change · click for a point' : 'Drag to mark · click for a point' }} · Space+drag pans
-                        @endif
-                    </p>
+                    {{-- Pinned left beside the zoom bar, never under it: it gives way first. --}}
+                    @php($canvasHint = $shot->elementsUrl() ? ($mode === 'guest' ? 'Click a part to suggest a change · drag for an area · Alt-click for a spot · Space+drag pans' : 'Click a part to mark it · drag for an area · Alt-click for a spot · Space+drag pans') : ($mode === 'guest' ? 'Drag to suggest a change · click for a point · Space+drag pans' : 'Drag to mark · click for a point · Space+drag pans'))
+                    <p
+                        data-canvas-hint
+                        class="pointer-events-none absolute bottom-3 left-3 z-20 hidden max-w-[calc(100%-26rem)] truncate rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] lg:block"
+                        title="{{ $canvasHint }}"
+                    >{{ $canvasHint }}</p>
                 @endif
                 </div>
             @else
