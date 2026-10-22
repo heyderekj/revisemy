@@ -9,6 +9,7 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PolarWebhookController;
 use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
+use App\Http\Controllers\SubmitReviewController;
 use App\Http\Controllers\UseCaseController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +60,10 @@ Route::middleware('noindex')->group(function () {
     Route::get('/connect', [ConnectController::class, 'show'])->name('login');
     Route::post('/connect', [ConnectController::class, 'store'])->middleware('throttle:10,1')->name('connect');
 });
+
+// Start a review on the site, without an agent; its link hands it to one later.
+Route::get('/new', [SubmitReviewController::class, 'show'])->name('reviews.new');
+Route::post('/new', [SubmitReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.submit');
 
 Route::get('/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');
 

@@ -60,10 +60,10 @@ class LookAtMarksTool extends Tool
             'mark_ids.*' => 'integer',
         ]);
 
-        $review = $this->reviews->findForWorkspace($workspace, $data['id']);
+        $review = $this->reviews->findOrAdopt($workspace, $data['id']);
 
         if (! $review) {
-            return Response::error('No review with that id for this try token.');
+            return Response::error('No review with that id for this try token. A review link started on the site works once — the first agent to open it keeps it.');
         }
 
         $marks = $this->marks($review->id, $review->parent_id, $data['mark_ids'] ?? null);
@@ -133,7 +133,7 @@ class LookAtMarksTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'id' => $schema->string()->description('The review public id')->required(),
+            'id' => $schema->string()->description('The review id from create_review, or a review link someone pasted')->required(),
             'mark_ids' => $schema->array()->items($schema->integer())->max(self::MAX_MARKS)->description('Optional: which marks to see, by work_packets.pins[].id. Defaults to the open marks, up to 5.'),
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\ReviewDecided;
+use App\Events\ReviewHandedOff;
 use App\Exceptions\InsufficientCreditsException;
 use App\Models\Review;
 use App\Models\Screenshot;
@@ -11,6 +12,7 @@ use App\Services\Capture\PageCaptureService;
 use App\Support\OutboundUrl;
 use App\Support\ToolProgress;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -38,7 +40,7 @@ class ReviewService
      *
      * @throws InsufficientCreditsException
      */
-    public function createFromRequest(Workspace $workspace, array $data): Review
+    public function createFromRequest(Workspace $workspace, array $data, ?string $origin = null): Review
     {
         $images = $data['images'] ?? [];
         $sources = array_filter([
@@ -102,6 +104,7 @@ class ReviewService
                 $type,
                 $domHtml,
                 $data['webhook_url'] ?? null,
+                $origin,
             );
         } catch (ValidationException $e) {
             $this->credits->refund($workspace, $debited);
@@ -125,6 +128,7 @@ class ReviewService
                 $type ?? Review::TYPE_WEBSITE,
                 null,
                 $data['webhook_url'] ?? null,
+                $origin,
             );
         } catch (Throwable $e) {
             $this->credits->refund($workspace, $debited);
@@ -154,6 +158,7 @@ class ReviewService
         ?string $type = null,
         ?string $domHtml = null,
         ?string $webhookUrl = null,
+        ?string $origin = null,
     ): Review {
         if ($type !== null && ! in_array($type, Review::types(), true)) {
             throw ValidationException::withMessages([
@@ -224,6 +229,7 @@ class ReviewService
             'title' => $title,
             'context' => $context,
             'type' => $type ?? Review::TYPE_UI,
+            'origin' => $origin,
             'page_url' => $pageUrl,
             'webhook_url' => $webhookUrl,
             ...($webhookHealth ?? []),
@@ -327,6 +333,115 @@ class ReviewService
             ->where('public_id', $publicId)
             ->with(['screenshots.annotations', 'screenshots.findings', 'parent'])
             ->first();
+    }
+
+    /**
+     * A review by id, or by the review link someone pasted. A link to a review
+     * started on the site, that no agent has yet, moves into this workspace:
+     * holding the owner link is already the reviewer's whole login. Guest
+     * links never count, and a review another agent holds stays where it is.
+     */
+    public function findOrAdopt(Workspace $workspace, string $idOrLink): ?Review
+    {
+        $idOrLink = trim($idOrLink);
+
+        if ($review = $this->findForWorkspace($workspace, $idOrLink)) {
+            return $review;
+        }
+
+        $token = $this->ownerTokenFrom($idOrLink);
+
+        if ($token === null) {
+            return null;
+        }
+
+        $review = Review::query()->where('token', $token)->first();
+
+        if (! $review || ! hash_equals((string) $review->token, $token)) {
+            return null;
+        }
+
+        if ($review->workspace_id === $workspace->id) {
+            return $this->findForWorkspace($workspace, $review->public_id);
+        }
+
+        if (! $review->isAwaitingAgent()) {
+            return null;
+        }
+
+        $adopted = DB::transaction(function () use ($review, $workspace): bool {
+            $locked = Review::query()->whereKey($review->id)->lockForUpdate()->first();
+
+            if (! $locked || ! $locked->isAwaitingAgent()) {
+                return false;
+            }
+
+            $chain = $this->passChainIds($locked);
+
+            Review::query()->whereKey($chain)->update([
+                'workspace_id' => $workspace->id,
+                'expires_at' => now()->addDays($workspace->reviewRetentionDays()),
+            ]);
+
+            $locked->update(['handed_off_at' => now()]);
+
+            return true;
+        });
+
+        if (! $adopted) {
+            return null;
+        }
+
+        $review = $this->findForWorkspace($workspace, $review->public_id);
+
+        if ($review) {
+            ReviewHandedOff::dispatch($review);
+        }
+
+        return $review;
+    }
+
+    /**
+     * The owner token in a pasted /r/{token} or /r/{token}/board link on this
+     * site, or a bare token.
+     */
+    protected function ownerTokenFrom(string $value): ?string
+    {
+        if (preg_match('/^[A-Za-z0-9]{40}$/', $value)) {
+            return $value;
+        }
+
+        $parts = parse_url($value);
+        $bare = fn (string $host): string => preg_replace('/^www\./i', '', strtolower($host));
+        $ours = $bare((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+
+        if (! is_array($parts) || ! isset($parts['host'], $parts['path']) || $bare($parts['host']) !== $ours) {
+            return null;
+        }
+
+        return preg_match('#^/r/([A-Za-z0-9]{40})(?:/board)?/?$#', $parts['path'], $m) ? $m[1] : null;
+    }
+
+    /**
+     * This review and every later pass built on it, in the same workspace.
+     *
+     * @return list<int>
+     */
+    protected function passChainIds(Review $review): array
+    {
+        $ids = [$review->id];
+        $frontier = [$review->id];
+
+        while ($frontier !== []) {
+            $frontier = Review::query()
+                ->whereIn('parent_id', $frontier)
+                ->where('workspace_id', $review->workspace_id)
+                ->pluck('id')
+                ->all();
+            $ids = [...$ids, ...$frontier];
+        }
+
+        return $ids;
     }
 
     /**

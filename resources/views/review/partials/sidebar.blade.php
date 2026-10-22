@@ -55,6 +55,8 @@
                     }
                 }"
             >
+                @include('review.partials.handoff')
+
                 {{-- My marks --}}
                 <section class="rounded-2xl bg-card" data-panel="marks">
                     <div class="flex items-center gap-2 px-3 py-3 sm:px-4">

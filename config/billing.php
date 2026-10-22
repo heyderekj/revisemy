@@ -104,6 +104,10 @@ return [
         // New workspaces from Connect (an assistant signing in), counted apart.
         'connect_per_hour' => (int) env('REVISEMY_CONNECT_PER_HOUR', 6),
         'connect_per_day' => (int) env('REVISEMY_CONNECT_PER_DAY', 20),
+        // Reviews started on the site at /new, every attempt counted —
+        // a capture that fails still makes a board.
+        'submit_per_hour' => (int) env('REVISEMY_SUBMIT_PER_HOUR', 10),
+        'submit_per_day' => (int) env('REVISEMY_SUBMIT_PER_DAY', 30),
     ],
 
     /*

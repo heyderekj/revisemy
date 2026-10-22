@@ -55,6 +55,10 @@ Two tools keep your agent from guessing:
 - `wait_for_review` holds one call until the person acts on the review (a decision, a mark, a comment, a verify), or about 45 seconds, instead of polling `get_review`. A host that sends a `progressToken` hears a heartbeat while it waits. Hosts don't support MCP Tasks yet, so this is a long-held call that works everywhere.
 - `look_at_marks` returns a cropped picture of each open mark with the person's box or point drawn on it, so your agent sees what they circled, not just coordinates. Up to 5 at a time, sized for vision models.
 
+## Reviews started on the site
+
+Someone can start a review at [`/new`](/new) without an agent: paste a link, or add screenshots, a PDF or an email. When they paste the review link to your agent, call `get_review` with the link as `id`. The review joins your agent's workspace, and every tool works on it by its `id` from then on. The first agent to open a link keeps the review; any other gets "No review with that id". Over REST, pass the token from the link: `GET /api/reviews/{token}`.
+
 ## Reviews inside the chat
 
 In hosts that support [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview), such as Claude, ChatGPT and VS Code, `create_review` and `get_review` also render the review inline. The person marks, replies and decides without leaving the conversation. Everywhere else your agent pastes `review_url`. The loop is the same either way, and your agent should always paste the link.

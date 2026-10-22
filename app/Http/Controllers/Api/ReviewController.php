@@ -60,9 +60,13 @@ class ReviewController extends Controller
         return response()->json($review->toAgentPayload(), 201);
     }
 
+    /**
+     * By id, or by the token from a review link started on the site — the
+     * same handoff get_review does over MCP.
+     */
     public function show(Request $request, string $publicId, ReviewService $reviews): JsonResponse
     {
-        $review = $reviews->findForWorkspace($request->user()->workspace, $publicId);
+        $review = $reviews->findOrAdopt($request->user()->workspace, $publicId);
 
         if (! $review) {
             return response()->json(['message' => 'Review not found for this try token.'], 404);

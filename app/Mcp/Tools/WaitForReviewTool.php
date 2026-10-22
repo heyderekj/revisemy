@@ -52,10 +52,10 @@ class WaitForReviewTool extends Tool
             'since' => 'nullable|date',
         ]);
 
-        $review = $this->reviews->findForWorkspace($workspace, $data['id']);
+        $review = $this->reviews->findOrAdopt($workspace, $data['id']);
 
         if (! $review) {
-            return Response::error('No review with that id for this try token.');
+            return Response::error('No review with that id for this try token. A review link started on the site works once — the first agent to open it keeps it.');
         }
 
         // Nothing given: wait for anything after this call started.
@@ -106,7 +106,7 @@ class WaitForReviewTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'id' => $schema->string()->description('The review public id')->required(),
+            'id' => $schema->string()->description('The review id from create_review, or a review link someone pasted')->required(),
             'since' => $schema->string()->description('The updated_at you last saw (ISO 8601). The call returns once the review has moved past it. Leave it out to wait for anything after this call starts.'),
         ];
     }

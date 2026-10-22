@@ -16,6 +16,7 @@ final class MarketingPages
     {
         $pages = [
             ['href' => '/connectors', 'label' => 'Connectors', 'line' => 'Connect Claude, ChatGPT, Cursor, VS Code, Grok, Muse or Codex.', 'icon' => 'puzzle-piece'],
+            ['href' => '/new', 'label' => 'Start a review', 'line' => 'Paste a link or add a file, then hand the review to your agent.', 'icon' => 'plus'],
         ];
 
         foreach (config('guides.pages', []) as $slug => $page) {

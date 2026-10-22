@@ -41,10 +41,10 @@ class GetReviewTool extends Tool
             'id' => 'required|string',
         ]);
 
-        $review = $this->reviews->findForWorkspace($workspace, $data['id']);
+        $review = $this->reviews->findOrAdopt($workspace, $data['id']);
 
         if (! $review) {
-            return Response::error('No review with that id for this try token.');
+            return Response::error('No review with that id for this try token. A review link started on the site works once — the first agent to open it keeps it.');
         }
 
         $payload = $review->toAgentPayload();
@@ -64,7 +64,7 @@ class GetReviewTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'id' => $schema->string()->description('The review public id returned by create_review')->required(),
+            'id' => $schema->string()->description('The review id from create_review, or a review link someone pasted')->required(),
         ];
     }
 

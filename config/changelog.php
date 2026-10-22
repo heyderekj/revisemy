@@ -15,6 +15,17 @@ return [
     'entries' => [
 
         [
+            'version' => '1.9.0',
+            'date' => '2026-10-22',
+            'title' => 'Start a review without an agent',
+            'highlights' => [
+                'Start a review on the site: paste a page link, or add screenshots, a PDF or an email. No account, no agent needed to start',
+                'Paste the review link to your agent and it picks the review up as its own, marks and all',
+                'The review shows what to paste, and says so once your agent has it',
+            ],
+        ],
+
+        [
             'version' => '1.8.0',
             'date' => '2026-10-15',
             'title' => 'Your agent hears you the moment you decide',

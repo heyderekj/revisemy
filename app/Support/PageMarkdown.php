@@ -21,6 +21,7 @@ final class PageMarkdown
         return match (true) {
             $path === '/' || $path === '/index' => self::home(),
             $path === '/for' => self::useCaseIndex(),
+            $path === '/new' => self::startReview(),
             $path === '/alternatives' => self::alternativeIndex(),
             $path === '/docs' => self::doc('index'),
             $path === '/docs/index' => null,
@@ -78,6 +79,27 @@ final class PageMarkdown
         $md .= "\nMCP endpoint: ".McpCatalog::endpoint()."\n\n";
 
         $md .= self::faq(HomeFaq::plain());
+
+        return $md;
+    }
+
+    protected static function startReview(): string
+    {
+        $costs = config('billing.costs');
+
+        $md = self::head('Start a review', 'Paste a link or add a file. You get a board to mark up now, and its link hands the work to your agent when you’re ready. No account.', '/new');
+
+        $md .= "## What you can start from\n\n"
+            .'- A public page, captured at desktop, tablet and phone sizes ('.$costs['capture_url']." credits)\n"
+            .'- Up to 5 screenshots, PNG, JPG or WebP ('.$costs['images']." credit)\n"
+            .'- Slides as a PDF, first 5 pages ('.$costs['pdf']." credit)\n"
+            .'- An email as an .html file, rendered 600px wide ('.$costs['html']." credits)\n\n";
+
+        $md .= "## Then hand it to your agent\n\n"
+            ."1. Mark what matters on the board.\n"
+            ."2. Paste the review link to your agent. It calls `get_review` with the link and picks the review up as its own.\n"
+            ."3. Your agent works through your marks and sends the next pass for you to check.\n\n"
+            ."A review link started on the site works once: the first agent to open it keeps it. Guest links never hand a review over.\n\n";
 
         return $md;
     }

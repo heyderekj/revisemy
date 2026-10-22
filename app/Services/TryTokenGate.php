@@ -14,6 +14,10 @@ class TryTokenGate
 
     public const DAY_MESSAGE = 'Too many new try workspaces from this network today. Come back tomorrow, or paste a try token you already have.';
 
+    public const SUBMIT_HOUR_MESSAGE = 'Too many reviews started from this network in the last hour. Try again in a little while.';
+
+    public const SUBMIT_DAY_MESSAGE = 'Too many reviews started from this network today. Come back tomorrow, or ask your agent to start one.';
+
     public function assertCanMint(Request $request): void
     {
         $ip = $request->ip() ?: 'unknown';
@@ -50,6 +54,29 @@ class TryTokenGate
 
         if (RateLimiter::tooManyAttempts($dayKey, max(1, (int) config('billing.try_token.connect_per_day', 20)))) {
             throw new RuntimeException(self::DAY_MESSAGE);
+        }
+
+        RateLimiter::hit($hourKey, 3600);
+        RateLimiter::hit($dayKey, 86400);
+    }
+
+    /**
+     * A review started on the site, without an agent. Counted per address on
+     * every attempt, since a capture that fails still makes a board and
+     * gives its credits back.
+     */
+    public function assertCanSubmit(Request $request): void
+    {
+        $ip = $request->ip() ?: 'unknown';
+        $hourKey = 'submit:hour:'.$ip;
+        $dayKey = 'submit:day:'.$ip;
+
+        if (RateLimiter::tooManyAttempts($hourKey, max(1, (int) config('billing.try_token.submit_per_hour', 10)))) {
+            throw new RuntimeException(self::SUBMIT_HOUR_MESSAGE);
+        }
+
+        if (RateLimiter::tooManyAttempts($dayKey, max(1, (int) config('billing.try_token.submit_per_day', 30)))) {
+            throw new RuntimeException(self::SUBMIT_DAY_MESSAGE);
         }
 
         RateLimiter::hit($hourKey, 3600);
