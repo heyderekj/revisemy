@@ -28,6 +28,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
         $fullPage = (bool) config('revisemy.capture.url_full_page', true);
         $sweep = $fullPage && CaptureSettleScript::enabled();
         $hideConsent = (bool) config('revisemy.capture.hide_consent', true);
+        $hideChat = (bool) config('revisemy.capture.hide_chat', true);
         $collect = (bool) config('revisemy.capture.collect_elements', true);
 
         // Browsershot can't measure the page before the shot, so wide
@@ -39,6 +40,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
             fullPage: $fullPage,
             sweep: $sweep,
             hideConsent: $hideConsent,
+            hideChat: $hideChat,
         );
 
         if (! $collect) {
@@ -46,7 +48,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
         }
 
         foreach ($viewports as $index => $viewport) {
-            $page = $this->pageData($url, $viewport, $sweep, $hideConsent);
+            $page = $this->pageData($url, $viewport, $sweep, $hideConsent, $hideChat);
 
             if ($page === null) {
                 continue;
@@ -86,7 +88,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
         $sweep = (bool) config('revisemy.capture.url_full_page', true) && CaptureSettleScript::enabled();
 
         try {
-            $shot = $this->configure(Browsershot::url($url), $sweep, hideConsent: true);
+            $shot = $this->configure(Browsershot::url($url), $sweep, hideConsent: true, hideChat: (bool) config('revisemy.capture.hide_chat', true));
 
             return $shot->bodyHtml();
         } catch (\Throwable $e) {
@@ -102,10 +104,10 @@ class BrowsershotCaptureDriver implements CaptureDriver
      * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
      * @return array{elements: array<string, mixed>|null, html: string|null}|null
      */
-    protected function pageData(string $url, array $viewport, bool $sweep, bool $hideConsent): ?array
+    protected function pageData(string $url, array $viewport, bool $sweep, bool $hideConsent, bool $hideChat = false): ?array
     {
         try {
-            $shot = $this->configure(Browsershot::url($url), $sweep, $hideConsent, collectElements: true);
+            $shot = $this->configure(Browsershot::url($url), $sweep, $hideConsent, collectElements: true, hideChat: $hideChat);
             $this->emulate($shot, $viewport, 1);
 
             $json = $shot->evaluate('JSON.stringify({ elements: window.__rmElements || null, html: document.documentElement.outerHTML })');
@@ -125,7 +127,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
      * @param  array<string, mixed>  $baseMeta
      * @return list<array{binary: string, meta: array<string, mixed>}>
      */
-    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage, bool $sweep, bool $hideConsent): array
+    protected function capture(callable $factory, array $viewports, array $baseMeta, bool $fullPage, bool $sweep, bool $hideConsent, bool $hideChat = false): array
     {
         if (! $this->enabled()) {
             throw ValidationException::withMessages([
@@ -139,7 +141,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
             ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
             $dpr = $viewport['dpr'] ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2));
 
-            $shot = $this->configure($factory(), $sweep, $hideConsent);
+            $shot = $this->configure($factory(), $sweep, $hideConsent, hideChat: $hideChat);
             $this->emulate($shot, $viewport, $dpr);
 
             if ($fullPage) {
@@ -164,7 +166,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
      * Navigation, settle delay and settle script — shared by every load so
      * the screenshot and the page data see the same final state.
      */
-    protected function configure(Browsershot $shot, bool $sweep, bool $hideConsent, bool $collectElements = false): Browsershot
+    protected function configure(Browsershot $shot, bool $sweep, bool $hideConsent, bool $collectElements = false, bool $hideChat = false): Browsershot
     {
         $timeout = (int) config('revisemy.capture.timeout', 30);
         $waitMs = (int) config('revisemy.capture.wait_ms', 1000);
@@ -178,7 +180,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
             ->waitUntilNetworkIdle(config('revisemy.capture.wait_until', 'networkidle2') === 'networkidle0')
             ->delay($waitMs)
             ->waitForFunction(
-                CaptureSettleScript::expression(sweep: $sweep, hideConsent: $hideConsent, collectElements: $collectElements),
+                CaptureSettleScript::expression(sweep: $sweep, hideConsent: $hideConsent, collectElements: $collectElements, hideChat: $hideChat),
                 timeout: $budgetMs + CaptureSettleScript::OUTER_HEADROOM_MS,
             );
 
@@ -201,8 +203,12 @@ class BrowsershotCaptureDriver implements CaptureDriver
         $shot->windowSize($viewport['width'], $viewport['height'])
             ->deviceScaleFactor($dpr);
 
+        if ($viewport['mobile']) {
+            $shot->mobile()->touch();
+        }
+
         if ($userAgent = CaptureDevice::userAgent($viewport)) {
-            $shot->mobile()->touch()->userAgent($userAgent);
+            $shot->userAgent($userAgent);
         }
     }
 }

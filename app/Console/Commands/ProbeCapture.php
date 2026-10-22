@@ -13,8 +13,9 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Capture a page the way create_review does, through each path on its own,
- * and say what came back: size, DPR, whether everything loaded, and how long
- * each viewport took. The images land in a folder to compare side by side.
+ * and say what came back: size, format, DPR, whether everything loaded, how
+ * many crop slices and elements came with it, and how long each viewport
+ * took. The images land in a folder to compare side by side.
  *
  * Reviews never show which path a capture took, and a /function that's
  * turned down falls back to /screenshot quietly, so this is how to see why.
@@ -70,19 +71,26 @@ class ProbeCapture extends Command
                     continue;
                 }
 
-                $file = "{$out}/{$prefix}-{$path}-{$viewport['label']}.png";
-                File::put($file, $shot['binary']);
+                $info = @getimagesizefromstring($shot['binary']) ?: [0, 0, 'mime' => 'image/png'];
+                [$width, $height] = $info;
+                $format = (string) Str::after((string) ($info['mime'] ?? 'image/png'), 'image/');
+                $base = "{$out}/{$prefix}-{$path}-{$viewport['label']}";
+                File::put("{$base}.{$format}", $shot['binary']);
 
                 if (is_string($shot['thumb'] ?? null)) {
-                    File::put(preg_replace('/\.png$/', '.thumb.jpg', $file), $shot['thumb']);
+                    File::put("{$base}.thumb.jpg", $shot['thumb']);
                 }
 
                 if (is_string($shot['vision']['binary'] ?? null)) {
-                    File::put(preg_replace('/\.png$/', '.vision.jpg', $file), $shot['vision']['binary']);
+                    File::put("{$base}.vision.jpg", $shot['vision']['binary']);
                 }
 
-                [$width, $height] = @getimagesizefromstring($shot['binary']) ?: [0, 0];
+                foreach ($shot['slices'] ?? [] as $index => $slice) {
+                    File::put("{$base}.slice-{$index}.jpg", $slice['binary']);
+                }
+
                 $meta = $shot['meta'];
+                $elements = is_array($shot['elements'] ?? null) ? $shot['elements'] : null;
 
                 $rows[] = [
                     $path,
@@ -94,8 +102,12 @@ class ProbeCapture extends Command
                     $this->flag($meta['settled'] ?? null),
                     $this->seconds($started),
                     implode(', ', array_filter([
+                        $format,
+                        isset($meta['doc_height']) ? "page {$meta['doc_width']}×{$meta['doc_height']} CSS px" : null,
                         isset($shot['thumb']) ? 'thumb from browser' : null,
                         isset($shot['vision']) ? 'vision copy covers '.round($shot['vision']['crop'] * 100).'%' : null,
+                        ! empty($shot['slices']) ? count($shot['slices']).' crop slices' : null,
+                        $elements !== null ? count((array) ($elements['elements'] ?? [])).' elements (map v'.($elements['version'] ?? 1).')' : null,
                     ])),
                 ];
             }
@@ -110,7 +122,7 @@ class ProbeCapture extends Command
 
     /**
      * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device: string}  $viewport
-     * @return list<array{binary: string, meta: array<string, mixed>, thumb?: string|null, vision?: array{binary: string, crop: float}|null}>
+     * @return list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, thumb?: string|null, vision?: array{binary: string, crop: float}|null, slices?: list<array{binary: string, top: float, height: float}>}>
      */
     private function shoot(string $path, string $url, array $viewport): array
     {

@@ -756,7 +756,7 @@ class Review extends Model
                 'url' => $shot->url(),
                 'width' => $shot->width,
                 'height' => $shot->height,
-                'meta' => $shot->meta,
+                'meta' => $shot->agentMeta(),
                 'second_opinion_status' => $shot->second_opinion_status,
                 'pins' => $pins,
                 'second_opinion' => $findings,

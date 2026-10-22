@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -22,6 +23,12 @@ class Screenshot extends Model
     public const KIND_SOURCE = 'source';
 
     public const KIND_AFTER = 'after';
+
+    /**
+     * Meta keys that point at the app's own storage. The agent can't fetch
+     * them, so its payload leaves them out.
+     */
+    public const INTERNAL_META = ['elements_path', 'elements_pick_path', 'vision_path', 'slices'];
 
     protected $fillable = [
         'review_id',
@@ -119,9 +126,11 @@ class Screenshot extends Model
     }
 
     /**
-     * Element map recorded at capture time: {docWidth, docHeight, viewport,
-     * elements: list<{selector, tag, kind, text, src, box: {x, y, w, h}}>},
-     * boxes in CSS px from the top of the document. Null when not captured.
+     * Element map recorded with the shot, cleaned by ElementMap:
+     * {version, docWidth, docHeight, viewport, elements: list<{selector, tag,
+     * kind, text, label?, role?, src?, box: {x, y, w, h}, parent, fixed?,
+     * styles?}>}, boxes in CSS px from the top of the document. Null when
+     * there is none.
      *
      * @return array<string, mixed>|null
      */
@@ -140,6 +149,36 @@ class Screenshot extends Model
         }
 
         return is_array($map) ? $map : null;
+    }
+
+    /**
+     * Meta as the agent sees it: everything but INTERNAL_META.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function agentMeta(): ?array
+    {
+        return is_array($this->meta) ? Arr::except($this->meta, self::INTERNAL_META) : null;
+    }
+
+    /**
+     * The CSS size of the page the image shows: what /function measured, or
+     * the image's own size over its pixel ratio.
+     *
+     * @return array{w: float, h: float}
+     */
+    public function cssSize(): array
+    {
+        $width = $this->meta['doc_width'] ?? null;
+        $height = $this->meta['doc_height'] ?? null;
+
+        if (is_numeric($width) && is_numeric($height) && $width > 0 && $height > 0) {
+            return ['w' => (float) $width, 'h' => (float) $height];
+        }
+
+        $ratio = $this->pixelRatio();
+
+        return ['w' => (int) $this->width / $ratio, 'h' => (int) $this->height / $ratio];
     }
 
     /**

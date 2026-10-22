@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'version' => '1.8.0',
+    'version' => '1.9.0',
 
     /*
     | Koati, the studio's other product. The footer names it as a sibling and
@@ -103,10 +103,12 @@ return [
         'function_endpoint' => env('REVISEMY_CAPTURE_FUNCTION_ENDPOINT'),
         'api_key' => env('REVISEMY_CAPTURE_KEY'),
         'timeout' => (int) env('REVISEMY_CAPTURE_TIMEOUT', 30),
-        // Longest Browserless session your plan allows (ms). The /function
-        // ?timeout= is clamped to it; a value over the plan's cap gets the
+        // Longest Browserless session your plan allows (ms; 2 minutes on
+        // most plans). Every /function wait is fitted inside it, the scroll
+        // sweep giving way first; a ?timeout= over the plan's cap gets the
         // request turned down and the capture falls back to /screenshot.
-        'session_max_ms' => (int) env('REVISEMY_CAPTURE_SESSION_MAX_MS', 0) ?: null,
+        // 0 sends whatever the waits add up to.
+        'session_max_ms' => (int) env('REVISEMY_CAPTURE_SESSION_MAX_MS', 120_000) ?: null,
         // Post-load pause before the settle script. Short: the settle script
         // itself waits until the page stops moving.
         'wait_ms' => max(0, (int) env('REVISEMY_CAPTURE_WAIT_MS', 1000)),
@@ -132,8 +134,14 @@ return [
         'load_timeout_ms' => max(1_000, (int) env('REVISEMY_CAPTURE_LOAD_TIMEOUT_MS', 8_000)),
         // Hide cookie consent banners (OneTrust, Cookiebot, …) on URL captures.
         'hide_consent' => filter_var(env('REVISEMY_CAPTURE_HIDE_CONSENT', true), FILTER_VALIDATE_BOOL),
+        // Hide chat launchers (Intercom, Drift, HubSpot, Crisp, Zendesk, …),
+        // which a full-page shot leaves floating mid-page.
+        'hide_chat' => filter_var(env('REVISEMY_CAPTURE_HIDE_CHAT', true), FILTER_VALIDATE_BOOL),
         // Record selector, kind, text and box for visible elements per shot.
         'collect_elements' => filter_var(env('REVISEMY_CAPTURE_COLLECT_ELEMENTS', true), FILTER_VALIDATE_BOOL),
+        // Desktop viewports send this user agent instead of HeadlessChrome's,
+        // which bot walls turn away. Empty keeps the browser's own.
+        'desktop_user_agent' => env('REVISEMY_CAPTURE_DESKTOP_USER_AGENT', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
         // Mobile viewports render as a phone: isMobile, touch, this user agent.
         'mobile_user_agent' => env('REVISEMY_CAPTURE_MOBILE_USER_AGENT', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'),
         // Viewports with 'device' => 'tablet' render as an iPad instead.
@@ -162,9 +170,10 @@ return [
         'url_device_scale_factor' => max(1, (int) env('REVISEMY_CAPTURE_URL_DPR', 1)),
         // /function shoots at the viewport's DPR, scaled down only as far as
         // it takes to stay under this many pixels and Chrome's 16,384px
-        // screenshot height. Long pages lose a little sharpness instead of
-        // memory or content.
-        'max_pixels' => max(1_000_000, (int) env('REVISEMY_CAPTURE_MAX_PIXELS', 24_000_000)),
+        // screenshot height. 41M is a 2× desktop shot 8,000 CSS px tall; past
+        // that a long page loses a little sharpness instead of memory or
+        // content. Big shots are WebP, so they stay well under the byte cap.
+        'max_pixels' => max(1_000_000, (int) env('REVISEMY_CAPTURE_MAX_PIXELS', 41_000_000)),
     ],
 
     /*
