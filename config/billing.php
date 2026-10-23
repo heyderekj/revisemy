@@ -28,7 +28,7 @@ return [
     'plans' => [
         'free' => [
             'name' => 'Try',
-            'credits' => (int) env('REVISEMY_FREE_CREDITS', 20),
+            'credits' => (int) env('REVISEMY_FREE_CREDITS', 40),
             'renews' => (bool) env('REVISEMY_FREE_CREDITS_RENEW', true),
             'review_retention_days' => (int) env('REVISEMY_FREE_RETENTION_DAYS', 7),
             'token_days' => (int) env('REVISEMY_FREE_TOKEN_DAYS', 90),

@@ -194,7 +194,7 @@ new class extends Component
     {{-- Credits / Pricing --}}
     @php
         $pricingEnabled = (bool) config('billing.pricing_enabled', false);
-        $freeCredits = (int) config('billing.plans.free.credits', 20);
+        $freeCredits = (int) config('billing.plans.free.credits', 40);
         $plusCredits = (int) config('billing.plans.pro.credits', 100);
         $freeRetention = (int) config('billing.plans.free.review_retention_days', 7);
         $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);

@@ -5,7 +5,7 @@
         'pdf' => ['label' => 'Slides', 'icon' => 'presentation-chart-bar', 'pending' => 'Rendering the slides…'],
         'html' => ['label' => 'Email', 'icon' => 'envelope', 'pending' => 'Rendering the email…'],
     ];
-    $grant = (int) config('billing.plans.free.credits', 20);
+    $grant = (int) config('billing.plans.free.credits', 40);
     $field = 'w-full rounded-xl bg-well px-3 py-2.5 text-sm text-foreground outline-none ring-1 ring-transparent placeholder:text-zinc-400 focus:ring-zinc-400';
     $file = 'block w-full rounded-xl bg-well px-3 py-6 text-sm text-zinc-600 ring-1 ring-transparent file:mr-3 file:rounded-full file:border-0 file:bg-card file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground focus-within:ring-zinc-400';
 @endphp

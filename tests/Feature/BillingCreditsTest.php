@@ -57,7 +57,7 @@ class BillingCreditsTest extends TestCase
         $workspace = $result['workspace']->fresh();
 
         $this->assertSame(Workspace::PLAN_FREE, $workspace->plan);
-        $this->assertSame(20, $workspace->credits_balance);
+        $this->assertSame(40, $workspace->credits_balance);
         $this->assertNotNull($workspace->credits_period_start);
     }
 
@@ -76,7 +76,7 @@ class BillingCreditsTest extends TestCase
             'images' => [$this->tinyPngDataUrl()],
         ])->assertHasNoErrors();
 
-        $this->assertSame(19, $workspace->fresh()->credits_balance);
+        $this->assertSame(39, $workspace->fresh()->credits_balance);
     }
 
     public function test_insufficient_credits_blocks_create_review(): void
@@ -126,8 +126,8 @@ class BillingCreditsTest extends TestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->where('plan', 'free')
                 ->where('plan_name', 'Try')
-                ->where('credits_remaining', 20)
-                ->where('credits_grant', 20)
+                ->where('credits_remaining', 40)
+                ->where('credits_grant', 40)
                 ->where('credits_renew', true)
                 ->whereType('credits_period_ends_at', 'string')
                 ->where('pricing_enabled', false)
@@ -147,7 +147,7 @@ class BillingCreditsTest extends TestCase
 
         $fresh = app(CreditsService::class)->ensurePeriod($workspace->fresh());
 
-        $this->assertSame(20, (int) $fresh->credits_balance);
+        $this->assertSame(40, (int) $fresh->credits_balance);
         $this->assertTrue($fresh->credits_period_start->greaterThan(now()->subDay()));
     }
 
@@ -193,7 +193,7 @@ class BillingCreditsTest extends TestCase
             'credits_period_start' => now()->subMonths(2),
         ])->save();
 
-        $this->assertSame(70, app(CreditsService::class)->remaining($workspace->fresh()));
+        $this->assertSame(90, app(CreditsService::class)->remaining($workspace->fresh()));
     }
 
     public function test_purchased_credits_make_a_review_affordable(): void
@@ -239,7 +239,7 @@ class BillingCreditsTest extends TestCase
             '--token-days' => 7,
         ])->assertSuccessful();
 
-        $this->assertSame(30, (int) $workspace->fresh()->credits_balance);
+        $this->assertSame(50, (int) $workspace->fresh()->credits_balance);
         $this->assertTrue($token->fresh()->expires_at->equalTo($originalExpiry->addDays(7)));
     }
 
@@ -254,7 +254,7 @@ class BillingCreditsTest extends TestCase
             '--pack' => true,
         ])->assertSuccessful();
 
-        $this->assertSame(22, (int) $workspace->fresh()->credits_balance);
+        $this->assertSame(42, (int) $workspace->fresh()->credits_balance);
     }
 
     public function test_checkout_tools_are_not_advertised_while_pricing_is_paused(): void
@@ -360,7 +360,7 @@ class BillingCreditsTest extends TestCase
         $this->assertFalse($status['polar_configured']);
         $this->assertFalse($status['pack_checkout_available']);
         $this->assertFalse($status['checkout_available']);
-        $this->assertSame(20, $status['credits_remaining']);
+        $this->assertSame(40, $status['credits_remaining']);
     }
 
     public function test_create_checkout_returns_signed_checkout_url_when_configured(): void
@@ -502,7 +502,7 @@ class BillingCreditsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('plan', 'free')
             ->assertJsonPath('plan_name', 'Try')
-            ->assertJsonPath('credits_grant', 20)
+            ->assertJsonPath('credits_grant', 40)
             ->assertJsonPath('credits_renew', true)
             ->assertJsonPath('pricing_enabled', false)
             ->assertJsonPath('checkout_available', false)

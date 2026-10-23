@@ -92,7 +92,7 @@ Every `create_review` costs credits, so this is the limit you'll hit first:
 | `html` | 3 |
 | `capture_url` | 5 |
 
-**Try** (the default, no account) grants **20 credits per month**, rolling, with no rollover — about 20 screenshot reviews or 4 full website captures. **Plus** ($9/mo) grants **100 credits per billing month**. A **credit pack** ($5 one-time) adds **50 credits that never expire**, on either plan; pack credits are spent after the monthly grant. `get_billing` reports what's left and when it refills; a `create_review` that can't afford its source returns `[insufficient_credits]`. Self-hosting? Set `REVISEMY_FREE_CREDITS` and `REVISEMY_TRY_TOKEN_PER_DAY` to whatever you like.
+**Try** (the default, no account) grants **40 credits per month**, rolling, with no rollover — about 40 screenshot reviews or 8 full website captures. **Plus** ($9/mo) grants **100 credits per billing month**. A **credit pack** ($5 one-time) adds **50 credits that never expire**, on either plan; pack credits are spent after the monthly grant. `get_billing` reports what's left and when it refills; a `create_review` that can't afford its source returns `[insufficient_credits]`. Self-hosting? Set `REVISEMY_FREE_CREDITS` and `REVISEMY_TRY_TOKEN_PER_DAY` to whatever you like.
 
 **Terminology:** UI copy uses *marks*; JSON still uses `work_packets.pins`, `related_pin`, and `apply_pins_then_next_pass`. Second opinion is suggestions only — see [docs/SECOND-OPINION.md](docs/SECOND-OPINION.md). Webhooks and MCP Apps details — see [docs/CONNECTORS.md](docs/CONNECTORS.md).
 

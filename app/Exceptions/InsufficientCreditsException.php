@@ -20,7 +20,7 @@ class InsufficientCreditsException extends Exception
 
     public function defaultMessage(): string
     {
-        $grant = (int) config('billing.plans.free.credits', 20);
+        $grant = (int) config('billing.plans.free.credits', 40);
 
         if (config('billing.pricing_enabled')) {
             $pack = collect(config('billing.packs', []))->map(fn (array $p, string $key) => [...$p, 'key' => $key])->first();
