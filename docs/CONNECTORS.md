@@ -55,7 +55,7 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Mark timeline: steps and comments, who did each, "Talk only" | `App\Support\MarkTimeline` → pin `timeline`; `components/mark-timeline` on the web, `mcp/partials/mark-timeline` inline |
 | Who did it: the Agent / You / guest pills | `Annotation::ACTOR_PILLS`; `components/who-pill` on the web |
 
-**Intentionally web-only:** share/guest link management, the “Hand this to your agent” panel on reviews started at `/new`, the “Your reviews” link in the header, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.
+**Intentionally web-only:** share/guest link management, the “Hand this to your agent” panel on reviews started at `/new`, the guests’ “Start your own review” link, link previews for pasted review links, the “Your reviews” link in the header, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.
 
 The four app tools are marked `Visibility::App`, so the model does not see them in its tool list. Note this is **hiding, not authorization**: any holder of the Sanctum token can still invoke them by name over the same endpoint. That matches ReviseMy's existing trust model — the token owner *is* the human, exactly as the token-gated `/r/{token}` owner link already assumes. Their descriptions say "human-in-the-loop UI only — agents must never call this," mirroring the "never verify a mark yourself" instruction agents already follow.
 

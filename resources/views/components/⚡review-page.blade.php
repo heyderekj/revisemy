@@ -1066,6 +1066,7 @@ new class extends Component
             </div>
             <h2 class="mt-5 text-lg font-semibold text-zinc-900">This guest link has expired</h2>
             <p class="mt-1.5 text-sm text-muted-foreground">Ask whoever shared it for a new one.</p>
+            <p class="mt-4 text-sm text-muted-foreground">Or <a href="{{ route('reviews.new') }}" class="link">start your own review</a>.</p>
         </div>
     @else
     {{-- Canvas first: the shot takes the window. The marks drawer remembers

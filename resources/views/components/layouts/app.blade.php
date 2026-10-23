@@ -3,6 +3,8 @@
     'description' => null,
     'keywords' => null,
     'ogImage' => null,
+    'ogImageAlt' => null,
+    'labels' => [],
     'ogUrl' => null,
     'canonical' => null,
     'robots' => 'index, follow',
@@ -25,6 +27,8 @@
         :description="$description"
         :keywords="$keywords"
         :og-image="$ogImage"
+        :og-image-alt="$ogImageAlt"
+        :labels="$labels"
         :og-url="$ogUrl"
         :canonical="$canonical"
         :robots="$robots"

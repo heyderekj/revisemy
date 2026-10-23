@@ -1,6 +1,9 @@
 <x-layouts.app
-    title="Review — ReviseMy"
-    description="Private design review link. Mark regions on screenshots, set intent and priority, and send structured feedback back to your agent."
+    :title="$preview['title']"
+    :description="$preview['description']"
+    :og-image="$preview['og_image']"
+    :og-image-alt="$preview['og_image_alt']"
+    :labels="$preview['labels']"
     robots="noindex, nofollow"
     schema="none"
 >

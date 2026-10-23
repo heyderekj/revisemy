@@ -344,6 +344,14 @@ class Review extends Model
         return ['s' => $secondOpinion, 'g' => $guest];
     }
 
+    /** The review behind an owner link or a guest link. */
+    public static function forLink(string $token): ?self
+    {
+        return static::query()
+            ->where(fn (Builder $q) => $q->where('token', $token)->orWhere('share_token', $token))
+            ->first();
+    }
+
     public function reviewUrl(): string
     {
         return url('/r/'.$this->token);
