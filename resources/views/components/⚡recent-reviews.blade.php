@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Annotation;
+use App\Models\Review;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\Auth;
@@ -62,9 +64,36 @@ new class extends Component
             ->limit(20)
             ->with(['screenshots.annotations', 'parent'])
             ->get()
-            ->map(fn ($review) => $review->toListSummary())
+            ->map(fn (Review $review) => $review->toListSummary() + $this->rowExtras($review))
             ->values()
             ->all();
+    }
+
+    /**
+     * What the row shows beyond the agent's list summary, read from the
+     * relations already loaded so twenty rows stay one query per relation.
+     *
+     * @return array<string, mixed>
+     */
+    protected function rowExtras(Review $review): array
+    {
+        $shot = $review->screenshots->first();
+        // Hand the shot its review so thumbUrl() doesn't fetch it again.
+        $shot?->setRelation('review', $review);
+
+        $marks = $review->screenshots->flatMap->annotations;
+        $updated = collect([$review->updated_at])->merge($marks->pluck('updated_at'))->filter()->max();
+
+        return [
+            'tag' => $review->statusTag(),
+            'type_label' => $review->typeLabel(),
+            'domain' => $review->sourceDomain(),
+            'thumb_url' => $shot?->thumbUrl(),
+            'share_url' => $review->shareUrl(),
+            'mark_count' => $marks->count(),
+            'guest_mark_count' => $marks->where('source', Annotation::SOURCE_GUEST)->count(),
+            'updated_at' => $updated?->toIso8601String(),
+        ];
     }
 
     /** Signs out a browser that Connect remembered, so it stops opening this list. */
@@ -91,6 +120,17 @@ new class extends Component
 <div
     class="relative"
     x-data="{
+        copied: null,
+        async copy(text, said) {
+            try {
+                await navigator.clipboard.writeText(text);
+                this.copied = said;
+            } catch (e) {
+                this.copied = 'Couldn’t copy the link';
+            }
+            clearTimeout(this.copiedTimer);
+            this.copiedTimer = setTimeout(() => this.copied = null, 1800);
+        },
         init() {
             let saved = null;
             try { saved = sessionStorage.getItem('revisemy_try_token') } catch (e) {}
@@ -136,24 +176,59 @@ new class extends Component
                             <p class="mt-1 text-sm text-muted-foreground">Ask your agent for a design checkup, and it lands here.</p>
                         </div>
                     @else
-                        <ul class="space-y-2.5">
+                        {{-- One line per review: the whole row opens it, the menu copies links. --}}
+                        <ul class="divide-y divide-border rounded-2xl bg-card">
                             @foreach ($reviews as $item)
-                                @php($tone = ['changes_requested' => 'attention', 'approved' => 'done'][$item['status']] ?? 'neutral')
-                                <li class="flex items-center gap-4 rounded-2xl bg-card p-4">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <x-signal-tag :tone="$tone">{{ $item['status_label'] }}</x-signal-tag>
-                                            <span class="text-xs text-muted-foreground">Pass {{ $item['pass'] }}</span>
-                                        </div>
-                                        <h2 class="mt-1.5 truncate text-base font-semibold text-zinc-900">{{ $item['title'] }}</h2>
-                                        <p class="mt-0.5 text-xs tabular-nums text-muted-foreground">
-                                            {{ $item['loop']['outstanding_count'] }} open
-                                            @if ($item['loop']['awaiting_verification_count'] > 0)
-                                                · {{ $item['loop']['awaiting_verification_count'] }} to verify
-                                            @endif
-                                        </p>
+                                @php
+                                    $marks = $item['loop'];
+                                    $counts = array_filter([
+                                        $marks['outstanding_count'] > 0 ? $marks['outstanding_count'].' open' : null,
+                                        $marks['awaiting_verification_count'] > 0 ? $marks['awaiting_verification_count'].' to verify' : null,
+                                        $marks['outstanding_count'] + $marks['awaiting_verification_count'] === 0 && $marks['verified_count'] > 0 ? $marks['verified_count'].' verified' : null,
+                                        $item['mark_count'] === 0 ? 'No marks yet' : null,
+                                        $item['guest_mark_count'] > 0 ? $item['guest_mark_count'].' '.str('guest mark')->plural($item['guest_mark_count']) : null,
+                                    ]);
+                                    $updated = $item['updated_at'] ? \Illuminate\Support\Carbon::parse($item['updated_at']) : null;
+                                @endphp
+                                <li wire:key="review-{{ $item['id'] }}" class="relative flex items-center gap-3 px-3 py-2.5 transition-colors first:rounded-t-2xl last:rounded-b-2xl hover:bg-chip/60 has-[a:focus-visible]:bg-chip/60 sm:gap-4 sm:px-4">
+                                    <div class="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-chip sm:w-14" aria-hidden="true">
+                                        @if ($item['thumb_url'])
+                                            <img src="{{ $item['thumb_url'] }}" alt="" loading="lazy" class="size-full object-cover object-top" onerror="this.remove()" />
+                                        @endif
                                     </div>
-                                    <a href="{{ $item['review_url'] }}" class="btn-quiet inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium">Open</a>
+
+                                    {{-- Status sits under the title on a phone, to the right from sm up. --}}
+                                    <div class="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
+                                        <div class="min-w-0 sm:flex-1">
+                                            <a href="{{ $item['review_url'] }}" class="block truncate text-sm font-semibold text-zinc-900 outline-none after:absolute after:inset-0 after:content-['']">{{ $item['title'] }}</a>
+                                            <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                                                {{ $item['type_label'] }}@if ($item['domain'])<span class="max-sm:hidden"> · {{ $item['domain'] }}</span>@endif
+                                                · Pass {{ $item['pass'] }}
+                                                @if ($updated)
+                                                    · <time datetime="{{ $item['updated_at'] }}" title="{{ $updated->timezone(config('app.timezone'))->toDayDateTimeString() }}">{{ $updated->diffForHumans(short: true) }}</time>
+                                                @endif
+                                            </p>
+                                        </div>
+                                        <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:mt-0 sm:shrink-0 sm:flex-col sm:items-end sm:gap-1">
+                                            <x-signal-tag :tone="$item['tag']['tone']">{{ $item['tag']['label'] }}</x-signal-tag>
+                                            <span class="text-xs tabular-nums text-muted-foreground">
+                                                @if ($marks['must_fix_count'] > 0)
+                                                    <span class="inline-flex items-center gap-1"><span class="size-1.5 rounded-full {{ \App\Models\Annotation::TONES['problem']['dot'] }}" aria-hidden="true"></span>{{ $marks['must_fix_count'] }} must fix</span> ·
+                                                @endif
+                                                {{ implode(' · ', $counts) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <flux:dropdown position="bottom" align="end" class="relative z-10 shrink-0">
+                                        <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" class="!size-8 !px-0" aria-label="More for {{ $item['title'] }}" />
+                                        <flux:menu class="min-w-48">
+                                            <flux:menu.item icon="clipboard-document" x-on:click="copy({{ \Illuminate\Support\Js::from($item['review_url']) }}, 'Review link copied')">Copy review link</flux:menu.item>
+                                            <flux:menu.item icon="link" x-on:click="copy({{ \Illuminate\Support\Js::from($item['share_url']) }}, 'Guest link copied')">Copy guest link</flux:menu.item>
+                                            <flux:menu.separator />
+                                            <flux:menu.item icon="view-columns" href="{{ $item['board_url'] }}">Open board</flux:menu.item>
+                                        </flux:menu>
+                                    </flux:dropdown>
                                 </li>
                             @endforeach
                         </ul>
@@ -176,4 +251,12 @@ new class extends Component
             </div>
         </x-home-section>
     </x-site-shell>
+    <div
+        x-show="copied"
+        x-cloak
+        x-transition.opacity
+        role="status"
+        class="fixed inset-x-0 bottom-6 z-50 mx-auto w-fit rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg"
+        x-text="copied"
+    ></div>
 </div>

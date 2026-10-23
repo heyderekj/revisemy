@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Annotation;
 use App\Models\Review;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -67,6 +69,45 @@ class YourReviewsTest extends TestCase
             ->assertRedirect('/reviews');
 
         $this->assertGuest('web');
+    }
+
+    public function test_each_row_shows_its_marks_and_offers_both_links(): void
+    {
+        $try = app(TryTokenService::class)->create();
+        $review = $this->reviewFor($try['token']);
+        $shot = $review->screenshots->first();
+        $shot->annotations()->create(['x' => 10, 'y' => 10, 'severity' => Annotation::SEVERITY_MUST_FIX, 'body' => 'Tighten', 'number' => 1]);
+        $shot->annotations()->create(['x' => 20, 'y' => 20, 'severity' => Annotation::SEVERITY_NIT, 'body' => 'Guest note', 'number' => 2, 'source' => Annotation::SOURCE_GUEST]);
+        $review->update(['status' => Review::STATUS_CHANGES_REQUESTED]);
+
+        $this->actingAs($try['user'], 'web');
+
+        Livewire::test('recent-reviews')
+            ->assertSee('Changes requested')
+            ->assertDontSee('apply marks, then open the next pass')
+            ->assertSee('1 must fix')
+            ->assertSee('2 open')
+            ->assertSee('1 guest mark')
+            ->assertSee('UI')
+            ->assertSee('Copy review link')
+            ->assertSee('Copy guest link')
+            ->assertSeeHtml($review->fresh()->shareUrl());
+    }
+
+    public function test_row_thumbnails_and_counts_come_from_the_loaded_relations(): void
+    {
+        $try = app(TryTokenService::class)->create();
+        $this->reviewFor($try['token']);
+        $this->reviewFor($try['token']);
+        $this->actingAs($try['user'], 'web');
+
+        DB::enableQueryLog();
+        Livewire::test('recent-reviews')->assertCount('reviews', 2);
+
+        $queries = collect(DB::getQueryLog())->pluck('query');
+
+        $this->assertSame(1, $queries->filter(fn ($q) => str_starts_with($q, 'select * from "screenshots"'))->count());
+        $this->assertSame(0, $queries->filter(fn ($q) => str_starts_with($q, 'select * from "reviews" where "reviews"."id"'))->count());
     }
 
     protected function reviewFor(string $token): Review

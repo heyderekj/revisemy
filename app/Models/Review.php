@@ -644,6 +644,22 @@ class Review extends Model
     }
 
     /**
+     * The short status tag a person sees on a list: a tone from
+     * Annotation::TONES and a few words. The inline review says the same.
+     *
+     * @return array{tone: string, label: string}
+     */
+    public function statusTag(): array
+    {
+        return match ($this->effectiveStatus()) {
+            self::STATUS_CHANGES_REQUESTED => ['tone' => 'attention', 'label' => 'Changes requested'],
+            self::STATUS_APPROVED => ['tone' => 'done', 'label' => 'Approved'],
+            self::STATUS_EXPIRED => ['tone' => 'neutral', 'label' => 'Expired'],
+            default => ['tone' => 'neutral', 'label' => 'Waiting on your eye'],
+        };
+    }
+
+    /**
      * Lightweight token-scoped memory for list_reviews (no full work packets).
      *
      * @return array<string, mixed>
