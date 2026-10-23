@@ -71,7 +71,7 @@ class SubmitReviewTest extends TestCase
         $this->assertSame('93.184.215.14', $review->title);
         $this->assertSame('The pricing table', $review->context);
         $this->assertAuthenticatedAs(User::query()->sole(), 'web');
-        $this->assertSame(20 - 5, $review->workspace->fresh()->credits_balance);
+        $this->assertSame(40 - 5, $review->workspace->fresh()->credits_balance);
     }
 
     public function test_a_link_without_a_scheme_is_read_as_https(): void
@@ -143,7 +143,7 @@ class SubmitReviewTest extends TestCase
 
         $this->assertSame(1, Workspace::query()->count());
         $this->assertSame(2, Review::query()->count());
-        $this->assertSame(20 - 10, Workspace::query()->sole()->credits_balance);
+        $this->assertSame(40 - 10, Workspace::query()->sole()->credits_balance);
     }
 
     public function test_private_and_loopback_pages_are_refused(): void

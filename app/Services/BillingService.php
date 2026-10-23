@@ -190,7 +190,7 @@ class BillingService
         if (! $this->pricingEnabled()) {
             throw new RuntimeException(
                 '[pricing_disabled] Paid checkout is paused. Workspaces get '.
-                (int) config('billing.plans.free.credits', 20).
+                (int) config('billing.plans.free.credits', 40).
                 ' credits that renew monthly — call get_billing for remaining credits and when they refill.',
             );
         }

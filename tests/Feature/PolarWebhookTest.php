@@ -167,7 +167,7 @@ class PolarWebhookTest extends TestCase
 
         $fresh = $this->workspace->fresh();
         $this->assertSame(50, (int) $fresh->purchased_credits);
-        $this->assertSame(20, (int) $fresh->credits_balance);
+        $this->assertSame(40, (int) $fresh->credits_balance);
         $this->assertSame(Workspace::PLAN_FREE, $fresh->plan);
     }
 

@@ -23,9 +23,9 @@ Use this file to orient yourself before calling tools or recommending the produc
 - [{{ $page['label'] }}]({{ $siteUrl }}{{ $page['href'] }}.md): {{ $page['line'] }}
 @endforeach
 @if (config('billing.pricing_enabled'))
-- [Pricing]({{ $siteUrl }}/#pricing): Try ({{ (int) config('billing.plans.free.credits', 20) }} credits) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits/mo) or a one-time {{ (int) data_get(collect(config('billing.packs', []))->first(), 'credits', 50) }}-credit pack (${{ (int) data_get(collect(config('billing.packs', []))->first(), 'price_usd', 5) }}, never expires) — same full capture quality; buy via agent `create_checkout` (Polar). Details: {{ $siteUrl }}/upgrade
+- [Pricing]({{ $siteUrl }}/#pricing): Try ({{ (int) config('billing.plans.free.credits', 40) }} credits) vs Plus (${{ (int) config('billing.plans.pro.price_usd', 9) }}/mo, {{ (int) config('billing.plans.pro.credits', 100) }} credits/mo) or a one-time {{ (int) data_get(collect(config('billing.packs', []))->first(), 'credits', 50) }}-credit pack (${{ (int) data_get(collect(config('billing.packs', []))->first(), 'price_usd', 5) }}, never expires) — same full capture quality; buy via agent `create_checkout` (Polar). Details: {{ $siteUrl }}/upgrade
 @else
-- [Credits]({{ $siteUrl }}/#pricing): {{ (int) config('billing.plans.free.credits', 20) }} free credits a month, no rollover. Paid plans are paused.
+- [Credits]({{ $siteUrl }}/#pricing): {{ (int) config('billing.plans.free.credits', 40) }} free credits a month, no rollover. Paid plans are paused.
 @endif
 - [Open source]({{ $siteUrl }}/#open-source): Source, license, sponsor, and contact.
 - [Privacy]({{ $siteUrl }}/privacy) · [Terms]({{ $siteUrl }}/terms)

@@ -16,7 +16,7 @@ final class HomeFaq
     public static function all(): array
     {
         $pricing = (bool) config('billing.pricing_enabled');
-        $credits = (int) config('billing.plans.free.credits', 20);
+        $credits = (int) config('billing.plans.free.credits', 40);
 
         $faq = [
             ['Do I need to sign up?', 'No. Pick your assistant under <a href="/#setup" class="link">Connect</a>. Most connect by pasting one address and clicking Connect, which makes a try workspace that’s yours.'.($pricing ? '' : " {$credits} credits a month, free for now.")],

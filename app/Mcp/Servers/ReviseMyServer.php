@@ -114,7 +114,7 @@ class ReviseMyServer extends Server
 
     protected function billingInstructions(): string
     {
-        $credits = (int) config('billing.plans.free.credits', 20);
+        $credits = (int) config('billing.plans.free.credits', 40);
         $burn = collect(config('billing.costs', []))
             ->map(fn (int $cost, string $source) => "{$source}={$cost}")
             ->implode(', ');
