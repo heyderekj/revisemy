@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\OAuthClient;
 use Illuminate\Support\Str;
+use Laravel\Passport\AccessToken;
 
 /**
  * Whether a sign-in's return address belongs to an assistant we know.
@@ -75,6 +77,19 @@ class AssistantCallback
      * The name to show for a client: the assistant its return address belongs
      * to, or else the name it registered, kept short.
      */
+    /**
+     * The assistant behind a signed-in call, by the OAuth app its token was
+     * given to ("Claude"). Null for a try token, which names no one.
+     */
+    public static function forCaller(mixed $user): ?string
+    {
+        $token = is_object($user) && method_exists($user, 'currentAccessToken') ? $user->currentAccessToken() : null;
+        $clientId = $token instanceof AccessToken ? $token->oauth_client_id : null;
+        $client = $clientId ? OAuthClient::query()->find($clientId) : null;
+
+        return $client ? self::displayName((string) $client->name, $client->redirect_uris[0] ?? null) : null;
+    }
+
     public static function displayName(string $clientName, ?string $uri): string
     {
         $assistant = self::identify($uri);

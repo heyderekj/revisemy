@@ -139,6 +139,7 @@ class CaptureSettleScript
             'hideChat' => $hideChat,
             'collectElements' => $collectElements,
             'embedElements' => $embedElements,
+            'placeFixed' => (bool) config('revisemy.capture.place_fixed', true),
             'stepMs' => self::stepMs(),
             'endSettleMs' => max(200, (int) config('revisemy.capture.scroll_end_settle_ms', 450)),
             'topSettleMs' => max(100, (int) config('revisemy.capture.scroll_top_settle_ms', 250)),
@@ -460,9 +461,9 @@ class CaptureSettleScript
       return fixedOf.get(el);
     }
     const cs = getComputedStyle(el);
-    const own = cs.position === 'fixed'
-      ? (cs.top === 'auto' && cs.bottom !== 'auto' ? 'bottom' : 'top')
-      : null;
+    const own = el.dataset && el.dataset.rmFixed
+      ? el.dataset.rmFixed
+      : (cs.position === 'fixed' ? (cs.top === 'auto' && cs.bottom !== 'auto' ? 'bottom' : 'top') : null);
     const value = own || fixedFor(el.parentElement);
     fixedOf.set(el, value);
     return value;
@@ -827,19 +828,88 @@ async (hardMs) => {
 
   const collectElements = () => (__RM_COLLECTOR__)(cfg);
 
+  // How long each phase took (ms), for the capture's meta. A second pass
+  // adds to its phases rather than replacing them.
+  window.__rmTimings = window.__rmTimings || {};
+  const timed = (key, since) => {
+    window.__rmTimings[key] = (window.__rmTimings[key] || 0) + (Date.now() - since);
+  };
+
+  // A full-page shot is the whole document seen from the first screen, so
+  // anything pinned to the viewport's bottom (tab bars, "Book now" bars)
+  // lands over the hero, and a sticky bottom bar is pushed up over the
+  // section it belongs to. Put each where a visitor last sees it: a bottom
+  // bar once at the very end of the page, a sticky bottom bar back in its
+  // place in the flow. Bars at the top already sit where they belong.
+  // Tagged with data-rm-fixed, so the element map still knows what they are.
+  const placeFixed = () => {
+    if (!cfg.placeFixed || !document.body) {
+      return;
+    }
+    window.scrollTo(0, 0);
+    const view = window.innerHeight || 800;
+    const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+    const moves = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+    let seen = 0;
+    for (let el = walker.nextNode(); el && seen < 8000; el = walker.nextNode()) {
+      seen++;
+      if (el.dataset.rmFixed) {
+        continue;
+      }
+      const cs = getComputedStyle(el);
+      if (cs.position === 'sticky' && cs.bottom !== 'auto') {
+        el.style.setProperty('position', 'relative', 'important');
+        el.style.setProperty('bottom', 'auto', 'important');
+        el.dataset.rmFixed = 'sticky';
+        continue;
+      }
+      if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') {
+        continue;
+      }
+      const r = el.getBoundingClientRect();
+      // Sitting low on the first screen, and a bar rather than an overlay.
+      if (r.width > 0 && r.height > 0 && r.height < view * 0.5 && r.top >= view * 0.5 && r.bottom <= view + 1) {
+        moves.push([el, r, view - r.top]);
+      }
+    }
+    // Measure every one before moving any, so one move can't shift the next.
+    for (const [el, r, fromBottom] of moves) {
+      if (el.parentElement && el.parentElement.closest('[data-rm-fixed="bottom"]')) {
+        continue;
+      }
+      el.style.setProperty('position', 'absolute', 'important');
+      el.style.setProperty('bottom', 'auto', 'important');
+      el.style.setProperty('right', 'auto', 'important');
+      el.style.setProperty('width', r.width + 'px', 'important');
+      el.style.setProperty('top', '0px', 'important');
+      el.style.setProperty('left', '0px', 'important');
+      // Where 0,0 put it says where its containing block starts.
+      const origin = el.getBoundingClientRect();
+      el.style.setProperty('top', (docHeight - fromBottom - origin.top) + 'px', 'important');
+      el.style.setProperty('left', (r.left - origin.left) + 'px', 'important');
+      el.dataset.rmFixed = 'bottom';
+    }
+  };
+
   // The last word before the shot. Consent banners and chat launchers
   // go; then wait until nothing moves for stableMs (or the budget runs out),
   // note what never loaded, and take the element map from this exact state.
   const finalPass = async (maxMs) => {
     hideOverlays();
+    placeFixed();
+    let since = Date.now();
     window.__rmSettleStable = await settleView(maxMs, cfg.stableMs, false);
+    timed('still', since);
     window.__rmIncomplete = pendingImages();
     window.__rmLoadComplete = window.__rmIncomplete === 0;
     if (!cfg.collectElements) {
       return true;
     }
     try {
+      since = Date.now();
       window.__rmElements = collectElements();
+      timed('elements', since);
       if (cfg.embedElements) {
         const old = document.getElementById('__rm-elements');
         if (old) {
@@ -860,6 +930,7 @@ async (hardMs) => {
   try {
     let settleDeadline = deadlineIn(cfg.settleBudgetMs);
     const left = () => Math.max(0, settleDeadline - Date.now());
+    let since = Date.now();
 
     // 1. Lay out at the full viewport width: a headless scrollbar takes 15px
     // of it and leaves the capture narrower than the device it names. Then
@@ -873,6 +944,7 @@ async (hardMs) => {
       await capped(document.fonts.ready, Math.min(2000, left()));
     }
     await settleImages(Math.min(2500, left()));
+    timed('ready', since);
 
     // 2. Land what's already running and stop transitions from easing in,
     // so every reveal from here on arrives in its final state at once.
@@ -885,6 +957,7 @@ async (hardMs) => {
     // each screen settle the way a reader's would, and holding reveals
     // open once they've scrolled past.
     if (cfg.sweep) {
+      since = Date.now();
       if (cfg.freeze) {
         lockOutOfView();
       }
@@ -907,10 +980,13 @@ async (hardMs) => {
       finishAnimations();
       window.scrollTo(0, 0);
       await sleep(cfg.topSettleMs);
+      timed('sweep', since);
     }
 
     // 4. Load everything a visitor would see, then land what that started.
+    since = Date.now();
     await loadGate(cfg.loadBudgetMs);
+    timed('load', since);
     finishAnimations();
     settleDeadline = deadlineIn(cfg.settleBudgetMs);
 

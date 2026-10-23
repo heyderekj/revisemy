@@ -15,6 +15,20 @@ return [
     'entries' => [
 
         [
+            'version' => '1.11.0',
+            'date' => '2026-10-23',
+            'title' => 'Faster captures you can watch',
+            'highlights' => [
+                'A page is captured at desktop, tablet and phone at once, so it takes about as long as its slowest size instead of all three added up',
+                'Starting a review on the site shows each size as it lands, then where the review is. Close the tab and it still lands in Your reviews',
+                'A wrong address or too few credits shows under the field, with what you typed and picked still there',
+                'A review you start on the site walks you through it: mark what matters, ask for changes, then open it in Claude, ChatGPT or Cursor with the prompt filled in',
+                'The review says which agent has it as soon as one opens the link, with no reload',
+                'Bars fixed to the bottom of the screen show once at the end of a full-page capture instead of over the top of the page',
+            ],
+        ],
+
+        [
             'version' => '1.10.0',
             'date' => '2026-10-22',
             'title' => 'Start a review without an agent',

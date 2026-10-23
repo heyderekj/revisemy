@@ -57,10 +57,11 @@ new class extends Component
             method="POST"
             action="{{ route('reviews.submit') }}"
             class="rm-fade-up-delay mt-6 w-full max-w-xl"
-            x-data="{ busy: false }"
-            x-on:submit="busy = true"
+            x-data="reviewSubmit('link')"
+            x-on:submit="start($event)"
         >
             @csrf
+            <x-review-progress />
             <input type="hidden" name="kind" value="link">
             <label for="hero-page-url" class="sr-only">Page address to review</label>
             <div class="flex flex-col gap-2 rounded-2xl bg-card p-2 sm:flex-row">
@@ -80,6 +81,7 @@ new class extends Component
                     <span x-show="busy" x-cloak>Capturing the page…</span>
                 </button>
             </div>
+            <p x-show="error('page_url')" x-text="error('page_url')" x-cloak class="mt-2 px-1 text-sm text-problem-ink" role="alert"></p>
             <p class="mt-2 px-1 text-xs text-muted-foreground">
                 No agent needed to start. Or <a href="{{ route('reviews.new', ['kind' => 'images']) }}" class="link">add screenshots, a PDF or an email</a>.
             </p>

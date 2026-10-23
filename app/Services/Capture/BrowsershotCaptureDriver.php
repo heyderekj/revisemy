@@ -157,6 +157,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
                     'mobile' => $viewport['mobile'],
                 ],
             ];
+            ToolProgress::report('Captured '.ToolProgress::viewport($viewport['label']), 'shot:'.$viewport['label']);
         }
 
         return $shots;

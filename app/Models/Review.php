@@ -72,6 +72,7 @@ class Review extends Model
         'type',
         'origin',
         'handed_off_at',
+        'handed_off_to',
         'page_url',
         'webhook_url',
         'webhook_failures',

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Mcp\Resources\ReviewApp;
 use App\Services\ReviewService;
+use App\Support\AssistantCallback;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -41,7 +42,7 @@ class GetReviewTool extends Tool
             'id' => 'required|string',
         ]);
 
-        $review = $this->reviews->findOrAdopt($workspace, $data['id']);
+        $review = $this->reviews->findOrAdopt($workspace, $data['id'], AssistantCallback::forCaller($request->user()));
 
         if (! $review) {
             return Response::error('No review with that id for this try token. A review link started on the site works once — the first agent to open it keeps it.');

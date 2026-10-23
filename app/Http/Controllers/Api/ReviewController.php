@@ -9,6 +9,7 @@ use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use App\Services\ReviewWaiter;
 use App\Services\SecondOpinionService;
+use App\Support\AssistantCallback;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -66,7 +67,7 @@ class ReviewController extends Controller
      */
     public function show(Request $request, string $publicId, ReviewService $reviews): JsonResponse
     {
-        $review = $reviews->findOrAdopt($request->user()->workspace, $publicId);
+        $review = $reviews->findOrAdopt($request->user()->workspace, $publicId, AssistantCallback::forCaller($request->user()));
 
         if (! $review) {
             return response()->json(['message' => 'Review not found for this try token.'], 404);

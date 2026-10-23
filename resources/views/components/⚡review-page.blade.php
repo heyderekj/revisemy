@@ -943,9 +943,17 @@ new class extends Component
             'decisionNote' => ['nullable', 'string', 'max:5000'],
         ]);
 
+        $awaitingAgent = $this->review->isAwaitingAgent();
+
         app(ReviewService::class)->decide($this->review, $status, $this->decisionNote ?: null);
 
         $this->loadReview();
+
+        // Made on the site and no agent has it yet: the changes have nowhere
+        // to go until it's sent, so offer that now.
+        if ($awaitingAgent && $status === Review::STATUS_CHANGES_REQUESTED) {
+            $this->dispatch('handoff-ready', asked: true);
+        }
     }
 
     /**
@@ -1041,7 +1049,8 @@ new class extends Component
             try { saved = localStorage.getItem('revisemy_drawer'); } catch (e) {}
             Alpine.store('rmPanel', {
                 {{-- Below lg the drawer covers the shot, so it starts closed there. --}}
-                open: window.innerWidth < 1024 ? false : (saved ? saved === 'open' : window.innerWidth >= 1280),
+                {{-- A review made on the site opens with its handoff in view. --}}
+                open: window.innerWidth < 1024 ? false : (saved ? saved === 'open' : (window.innerWidth >= 1280 || @js($this->isOwner() && $review->isAwaitingAgent()))),
                 brief: true,
                 remember() { try { localStorage.setItem('revisemy_drawer', this.open ? 'open' : 'closed'); } catch (e) {} },
                 toggle() { this.open = ! this.open; this.remember(); },
@@ -1160,7 +1169,7 @@ new class extends Component
         >
             <div class="pointer-events-auto flex items-center gap-1 rounded-full bg-zinc-900 py-1.5 pl-4 pr-1.5 text-sm text-white shadow-lg shadow-black/20">
                 <span x-show="! pending" x-text="message"></span>
-                <span x-show="pending" class="tabular-nums" x-text="(pending === 'approve' ? 'Approving' : 'Sending changes to the agent') + ' in ' + left + 's'"></span>
+                <span x-show="pending" class="tabular-nums" x-text="(pending === 'approve' ? 'Approving' : @js($review->isAwaitingAgent() ? 'Asking for changes' : 'Sending changes to the agent')) + ' in ' + left + 's'"></span>
                 <button type="button" class="ml-2 rounded-full px-3 py-1 font-medium text-key transition-colors night:text-white hover:bg-white/10" x-on:click="undo()">Undo</button>
                 <button type="button" x-show="pending" class="rounded-full bg-white/10 px-3 py-1 font-medium transition-colors hover:bg-white/20" x-on:click="commit()">Send now</button>
             </div>

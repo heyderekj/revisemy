@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Support\AssistantCallback;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Laravel\Passport\Token;
 
 class Workspace extends Model
 {
@@ -82,6 +84,33 @@ class Workspace extends Model
         return $this->normalizedPlan() === self::PLAN_PRO
             && $this->polar_subscription_id !== null
             && in_array($this->polar_subscription_status, self::PLUS_STATUSES, true);
+    }
+
+    /**
+     * The assistants signed in to this workspace ("Claude", "ChatGPT"), most
+     * recent first, as the connected-assistants list names them.
+     *
+     * @return list<string>
+     */
+    public function assistantNames(): array
+    {
+        $tokens = Token::query()
+            ->whereIn('user_id', $this->users()->pluck('id'))
+            ->where('revoked', false)
+            ->where('expires_at', '>', now()->subDays(60))
+            ->latest()
+            ->get(['client_id', 'created_at']);
+
+        $clients = OAuthClient::query()->whereKey($tokens->pluck('client_id')->unique())->get()->keyBy('id');
+
+        return $tokens
+            ->map(fn (Token $token) => ($client = $clients->get($token->client_id))
+                ? AssistantCallback::displayName((string) $client->name, $client->redirect_uris[0] ?? null)
+                : null)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /** Monthly grant plus purchased credits. */

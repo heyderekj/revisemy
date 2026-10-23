@@ -4,6 +4,7 @@ namespace App\Services\Capture;
 
 use App\Services\ScreenshotStorage;
 use App\Support\ToolProgress;
+use Illuminate\Http\Client\Batch;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -87,6 +88,13 @@ export default async function ({ page, context }) {
   // always ends with a picture rather than being cut off mid-settle.
   const stopAt = Date.now() + context.sessionMs - context.reserveMs;
   const left = () => Math.max(0, stopAt - Date.now());
+  // How long each phase took (ms), so the waits can be tuned from real pages.
+  const timings = {};
+  let since = Date.now();
+  const timed = (key) => {
+    timings[key] = Date.now() - since;
+    since = Date.now();
+  };
 
   let userAgent = context.userAgent;
   if (userAgent && !context.viewport.isMobile) {
@@ -102,16 +110,20 @@ export default async function ({ page, context }) {
     await page.setUserAgent(userAgent);
   }
   await page.setViewport(context.viewport);
+  timed('setup');
   // A page that never goes quiet still has something to shoot.
   await page.goto(context.url, { waitUntil: context.waitUntil, timeout: context.timeout }).catch((e) => {
     if (!e || e.name !== 'TimeoutError') {
       throw e;
     }
   });
+  timed('goto');
   if (context.waitMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, Math.min(context.waitMs, left())));
+    timed('wait');
   }
   await page.evaluate('(' + context.settle + ')(' + Math.max(1000, left() - context.idleMs - context.againMs) + ')');
+  timed('settle');
 
   // The sweep and the load gate start fetches the first load never made.
   // Let them land and, if any did, bring the page to rest once more. Pages
@@ -121,8 +133,10 @@ export default async function ({ page, context }) {
     const finished = () => page.evaluate(() => performance.getEntriesByType('resource').length);
     const before = await finished();
     await page.waitForNetworkIdle({ idleTime: 500, timeout: idleMs, concurrency: 2 }).catch(() => {});
+    timed('idle');
     if ((await finished()) !== before && left() > 500) {
       await page.evaluate((ms) => (window.__rmSettleAgain ? window.__rmSettleAgain(ms) : null), left());
+      timed('again');
     }
   }
 
@@ -165,6 +179,7 @@ export default async function ({ page, context }) {
     shot = await encode(scale);
   }
   const image = shot.image;
+  timed('main');
   const shootStarted = Date.now();
 
   // The rail thumbnail: the top of the page, already small, so the app
@@ -172,6 +187,7 @@ export default async function ({ page, context }) {
   const thumb = context.thumbWidth > 0
     ? await shoot('jpeg', { width, height: Math.min(height, Math.ceil(width * 1.25)) }, Math.min(1, context.thumbWidth / (width * dpr)), { quality: 75 })
     : null;
+  timed('thumb');
 
   // The vision copy: the top of the page at no more than 1x, small enough
   // that a vision model reads it as sent. Regions found on it map back to
@@ -184,6 +200,7 @@ export default async function ({ page, context }) {
       image: await shoot('jpeg', { width, height: visionHeight }, fit / dpr, { quality: 80 }),
       crop: visionHeight / height,
     };
+    timed('vision');
   }
 
   // Crop slices: the whole page top to bottom at no more than 1x, in pieces
@@ -207,6 +224,7 @@ export default async function ({ page, context }) {
         height: sliceTall,
       });
     }
+    timed('slices');
   }
 
   const state = await page.evaluate(() => ({
@@ -214,8 +232,14 @@ export default async function ({ page, context }) {
     stable: window.__rmSettleStable === true,
     loaded: window.__rmLoadComplete === true,
     incomplete: window.__rmIncomplete || 0,
+    timings: window.__rmTimings || {},
   }));
   const html = context.withHtml ? await page.content() : null;
+  timed('read');
+  // The settle's own phases, inside 'settle' and 'again' above.
+  for (const [key, ms] of Object.entries(state.timings)) {
+    timings['settle_' + key] = ms;
+  }
 
   return {
     data: {
@@ -231,6 +255,7 @@ export default async function ({ page, context }) {
       stable: state.stable,
       loaded: state.loaded,
       incomplete: state.incomplete,
+      timings,
     },
     type: 'application/json',
   };
@@ -276,11 +301,22 @@ JS;
         }
 
         $endpoint = $this->functionEndpoint() ?? throw new FunctionUnavailable(0, 'no /function endpoint is configured');
+        $requests = [];
+
+        foreach (array_values($viewports) as $index => $viewport) {
+            $requests[$viewport['label']] = $this->functionRequest($endpoint, $url, $viewport, $fullPage, $sweep, withHtml: $index === 0);
+        }
+
+        ToolProgress::report('Capturing '.ToolProgress::viewports(array_keys($requests)), 'shoot');
+        $replies = $this->sendAll($requests);
         $shots = [];
 
-        foreach ($viewports as $index => $viewport) {
-            ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
-            $shots[] = $this->captureViaFunction($endpoint, $url, $viewport, $baseMeta, $fullPage, $sweep, withHtml: $index === 0);
+        // One reply at a time, each dropped once decoded: three tall pages'
+        // worth of base64 never sits in memory beside its decoded copy.
+        foreach ($viewports as $viewport) {
+            $label = $viewport['label'];
+            $shots[] = $this->functionShot($replies[$label]['response'], $viewport, $requests[$label]['dpr'], $baseMeta, $replies[$label]['ms']);
+            unset($replies[$label]);
         }
 
         return $shots;
@@ -389,22 +425,17 @@ JS;
     }
 
     /**
-     * One viewport through Browserless /function.
+     * One viewport's Browserless /function request: where it goes, what it
+     * sends and how long to wait for it.
      *
      * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
-     * @param  array<string, mixed>  $baseMeta
-     * @return array{binary: string, meta: array<string, mixed>, elements: array<string, mixed>|null, html: string|null, thumb: string|null, vision: array{binary: string, crop: float}|null}
-     *
-     * @throws FunctionUnavailable when the host has no /function or turns the request down
+     * @return array{endpoint: string, payload: array<string, mixed>, timeout: int, dpr: int}
      */
-    protected function captureViaFunction(string $endpoint, string $url, array $viewport, array $baseMeta, bool $fullPage, bool $sweep, bool $withHtml): array
+    protected function functionRequest(string $endpoint, string $url, array $viewport, bool $fullPage, bool $sweep, bool $withHtml): array
     {
         $collect = (bool) config('revisemy.capture.collect_elements', true);
         $budget = $this->functionBudget($sweep, $collect);
-        $httpTimeout = $budget['httpTimeout'];
         $dpr = $viewport['dpr'] ?? $this->urlDeviceScaleFactor();
-        $label = $viewport['label'];
-        $started = microtime(true);
 
         $context = [
             'url' => $url,
@@ -452,14 +483,38 @@ JS;
         // Browserless ends a session at its own timeout, and turns the whole
         // request down when that is over the plan's cap; functionBudget()
         // has already fitted every wait inside it.
-        $target = $endpoint.(str_contains($endpoint, '?') ? '&' : '?').'timeout='.$budget['sessionMs'];
+        return [
+            'endpoint' => $endpoint.(str_contains($endpoint, '?') ? '&' : '?').'timeout='.$budget['sessionMs'],
+            'payload' => ['code' => self::FUNCTION_CODE, 'context' => $context],
+            'timeout' => $budget['httpTimeout'],
+            'dpr' => $dpr,
+        ];
+    }
 
-        $response = $this->send($target, ['code' => self::FUNCTION_CODE, 'context' => $context], $httpTimeout, $label);
+    /**
+     * 404/405: this host has no /function. 400: Browserless rejected the
+     * function payload (bad code, timeout, or plan). Either way /screenshot
+     * can still render the page, so the capture falls back instead of failing.
+     */
+    protected function functionDeclined(Response $response): bool
+    {
+        return in_array($response->status(), [400, 404, 405], true);
+    }
 
-        // 404/405: this host has no /function. 400: Browserless rejected the
-        // function payload (bad code, timeout, or plan). Either way /screenshot
-        // can still render the page, so fall back instead of failing the review.
-        if (in_array($response->status(), [400, 404, 405], true)) {
+    /**
+     * One viewport's shot from its /function reply.
+     *
+     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
+     * @param  array<string, mixed>  $baseMeta
+     * @return array{binary: string, meta: array<string, mixed>, elements: array<string, mixed>|null, html: string|null, thumb: string|null, vision: array{binary: string, crop: float}|null}
+     *
+     * @throws FunctionUnavailable when the host has no /function or turns the request down
+     */
+    protected function functionShot(Response $response, array $viewport, int $dpr, array $baseMeta, int $captureMs): array
+    {
+        $label = $viewport['label'];
+
+        if ($this->functionDeclined($response)) {
             Log::info('Hosted capture: /function rejected, falling back to /screenshot', [
                 'label' => $label,
                 'status' => $response->status(),
@@ -490,6 +545,9 @@ JS;
         $vision = is_string($data['vision']['image'] ?? null) ? base64_decode($data['vision']['image'], true) : false;
         $crop = is_numeric($data['vision']['crop'] ?? null) ? min(1.0, (float) $data['vision']['crop']) : 0.0;
         $cssHeight = is_numeric($data['css']['height'] ?? null) ? (int) $data['css']['height'] : 0;
+        $timings = is_array($data['timings'] ?? null)
+            ? array_map('intval', array_filter($data['timings'], 'is_numeric'))
+            : [];
 
         return [
             'binary' => $binary,
@@ -503,8 +561,9 @@ JS;
                 'settled' => (bool) ($data['stable'] ?? false),
                 'loaded' => (bool) ($data['loaded'] ?? false),
                 'incomplete_images' => (int) ($data['incomplete'] ?? 0),
-                'capture_ms' => (int) round((microtime(true) - $started) * 1000),
-            ] + (is_array($data['elements'] ?? null) ? ['elements_source' => 'same_load'] : [])
+                'capture_ms' => $captureMs,
+            ] + ($timings !== [] ? ['timings' => $timings] : [])
+              + (is_array($data['elements'] ?? null) ? ['elements_source' => 'same_load'] : [])
               + (is_numeric($data['css']['width'] ?? null) && $cssHeight > 0
                   ? ['doc_width' => (int) $data['css']['width'], 'doc_height' => $cssHeight]
                   : []),
@@ -608,18 +667,15 @@ JS;
         $budgetMs = CaptureSettleScript::budgetMs($sweep);
         $httpTimeout = $this->requestTimeout($budgetMs);
         $isUrl = isset($source['url']);
-        $shots = [];
+        $requests = [];
 
         foreach ($viewports as $viewport) {
-            ToolProgress::report('Capturing '.ToolProgress::viewport($viewport['label']));
-
             // A full-page URL shot here can't be scaled to fit, so a wide
             // viewport only gets its own DPR when the measured page is short
             // enough (see CaptureDevice::measuredDpr).
             $dpr = $isUrl
                 ? CaptureDevice::measuredDpr($viewport, $measured)
                 : ($viewport['dpr'] ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2)));
-            $label = $viewport['label'];
             $userAgent = CaptureDevice::userAgent($viewport);
 
             $payload = $source + [
@@ -648,11 +704,22 @@ JS;
                 $payload['userAgent'] = ['userAgent' => $userAgent];
             }
 
-            $response = $this->send($endpoint, $payload, $httpTimeout, $label);
+            $requests[$viewport['label']] = ['endpoint' => $endpoint, 'payload' => $payload, 'timeout' => $httpTimeout, 'dpr' => $dpr, 'userAgent' => $userAgent];
+        }
 
-            if ($userAgent !== null && $response->status() === 400 && str_contains($response->body(), 'userAgent')) {
-                $payload['userAgent'] = $userAgent;
-                $response = $this->send($endpoint, $payload, $httpTimeout, $label);
+        ToolProgress::report('Capturing '.ToolProgress::viewports(array_keys($requests)), 'shoot');
+        $replies = $this->sendAll($requests);
+        $shots = [];
+
+        foreach ($viewports as $viewport) {
+            $label = $viewport['label'];
+            $request = $requests[$label];
+            $response = $replies[$label]['response'];
+            unset($replies[$label]);
+
+            if ($request['userAgent'] !== null && $response->status() === 400 && str_contains($response->body(), 'userAgent')) {
+                $request['payload']['userAgent'] = $request['userAgent'];
+                $response = $this->send($endpoint, $request['payload'], $httpTimeout, $label);
             }
 
             if (! $response->successful() || $response->body() === '') {
@@ -666,13 +733,74 @@ JS;
                 'meta' => $baseMeta + [
                     'viewport' => $label,
                     'css_width' => $viewport['width'],
-                    'dpr' => $dpr,
+                    'dpr' => $request['dpr'],
                     'mobile' => $viewport['mobile'],
                 ],
             ];
         }
 
         return $shots;
+    }
+
+    /**
+     * Every viewport's request at once, as many side by side as the plan's
+     * browsers allow (revisemy.capture.concurrency), so a capture takes as
+     * long as its slowest viewport rather than all of them added up. Each
+     * viewport is reported as it lands. One the host turned away for being
+     * over its concurrent-browser limit (429) is asked again on its own.
+     *
+     * @param  array<string, array{endpoint: string, payload: array<string, mixed>, timeout: int}>  $requests  keyed by viewport label
+     * @return array<string, array{response: Response, ms: int}>
+     */
+    protected function sendAll(array $requests): array
+    {
+        $started = microtime(true);
+        $finished = [];
+        $landed = function (string $label) use (&$finished, $started): void {
+            $finished[$label] = (int) round((microtime(true) - $started) * 1000);
+        };
+
+        $results = Http::batch(function (Batch $batch) use ($requests): void {
+            foreach ($requests as $label => $request) {
+                $batch->as($label)->timeout($request['timeout'])->post($request['endpoint'], $request['payload']);
+            }
+        })
+            ->concurrency(max(1, (int) config('revisemy.capture.concurrency', 3)))
+            ->progress(function (Batch $batch, string $label) use ($landed): void {
+                $landed($label);
+                ToolProgress::report('Captured '.ToolProgress::viewport($label), 'shot:'.$label);
+            })
+            ->catch(fn (Batch $batch, string $label) => $landed($label))
+            ->send();
+
+        $replies = [];
+
+        foreach ($requests as $label => $request) {
+            $response = $results[$label] ?? null;
+
+            if (! $response instanceof Response) {
+                Log::warning('Hosted capture request failed', [
+                    'label' => $label,
+                    'error' => $response instanceof \Throwable ? $response->getMessage() : 'no reply',
+                ]);
+
+                throw ValidationException::withMessages(['capture' => $this->unreachableMessage($label)]);
+            }
+
+            if ($response->status() === 429) {
+                $again = microtime(true);
+                $response = $this->send($request['endpoint'], $request['payload'], $request['timeout'], $label);
+                $finished[$label] = (int) round((microtime(true) - $again) * 1000);
+
+                if ($response->successful()) {
+                    ToolProgress::report('Captured '.ToolProgress::viewport($label), 'shot:'.$label);
+                }
+            }
+
+            $replies[$label] = ['response' => $response, 'ms' => $finished[$label] ?? (int) round((microtime(true) - $started) * 1000)];
+        }
+
+        return $replies;
     }
 
     /**
@@ -688,10 +816,13 @@ JS;
                 'error' => $e->getMessage(),
             ]);
 
-            throw ValidationException::withMessages([
-                'capture' => "[capture_provider_failed] Capture timed out or could not reach the screenshot provider at {$label}. Raise REVISEMY_CAPTURE_TIMEOUT, check the Browserless endpoint/key, or fall back to create_review with images as data URLs.",
-            ]);
+            throw ValidationException::withMessages(['capture' => $this->unreachableMessage($label)]);
         }
+    }
+
+    protected function unreachableMessage(string $label): string
+    {
+        return "[capture_provider_failed] Capture timed out or could not reach the screenshot provider at {$label}. Raise REVISEMY_CAPTURE_TIMEOUT, check the Browserless endpoint/key, or fall back to create_review with images as data URLs.";
     }
 
     protected function failureMessage(string $label, Response $response): string

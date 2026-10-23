@@ -69,8 +69,10 @@ class ToolProgressTest extends TestCase
         $this->assertSame('p-1', $progress[0]['progressToken']);
         $this->assertSame(range(1, $progress->count()), $progress->pluck('progress')->all(), 'progress only goes up');
         $this->assertSame('Opening example.com to capture it', $progress[0]['message']);
-        $this->assertContains('Capturing desktop (1280px)', $progress->pluck('message'));
-        $this->assertContains('Capturing mobile (375px)', $progress->pluck('message'));
+        $this->assertContains('Capturing desktop, mobile and tablet', $progress->pluck('message'));
+        $this->assertContains('Captured desktop (1280px)', $progress->pluck('message'));
+        $this->assertContains('Captured mobile (375px)', $progress->pluck('message'));
+        $this->assertContains('Captured tablet (768px)', $progress->pluck('message'));
         $this->assertSame('Saving the review and its second opinion', $progress->last()['message']);
 
         $result = $events->last();
@@ -102,5 +104,48 @@ class ToolProgressTest extends TestCase
         $this->assertCount(3, $steps);
         $this->assertSame('Two', $steps[1]->content()->toArray()['params']['message']);
         $this->assertSame('mobile (375px)', ToolProgress::viewport('mobile-375'));
+        $this->assertSame('desktop, mobile and tablet', ToolProgress::viewports(['desktop-1280', 'mobile-375', 'tablet-768']));
+    }
+
+    public function test_steps_yields_each_report_with_its_key_then_returns_the_result(): void
+    {
+        $steps = ToolProgress::steps(function () {
+            ToolProgress::report('Opening example.com', 'open');
+            ToolProgress::report('Thinking');
+
+            return 'done';
+        });
+
+        $this->assertSame([
+            ['message' => 'Opening example.com', 'step' => 'open'],
+            ['message' => 'Thinking', 'step' => null],
+        ], iterator_to_array($steps, false));
+        $this->assertSame('done', $steps->getReturn());
+    }
+
+    public function test_steps_lets_the_work_throw(): void
+    {
+        $steps = ToolProgress::steps(function () {
+            ToolProgress::report('Opening example.com', 'open');
+
+            throw new \RuntimeException('Turned away');
+        });
+
+        $seen = [];
+
+        try {
+            foreach ($steps as $step) {
+                $seen[] = $step['step'];
+            }
+
+            $this->fail('The work threw, so the loop should have too.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Turned away', $e->getMessage());
+        }
+
+        $this->assertSame(['open'], $seen);
+
+        // The next report outside any work goes nowhere.
+        ToolProgress::report('Nobody is listening');
     }
 }

@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Services\Capture\CaptureDevice;
+use App\Services\Capture\CaptureSettleScript;
 use App\Services\Capture\HostedCaptureDriver;
 use App\Services\DocumentIngestionService;
 use App\Services\ScreenshotStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -106,6 +108,76 @@ class CaptureQualityTest extends TestCase
         });
     }
 
+    public function test_each_viewport_keeps_the_phase_timings_its_session_sent_back(): void
+    {
+        $token = $this->setUpEnv();
+        config(['revisemy.capture.concurrency' => 3]);
+        $widths = [];
+
+        Http::fake(function ($request) use (&$widths) {
+            $widths[] = $request->data()['context']['viewport']['width'] ?? null;
+
+            return Http::response(['image' => base64_encode($this->encoded('png', 4, 4)), 'timings' => ['goto' => 2100, 'settle' => 9400, 'settle_sweep' => 6200, 'main' => 800]]);
+        });
+
+        $desktop = $this->capture($token);
+
+        $this->assertSame([1280, 375, 768], $widths);
+        $this->assertSame(['goto' => 2100, 'settle' => 9400, 'settle_sweep' => 6200, 'main' => 800], $desktop->meta['timings']);
+        $this->assertIsInt($desktop->meta['capture_ms']);
+    }
+
+    public function test_a_viewport_over_the_plans_browser_limit_is_asked_again_on_its_own(): void
+    {
+        $token = $this->setUpEnv();
+        $asked = [];
+
+        Http::fake(function ($request) use (&$asked) {
+            $width = $request->data()['context']['viewport']['width'];
+            $asked[] = $width;
+
+            // The plan runs two browsers; the third is turned away once.
+            return $width === 768 && count(array_keys($asked, 768)) === 1
+                ? Http::response('Too many requests', 429)
+                : Http::response(['image' => base64_encode($this->encoded('png', 4, 4))]);
+        });
+
+        $this->capture($token);
+
+        $this->assertSame([1280, 375, 768, 768], $asked);
+        $this->assertSame(3, Review::query()->sole()->screenshots()->count());
+        $this->assertSame('tablet-768', Review::query()->sole()->screenshots()->orderBy('sort_order')->get()[2]->meta['viewport']);
+    }
+
+    public function test_a_viewport_that_never_answers_opens_the_review_without_a_shot(): void
+    {
+        $token = $this->setUpEnv();
+
+        Http::fake(function ($request) {
+            if (($request->data()['context']['viewport']['width'] ?? null) === 375) {
+                throw new ConnectionException('cURL error 28: Operation timed out');
+            }
+
+            return Http::response(['image' => base64_encode($this->encoded('png', 4, 4))]);
+        });
+
+        $shot = $this->capture($token);
+
+        $this->assertSame('capture_failed', $shot->meta['origin']);
+        $this->assertStringContainsString('capture_provider_failed', (string) Review::query()->sole()->context);
+        $this->assertStringContainsString('mobile-375', (string) Review::query()->sole()->context);
+    }
+
+    public function test_bottom_bars_are_placed_at_the_end_of_the_page_unless_turned_off(): void
+    {
+        $this->assertStringContainsString('"placeFixed":true', CaptureSettleScript::functionBody());
+        $this->assertStringContainsString('placeFixed();', CaptureSettleScript::functionBody());
+
+        config(['revisemy.capture.place_fixed' => false]);
+
+        $this->assertStringContainsString('"placeFixed":false', CaptureSettleScript::functionBody());
+    }
+
     public function test_a_webp_reply_is_kept_as_webp_with_the_dpr_it_holds(): void
     {
         $token = $this->setUpEnv();
@@ -195,7 +267,7 @@ class CaptureQualityTest extends TestCase
 
         $desktop = $this->capture($token);
 
-        $this->assertSame(['/function', '/content', '/screenshot', '/screenshot', '/screenshot'], $order, 'measured once, before the shots, and never again');
+        $this->assertSame(['/function', '/function', '/function', '/content', '/screenshot', '/screenshot', '/screenshot'], $order, 'measured once, before the shots, and never again');
         $this->assertSame(2, $desktop->meta['dpr']);
         $this->assertSame('separate_load', $desktop->meta['elements_source']);
         $this->assertStringContainsString('<h1>Hi</h1>', (string) Review::query()->firstOrFail()->domHtml());
