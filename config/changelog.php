@@ -22,6 +22,8 @@ return [
                 'Start a review on the site: paste a page link, or add screenshots, a PDF or an email. No account, no agent needed to start',
                 'Paste the review link to your agent and it picks the review up as its own, marks and all',
                 'The review shows what to paste, and says so once your agent has it',
+                'A review link pasted into Slack, iMessage or a post shows the review’s title, its open marks and the top of the page',
+                'Guests looking at a review can start one of their own',
             ],
         ],
 

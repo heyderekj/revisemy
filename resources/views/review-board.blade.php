@@ -1,6 +1,9 @@
 <x-layouts.app
-    title="Board — ReviseMy"
-    description="Track mark status across a design review pass. See what is open, resolved, or waiting on the agent."
+    :title="$preview['title']"
+    :description="$preview['description']"
+    :og-image="$preview['og_image']"
+    :og-image-alt="$preview['og_image_alt']"
+    :labels="$preview['labels']"
     robots="noindex, nofollow"
     schema="none"
 >

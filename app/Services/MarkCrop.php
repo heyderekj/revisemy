@@ -170,7 +170,7 @@ class MarkCrop
      * One stored image, or null when it's missing, over MAX_DECODE_PIXELS
      * or in a format this GD can't read.
      */
-    protected function decode(Filesystem $disk, string $path): ?GdImage
+    public function decode(Filesystem $disk, string $path): ?GdImage
     {
         $binary = rescue(fn () => $disk->get($path), report: false);
 
