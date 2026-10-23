@@ -213,6 +213,32 @@ class BillingCreditsTest extends TestCase
         $this->assertSame(3, (int) $result['workspace']->fresh()->purchased_credits);
     }
 
+    public function test_try_reset_migration_starts_every_free_workspace_at_the_new_grant(): void
+    {
+        $spent = app(TryTokenService::class)->create()['workspace'];
+        $spent->forceFill([
+            'credits_balance' => 3,
+            'purchased_credits' => 50,
+            'credits_period_start' => now()->subWeeks(2),
+        ])->save();
+
+        $toppedUp = app(TryTokenService::class)->create()['workspace'];
+        $toppedUp->forceFill(['credits_balance' => 60])->save();
+
+        $plus = app(TryTokenService::class)->create()['workspace'];
+        app(CreditsService::class)->activatePro($plus, 'plus@example.com');
+        $plus->refresh()->forceFill(['credits_balance' => 7])->save();
+
+        (require database_path('migrations/2026_10_23_000200_reset_try_credits_to_new_grant.php'))->up();
+
+        $spent->refresh();
+        $this->assertSame(40, (int) $spent->credits_balance);
+        $this->assertSame(50, (int) $spent->purchased_credits);
+        $this->assertTrue($spent->credits_period_start->greaterThan(now()->subDay()));
+        $this->assertSame(60, (int) $toppedUp->fresh()->credits_balance);
+        $this->assertSame(7, (int) $plus->fresh()->credits_balance);
+    }
+
     public function test_activate_free_does_not_grant_new_try_pack(): void
     {
         $workspace = app(TryTokenService::class)->create()['workspace'];
