@@ -3,6 +3,9 @@
     'description' => null,
     'keywords' => null,
     'ogImage' => null,
+    // Alt text for a page's own og image, and Slack's extra label/data rows.
+    'ogImageAlt' => null,
+    'labels' => [],
     'ogUrl' => null,
     'canonical' => null,
     'robots' => 'index, follow',
@@ -17,6 +20,7 @@
     $pageTitle = $title ?? $siteName;
     $pageDescription = $description ?? config('seo.description');
     $pageOgImage = Seo::ogImageUrl($ogImage);
+    $pageOgImageAlt = $ogImage && $ogImageAlt ? $ogImageAlt : $siteName.' — '.config('seo.tagline');
     // Always the main host, so a preview or *.laravel.cloud copy never claims to be the page.
     $path = '/'.trim(request()->path(), '/');
     $pageOgUrl = $ogUrl ?? $siteUrl.($path === '/' ? '/' : $path);
@@ -77,7 +81,7 @@
 <meta property="og:description" content="{{ $pageDescription }}">
 <meta property="og:url" content="{{ $pageOgUrl }}">
 <meta property="og:image" content="{{ $pageOgImage }}">
-<meta property="og:image:alt" content="{{ $siteName }} — {{ config('seo.tagline') }}">
+<meta property="og:image:alt" content="{{ $pageOgImageAlt }}">
 <meta property="og:image:width" content="{{ config('seo.og_image_width', 1200) }}">
 <meta property="og:image:height" content="{{ config('seo.og_image_height', 630) }}">
 
@@ -87,7 +91,11 @@
 <meta name="twitter:title" content="{{ $pageTitle }}">
 <meta name="twitter:description" content="{{ $pageDescription }}">
 <meta name="twitter:image" content="{{ $pageOgImage }}">
-<meta name="twitter:image:alt" content="{{ $siteName }} — {{ config('seo.tagline') }}">
+<meta name="twitter:image:alt" content="{{ $pageOgImageAlt }}">
+@foreach (array_filter((array) $labels) as $label => $data)
+<meta name="twitter:label{{ $loop->iteration }}" content="{{ $label }}">
+<meta name="twitter:data{{ $loop->iteration }}" content="{{ $data }}">
+@endforeach
 
 <meta name="apple-mobile-web-app-title" content="{{ $siteName }}">
 <meta name="mobile-web-app-capable" content="yes">

@@ -11,6 +11,8 @@ use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\SubmitReviewController;
 use App\Http\Controllers\UseCaseController;
+use App\Models\Review;
+use App\Services\ReviewPreview;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -106,13 +108,19 @@ Route::get('/reviews', function () {
     return view('recent-reviews');
 })->middleware('noindex')->name('reviews.index');
 
-Route::get('/r/{token}', function (string $token) {
-    return view('review', ['token' => $token]);
+// Review links carry their own title, state and first shot, so a link pasted
+// into Slack or iMessage previews the review (App\Services\ReviewPreview).
+Route::get('/r/{token}', function (string $token, ReviewPreview $preview) {
+    return view('review', ['token' => $token, 'preview' => $preview->meta(Review::forLink($token) ?? abort(404), $token)]);
 })->middleware('noindex')->name('reviews.show');
 
-Route::get('/r/{token}/board', function (string $token) {
-    return view('review-board', ['token' => $token]);
+Route::get('/r/{token}/board', function (string $token, ReviewPreview $preview) {
+    return view('review-board', ['token' => $token, 'preview' => $preview->meta(Review::forLink($token) ?? abort(404), $token)]);
 })->middleware('noindex')->name('reviews.board');
+
+Route::get('/r/{token}/preview.jpg', [ScreenshotController::class, 'previewForReview'])
+    ->middleware('noindex')
+    ->name('reviews.preview');
 
 Route::get('/r/{token}/shots/{screenshot}', [ScreenshotController::class, 'showForReview'])
     ->middleware('noindex')

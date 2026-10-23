@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Review;
 use App\Models\Screenshot;
+use App\Services\ReviewPreview;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -42,6 +44,28 @@ class ScreenshotController extends Controller
         $this->assertReviewToken($token, $screenshot);
 
         return $this->stream($screenshot, $screenshot->thumb_path ?: $screenshot->path);
+    }
+
+    /**
+     * The link-preview card for a review (ReviewPreview). Public caching:
+     * the apps that fetch it send no cookies, and the token is in the URL.
+     */
+    public function previewForReview(string $token, ReviewPreview $preview): Response
+    {
+        $review = Review::forLink($token);
+
+        if (! $review || (! hash_equals((string) $review->token, $token) && ! $review->allowsGuestAccess())) {
+            abort(404);
+        }
+
+        $jpeg = $preview->image($review);
+
+        abort_if($jpeg === null, 404);
+
+        return response($jpeg, headers: [
+            'Content-Type' => 'image/jpeg',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     protected function assertReviewToken(string $token, Screenshot $screenshot): void

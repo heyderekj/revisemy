@@ -99,10 +99,20 @@
             @include('review.partials.panel-toggles')
 
             @if ($mode === 'guest')
-                <div class="flex shrink-0 items-center">
+                <div class="flex shrink-0 items-center gap-3">
                     @if ($review->allowsGuestAccess())
                         <x-signal-tag>Guest</x-signal-tag>
                     @endif
+                    {{-- A guest's way to a review of their own. Quiet, and no account. --}}
+                    <a
+                        href="{{ route('reviews.new') }}"
+                        class="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-zinc-900"
+                        aria-label="Start your own review"
+                        onclick="if(window.fathom)fathom.trackEvent('Guest start review')"
+                    >
+                        <flux:icon.plus variant="micro" class="size-4 sm:hidden" />
+                        <span class="hidden sm:inline">Start your own review</span>
+                    </a>
                 </div>
             @elseif ($this->isOwner())
                 <div class="flex shrink-0 flex-nowrap items-center justify-end gap-1.5">
