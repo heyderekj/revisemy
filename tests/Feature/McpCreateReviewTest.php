@@ -109,8 +109,8 @@ class McpCreateReviewTest extends TestCase
         );
 
         Queue::assertNothingPushed();
-        // One /function probe, then /screenshot per viewport.
-        Http::assertSentCount(4);
+        // Every viewport tries /function side by side, then /screenshot each.
+        Http::assertSentCount(6);
     }
 
     /** Three viewports, one checklist: it sits on the first shot, not on all three. */

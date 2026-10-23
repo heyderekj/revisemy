@@ -6,6 +6,7 @@ use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Models\Review;
 use App\Services\ReviewService;
 use App\Services\ReviewWaiter;
+use App\Support\AssistantCallback;
 use Generator;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -52,7 +53,7 @@ class WaitForReviewTool extends Tool
             'since' => 'nullable|date',
         ]);
 
-        $review = $this->reviews->findOrAdopt($workspace, $data['id']);
+        $review = $this->reviews->findOrAdopt($workspace, $data['id'], AssistantCallback::forCaller($request->user()));
 
         if (! $review) {
             return Response::error('No review with that id for this try token. A review link started on the site works once — the first agent to open it keeps it.');

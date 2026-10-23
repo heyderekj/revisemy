@@ -31,10 +31,11 @@
                     action="{{ route('reviews.submit') }}"
                     enctype="multipart/form-data"
                     class="mt-8 space-y-5"
-                    x-data="{ kind: @js($kind), busy: false, pending: @js(collect($tabs)->map(fn ($t) => $t['pending'])) }"
-                    x-on:submit="busy = true"
+                    x-data="{ ...reviewSubmit(@js($kind)), pending: @js(collect($tabs)->map(fn ($t) => $t['pending'])) }"
+                    x-on:submit="start($event)"
                 >
                     @csrf
+                    <x-review-progress />
                     <input type="hidden" name="kind" x-bind:value="kind">
 
                     <div role="tablist" aria-label="What to review" class="grid grid-cols-2 gap-1 rounded-xl bg-well p-1 sm:grid-cols-4">
@@ -68,6 +69,7 @@
                             class="mt-2 {{ $field }}"
                         >
                         <p class="mt-2 text-xs text-muted-foreground">A public page. It’s captured at desktop, tablet and phone sizes.</p>
+                        <p x-show="error('page_url')" x-text="error('page_url')" x-cloak class="mt-2 text-sm text-problem-ink" role="alert"></p>
                         @error('page_url')
                             <p class="mt-2 text-sm text-problem-ink" role="alert">{{ $message }}</p>
                         @enderror
@@ -77,6 +79,7 @@
                         <label for="images" class="text-sm font-medium text-zinc-700">Screenshots</label>
                         <input id="images" name="images[]" type="file" multiple accept="image/png,image/jpeg,image/webp" x-bind:required="kind === 'images'" class="mt-2 {{ $file }}">
                         <p class="mt-2 text-xs text-muted-foreground">Up to 5 PNG, JPG or WebP files, 8MB each.</p>
+                        <p x-show="error('images')" x-text="error('images')" x-cloak class="mt-2 text-sm text-problem-ink" role="alert"></p>
                         @error('images')
                             <p class="mt-2 text-sm text-problem-ink" role="alert">{{ $message }}</p>
                         @enderror
@@ -89,6 +92,7 @@
                         <label for="pdf" class="text-sm font-medium text-zinc-700">Slides as a PDF</label>
                         <input id="pdf" name="pdf" type="file" accept="application/pdf" x-bind:required="kind === 'pdf'" class="mt-2 {{ $file }}">
                         <p class="mt-2 text-xs text-muted-foreground">The first 5 pages become the board, up to 20MB.</p>
+                        <p x-show="error('pdf')" x-text="error('pdf')" x-cloak class="mt-2 text-sm text-problem-ink" role="alert"></p>
                         @error('pdf')
                             <p class="mt-2 text-sm text-problem-ink" role="alert">{{ $message }}</p>
                         @enderror
@@ -98,6 +102,7 @@
                         <label for="html" class="text-sm font-medium text-zinc-700">Email HTML</label>
                         <input id="html" name="html" type="file" accept=".html,.htm,text/html" x-bind:required="kind === 'html'" class="mt-2 {{ $file }}">
                         <p class="mt-2 text-xs text-muted-foreground">The .html file your email tool exports, rendered 600px wide.</p>
+                        <p x-show="error('html')" x-text="error('html')" x-cloak class="mt-2 text-sm text-problem-ink" role="alert"></p>
                         @error('html')
                             <p class="mt-2 text-sm text-problem-ink" role="alert">{{ $message }}</p>
                         @enderror
@@ -106,6 +111,7 @@
                     <div>
                         <label for="context" class="text-sm font-medium text-zinc-700">What should people look at? <span class="font-normal text-muted-foreground">Optional</span></label>
                         <textarea id="context" name="context" rows="3" maxlength="5000" class="mt-2 {{ $field }}" placeholder="The new pricing table, and whether the CTA reads on mobile.">{{ old('context') }}</textarea>
+                        <p x-show="error('context')" x-text="error('context')" x-cloak class="mt-2 text-sm text-problem-ink" role="alert"></p>
                         @error('context')
                             <p class="mt-2 text-sm text-problem-ink" role="alert">{{ $message }}</p>
                         @enderror

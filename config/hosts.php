@@ -23,6 +23,8 @@ return [
     'connect' => [
         'claude' => [
             'name' => 'Claude',
+            // Opens a new chat with {prompt} filled in, for a review handed over from the site.
+            'open' => 'https://claude.ai/new?q={prompt}',
             'icon' => 'claude',
             'mode' => 'oauth',
             'where' => 'Claude on the web, desktop or phone',
@@ -36,6 +38,8 @@ return [
         ],
         'chatgpt' => [
             'name' => 'ChatGPT',
+            // Opens a new chat with {prompt} filled in, for a review handed over from the site.
+            'open' => 'https://chatgpt.com/?q={prompt}',
             'icon' => 'chatgpt',
             'mode' => 'oauth',
             'where' => 'The ChatGPT app',
@@ -49,6 +53,8 @@ return [
         ],
         'cursor' => [
             'name' => 'Cursor',
+            // Opens a new chat with {prompt} filled in, for a review handed over from the site.
+            'open' => 'https://cursor.com/link/prompt?text={prompt}',
             'icon' => 'cursor',
             'mode' => 'deeplink',
             'where' => 'Cursor’s agent',

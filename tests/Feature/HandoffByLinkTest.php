@@ -8,6 +8,7 @@ use App\Mcp\Tools\GetReviewTool;
 use App\Mcp\Tools\LookAtMarksTool;
 use App\Mcp\Tools\ResolveMarksTool;
 use App\Models\Annotation;
+use App\Models\OAuthClient;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\ReviewService;
@@ -16,6 +17,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Laravel\Passport\AccessToken;
 use Tests\TestCase;
 
 class HandoffByLinkTest extends TestCase
@@ -143,16 +146,40 @@ class HandoffByLinkTest extends TestCase
         $this->assertNull($review->fresh()->handed_off_at);
     }
 
-    public function test_the_browser_that_started_it_is_already_home(): void
+    public function test_an_agent_the_browser_connected_takes_it_without_moving_it(): void
     {
+        Event::fake([ReviewHandedOff::class]);
         $review = $this->webReview();
         $sameWorkspace = User::query()->where('workspace_id', $review->workspace_id)->sole();
 
         ReviseMyServer::actingAs($sameWorkspace)->tool(GetReviewTool::class, ['id' => $review->reviewUrl()])
             ->assertHasNoErrors();
 
-        // Nothing moved; a different agent can still take it.
-        $this->assertNull($review->fresh()->handed_off_at);
+        // Already home, so nothing moves, but the page stops waiting for an agent.
+        $fresh = $review->fresh();
+        $this->assertSame($review->workspace_id, $fresh->workspace_id);
+        $this->assertNotNull($fresh->handed_off_at);
+        Event::assertDispatched(ReviewHandedOff::class);
+    }
+
+    public function test_the_review_names_the_app_that_took_it(): void
+    {
+        $review = $this->webReview();
+        $agent = $this->agent();
+        $client = OAuthClient::query()->forceCreate([
+            'id' => (string) Str::uuid(), 'name' => 'Claude', 'redirect_uris' => ['https://claude.ai/cb'],
+            'grant_types' => ['authorization_code'], 'revoked' => false,
+        ]);
+
+        $this->actingAs($agent, 'api');
+        $agent->withAccessToken(new AccessToken(['oauth_client_id' => $client->id]));
+        $this->postJson('/mcp/revisemy', [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+            'params' => ['name' => 'get_review', 'arguments' => ['id' => $review->reviewUrl()]],
+        ])->assertOk();
+
+        $this->assertSame('Claude', $review->fresh()->handed_off_to);
+        $this->get($review->reviewUrl())->assertSee('Claude has this review');
     }
 
     public function test_later_passes_move_with_it(): void

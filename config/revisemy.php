@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'version' => '1.10.0',
+    'version' => '1.11.0',
 
     /*
     | Koati, the studio's other product. The footer names it as a sibling and
@@ -109,6 +109,16 @@ return [
         // request turned down and the capture falls back to /screenshot.
         // 0 sends whatever the waits add up to.
         'session_max_ms' => (int) env('REVISEMY_CAPTURE_SESSION_MAX_MS', 120_000) ?: null,
+        // How many viewports to shoot side by side, each in its own browser
+        // session. Match it to your plan's concurrent browsers; 1 shoots
+        // them one after another. A viewport turned away for being over the
+        // limit (HTTP 429) is asked again on its own.
+        // Bars fixed to the bottom of the screen (tab bars, "Book now" bars)
+        // are drawn once at the end of a full-page shot instead of over the
+        // first screen, and sticky bottom bars go back to their place in the
+        // page. false shoots them where the first screen has them.
+        'place_fixed' => filter_var(env('REVISEMY_CAPTURE_PLACE_FIXED', true), FILTER_VALIDATE_BOOL),
+        'concurrency' => max(1, (int) env('REVISEMY_CAPTURE_CONCURRENCY', 3)),
         // Post-load pause before the settle script. Short: the settle script
         // itself waits until the page stops moving.
         'wait_ms' => max(0, (int) env('REVISEMY_CAPTURE_WAIT_MS', 1000)),

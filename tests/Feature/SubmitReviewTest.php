@@ -51,7 +51,7 @@ class SubmitReviewTest extends TestCase
     public function test_the_page_opens_on_the_tab_asked_for(): void
     {
         $this->get('/new')->assertOk()->assertSee('Start a review')->assertSee('Your first review makes a try workspace');
-        $this->get('/new?kind=pdf')->assertOk()->assertSee("kind: 'pdf'", false);
+        $this->get('/new?kind=pdf')->assertOk()->assertSee("reviewSubmit('pdf')", false);
         $this->get('/new.md')->assertOk()->assertSee('# Start a review');
     }
 
@@ -181,6 +181,77 @@ class SubmitReviewTest extends TestCase
         $this->assertSame(2, Review::query()->count());
     }
 
+    /**
+     * The progress dialog's request: each step as it happens, then the review.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function streamed(array $form): array
+    {
+        $response = $this->post('/new', $form, ['Accept' => 'text/event-stream'])
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/event-stream; charset=utf-8');
+
+        return collect(explode("\n\n", trim($response->streamedContent())))
+            ->map(fn (string $event) => json_decode(substr($event, strlen('data: ')), true))
+            ->all();
+    }
+
+    public function test_the_dialog_hears_each_viewport_land_then_where_the_review_is(): void
+    {
+        $this->fakeCapture();
+
+        $events = collect($this->streamed(['kind' => 'link', 'page_url' => self::PAGE]));
+        $steps = $events->pluck('step')->filter()->values()->all();
+        $review = Review::query()->sole();
+
+        $this->assertSame('open', $steps[0]);
+        $this->assertContains('shoot', $steps);
+        $this->assertContains('shot:desktop-1280', $steps);
+        $this->assertContains('shot:mobile-375', $steps);
+        $this->assertContains('shot:tablet-768', $steps);
+        $this->assertSame('save', end($steps));
+        $this->assertSame(['done' => route('reviews.show', $review->token)], $events->last());
+        $this->assertSame(Review::ORIGIN_WEB, $review->origin);
+        $this->assertAuthenticatedAs(User::query()->sole(), 'web');
+    }
+
+    public function test_the_dialog_gets_a_bad_address_back_as_json(): void
+    {
+        $this->post('/new', ['kind' => 'link', 'page_url' => 'http://127.0.0.1/admin'], ['Accept' => 'text/event-stream'])
+            ->assertStatus(422)
+            ->assertJsonStructure(['errors' => ['page_url']]);
+
+        $this->assertSame(0, Review::query()->count());
+    }
+
+    public function test_the_dialog_hears_when_credits_run_out(): void
+    {
+        $this->fakeCapture();
+
+        $this->post('/new', ['kind' => 'link', 'page_url' => self::PAGE]);
+        Workspace::query()->sole()->update(['credits_balance' => 2, 'purchased_credits' => 0]);
+
+        $events = $this->streamed(['kind' => 'link', 'page_url' => self::PAGE]);
+
+        $this->assertSame(['errors' => ['page_url' => 'That needs 5 credits and this browser’s try workspace has 2 left. Credits renew monthly.']], end($events));
+        $this->assertSame(1, Review::query()->count());
+        $this->assertSame(2, Workspace::query()->sole()->credits_balance);
+    }
+
+    public function test_the_dialog_streams_a_pdf_too(): void
+    {
+        $this->post('/new', ['kind' => 'link', 'page_url' => self::PAGE]);
+
+        $events = collect($this->streamed([
+            'kind' => 'images',
+            'images' => [UploadedFile::fake()->createWithContent('home.png', $this->tinyPngBinary())],
+        ]));
+
+        $this->assertSame('save', $events->pluck('step')->filter()->last());
+        $this->assertStringContainsString('/r/', $events->last()['done']);
+    }
+
     public function test_running_out_of_credits_says_so_plainly(): void
     {
         $this->fakeCapture();
@@ -201,10 +272,17 @@ class SubmitReviewTest extends TestCase
         $this->post('/new', ['kind' => 'link', 'page_url' => self::PAGE]);
         $review = Review::query()->sole();
 
+        $prompt = 'Open my ReviseMy review '.$review->reviewUrl().' and work through my marks.';
+
         $this->get(route('reviews.show', $review->token))
             ->assertOk()
             ->assertSee('Hand this to your agent')
-            ->assertSee('Open my ReviseMy review '.$review->reviewUrl().' and work through my marks.');
+            ->assertSeeInOrder(['Mark what matters', 'Drag on the page to mark a spot', 'Ask for changes', 'Send it to your agent'])
+            ->assertSee($prompt)
+            ->assertSee(e('https://claude.ai/new?q='.rawurlencode($prompt)), false)
+            ->assertSee(e('https://chatgpt.com/?q='.rawurlencode($prompt)), false)
+            ->assertSee(e('https://cursor.com/link/prompt?text='.rawurlencode($prompt)), false)
+            ->assertSee('Your agent needs ReviseMy connected first.');
 
         // A guest never sees it.
         $this->get('/r/'.$review->share_token)->assertOk()->assertDontSee('Hand this to your agent');
@@ -213,7 +291,11 @@ class SubmitReviewTest extends TestCase
 
         $this->get(route('reviews.show', $review->token))
             ->assertDontSee('Hand this to your agent')
-            ->assertSee('Your agent has this review.');
+            ->assertSee('Your agent has this review');
+
+        $review->update(['handed_off_to' => 'Claude']);
+
+        $this->get(route('reviews.show', $review->token))->assertSee('Claude has this review');
     }
 
     public function test_your_reviews_lists_what_this_browser_started(): void

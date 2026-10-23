@@ -9,6 +9,8 @@ use App\Services\ReviewService;
 use App\Services\TryTokenGate;
 use App\Services\TryTokenService;
 use App\Support\OutboundUrl;
+use App\Support\ToolProgress;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -19,6 +21,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 /**
  * Starting a review on the site, without an agent: paste a link or drop in
@@ -46,7 +50,7 @@ class SubmitReviewController extends Controller
         ]);
     }
 
-    public function store(Request $request, ReviewService $reviews, TryTokenService $tryTokens, TryTokenGate $gate): RedirectResponse
+    public function store(Request $request, ReviewService $reviews, TryTokenService $tryTokens, TryTokenGate $gate): RedirectResponse|JsonResponse|StreamedResponse
     {
         $kind = $request->input('kind');
 
@@ -103,34 +107,110 @@ class SubmitReviewController extends Controller
             $request->session()->regenerate();
         }
 
+        // Read up front: uploads are only on disk while the request is.
+        $attributes = [
+            'title' => $this->title($kind, $data),
+            'context' => $data['context'] ?? null,
+            ...$this->source($kind, $data),
+        ];
+        $make = fn () => $reviews->createFromRequest($user->workspace, $attributes, Review::ORIGIN_WEB);
+
+        if ($this->wantsSteps($request)) {
+            return $this->streamSteps($make, $field);
+        }
+
         try {
-            $review = $reviews->createFromRequest($user->workspace, [
-                'title' => $this->title($kind, $data),
-                'context' => $data['context'] ?? null,
-                ...$this->source($kind, $data),
-            ], Review::ORIGIN_WEB);
-        } catch (InsufficientCreditsException $e) {
-            return $this->retry($request, $kind, [$field => sprintf(
-                'That needs %d credit%s and this browser’s try workspace has %d left. Credits renew monthly.',
-                $e->required,
-                $e->required === 1 ? '' : 's',
-                $e->remaining,
-            )]);
-        } catch (ValidationException $e) {
-            return $this->retry($request, $kind, [$field => collect($e->errors())->flatten()->first()]);
+            $review = $make();
+        } catch (InsufficientCreditsException|ValidationException $e) {
+            return $this->retry($request, $kind, [$field => $this->problem($e)]);
         }
 
         return redirect()->route('reviews.show', $review->token);
     }
 
     /**
+     * The form's progress dialog asks for the steps as they happen, so a
+     * minute-long capture shows which viewports have landed instead of a
+     * button that just says it's busy. Without JS the form posts as usual.
+     */
+    protected function wantsSteps(Request $request): bool
+    {
+        return str_contains((string) $request->header('Accept'), 'text/event-stream');
+    }
+
+    /**
+     * Make the review while streaming each step ToolProgress hears, framed
+     * like the MCP transport (data: {json}, a blank line), then where the
+     * review is or what went wrong. The browser is already signed in: the
+     * session is saved before this body runs, so nothing here may touch it.
+     *
+     * @param  callable(): Review  $make
+     */
+    protected function streamSteps(callable $make, string $field): StreamedResponse
+    {
+        return response()->stream(function () use ($make, $field): void {
+            // A closed tab still gets its review, listed under Your reviews.
+            ignore_user_abort(true);
+
+            $send = function (array $event): void {
+                echo 'data: '.json_encode($event, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n\n";
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+
+                flush();
+            };
+
+            $steps = ToolProgress::steps($make);
+
+            try {
+                foreach ($steps as $report) {
+                    $send($report);
+                }
+
+                $send(['done' => route('reviews.show', $steps->getReturn()->token)]);
+            } catch (InsufficientCreditsException|ValidationException $e) {
+                $send(['errors' => [$field => $this->problem($e)]]);
+            } catch (Throwable $e) {
+                report($e);
+                $send(['errors' => [$field => 'Something went wrong making the review. Your credits are back, so try again.']]);
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache, no-transform',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    /** What to tell the person when the review couldn't be made. */
+    protected function problem(InsufficientCreditsException|ValidationException $e): string
+    {
+        if ($e instanceof InsufficientCreditsException) {
+            return sprintf(
+                'That needs %d credit%s and this browser’s try workspace has %d left. Credits renew monthly.',
+                $e->required,
+                $e->required === 1 ? '' : 's',
+                $e->remaining,
+            );
+        }
+
+        return (string) collect($e->errors())->flatten()->first();
+    }
+
+    /**
      * Back to /new on the same tab, whether the form was there or in the
-     * home hero, with what was typed. Files have to be picked again.
+     * home hero, with what was typed. Files have to be picked again. The
+     * progress dialog gets the errors as JSON and keeps the form as it is.
      *
      * @param  array<string, mixed>  $errors
      */
-    protected function retry(Request $request, string $kind, array $errors): RedirectResponse
+    protected function retry(Request $request, string $kind, array $errors): RedirectResponse|JsonResponse
     {
+        if ($this->wantsSteps($request)) {
+            return response()->json(['errors' => $errors], 422);
+        }
+
         return redirect()
             ->route('reviews.new', ['kind' => array_key_exists($kind, self::FIELDS) ? $kind : 'link'])
             ->withInput($request->only('page_url', 'context'))

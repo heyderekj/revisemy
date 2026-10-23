@@ -90,24 +90,28 @@ class ReviewService
 
         $type = $data['type'] ?? null;
         $domHtml = null;
+        $captureMs = null;
 
         try {
             if (isset($sources['capture_url'])) {
-                ToolProgress::report('Opening '.(parse_url($pageUrl, PHP_URL_HOST) ?: $pageUrl).' to capture it');
+                ToolProgress::report('Opening '.(parse_url($pageUrl, PHP_URL_HOST) ?: $pageUrl).' to capture it', 'open');
+                $started = microtime(true);
                 ['shots' => $images, 'dom' => $domHtml] = $this->capture->capturePage($pageUrl);
+                $captureMs = (int) round((microtime(true) - $started) * 1000);
                 $type ??= Review::TYPE_WEBSITE;
             } elseif (isset($sources['pdf'])) {
-                ToolProgress::report('Rendering the slides');
+                ToolProgress::report('Rendering the slides', 'render');
                 $images = $this->documents->pdfToImages((string) $data['pdf']);
                 $type ??= Review::TYPE_PRESENTATION;
             } elseif (isset($sources['html'])) {
-                ToolProgress::report('Rendering the email');
+                ToolProgress::report('Rendering the email', 'render');
                 $images = $this->capture->captureHtml((string) $data['html']);
                 $domHtml = (string) $data['html'];
                 $type ??= Review::TYPE_EMAIL;
             }
 
-            ToolProgress::report('Saving the review and its second opinion');
+            ToolProgress::report('Saving the review and its second opinion', 'save');
+            $started = microtime(true);
 
             $review = $this->create(
                 $workspace,
@@ -122,6 +126,10 @@ class ReviewService
                 $origin,
             );
             $settled = true;
+
+            if ($captureMs !== null) {
+                $this->logCaptureTimings($review, $images, $captureMs, (int) round((microtime(true) - $started) * 1000));
+            }
 
             return $review;
         } catch (ValidationException $e) {
@@ -159,8 +167,10 @@ class ReviewService
 
     /**
      * Raise PHP's time limit to what this source can take: every viewport's
-     * capture session one after another, plus the DOM load and saving. Only
-     * ever raised, never lowered, and left alone where there is no limit.
+     * capture session one after another, plus the DOM load and saving. The
+     * sessions usually run side by side, but a plan that turns the extra
+     * browsers away sends them back to one at a time. Only ever raised,
+     * never lowered, and left alone where there is no limit.
      *
      * @param  array<string, bool>  $sources
      */
@@ -179,6 +189,37 @@ class ReviewService
         if ($needed > $limit) {
             @set_time_limit($needed);
         }
+    }
+
+    /**
+     * One line per capture, so the waits inside a shot can be tuned from what
+     * real pages take: each viewport's session and phases, the whole capture
+     * and the time spent storing it.
+     *
+     * @param  list<array{meta?: array<string, mixed>|null}|mixed>  $shots
+     */
+    protected function logCaptureTimings(Review $review, array $shots, int $captureMs, int $storeMs): void
+    {
+        $viewports = [];
+
+        foreach ($shots as $shot) {
+            $meta = is_array($shot) ? ($shot['meta'] ?? []) : [];
+
+            if (isset($meta['viewport'])) {
+                $viewports[$meta['viewport']] = array_filter([
+                    'capture_ms' => $meta['capture_ms'] ?? null,
+                    'timings' => $meta['timings'] ?? null,
+                ], fn ($value) => $value !== null);
+            }
+        }
+
+        Log::info('Capture timings', [
+            'review' => $review->public_id,
+            'page_url' => $review->page_url,
+            'capture_ms' => $captureMs,
+            'store_ms' => $storeMs,
+            'viewports' => $viewports,
+        ]);
     }
 
     protected function captureCanFallOpen(ValidationException $e): bool
@@ -387,13 +428,14 @@ class ReviewService
      * started on the site, that no agent has yet, moves into this workspace:
      * holding the owner link is already the reviewer's whole login. Guest
      * links never count, and a review another agent holds stays where it is.
+     * $agent names who took it ("Claude"), for the review page to say so.
      */
-    public function findOrAdopt(Workspace $workspace, string $idOrLink): ?Review
+    public function findOrAdopt(Workspace $workspace, string $idOrLink, ?string $agent = null): ?Review
     {
         $idOrLink = trim($idOrLink);
 
         if ($review = $this->findForWorkspace($workspace, $idOrLink)) {
-            return $review;
+            return $this->takenBy($review, $agent);
         }
 
         $token = $this->ownerTokenFrom($idOrLink);
@@ -408,15 +450,19 @@ class ReviewService
             return null;
         }
 
+        // An agent connected from the browser that made the review already
+        // shares its workspace. Opening the link still hands it over.
         if ($review->workspace_id === $workspace->id) {
-            return $this->findForWorkspace($workspace, $review->public_id);
+            $own = $this->findForWorkspace($workspace, $review->public_id);
+
+            return $own ? $this->takenBy($own, $agent) : null;
         }
 
         if (! $review->isAwaitingAgent()) {
             return null;
         }
 
-        $adopted = DB::transaction(function () use ($review, $workspace): bool {
+        $adopted = DB::transaction(function () use ($review, $workspace, $agent): bool {
             $locked = Review::query()->whereKey($review->id)->lockForUpdate()->first();
 
             if (! $locked || ! $locked->isAwaitingAgent()) {
@@ -430,7 +476,7 @@ class ReviewService
                 'expires_at' => now()->addDays($workspace->reviewRetentionDays()),
             ]);
 
-            $locked->update(['handed_off_at' => now()]);
+            $locked->update(['handed_off_at' => now(), 'handed_off_to' => $agent]);
 
             return true;
         });
@@ -444,6 +490,31 @@ class ReviewService
         if ($review) {
             ReviewHandedOff::dispatch($review);
         }
+
+        return $review;
+    }
+
+    /**
+     * A review made on the site that an agent in its own workspace has just
+     * opened: no move, but the page should stop waiting for one.
+     */
+    protected function takenBy(Review $review, ?string $agent): Review
+    {
+        if (! $review->isAwaitingAgent()) {
+            return $review;
+        }
+
+        $taken = Review::query()
+            ->whereKey($review->id)
+            ->whereNull('handed_off_at')
+            ->update(['handed_off_at' => now(), 'handed_off_to' => $agent]);
+
+        if ($taken === 0) {
+            return $review;
+        }
+
+        $review->forceFill(['handed_off_at' => now(), 'handed_off_to' => $agent]);
+        ReviewHandedOff::dispatch($review);
 
         return $review;
     }

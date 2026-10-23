@@ -209,8 +209,8 @@ class CaptureIngestionTest extends TestCase
         ])->assertCreated();
 
         $this->assertCount(3, $response->json('screenshots'));
-        // One /function probe, then /screenshot per viewport.
-        Http::assertSentCount(4);
+        // Every viewport tries /function side by side, then /screenshot each.
+        Http::assertSentCount(6);
 
         Http::assertSent(function ($request) {
             $body = $request->data();
@@ -409,7 +409,7 @@ class CaptureIngestionTest extends TestCase
         ])->assertCreated();
 
         $this->assertCount(3, $response->json('screenshots'));
-        Http::assertSentCount(4);
+        Http::assertSentCount(6);
     }
 
     public function test_freezing_animations_can_be_turned_off(): void
