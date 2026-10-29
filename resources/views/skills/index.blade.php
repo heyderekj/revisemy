@@ -1,6 +1,6 @@
 <x-layouts.marketing
-    title="Skills for your agent — packs for marketing sites, industries and reviews"
-    description="Free skill packs that teach your agent to review and fix your marketing site, with industry packs on top. They work with or without ReviseMy."
+    title="Skills for your agent — packs for websites, apps, email and slides"
+    description="Free skill packs that teach your agent to review and fix websites, apps, email and slides, with industry packs on top. They work with or without ReviseMy."
     :keywords="['agent skills', 'Claude Code skills', 'landing page feedback', 'homepage review', 'design review']"
     fathom="Skills hub"
 >

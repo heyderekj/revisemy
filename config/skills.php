@@ -7,22 +7,39 @@ return [
     | Skill packs
     |--------------------------------------------------------------------------
     |
-    | /skills lists the packs by category; each pack with a path gets its own
-    | page, drawn by the guide template. An entry with an href instead links
-    | to where that skill is already explained. The skills themselves live in
-    | plugin/skills/.
+    | /skills lists the packs by what they review (the same four review
+    | types as /for), then industry packs and the review loop. A category
+    | with no packs yet shows only its "soon" line. Each pack with a path
+    | gets its own page, drawn by the guide template; an entry with an href
+    | links to where that skill is already explained. The skills themselves
+    | live in plugin/skills/.
     |
     */
 
     'categories' => [
-        'marketing' => [
-            'label' => 'Marketing sites',
+        'websites' => [
+            'label' => 'Websites',
             'line' => 'Review and fix the pages people see before they try your product.',
             'soon' => 'Packs for pricing, feature and launch pages.',
         ],
+        'apps' => [
+            'label' => 'Apps',
+            'line' => 'Screens inside your product, on the web or a phone.',
+            'soon' => 'Packs for onboarding, empty states and settings.',
+        ],
+        'email' => [
+            'label' => 'Email',
+            'line' => 'What lands in the inbox.',
+            'soon' => 'Packs for launch emails and newsletters.',
+        ],
+        'slides' => [
+            'label' => 'Slides',
+            'line' => 'Decks people present or send.',
+            'soon' => 'Packs for pitch decks and talks.',
+        ],
         'industries' => [
             'label' => 'Industry packs',
-            'line' => 'Extra rules for one kind of product, on top of the homepage skills.',
+            'line' => 'Extra rules for one kind of product, on top of the other packs.',
             'soon' => 'More industries, each built from real feedback.',
         ],
         'review' => [
@@ -37,7 +54,7 @@ return [
         'homepage' => [
             'slug' => 'homepage',
             'path' => '/skills/homepage',
-            'category' => 'marketing',
+            'category' => 'websites',
             'label' => 'Homepage skills',
             'line' => 'Review the homepage, find its strongest section, show more, cut the rest, carry the brand.',
             'icon' => 'home',

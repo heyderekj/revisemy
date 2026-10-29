@@ -246,6 +246,11 @@ final class PageMarkdown
 
         foreach (SkillPacks::categories() as $category) {
             $md .= '## '.$category['label']."\n\n".$category['line']."\n\n";
+            if ($category['links'] === []) {
+                $md .= 'More on the way: '.$category['soon']."\n\n";
+
+                continue;
+            }
             foreach ($category['links'] as $link) {
                 $href = str_contains($link['href'], '#') ? rtrim((string) config('app.url'), '/').$link['href'] : self::url($link['href']);
                 $md .= '- ['.$link['label'].']('.$href.') — '.$link['line']."\n";

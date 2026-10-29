@@ -42,7 +42,7 @@ final class SkillPacks
                     ->values()
                     ->all(),
             ])
-            ->filter(fn (array $category) => $category['links'] !== [])
+            ->filter(fn (array $category) => $category['links'] !== [] || $category['soon'] !== null)
             ->values()
             ->all();
     }
