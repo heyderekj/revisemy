@@ -20,6 +20,28 @@ Or install the Claude Code plugin, which adds the server plus a `design-checkup`
 /plugin install revisemy@revisemy
 ```
 
+### Homepage skills
+
+The plugin also carries seven skills for the marketing site of an app or tool, drawn from feedback on real landing pages. They work in any agent on their own, and turn a critique into a ReviseMy review you can mark up when the server is connected.
+
+| Skill | What it does |
+|---|---|
+| `homepage-craft` | The rules: five-second test, show the product, one action, less homepage, one brand. Plus a reference shelf |
+| `review-homepage` | A full critique: what's working, the strongest section, up to seven changes, two or three references |
+| `find-strongest-section` | Finds the section that already works and lifts the rest with it |
+| `show-dont-tell` | Turns text-heavy sections into visuals that carry the point |
+| `cut-homepage` | What to cut, where it goes instead, and the order for what's left |
+| `brand-pass` | Finds the brand element that works and carries it through the page |
+| `faith-homepage` | Extra rules for church, ministry and Bible software |
+
+For Cursor, Codex and other agents:
+
+```bash
+npx skills add heyderekj/revisemy
+```
+
+See [revisemy.com/skills](https://revisemy.com/skills).
+
 ReviseMy is an open-source human-in-the-loop design review tool. Your agent captures **UI, websites, slides, or email** from screenshots, a URL, PDF, or HTML over [Laravel MCP](https://laravel.com/docs/mcp), you open a review link, **mark** what matters like a design critique, then approve or request changes. The agent reads structured work packets and keeps going.
 
 Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel MCP — ready for [Laravel Cloud](https://cloud.laravel.com).

@@ -23,6 +23,7 @@ final class PageMarkdown
             $path === '/for' => self::useCaseIndex(),
             $path === '/new' => self::startReview(),
             $path === '/alternatives' => self::alternativeIndex(),
+            $path === '/skills' => self::skillsIndex(),
             $path === '/docs' => self::doc('index'),
             $path === '/docs/index' => null,
             str_starts_with($path, '/docs/') => self::doc(substr($path, 6)),
@@ -44,7 +45,7 @@ final class PageMarkdown
         return match (true) {
             str_starts_with($path, '/for/') => config('use-cases.pages.'.substr($path, 5)) ?? config('use-cases.audiences.'.substr($path, 5)),
             str_starts_with($path, '/alternatives/') => config('alternatives.pages.'.substr($path, 14)),
-            default => collect(config('guides.pages', []))->firstWhere('path', $path),
+            default => self::guidePage($path),
         };
     }
 
@@ -106,7 +107,7 @@ final class PageMarkdown
 
     protected static function guide(string $path): ?string
     {
-        $page = collect(config('guides.pages', []))->firstWhere('path', $path);
+        $page = self::guidePage($path);
 
         if (! $page) {
             return null;
@@ -226,6 +227,33 @@ final class PageMarkdown
         }
 
         return $md."\n";
+    }
+
+    /**
+     * A guide or a skill pack page; both are drawn by the guide template.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected static function guidePage(string $path): ?array
+    {
+        return collect(config('guides.pages', []))->firstWhere('path', $path)
+            ?? collect(SkillPacks::pages())->firstWhere('path', $path);
+    }
+
+    protected static function skillsIndex(): string
+    {
+        $md = self::head('Skills for your agent', 'Packs that teach your agent what good looks like, so it can review your work and fix it.', '/skills');
+
+        foreach (SkillPacks::categories() as $category) {
+            $md .= '## '.$category['label']."\n\n".$category['line']."\n\n";
+            foreach ($category['links'] as $link) {
+                $href = str_contains($link['href'], '#') ? rtrim((string) config('app.url'), '/').$link['href'] : self::url($link['href']);
+                $md .= '- ['.$link['label'].']('.$href.') — '.$link['line']."\n";
+            }
+            $md .= "\n";
+        }
+
+        return $md."## Install them\n\n- Claude Code: `/plugin marketplace add heyderekj/revisemy`, then `/plugin install revisemy@revisemy`.\n- Cursor, Codex and other agents: `npx skills add heyderekj/revisemy`.\n\n";
     }
 
     protected static function alternativeIndex(): string
