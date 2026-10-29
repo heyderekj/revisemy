@@ -1,8 +1,9 @@
 /**
  * The picker inside the Live view: the page's code as captured, framed on
- * the review (App\Support\LiveSnapshot). Hover outlines an element, a click
- * selects it, and a small bar offers Mark this or Edit words. Either one goes
- * to the review as a message; the review makes the mark.
+ * the review (App\Support\LiveSnapshot). Hover outlines an element. A click
+ * on words opens them for editing straight away (Done, or Just mark it); a
+ * click on anything else selects it with Mark this. Either way it goes to the
+ * review as a message, and the review makes the mark.
  *
  * Plain script, no imports: LiveSnapshot inlines it into the page under the
  * response's nonce. The page runs in an opaque origin, so messages go to '*'
@@ -75,6 +76,23 @@
     };
     const textOf = (el) => (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 200);
 
+    // Words you can change in place: the element has its own text and no
+    // block-level parts inside it (a heading, a link, a button, a paragraph).
+    const holdsWords = (el) => {
+        if (!Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim() !== '')) return false;
+        return !Array.from(el.querySelectorAll('*')).some((child) => !/^(inline|inline-block|contents|none)$/.test(getComputedStyle(child).display));
+    };
+    const caretAt = (x, y) => {
+        if (document.caretPositionFromPoint) {
+            const p = document.caretPositionFromPoint(x, y);
+            if (!p) return null;
+            const range = document.createRange();
+            range.setStart(p.offsetNode, p.offset);
+            return range;
+        }
+        return document.caretRangeFromPoint ? document.caretRangeFromPoint(x, y) : null;
+    };
+
     // Our chrome lives in a shadow root so the page's CSS can't reach it.
     const host = document.createElement('div');
     host.setAttribute('data-rm-live', '');
@@ -136,36 +154,50 @@
         clear();
     };
 
-    const startEdit = () => {
+    // From a click on words (caret where you clicked), or from Edit words
+    // (everything selected, ready to retype).
+    const startEdit = (caret = null) => {
         if (!picked) return;
-        editing = { el: picked, html: picked.innerHTML, before: textOf(picked) };
+        editing = { el: picked, html: picked.innerHTML, before: textOf(picked), direct: caret !== null };
         picked.setAttribute('contenteditable', 'plaintext-only');
         picked.focus();
-        const range = document.createRange();
-        range.selectNodeContents(picked);
+        const range = caret || document.createRange();
+        if (!caret) range.selectNodeContents(picked);
         getSelection().removeAllRanges();
         getSelection().addRange(range);
-        showBar([['Done', finishEdit, true], ['Cancel', cancelEdit]]);
+        showBar([['Done', () => finishEdit(true), true], ['Just mark it', markInstead], ['Cancel', cancelEdit]]);
+    };
+    const markInstead = () => {
+        editing.el.innerHTML = editing.html;
+        stopEditing();
+        editing = null;
+        mark();
     };
     const stopEditing = () => {
         editing.el.removeAttribute('contenteditable');
         getSelection().removeAllRanges();
     };
-    const finishEdit = () => {
+    // Done (or Enter) with the words unchanged still marks the element;
+    // clicking away with them unchanged lets it go.
+    const finishEdit = (marking = false) => {
         const { el, before } = editing;
         const after = (el.innerText || '').trim();
         stopEditing();
         editing = null;
         if (after !== '' && after !== before) {
             send('edit', { selector: selectorFor(el), box: boxOf(el), text: before, after });
+        } else if (marking) {
+            return mark();
         }
         clear();
     };
     const cancelEdit = () => {
+        const { direct } = editing;
         editing.el.innerHTML = editing.html;
         stopEditing();
         editing = null;
-        if (picked) showBar([['Mark this', mark, true], ['Edit words', startEdit]]);
+        if (direct) return clear();
+        if (picked) showBar([['Mark this', mark, true], ['Edit words', () => startEdit()]]);
     };
 
     document.addEventListener('mousemove', (e) => {
@@ -187,7 +219,14 @@
         picked = e.target;
         hoverBox.hidden = true;
         place(pickedBox, picked);
-        showBar([['Mark this', mark, true], ['Edit words', startEdit]]);
+        if (holdsWords(picked)) {
+            const caret = caretAt(e.clientX, e.clientY);
+            const end = document.createRange();
+            end.selectNodeContents(picked);
+            end.collapse(false);
+            return startEdit(caret && picked.contains(caret.startContainer) ? caret : end);
+        }
+        showBar([['Mark this', mark, true], ['Edit words', () => startEdit()]]);
     }, true);
 
     document.addEventListener('submit', (e) => e.preventDefault(), true);
@@ -196,7 +235,7 @@
     document.addEventListener('keydown', (e) => {
         if (editing && e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            finishEdit();
+            finishEdit(true);
         } else if (e.key === 'Escape') {
             e.preventDefault();
             editing ? cancelEdit() : clear();
