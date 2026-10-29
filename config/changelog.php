@@ -15,6 +15,35 @@ return [
     'entries' => [
 
         [
+            'version' => '1.13.0',
+            'date' => '2026-10-29',
+            'title' => 'Mark the part, not just the pixels',
+            'highlights' => [
+                'Click a button, a heading or a card to mark the whole thing. Wider steps out to the part around it, and Alt-click still drops a spot',
+                'Inspect shows what the page has there: size, type, colours, padding and corners',
+                'Your agent gets the element with each mark, so it changes the right one and starts from its real values',
+                'Works in the inline review too, and on your agent’s own screenshots when it sends the page’s elements along',
+            ],
+        ],
+
+        [
+            'version' => '1.12.0',
+            'date' => '2026-10-29',
+            'title' => 'Skills for your agent',
+            'highlights' => [
+                'Seven skills for the marketing site of an app or tool, drawn from feedback on real landing pages',
+                'review-homepage writes a full critique: what\'s working, the strongest section, up to seven changes and two or three sites to look at',
+                'find-strongest-section, show-dont-tell, cut-homepage and brand-pass each take on one problem, and edit your code only when you ask',
+                'faith-homepage adds rules for church, ministry and Bible software',
+                'They work in any agent on their own. With ReviseMy connected, the critique lands on a review you can mark up',
+                'Install them with the Claude Code plugin, or with npx skills add heyderekj/revisemy in Cursor, Codex and other agents',
+            ],
+            'links' => [
+                ['label' => 'Skills', 'href' => '/skills'],
+            ],
+        ],
+
+        [
             'version' => '1.11.0',
             'date' => '2026-10-23',
             'title' => 'Faster captures you can watch',

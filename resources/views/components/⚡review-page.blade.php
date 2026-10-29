@@ -9,7 +9,9 @@ use App\Models\Screenshot;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use App\Services\SecondOpinionService;
+use App\Support\ElementTarget;
 use App\Support\FeedbackText;
+use App\Support\NormalizedArea;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -43,6 +45,17 @@ new class extends Component
     public ?float $pendingW = null;
 
     public ?float $pendingH = null;
+
+    /**
+     * The element the pending mark is on, resolved here from the shot's
+     * element map, never taken from the browser.
+     */
+    #[Locked]
+    public ?array $pendingTarget = null;
+
+    /** The element around the pending one, for "Wider". */
+    #[Locked]
+    public ?int $pendingParent = null;
 
     public string $decisionNote = '';
 
@@ -191,7 +204,13 @@ new class extends Component
         return app(SecondOpinionService::class)->visionEnabled();
     }
 
-    public function startPin(float $x, float $y, ?float $w = null, ?float $h = null): void
+    /**
+     * Open the composer on a point or a box. $element is the element the
+     * person clicked (its index in the shot's element map); the mark snaps
+     * to its box. A drawn box is matched to the element it covers while
+     * $snap is on. A spot is just a spot.
+     */
+    public function startPin(float $x, float $y, ?float $w = null, ?float $h = null, ?int $element = null, bool $snap = true): void
     {
         if ($this->mode === 'guest' && ! $this->review->allowsGuestAccess()) {
             return;
@@ -206,15 +225,110 @@ new class extends Component
         $w = $w !== null ? max(0, min(1 - $x, $w)) : null;
         $h = $h !== null ? max(0, min(1 - $y, $h)) : null;
 
-        $hasRegion = $w !== null && $h !== null && $w >= 0.01 && $h >= 0.01;
+        $hasRegion = $w !== null && $h !== null && $w >= NormalizedArea::MIN_MARK_SIDE && $h >= NormalizedArea::MIN_MARK_SIDE;
 
         $this->pendingX = $hasRegion ? $x + ($w / 2) : $x;
         $this->pendingY = $hasRegion ? $y + ($h / 2) : $y;
         $this->pendingW = $hasRegion ? $w : null;
         $this->pendingH = $hasRegion ? $h : null;
+        $this->pendingTarget = null;
+
+        if (($element !== null || ($hasRegion && $snap)) && $screenshot = $this->activeScreenshot()) {
+            $area = $hasRegion ? ['x' => $x, 'y' => $y, 'w' => $w, 'h' => $h] : null;
+            $this->targetPending(ElementTarget::resolve($screenshot, $this->pendingX, $this->pendingY, $area, $element), $screenshot);
+        }
+
         $this->draftBody = '';
         $this->draftSuggestedCopy = '';
         $this->draftSeverity = Annotation::SEVERITY_MUST_FIX;
+    }
+
+    /**
+     * Step the pending mark out to the element around the one it's on.
+     */
+    public function widenPendingElement(): void
+    {
+        $screenshot = $this->activeScreenshot();
+        $parent = $this->pendingParent;
+        $map = $screenshot?->elementMap();
+
+        if (! $screenshot || $parent === null || $map === null || ! isset($map['elements'][$parent])) {
+            return;
+        }
+
+        $box = ElementTarget::area(['box' => $map['elements'][$parent]['box']], $screenshot->cssSize());
+        $this->targetPending(ElementTarget::fromMap($map, $screenshot->cssSize(), $box['x'] + $box['w'] / 2, $box['y'] + $box['h'] / 2, null, $parent), $screenshot);
+    }
+
+    /**
+     * Keep the pending mark where it was drawn, on no element.
+     */
+    public function dropPendingElement(): void
+    {
+        $this->pendingTarget = null;
+        $this->pendingParent = null;
+    }
+
+    /**
+     * Take a resolved target; a picked one moves the pending mark onto the
+     * element's box.
+     *
+     * @param  array<string, mixed>|null  $target
+     */
+    protected function targetPending(?array $target, Screenshot $screenshot): void
+    {
+        $this->pendingTarget = $target;
+        $map = $target !== null ? $screenshot->elementMap() : null;
+        $this->pendingParent = $map !== null && is_int($target['index'] ?? null) ? ElementTarget::parentOf($map, $target['index']) : null;
+
+        if (($target['via'] ?? null) !== 'picked') {
+            return;
+        }
+
+        $box = ElementTarget::area($target, $screenshot->cssSize());
+        $this->pendingX = $box['x'] + $box['w'] / 2;
+        $this->pendingY = $box['y'] + $box['h'] / 2;
+        $this->pendingW = $box['w'];
+        $this->pendingH = $box['h'];
+    }
+
+    /**
+     * A pick from the Live view: the element the person chose on the page's
+     * own code, named by the capture's selector rules. It lands as a normal
+     * mark on the active shot, on the same element in the shot's map when
+     * the selector is there, else on the box the frame measured. Edited
+     * words become the mark's suggested copy.
+     *
+     * @param  array{x?: mixed, y?: mixed, w?: mixed, h?: mixed}  $box
+     */
+    public function markLiveElement(string $selector, array $box, ?string $edited = null): void
+    {
+        $screenshot = $this->activeScreenshot();
+
+        if (! $screenshot || ! $this->review->dom_path) {
+            return;
+        }
+
+        $css = $screenshot->cssSize();
+        $elements = array_values((array) ($screenshot->elementMap()['elements'] ?? []));
+        $index = $selector === '' ? false : array_search($selector, array_column($elements, 'selector'), true);
+
+        if ($index !== false && is_array($elements[$index]['box'] ?? null) && $css['w'] > 0 && $css['h'] > 0) {
+            $b = $elements[$index]['box'];
+            $this->startPin(($b['x'] + $b['w'] / 2) / $css['w'], ($b['y'] + $b['h'] / 2) / $css['h'], element: $index);
+        } elseif ($css['w'] > 0 && $css['h'] > 0) {
+            $num = fn (string $key) => is_numeric($box[$key] ?? null) ? (float) $box[$key] : 0.0;
+            $this->startPin($num('x') / $css['w'], $num('y') / $css['h'], $num('w') / $css['w'], $num('h') / $css['h']);
+        }
+
+        if ($this->pendingX !== null && $edited !== null && trim($edited) !== '') {
+            $this->draftSuggestedCopy = mb_substr(FeedbackText::sanitizeBody($edited), 0, 2000);
+        }
+    }
+
+    protected function activeScreenshot(): ?Screenshot
+    {
+        return $this->review->screenshots->values()->get($this->activeScreenshotIndex);
     }
 
     public function cancelPin(): void
@@ -223,6 +337,8 @@ new class extends Component
         $this->pendingY = null;
         $this->pendingW = null;
         $this->pendingH = null;
+        $this->pendingTarget = null;
+        $this->pendingParent = null;
         $this->draftBody = '';
         $this->draftSuggestedCopy = '';
     }
@@ -270,7 +386,7 @@ new class extends Component
         }
 
         $hasRegion = $this->pendingW !== null && $this->pendingH !== null
-            && $this->pendingW >= 0.01 && $this->pendingH >= 0.01;
+            && $this->pendingW >= NormalizedArea::MIN_MARK_SIDE && $this->pendingH >= NormalizedArea::MIN_MARK_SIDE;
 
         $area = $hasRegion ? [
             'x' => max(0, min(1, $this->pendingX - ($this->pendingW / 2))),
@@ -295,6 +411,7 @@ new class extends Component
                 [
                     'suggested_copy' => $this->draftSuggestedCopy !== '' ? $this->draftSuggestedCopy : null,
                     'source' => Annotation::SOURCE_HUMAN,
+                    'target' => $this->pendingTarget,
                 ],
             );
         } else {
@@ -306,6 +423,7 @@ new class extends Component
                 'x' => $this->pendingX,
                 'y' => $this->pendingY,
                 'area' => $area,
+                'target' => $this->pendingTarget,
                 'status' => Finding::STATUS_OPEN,
             ]);
         }
@@ -722,7 +840,10 @@ new class extends Component
             [
                 'source' => Annotation::sourceFromFinding($finding),
                 'promoted_from_finding_id' => $finding->id,
-            ],
+            ]
+            // A guest's pick carries over as it was; a hint that points
+            // nowhere on the page is tied to no element.
+            + ($finding->target !== null || ($area === null && $finding->x === null) ? ['target' => $finding->target] : []),
         );
 
         $finding->update([

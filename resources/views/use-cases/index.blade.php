@@ -35,5 +35,5 @@
         </div>
     </x-home-section>
 
-    <x-link-list heading="Keep going" :links="\App\Support\MarketingPages::more()" />
+    <x-link-list data-no-toc heading="Keep going" :links="\App\Support\MarketingPages::more()" />
 </x-layouts.marketing>

@@ -66,6 +66,10 @@ class CreateReviewTool extends Tool
             'parent_id' => 'nullable|string',
             'images' => 'nullable|array|min:1|max:5',
             'images.*' => 'required|string',
+            'image_details' => 'nullable|array|max:5',
+            'image_details.*' => 'nullable|array',
+            'image_details.*.dpr' => 'nullable|numeric|between:0.5,4',
+            'image_details.*.elements' => 'nullable',
             'capture_url' => 'nullable|boolean',
             'pdf' => 'nullable|string',
             'html' => 'nullable|string|max:500000',
@@ -156,6 +160,10 @@ class CreateReviewTool extends Tool
                 ->min(1)
                 ->max(5)
                 ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs '.$this->cost('images').'). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
+            'image_details' => $schema->array()
+                ->items($schema->object()->description('{dpr, elements} for the image at the same position'))
+                ->max(5)
+                ->description('Optional, one per image in the same order. dpr: device pixels per CSS px (2 for a retina screenshot), so the human sees it at its real size. elements: the element map from running the script at '.url('/capture/elements.js').' (also the revisemy://capture/elements.js resource) with page.evaluate in the browser you screenshot, at the top of the page, right after a full-page shot. With it, the human can click a button or heading to mark it, and each mark tells you its selector, text and styles.'),
             'capture_url' => $schema->boolean()
                 ->description('Capture page_url server-side (desktop, mobile and tablet, sharp at 2×; costs '.$this->cost('capture_url').'). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
             'pdf' => $schema->string()

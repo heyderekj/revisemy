@@ -55,6 +55,19 @@ Still to do:
 - **Production on `/function`.** Confirm it with `php artisan revisemy:probe-capture` after 1.9.0 deploys: desktop around 2560 wide at DPR 2, WebP, slices, map v2.
 - **Vision below the fold, and off `/function`.** The vision copy covers the top 1568 CSS px of the page only (about two screens on desktop and phone), so the second opinion says nothing about the rest. The crop slices could feed it next. Shots from `/screenshot`, Browsershot and uploads have no copy and still go in whole, so a tall one can be turned down. Production runs no vision key today, so the second opinion is the checklist only.
 
+### 0.5. Marks know their element (shipped, 1.10.0)
+
+From ibelick/mesurer, which pins each comment to a live element. ReviseMy works on a picture, so the element map recorded with the shot stands in for the live page:
+
+- **Pick an element.** Hover outlines the element under the cursor with its kind and size; a click (or a tap) marks the whole element, Wider steps out to the one around it, Alt-click still drops a free spot, and a drawn box is matched to the element it covers. A Snap toggle turns it off.
+- **Inspect.** The composer and the board show the element's size, type, colours, padding, corners, border and gap, as the page had them.
+- **For the agent.** Each pin carries `element`: summary, selector, text, role, box and styles, so it changes the right element starting from its real values. `look_at_marks` names it under each crop.
+- **Your own screenshots too.** `/capture/elements.js` (and the `revisemy://capture/elements.js` resource) is the collector ReviseMy runs on its captures; agents run it in their own browser and send the map with `image_details` or `add_screenshot`.
+- **Inline parity.** The inline review picks the same way, through the app-only `get_shot_elements`.
+- **Small marks survive.** A person's box may be as small as 0.1% of the shot, so a button on a long page stays a box.
+
+Still to do: a distance measure between two elements (mesurer's Alt overlay), and element-aware second-opinion findings.
+
 ### 1. Let the agent reply on a mark (shipped)
 
 `reply_to_marks` puts the agent's reply in a mark's thread: an answer to a question, an explanation of a fix, or a question before it guesses. It works while the review waits on the person or after they ask for changes, respects comments being off, and never changes a mark's status. `get_review` already returned each pin's last 10 comments; they now carry `author_type`. The inline review shows threads read-only, and replying stays on the web.

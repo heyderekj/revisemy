@@ -29,6 +29,7 @@
     </template>
 
     <div class="space-y-3 px-3 py-3 sm:px-4">
+        <div class="mb-1.5" x-show="activePin && activePin.element">@include('mcp.partials.element-chip', ['source' => 'activePin && activePin.element'])</div>
         <p class="text-sm leading-relaxed text-pretty text-zinc-800" x-text="activePin && activePin.body"></p>
         @include('mcp.partials.before-after', ['pin' => 'activePin'])
         {{-- Who did what on this mark, then your reply. --}}

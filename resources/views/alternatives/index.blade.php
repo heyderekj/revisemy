@@ -8,5 +8,5 @@
 
     <x-link-list heading="Compare" :links="collect($pages)->map(fn ($p) => ['href' => url('/alternatives/'.$p['slug']), 'label' => $p['label'], 'line' => $p['teaser'], 'icon' => $p['icon']])->all()" />
 
-    <x-link-list heading="Keep going" :links="\App\Support\MarketingPages::more('/alternatives')" />
+    <x-link-list data-no-toc heading="Keep going" :links="\App\Support\MarketingPages::more('/alternatives')" />
 </x-layouts.marketing>

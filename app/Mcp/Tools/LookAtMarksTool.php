@@ -7,6 +7,7 @@ use App\Models\Annotation;
 use App\Services\MarkCrop;
 use App\Services\ReviewService;
 use App\Support\AssistantCallback;
+use App\Support\ElementTarget;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
@@ -87,6 +88,10 @@ class LookAtMarksTool extends Tool
             $crop = $this->crops->for($mark);
             $pass = (int) $mark->screenshot->review_id !== (int) $review->id ? ' (from the pass before)' : '';
             $caption = "M{$mark->number}{$pass} · {$mark->label()} · {$mark->statusLabel()} · id {$mark->id}\n{$mark->body}";
+
+            if (is_array($mark->target)) {
+                $caption .= "\nOn: ".ElementTarget::summary($mark->target).(isset($mark->target['selector']) ? " · `{$mark->target['selector']}`" : '');
+            }
 
             if ($crop === null) {
                 $content[] = Response::text($caption."\nNo picture for this one: it sits below the part of the page I can crop. Use its area coordinates in work_packets.pins.");
