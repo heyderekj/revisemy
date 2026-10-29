@@ -20,7 +20,14 @@ class ReviewController extends Controller
     {
         $workspace = $request->user()->workspace;
 
+        $data = $request->validate([
+            'status' => ['nullable', 'in:'.implode(',', Review::LIST_STATUSES)],
+            'include_archived' => ['nullable', 'boolean'],
+        ]);
+
         $reviews = $workspace->reviews()
+            ->when(! $request->boolean('include_archived'), fn ($q) => $q->unarchived())
+            ->when($data['status'] ?? null, fn ($q, string $status) => $q->withStatus($status))
             ->latest()
             ->limit(20)
             ->with(['screenshots.annotations', 'parent'])

@@ -60,8 +60,16 @@ test('the inline review hands the decision back to the chat', async ({ page }) =
     expect(context.params.structuredContent.review_id).toBe(review.id);
     expect(context.params.content[0].text).toContain('1 open mark');
 
+    // A decision waits with Undo, as on the web; Undo takes it back.
+    await newer.getByRole('button', { name: 'Changes' }).click();
+    await expect(newer.getByText(/Sending changes in \d+s/)).toBeVisible();
+    await newer.getByRole('button', { name: 'Undo' }).click();
+    await expect(newer.getByRole('button', { name: 'Changes' })).toBeVisible();
+    expect((await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('pending');
+
     // Deciding says so in the chat, once, as the person.
     await newer.getByRole('button', { name: 'Changes' }).click();
+    await newer.getByRole('button', { name: 'Send now' }).click();
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('changes_requested');
     await expect.poll(async () => (await sent('newer', 'ui/message')).length).toBe(1);
     const [message] = await sent('newer', 'ui/message');
@@ -83,6 +91,7 @@ test('a host that never takes the message leaves the person a nudge', async ({ p
     const { sent, newer } = await openInHost(page, 'Silent host', { silentMessage: true });
 
     await newer.getByRole('button', { name: 'Changes' }).click();
+    await newer.getByRole('button', { name: 'Send now' }).click();
     await expect.poll(async () => (await sent('newer', 'ui/message')).length).toBe(1);
     // The app gives the host eight seconds to answer.
     await expect(newer.getByText('Tell your agent in the chat to carry on.')).toBeVisible({ timeout: 12_000 });

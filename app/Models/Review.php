@@ -41,6 +41,9 @@ class Review extends Model
     public const STATUS_EXPIRED = 'expired';
 
     /** Default lifetime for guest share links (aligned with review expires_at). */
+    /** The statuses a list can be narrowed to. */
+    public const LIST_STATUSES = [self::STATUS_PENDING, self::STATUS_CHANGES_REQUESTED, self::STATUS_APPROVED, self::STATUS_EXPIRED];
+
     public const SHARE_EXPIRY_DAYS = 7;
 
     public const TYPE_UI = 'ui';
@@ -84,6 +87,7 @@ class Review extends Model
         'status',
         'decision_note',
         'decision_at',
+        'archived_at',
         'expires_at',
         'share_expires_at',
         'comments_enabled',
@@ -103,6 +107,7 @@ class Review extends Model
     {
         return [
             'decision_at' => 'datetime',
+            'archived_at' => 'datetime',
             'expires_at' => 'datetime',
             'webhook_paused_at' => 'datetime',
             'share_expires_at' => 'datetime',
@@ -421,6 +426,86 @@ class Review extends Model
         return $this->status;
     }
 
+    /** No later pass builds on this one. */
+    public function isLatestPass(): bool
+    {
+        return $this->relationLoaded('children')
+            ? $this->children->isEmpty()
+            : ! $this->children()->exists();
+    }
+
+    /**
+     * The person may change a decision they've made: reopen it, or switch
+     * between approved and changes requested. Only on the latest pass, since
+     * a later pass has already acted on the earlier one, and never once the
+     * review has run past its retention.
+     */
+    public function canChangeStatus(): bool
+    {
+        return $this->status !== self::STATUS_PENDING
+            && ! $this->isExpired()
+            && $this->isLatestPass();
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    /**
+     * Every pass in this review's chain, root first: the passes it built on
+     * and every pass built on it.
+     *
+     * @return Collection<int, self>
+     */
+    public function chain(): Collection
+    {
+        $root = $this;
+        $seen = [$root->id => true];
+
+        while ($root->parent_id && ($parent = self::find($root->parent_id)) && ! isset($seen[$parent->id])) {
+            $seen[$parent->id] = true;
+            $root = $parent;
+        }
+
+        $chain = collect([$root]);
+        $frontier = [$root->id];
+
+        while ($frontier !== []) {
+            $next = self::query()->whereIn('parent_id', $frontier)->get();
+            $chain = $chain->merge($next);
+            $frontier = $next->pluck('id')->all();
+        }
+
+        return $chain->values();
+    }
+
+    /** Leaves "Your reviews" and list_reviews unless asked for. */
+    public function scopeUnarchived(Builder $query): Builder
+    {
+        return $query->whereNull('archived_at');
+    }
+
+    /**
+     * Reviews whose effective status is $status, expired included: an
+     * expired review is a pending one past its retention.
+     */
+    public function scopeWithStatus(Builder $query, string $status): Builder
+    {
+        return match ($status) {
+            self::STATUS_EXPIRED => $query->where('status', self::STATUS_PENDING)->where('expires_at', '<', now()),
+            self::STATUS_PENDING => $query->where('status', self::STATUS_PENDING)
+                ->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now())),
+            default => $query->where('status', $status),
+        };
+    }
+
+    /** One row per chain: the pass nothing builds on yet. */
+    public function scopeLatestPasses(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('children');
+    }
+
     /**
      * Human can still mark and decide only while waiting on their eye.
      */
@@ -698,6 +783,7 @@ class Review extends Model
             ],
             'created_at' => $this->created_at?->toIso8601String(),
             'decision_at' => $this->decision_at?->toIso8601String(),
+            'archived' => $this->isArchived(),
         ];
     }
 
@@ -861,6 +947,9 @@ class Review extends Model
             'comments_enabled' => $this->allowsComments(),
             'decision_note' => $this->decision_note,
             'decision_at' => $this->decision_at?->toIso8601String(),
+            // The person can still reopen or change their decision.
+            'can_change_status' => $this->canChangeStatus(),
+            'archived' => $this->isArchived(),
             'expires_at' => $this->expires_at?->toIso8601String(),
             // Only whether the decision webhook is getting through, never its URL.
             'webhook' => $this->webhook_url ? [

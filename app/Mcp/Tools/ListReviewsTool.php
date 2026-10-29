@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('list_reviews')]
 #[Title('List reviews')]
-#[Description('List recent design reviews for this try token only. Returns pass #, status, next_action, and outstanding / awaiting-verification counts — not full work packets. Call get_review for pins.')]
+#[Description('List recent design reviews for this try token only, newest first (20). Returns pass #, status, next_action, archived, and outstanding / awaiting-verification counts — not full work packets. Archived reviews are left out unless include_archived is true; status narrows to one status. Call get_review for pins.')]
 #[IsReadOnly]
 #[IsOpenWorld(false)]
 class ListReviewsTool extends Tool
@@ -32,7 +32,14 @@ class ListReviewsTool extends Tool
             return $workspace;
         }
 
+        $data = $request->validate([
+            'status' => 'nullable|in:'.implode(',', Review::LIST_STATUSES),
+            'include_archived' => 'nullable|boolean',
+        ]);
+
         $reviews = $workspace->reviews()
+            ->when(! ($data['include_archived'] ?? false), fn ($q) => $q->unarchived())
+            ->when($data['status'] ?? null, fn ($q, string $status) => $q->withStatus($status))
             ->latest()
             ->limit(20)
             ->with(['screenshots.annotations', 'parent'])
@@ -51,7 +58,10 @@ class ListReviewsTool extends Tool
      */
     public function schema(JsonSchema $schema): array
     {
-        return [];
+        return [
+            'status' => $schema->string()->enum(Review::LIST_STATUSES)->description('Only reviews with this status'),
+            'include_archived' => $schema->boolean()->description('Include reviews the person archived (default false)'),
+        ];
     }
 
     /**

@@ -4,6 +4,7 @@ use App\Models\Annotation;
 use App\Models\Review;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\ReviewService;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Attributes\Locked;
@@ -25,6 +26,19 @@ new class extends Component
 
     #[Locked]
     public ?int $workspaceId = null;
+
+    /** Open or archived. */
+    public string $shelf = 'open';
+
+    /** A review status to narrow to, or '' for all. */
+    public string $statusFilter = '';
+
+    public int $limit = 20;
+
+    public bool $hasMore = false;
+
+    /** @var array<string, int> */
+    public array $shelfCounts = ['open' => 0, 'archived' => 0];
 
     public function mount(): void
     {
@@ -59,14 +73,110 @@ new class extends Component
     protected function show(Workspace $workspace): void
     {
         $this->workspaceId = $workspace->id;
-        $this->reviews = $workspace->reviews()
+        $this->refreshList();
+    }
+
+    /**
+     * One row per loop: the latest pass of each chain, newest first, on the
+     * chosen shelf and status.
+     */
+    protected function refreshList(): void
+    {
+        $workspace = Workspace::find($this->workspaceId);
+
+        if (! $workspace) {
+            return;
+        }
+
+        $base = $workspace->reviews()->latestPasses();
+
+        $this->shelfCounts = [
+            'open' => (clone $base)->whereNull('archived_at')->count(),
+            'archived' => (clone $base)->whereNotNull('archived_at')->count(),
+        ];
+
+        $query = (clone $base)
+            ->when($this->shelf === 'archived', fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->whereNull('archived_at'))
+            ->when(in_array($this->statusFilter, Review::LIST_STATUSES, true), fn ($q) => $q->withStatus($this->statusFilter));
+
+        $rows = $query
             ->latest()
-            ->limit(20)
-            ->with(['screenshots.annotations', 'parent'])
-            ->get()
+            ->limit($this->limit + 1)
+            ->with(['screenshots.annotations', 'parent', 'children'])
+            ->get();
+
+        $this->hasMore = $rows->count() > $this->limit;
+        $this->reviews = $rows
+            ->take($this->limit)
             ->map(fn (Review $review) => $review->toListSummary() + $this->rowExtras($review))
             ->values()
             ->all();
+    }
+
+    public function updatedShelf(): void
+    {
+        $this->shelf = $this->shelf === 'archived' ? 'archived' : 'open';
+        $this->limit = 20;
+        $this->refreshList();
+    }
+
+    public function updatedStatusFilter(): void
+    {
+        $this->limit = 20;
+        $this->refreshList();
+    }
+
+    public function loadMore(): void
+    {
+        $this->limit = min($this->limit + 20, 200);
+        $this->refreshList();
+    }
+
+    /** A review in this workspace, by its public id. */
+    protected function ownReview(string $publicId): ?Review
+    {
+        return $this->workspaceId
+            ? Review::query()->where('workspace_id', $this->workspaceId)->where('public_id', $publicId)->first()
+            : null;
+    }
+
+    public function setStatus(string $publicId, string $status): void
+    {
+        if ($review = $this->ownReview($publicId)) {
+            app(ReviewService::class)->setStatus($review, $status);
+        }
+
+        $this->refreshList();
+    }
+
+    public function archive(string $publicId): void
+    {
+        $this->shelve($publicId, true);
+    }
+
+    public function restore(string $publicId): void
+    {
+        $this->shelve($publicId, false);
+    }
+
+    protected function shelve(string $publicId, bool $archived): void
+    {
+        if ($review = $this->ownReview($publicId)) {
+            app(ReviewService::class)->archive($review, $archived);
+            $this->dispatch('rm-copied', said: $archived ? 'Archived' : 'Restored');
+        }
+
+        $this->refreshList();
+    }
+
+    public function deleteReview(string $publicId): void
+    {
+        if ($review = $this->ownReview($publicId)) {
+            app(ReviewService::class)->deleteChain($review);
+            $this->dispatch('rm-copied', said: 'Review deleted');
+        }
+
+        $this->refreshList();
     }
 
     /**
@@ -86,6 +196,8 @@ new class extends Component
 
         return [
             'tag' => $review->statusTag(),
+            'raw_status' => $review->status,
+            'can_change_status' => $review->canChangeStatus(),
             'type_label' => $review->typeLabel(),
             'domain' => $review->sourceDomain(),
             'thumb_url' => $shot?->thumbUrl(),
@@ -128,6 +240,10 @@ new class extends Component
             } catch (e) {
                 this.copied = 'Couldn’t copy the link';
             }
+            this.flash();
+        },
+        flash(said) {
+            if (said) this.copied = said;
             clearTimeout(this.copiedTimer);
             this.copiedTimer = setTimeout(() => this.copied = null, 1800);
         },
@@ -143,6 +259,7 @@ new class extends Component
         },
     }"
     x-on:revisemy-try-token.window="forgetSaved($event.detail.token)"
+    x-on:rm-copied.window="flash($event.detail.said)"
 >
     <x-site-shell :cta="false">
         <x-home-section first>
@@ -170,7 +287,46 @@ new class extends Component
                         <p class="mt-3 text-sm text-problem-ink" role="alert">{{ $error }}</p>
                     @endif
                 @else
-                    @if ($reviews === [])
+                    @php
+                        $filtered = $shelf === 'archived' || $statusFilter !== '';
+                    @endphp
+                    @if ($shelfCounts['open'] + $shelfCounts['archived'] > 0)
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div class="inline-flex rounded-lg bg-chip p-0.5 text-sm" role="tablist" aria-label="Which reviews">
+                                @foreach (['open' => 'Open', 'archived' => 'Archived'] as $value => $label)
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        aria-selected="{{ $shelf === $value ? 'true' : 'false' }}"
+                                        wire:click="$set('shelf', '{{ $value }}')"
+                                        @class([
+                                            'rounded-md px-3 py-1 font-medium transition-colors',
+                                            'bg-background text-zinc-900 shadow-sm' => $shelf === $value,
+                                            'text-zinc-500 hover:text-zinc-900' => $shelf !== $value,
+                                        ])
+                                    >{{ $label }} <span class="tabular-nums text-zinc-400">{{ $shelfCounts[$value] }}</span></button>
+                                @endforeach
+                            </div>
+                            <label class="sr-only" for="status-filter">Status</label>
+                            <select
+                                id="status-filter"
+                                wire:model.live="statusFilter"
+                                class="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm text-zinc-700 outline-none focus:border-zinc-400"
+                            >
+                                <option value="">Any status</option>
+                                <option value="pending">Waiting on your eye</option>
+                                <option value="changes_requested">Changes requested</option>
+                                <option value="approved">Approved</option>
+                                <option value="expired">Expired</option>
+                            </select>
+                        </div>
+                    @endif
+                    @if ($reviews === [] && $filtered)
+                        <div class="hatch rounded-2xl px-6 py-10 text-center text-zinc-300">
+                            <p class="text-base font-semibold text-zinc-900">{{ $shelf === 'archived' && $statusFilter === '' ? 'Nothing archived' : 'No reviews match' }}</p>
+                            <p class="mt-1 text-sm text-muted-foreground">{{ $shelf === 'archived' && $statusFilter === '' ? 'Archive a review from its menu to put it away here.' : 'Try another status.' }}</p>
+                        </div>
+                    @elseif ($reviews === [])
                         <div class="hatch rounded-2xl px-6 py-10 text-center text-zinc-300">
                             <p class="text-base font-semibold text-zinc-900">No reviews yet</p>
                             <p class="mt-1 text-sm text-muted-foreground">Ask your agent for a design checkup, and it lands here.</p>
@@ -227,11 +383,41 @@ new class extends Component
                                             <flux:menu.item icon="link" x-on:click="copy({{ \Illuminate\Support\Js::from($item['share_url']) }}, 'Guest link copied')">Copy guest link</flux:menu.item>
                                             <flux:menu.separator />
                                             <flux:menu.item icon="view-columns" href="{{ $item['board_url'] }}">Open board</flux:menu.item>
+                                            @if ($item['raw_status'] === 'pending' && $item['status'] !== 'expired')
+                                                <flux:menu.separator />
+                                                <flux:menu.item icon="check" wire:click="setStatus('{{ $item['id'] }}', 'approved')">Approve</flux:menu.item>
+                                                <flux:menu.item icon="arrow-uturn-left" wire:click="setStatus('{{ $item['id'] }}', 'changes_requested')">Request changes</flux:menu.item>
+                                            @elseif ($item['can_change_status'])
+                                                <flux:menu.separator />
+                                                <flux:menu.item icon="arrow-path" wire:click="setStatus('{{ $item['id'] }}', 'pending')">Reopen for review</flux:menu.item>
+                                                @if ($item['raw_status'] === 'approved')
+                                                    <flux:menu.item icon="arrow-uturn-left" wire:click="setStatus('{{ $item['id'] }}', 'changes_requested')">Request changes instead</flux:menu.item>
+                                                @else
+                                                    <flux:menu.item icon="check" wire:click="setStatus('{{ $item['id'] }}', 'approved')">Approve instead</flux:menu.item>
+                                                @endif
+                                            @endif
+                                            <flux:menu.separator />
+                                            @if ($item['archived'])
+                                                <flux:menu.item icon="arrow-up-tray" wire:click="restore('{{ $item['id'] }}')">Restore</flux:menu.item>
+                                            @else
+                                                <flux:menu.item icon="archive-box" wire:click="archive('{{ $item['id'] }}')">Archive</flux:menu.item>
+                                            @endif
+                                            <flux:menu.item
+                                                icon="trash"
+                                                variant="danger"
+                                                wire:click="deleteReview('{{ $item['id'] }}')"
+                                                wire:confirm="Delete this review and every pass of it? Its screenshots and marks go too, and your agent can’t open it again."
+                                            >Delete</flux:menu.item>
                                         </flux:menu>
                                     </flux:dropdown>
                                 </li>
                             @endforeach
                         </ul>
+                        @if ($hasMore)
+                            <div class="mt-3 flex justify-center">
+                                <flux:button size="sm" variant="ghost" wire:click="loadMore" class="!bg-chip hover:!bg-chip-hover">Load more</flux:button>
+                            </div>
+                        @endif
                     @endif
 
                     <div class="mt-8">
