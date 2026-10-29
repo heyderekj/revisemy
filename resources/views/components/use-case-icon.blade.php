@@ -112,6 +112,16 @@
         @case('rocket-launch')
             <flux:icon.rocket-launch variant="micro" class="{{ $glyph }}" />
             @break
+        @case('home')
+            <flux:icon.home variant="micro" class="{{ $glyph }}" />
+            @break
+        @case('church')
+            {{-- A chapel with a cross, drawn to sit with the micro heroicons. --}}
+            <svg class="{{ $glyph }}" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M7.25.75h1.5V2H10v1.25H8.75V4.5h-1.5V3.25H6V2h1.25V.75Z" />
+                <path d="M8 5.25 12.25 9v6H9.25v-2.5a1.25 1.25 0 0 0-2.5 0V15H3.75V9L8 5.25Z" />
+            </svg>
+            @break
         @case('building-office-2')
             <flux:icon.building-office-2 variant="micro" class="{{ $glyph }}" />
             @break

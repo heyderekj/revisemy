@@ -29,7 +29,7 @@
     @endif
 
     @if (! empty($page['checklist']))
-        <x-list-section :heading="$page['checklist_heading'] ?? 'How it stays straight'" :items="$page['checklist']" />
+        <x-list-section :heading="$page['checklist_heading'] ?? 'How it stays straight'" :intro="$page['checklist_intro'] ?? null" :items="$page['checklist']" />
     @endif
 
     @if (! empty($page['sources']))
@@ -47,5 +47,5 @@
         @include('use-cases.partials.faq')
     @endif
 
-    <x-link-list heading="Keep going" :links="\App\Support\MarketingPages::more($page['path'])" />
+    <x-link-list data-no-toc heading="Keep going" :links="\App\Support\MarketingPages::more($page['path'])" />
 </x-layouts.marketing>
