@@ -10,6 +10,7 @@ use App\Models\Screenshot;
 use App\Models\Workspace;
 use App\Services\Capture\HostedCaptureDriver;
 use App\Services\Capture\PageCaptureService;
+use App\Support\ElementMap;
 use App\Support\OutboundUrl;
 use App\Support\ToolProgress;
 use Illuminate\Http\UploadedFile;
@@ -69,6 +70,19 @@ class ReviewService
             throw ValidationException::withMessages([
                 'page_url' => 'capture_url needs a valid page_url to render.',
             ]);
+        }
+
+        // Each uploaded image may come with its DPR and the element map the
+        // agent collected on the page it shot (image_details, same order).
+        if (isset($sources['images'])) {
+            $details = array_values((array) ($data['image_details'] ?? []));
+            $images = array_map(
+                fn ($image, int $index) => is_array($details[$index] ?? null)
+                    ? ['upload' => $image, 'dpr' => $details[$index]['dpr'] ?? null, 'elements' => self::elementsFrom($details[$index]['elements'] ?? null)]
+                    : $image,
+                array_values($images),
+                array_keys(array_values($images)),
+            );
         }
 
         $cost = $this->credits->costForSources($sources);
@@ -273,8 +287,8 @@ class ReviewService
         $resolved = [];
 
         foreach (array_values($images) as $index => $image) {
-            if (! is_array($image)) {
-                $resolved[$index] = $this->screenshots->validateSource($image);
+            if (($upload = self::uploadOf($image)) !== null) {
+                $resolved[$index] = $this->screenshots->validateSource($upload);
             }
         }
 
@@ -335,11 +349,14 @@ class ReviewService
 
         $shots = [];
         foreach (array_values($images) as $index => $image) {
-            $shot = is_array($image)
+            $upload = self::uploadOf($image);
+            $shot = $upload === null
                 ? $this->screenshots->storeRaw($review, $image['binary'], $index, $image['meta'] ?? null, $image['thumb'] ?? null)
-                : $this->screenshots->store($review, $image, $index, binary: $resolved[$index]);
+                : $this->screenshots->store($review, $upload, $index, binary: $resolved[$index]);
 
-            if (is_array($image) && is_array($image['elements'] ?? null)) {
+            if ($upload !== null && is_array($image)) {
+                $this->applyUploadDetails($shot, $image['dpr'] ?? null, $image['elements'] ?? null);
+            } elseif (is_array($image) && is_array($image['elements'] ?? null)) {
                 $this->screenshots->storeElements($shot, $image['elements']);
             }
             if (is_array($image) && is_string($image['vision']['binary'] ?? null)) {
@@ -359,7 +376,10 @@ class ReviewService
         return $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent']) ?? $review;
     }
 
-    public function addScreenshot(Review $review, string|UploadedFile $image): Screenshot
+    /**
+     * @param  array<string, mixed>|null  $elements
+     */
+    public function addScreenshot(Review $review, string|UploadedFile $image, ?float $dpr = null, ?array $elements = null): Screenshot
     {
         if (! $review->isOpenForFeedback()) {
             throw ValidationException::withMessages([
@@ -376,9 +396,80 @@ class ReviewService
         $sortOrder = (int) $review->screenshots()->max('sort_order') + 1;
 
         $shot = $this->screenshots->store($review, $image, $sortOrder);
+        $this->applyUploadDetails($shot, $dpr, $elements);
         $this->opinions->queue($shot);
 
         return $shot;
+    }
+
+    /**
+     * An uploaded image's DPR and element map. The DPR says what its pixels
+     * hold per CSS px, so the review shows it at the size it was drawn at;
+     * without one, a map's page width works it out. A map that doesn't line
+     * up with the image is left out, and meta.elements_skipped says why, so
+     * the agent can see it in the payload. The image is always kept.
+     *
+     * @param  array<string, mixed>|null  $elements
+     */
+    protected function applyUploadDetails(Screenshot $shot, mixed $dpr, ?array $elements): void
+    {
+        $dpr = is_numeric($dpr) && $dpr >= 0.5 && $dpr <= 4 ? round((float) $dpr, 2) : null;
+        $docWidth = is_array($elements) && is_numeric($elements['docWidth'] ?? null) ? (float) $elements['docWidth'] : null;
+        $width = (int) $shot->width;
+
+        if ($dpr === null && $docWidth > 0 && $width > 0) {
+            $guess = $width / $docWidth;
+            $dpr = $guess >= 0.5 && $guess <= 4 ? round($guess, 2) : null;
+        }
+
+        if ($dpr !== null) {
+            $shot->update(['meta' => [...($shot->meta ?? []), 'dpr' => $dpr]]);
+        }
+
+        if (! is_array($elements)) {
+            return;
+        }
+
+        // The map's page should be as wide as the image at its DPR.
+        if ($docWidth === null || $dpr === null || abs($docWidth * $dpr - $width) > $width * 0.02) {
+            $shot->update(['meta' => [...($shot->meta ?? []), 'elements_skipped' => $docWidth === null
+                ? 'the element map has no docWidth'
+                : "the element map is {$docWidth} CSS px wide, which doesn't match a {$width}px image".($dpr !== null ? " at dpr {$dpr}" : ''),
+            ]]);
+
+            return;
+        }
+
+        $this->screenshots->storeElements($shot, $elements, 'upload');
+    }
+
+    /**
+     * The uploaded source in an images entry: the entry itself, or the
+     * upload in an entry that carries details. Null for a server capture.
+     */
+    protected static function uploadOf(mixed $image): string|UploadedFile|null
+    {
+        if (is_string($image) || $image instanceof UploadedFile) {
+            return $image;
+        }
+
+        return is_array($image) && (is_string($image['upload'] ?? null) || ($image['upload'] ?? null) instanceof UploadedFile)
+            ? $image['upload']
+            : null;
+    }
+
+    /**
+     * An element map as sent: an object, or JSON text (multipart forms).
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function elementsFrom(mixed $elements): ?array
+    {
+        if (is_string($elements) && strlen($elements) <= ElementMap::MAX_BYTES) {
+            $elements = json_decode($elements, true);
+        }
+
+        return is_array($elements) ? $elements : null;
     }
 
     /**

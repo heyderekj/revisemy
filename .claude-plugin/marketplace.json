@@ -8,7 +8,7 @@
     {
       "name": "revisemy",
       "source": "./plugin",
-      "description": "Visual feedback for your agent: it sends a review, you mark what matters, it fixes the next pass."
+      "description": "Visual feedback for your agent: it sends a review, you mark what matters, it fixes the next pass. Plus homepage skills for app and tool landing pages."
     }
   ]
 }

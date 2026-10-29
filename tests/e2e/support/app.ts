@@ -43,7 +43,25 @@ export type Seeded = { api: APIRequestContext; token: string; review: { id: stri
  * A fresh try token and a one-screenshot review, made the way an agent makes
  * them: through the API. There is no seeder because there are no accounts.
  */
-export async function seedReview(title = 'Pricing page'): Promise<Seeded> {
+/**
+ * An element map for the fixture shot (1200×800 at 1×), as the collector at
+ * /capture/elements.js would return it: a hero box holding a heading and a
+ * #buy button.
+ */
+export const FIXTURE_ELEMENTS = {
+    version: 2,
+    docWidth: 1200,
+    docHeight: 800,
+    viewport: { width: 1200, height: 800 },
+    elements: [
+        { selector: '#hero', tag: 'section', kind: 'Box', text: 'Plans for every team Buy now', box: { x: 60, y: 60, w: 600, h: 300 }, parent: null, styles: { bg: '#eef2ff', p: [40, 40, 40, 40], r: 16 } },
+        { selector: '#hero > h1', tag: 'h1', kind: 'Heading', text: 'Plans for every team', box: { x: 100, y: 100, w: 400, h: 48 }, parent: 0, styles: { fs: 40, lh: 48, fw: 700, ff: 'Inter', c: '#111827' } },
+        { selector: '#buy', tag: 'a', kind: 'Button', text: 'Buy now', role: 'link', box: { x: 100, y: 200, w: 200, h: 60 }, parent: 0, styles: { fs: 18, lh: 24, fw: 600, ff: 'Inter', c: '#ffffff', bg: '#2563eb', p: [18, 32, 18, 32], r: 10 } },
+        { selector: '#buy > span', tag: 'span', kind: 'Text', text: 'Buy now', box: { x: 130, y: 218, w: 80, h: 24 }, parent: 2, styles: { fs: 18, fw: 600, c: '#ffffff' } },
+    ],
+};
+
+export async function seedReview(title = 'Pricing page', { elements = false }: { elements?: boolean } = {}): Promise<Seeded> {
     const anon = await request.newContext({ baseURL: APP });
     const minted = await anon.post('/api/try-token');
     expect(minted.status()).toBe(201);
@@ -53,7 +71,9 @@ export async function seedReview(title = 'Pricing page'): Promise<Seeded> {
         baseURL: APP,
         extraHTTPHeaders: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     });
-    const created = await api.post('/api/reviews', { data: { title, type: 'ui', images: [SHOT] } });
+    const created = await api.post('/api/reviews', {
+        data: { title, type: 'ui', images: [SHOT], ...(elements ? { image_details: [{ dpr: 1, elements: FIXTURE_ELEMENTS }] } : {}) },
+    });
     expect(created.status(), await created.text()).toBe(201);
 
     return { api, token, review: await created.json() };

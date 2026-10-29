@@ -9,6 +9,7 @@ use App\Models\AnnotationEvent;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
+use App\Support\ElementTarget;
 use App\Support\FeedbackText;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -282,8 +283,15 @@ class MarkLifecycleService
      * inside the image. Shared by the review page and the MCP app's
      * add_mark tool. Broadcasts so open review pages refresh live.
      *
+     * The mark is tied to an element on the page when the shot has an
+     * element map: $options['element'] is the one the person picked (its
+     * index or selector), and the mark's area becomes its box; otherwise a
+     * drawn box is matched to the element it covers, or a point to the
+     * smallest one under it. $options['snap'] false keeps the mark free, and
+     * $options['target'] carries one already resolved (a guest's pick).
+     *
      * @param  array{x: float, y: float, w: float, h: float}|null  $area
-     * @param  array{suggested_copy?: ?string, source?: string, promoted_from_finding_id?: ?int}  $options
+     * @param  array{suggested_copy?: ?string, source?: string, promoted_from_finding_id?: ?int, element?: int|string|null, snap?: bool, target?: ?array<string, mixed>}  $options
      */
     public function createMark(
         Screenshot $screenshot,
@@ -294,6 +302,16 @@ class MarkLifecycleService
         string $body,
         array $options = [],
     ): Annotation {
+        $target = array_key_exists('target', $options)
+            ? $options['target']
+            : (($options['snap'] ?? true) ? ElementTarget::resolve($screenshot, $x, $y, $area, $options['element'] ?? null) : null);
+
+        if (is_array($target) && ($target['via'] ?? null) === 'picked') {
+            $area = ElementTarget::area($target, $screenshot->cssSize());
+            $x = $area['x'] + $area['w'] / 2;
+            $y = $area['y'] + $area['h'] / 2;
+        }
+
         if ($area !== null) {
             $area = [
                 'x' => max(0.0, min(1.0 - (float) $area['w'], (float) $area['x'])),
@@ -318,6 +336,7 @@ class MarkLifecycleService
             'x' => max(0.0, min(1.0, $x)),
             'y' => max(0.0, min(1.0, $y)),
             'area' => $area,
+            'target' => is_array($target) ? $target : null,
             'severity' => $severity,
             'body' => $body,
             'suggested_copy' => $suggestedCopy,
