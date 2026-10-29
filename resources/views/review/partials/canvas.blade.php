@@ -136,6 +136,39 @@
                         hover: null,
                         hoverFrame: null,
                         pickOn: (() => { try { return localStorage.getItem('rm-pick') !== 'off'; } catch (e) { return true; } })(),
+                        {{-- Live: the page's code as captured, framed so a click picks the real element (LiveSnapshot). --}}
+                        liveUrl: @js($review->isOpenForFeedback() && $review->dom_path ? route('reviews.screenshot.live', [$token, $shot]) : null),
+                        live: false,
+                        liveLoaded: false,
+                        liveWidth: {{ (int) round($shot->cssSize()['w']) ?: 1280 }},
+                        liveHeight: {{ (int) round($shot->cssSize()['h']) ?: 800 }},
+                        liveScale: 1,
+                        toggleLive() {
+                            this.live = ! this.live;
+                            this.hover = null;
+                            if (this.live) {
+                                this.liveLoaded = true;
+                                this.$nextTick(() => this.measureLive());
+                            }
+                        },
+                        measureLive() {
+                            const box = this.$refs.liveViewport;
+                            if (! box) return;
+                            const cs = getComputedStyle(box);
+                            const avail = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+                            this.liveScale = Math.min(1, Math.max(0.1, avail / this.liveWidth));
+                        },
+                        onLiveMessage(e) {
+                            const data = e.data;
+                            if (! this.$refs.liveFrame || e.source !== this.$refs.liveFrame.contentWindow || ! data || data.source !== 'rm-live') return;
+                            if (data.type === 'size' && data.height > 0) {
+                                this.liveHeight = Math.min(data.height, 40000);
+                            } else if (data.type === 'pick' || data.type === 'edit') {
+                                this.live = false;
+                                $wire.markLiveElement(String(data.selector || ''), data.box || {}, data.type === 'edit' ? String(data.after || '') : null)
+                                    .then(() => this.$nextTick(() => this.$root.querySelector('[data-pending-mark]')?.scrollIntoView({ block: 'center', behavior: 'smooth' })));
+                            }
+                        },
                         init() {
                             this.$nextTick(() => {
                                 this.measureLayout();
@@ -417,12 +450,28 @@
                     x-init="init(); return () => destroy()"
                     x-on:keydown.window="onKeyDown($event)"
                     x-on:keyup.window="onKeyUp($event)"
+                    x-on:message.window="onLiveMessage($event)"
+                    x-on:resize.window.debounce.100ms="live && measureLive()"
                 >
                     <div @class([
                         'relative flex min-h-0 flex-1 flex-col',
                     ])>
                         <div data-zoom-controls class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
-                            <template x-if="elements">
+                            <template x-if="liveUrl">
+                                <div class="flex items-center">
+                                    <button
+                                        type="button"
+                                        data-live-toggle
+                                        class="flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
+                                        x-bind:class="live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                        x-bind:aria-pressed="live.toString()"
+                                        x-on:click="toggleLive()"
+                                        title="The page’s code as captured: click a part to mark it, or change its words"
+                                    ><flux:icon.code-bracket variant="micro" class="size-3.5" />Live</button>
+                                    <span class="mx-0.5 h-4 w-px bg-zinc-200" aria-hidden="true"></span>
+                                </div>
+                            </template>
+                            <template x-if="elements && ! live">
                                 <div class="flex items-center">
                                     <button
                                         type="button"
@@ -460,6 +509,30 @@
                                 aria-label="Zoom in"
                             >+</button>
                         </div>
+
+                    <template x-if="liveLoaded">
+                        <div
+                            x-show="live"
+                            x-ref="liveViewport"
+                            data-live-view
+                            class="absolute inset-0 z-20 overflow-auto overscroll-contain bg-well px-3 pt-3 pb-20 md:px-6 md:pt-6"
+                        >
+                            <p class="mx-auto mb-2 max-w-full text-xs text-muted-foreground" x-bind:style="'width:' + (liveWidth * liveScale) + 'px'">
+                                The page’s code as captured. Click a part, then mark it or change its words. Fonts and images may differ from the screenshot.
+                            </p>
+                            <div class="relative mx-auto overflow-hidden rounded-lg bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]" x-bind:style="'width:' + (liveWidth * liveScale) + 'px;height:' + (liveHeight * liveScale) + 'px'">
+                                <iframe
+                                    x-ref="liveFrame"
+                                    x-bind:src="liveUrl"
+                                    sandbox="allow-scripts"
+                                    referrerpolicy="no-referrer"
+                                    title="Live page"
+                                    class="absolute left-0 top-0 origin-top-left border-0"
+                                    x-bind:style="'width:' + liveWidth + 'px;height:' + liveHeight + 'px;transform:scale(' + liveScale + ')'"
+                                ></iframe>
+                            </div>
+                        </div>
+                    </template>
 
                     <div
                         x-ref="viewport"
