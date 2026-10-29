@@ -69,7 +69,7 @@ class ReviseMyFlowTest extends TestCase
 
         $reviewResponse
             ->assertJsonPath('status', 'pending')
-            ->assertJsonPath('status_label', 'Waiting on your eye');
+            ->assertJsonPath('status_label', 'Needs your review');
 
         $this->assertStringContainsString('Apply human marks first', (string) $reviewResponse->json('guidance'));
 

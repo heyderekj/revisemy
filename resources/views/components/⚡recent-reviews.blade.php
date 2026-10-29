@@ -342,7 +342,7 @@ new class extends Component
                             </div>
                             {{-- Same chip as the tabs beside it, not a form field. --}}
                             @php
-                                $statusLabels = ['' => 'Any status', 'pending' => 'Waiting on your eye', 'changes_requested' => 'Changes requested', 'approved' => 'Approved', 'expired' => 'Expired'];
+                                $statusLabels = ['' => 'Any status', 'pending' => 'Needs review', 'changes_requested' => 'Changes requested', 'approved' => 'Approved', 'expired' => 'Expired'];
                             @endphp
                             <flux:dropdown position="bottom" align="end">
                                 <button
