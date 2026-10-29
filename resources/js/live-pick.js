@@ -17,6 +17,9 @@
 (() => {
     const ATTRIBUTES = ['data-w-id', 'data-testid'];
     const send = (type, data = {}) => parent.postMessage({ source: 'rm-live', type, ...data }, '*');
+    // Opened on its own there's no review to hear a pick, so the bar says so
+    // instead of quietly closing.
+    const framed = parent !== window;
 
     const isStableId = (id) => id.length > 0 && id.length < 64 && !/\d{4,}|^[a-f0-9-]{16,}$|^(ember|react|radix|headlessui|:r)/i.test(id);
     const unique = (selector, el) => {
@@ -110,6 +113,8 @@
                 opacity: 0; transform: translateY(4px) scale(.96); transform-origin: left bottom;
                 transition: left .18s var(--ease), top .18s var(--ease), opacity .14s ease, transform .18s var(--ease); }
             .bar.in { opacity: 1; transform: none; }
+            .note { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px 0 9px; height: 26px; }
+            .note.ok svg { color: #f5b400; }
             .kind { padding: 0 8px 0 9px; color: rgba(255,255,255,.55); font-size: 11px; letter-spacing: .01em; }
             .bar button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px; color: #fff; transition: background .12s ease; }
             .bar button:hover, .bar button:focus-visible { background: rgba(255,255,255,.12); }
@@ -161,6 +166,7 @@
     };
     // Each action: [icon, one-word label, run, primary?, key].
     const showBar = (list) => {
+        clearTimeout(noteTimer);
         actions = list;
         const kind = document.createElement('span');
         kind.className = 'kind';
@@ -197,6 +203,7 @@
     };
 
     const clear = () => {
+        clearTimeout(noteTimer);
         if (editing) cancelEdit();
         picked = null;
         pickedBox.hidden = true;
@@ -204,10 +211,29 @@
         bar.classList.remove('in');
     };
 
+    // Says what happened in the bar for a moment, then lets go.
+    let noteTimer = null;
+    const note = (text, ok) => {
+        const span = document.createElement('span');
+        span.className = 'note' + (ok ? ' ok' : '');
+        span.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true">' + (ok ? ICONS.done : ICONS.mark) + '</svg>';
+        span.append(text);
+        actions = [];
+        bar.replaceChildren(span);
+        placeBar();
+        clearTimeout(noteTimer);
+        noteTimer = setTimeout(clear, ok ? 900 : 2600);
+    };
+    // A pick or an edit goes to the review, which makes the mark.
+    const deliver = (type, data) => {
+        if (!framed) return note('Open Live from a review to mark this', false);
+        send(type, data);
+        note(type === 'edit' ? 'Marked with your words' : 'Marked', true);
+    };
+
     const mark = () => {
         if (!picked) return;
-        send('pick', { selector: selectorFor(picked), box: boxOf(picked), text: textOf(picked) });
-        clear();
+        deliver('pick', { selector: selectorFor(picked), box: boxOf(picked), text: textOf(picked) });
     };
 
     // From a click on words (caret where you clicked), or from Edit words
@@ -241,7 +267,7 @@
         stopEditing();
         editing = null;
         if (after !== '' && after !== before) {
-            send('edit', { selector: selectorFor(el), box: boxOf(el), text: before, after });
+            return deliver('edit', { selector: selectorFor(el), box: boxOf(el), text: before, after });
         } else if (marking) {
             return mark();
         }
