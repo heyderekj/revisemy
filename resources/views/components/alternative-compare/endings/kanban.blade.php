@@ -1,6 +1,6 @@
 {{-- Every comment is a card; the agent moves this one to Resolved. --}}
 <x-alternative-compare.shot muted>
-    <span class="absolute flex h-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-zinc-700 px-1.5 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 32%; top: 24%;">#42</span>
+    <span class="absolute flex h-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-zinc-700 px-1.5 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 43%; top: 23%;">#42</span>
 </x-alternative-compare.shot>
 
 <div class="grid grid-cols-4 gap-1.5 rounded-xl bg-chip/60 p-1.5">

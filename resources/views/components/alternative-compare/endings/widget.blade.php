@@ -1,7 +1,7 @@
 {{-- A comment from the site widget, an AI brief, and a status the agent
      can move to Done. --}}
 <x-alternative-compare.shot muted>
-    <span class="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-zinc-700 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 32%; top: 24%;">1</span>
+    <span class="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-zinc-700 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 43%; top: 23%;">1</span>
     <span class="absolute right-0 top-[30%] origin-bottom-right -rotate-90 rounded-t-md bg-zinc-700 px-2 py-1 text-[10px] font-medium text-white">Feedback</span>
 </x-alternative-compare.shot>
 

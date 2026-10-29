@@ -38,7 +38,7 @@
                 <x-alternative-compare.shot>
                     <div class="pointer-events-none absolute rm-review-mock-pop" style="left: 7%; top: 17%; width: 50%; height: 23%; animation-delay: .6s;">
                         <div class="absolute inset-0 rounded-md border-2 border-key/80 bg-key/10"></div>
-                        <span class="absolute -left-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-xs font-semibold shadow-sm ring-2 ring-raised {{ (new Annotation)->markerClass() }}">M1</span>
+                        <span class="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full px-0.5 text-xs font-semibold shadow-sm ring-2 ring-raised {{ (new Annotation)->markerClass() }}">M1</span>
                     </div>
                 </x-alternative-compare.shot>
                 <ul class="mt-2.5">
