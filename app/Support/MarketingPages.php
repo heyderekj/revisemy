@@ -29,6 +29,12 @@ final class MarketingPages
             $pages[] = ['href' => $doc['path'], 'label' => $doc['slug'] === 'index' ? 'Developer docs' : $doc['title'], 'line' => $doc['description'], 'icon' => $doc['icon']];
         }
 
+        $pages[] = ['href' => '/skills', 'label' => 'Skills', 'line' => 'Packs that teach your agent to review and fix websites, apps, email and slides.', 'icon' => 'squares-2x2'];
+
+        foreach (SkillPacks::pages() as $pack) {
+            $pages[] = ['href' => $pack['path'], 'label' => $pack['label'], 'line' => $pack['description'], 'icon' => $pack['icon'] ?? null];
+        }
+
         $pages[] = ['href' => '/for', 'label' => 'Built for', 'line' => 'Review types and who uses them.', 'icon' => 'squares-2x2'];
 
         foreach (config('use-cases.pages', []) + config('use-cases.audiences', []) as $slug => $page) {

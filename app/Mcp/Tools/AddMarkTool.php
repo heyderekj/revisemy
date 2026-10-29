@@ -8,6 +8,7 @@ use App\Models\Annotation;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
 use App\Support\FeedbackText;
+use App\Support\NormalizedArea;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -58,8 +59,11 @@ class AddMarkTool extends Tool
             'area' => 'nullable|array',
             'area.x' => 'required_with:area|numeric|between:0,1',
             'area.y' => 'required_with:area|numeric|between:0,1',
-            'area.w' => 'required_with:area|numeric|between:0.01,1',
-            'area.h' => 'required_with:area|numeric|between:0.01,1',
+            'area.w' => 'required_with:area|numeric|between:'.NormalizedArea::MIN_MARK_SIDE.',1',
+            'area.h' => 'required_with:area|numeric|between:'.NormalizedArea::MIN_MARK_SIDE.',1',
+            'element' => 'nullable|integer|min:0',
+            'selector' => 'nullable|string|max:300',
+            'snap' => 'nullable|boolean',
             'severity' => 'required|in:'.implode(',', Annotation::severities()),
             'body' => FeedbackText::bodyRules(),
             'suggested_copy' => ['nullable', 'string', 'max:2000'],
@@ -106,6 +110,8 @@ class AddMarkTool extends Tool
             [
                 'suggested_copy' => $suggestedCopy !== '' ? $suggestedCopy : null,
                 'source' => Annotation::SOURCE_HUMAN,
+                'element' => isset($data['element']) ? (int) $data['element'] : ($data['selector'] ?? null),
+                'snap' => (bool) ($data['snap'] ?? true),
             ],
         );
 
@@ -127,6 +133,9 @@ class AddMarkTool extends Tool
             'severity' => $schema->string()->enum(Annotation::severities())->description('must-fix, nit, question, or keep')->required(),
             'body' => $schema->string()->description('The human note for this mark')->required(),
             'suggested_copy' => $schema->string()->description('Optional exact copy string for the agent to apply'),
+            'element' => $schema->integer()->description('Optional index of the element the person picked, from get_shot_elements; the mark snaps to its box'),
+            'selector' => $schema->string()->description('Optional selector of the picked element, when there is no index'),
+            'snap' => $schema->boolean()->description('False keeps the mark free of any element (default true)'),
         ];
     }
 }

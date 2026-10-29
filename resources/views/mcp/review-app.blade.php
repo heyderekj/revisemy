@@ -10,13 +10,18 @@
        after images, replies and agent findings ↔ the same component on the web
      - Mark timeline (steps + comments, who did each) ↔ App\Support\MarkTimeline,
        components/mark-timeline; actor pills ↔ Annotation::ACTOR_PILLS
+     - Element picking: hover outline, click snaps, Alt-click for a spot, drag
+       matches, Snap toggle, Wider, Inspect ↔ resources/js/element-pick.js (shared),
+       ElementTarget, components/element-chip + element-inspect; chip colour
+       ↔ Annotation::ELEMENT_CHIP
      Intentionally web-only: share/guest, drag columns, second-opinion
      accept/dismiss, pan, editable title.
 
      Styles and Alpine are compiled from resources/css/mcp-app.css and
      resources/js/mcp-app.js (the same tokens as the site) and inlined by
      App\Mcp\Resources\ReviewApp; nothing loads from a CDN. The bridge is inline.
-     App-only tools: add_mark / add_comment / decide_review / verify_mark. --}}
+     App-only tools: add_mark / add_comment / decide_review / verify_mark /
+     get_shot_elements. --}}
 <style>{!! $styles !!}</style>
 
 <div class="bg-background text-foreground" x-data="reviewApp()" x-init="init()" :style="safeAreaStyle()" x-cloak>
@@ -138,6 +143,11 @@
                     <div class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07]">
                         <button type="button" class="h-7 rounded-full px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-chip"
                             x-show="payload.context && !brief" @click="brief = true">Brief</button>
+                        <button type="button" class="flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
+                            x-show="isPending && elementsFor(activeShot())"
+                            :class="pickOn ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                            :aria-pressed="pickOn.toString()" @click="togglePick()"
+                            title="When on, a click marks the whole part of the page under it">Snap</button>
                         <template x-for="mode in [['width', 'Fit width'], ['page', 'Whole page'], ['actual', '100%']]" :key="mode[0]">
                             <button type="button" class="h-7 rounded-full px-2.5 text-xs font-medium transition-colors"
                                 :class="fit === mode[0] ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
@@ -151,7 +161,7 @@
                             <img class="block w-full rounded-lg" :src="activeShot()?.url" :alt="payload.title" draggable="false">
                             <div class="absolute inset-0 cursor-crosshair touch-pan-y" x-ref="overlay"
                                 @pointerdown="startDraw($event)" @pointermove="moveDraw($event)"
-                                @pointerup="endDraw($event)" @pointercancel="cancelDraw()" @pointerleave="cancelDraw()">
+                                @pointerup="endDraw($event)" @pointercancel="cancelDraw()" @pointerleave="cancelDraw(); hover = null">
 
                                 {{-- human marks: key-coloured region + M# badge (review page classes) --}}
                                 <template x-for="pin in (activeShot()?.pins || [])" :key="'p'+pin.id">
@@ -178,6 +188,13 @@
                                             @pointerdown.stop @pointerup.stop @click.stop="showFinding(item.finding)"></button>
                                     </div>
                                 </template>
+
+                                {{-- the element a click would mark (as on the page) --}}
+                                <div class="pointer-events-none absolute z-[16] rounded-sm bg-key/5 ring-2 ring-key/70"
+                                    x-show="hover !== null" :style="hoverStyle()" data-element-hover>
+                                    <span class="absolute bottom-full left-0 mb-1 max-w-[min(20rem,90vw)] truncate rounded-md bg-foreground px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-background shadow-sm"
+                                        x-text="hoverLabel()"></span>
+                                </div>
 
                                 {{-- draft rectangle / pending composer pin (dashed key, like the page) --}}
                                 <div class="pointer-events-none absolute z-[15] rounded-md border-2 border-dashed border-key bg-key/15"
@@ -212,10 +229,21 @@
                         <p class="mt-1.5 text-sm leading-relaxed text-zinc-700" x-text="activeFinding && activeFinding.body"></p>
                     </div>
 
-                    <p class="mt-2 text-center text-xs text-muted-foreground" x-text="isPending ? 'Drag to mark a region, or click for a point.' : 'Click a numbered mark to read it.'"></p>
+                    <p class="mt-2 text-center text-xs text-muted-foreground" x-text="!isPending ? 'Click a numbered mark to read it.' : (elementsFor(activeShot()) ? 'Click a part to mark it, drag for an area, or Alt-click for a spot.' : 'Drag to mark a region, or click for a point.')"></p>
 
                     {{-- mark composer --}}
                     <div class="mt-3 rounded-2xl bg-card px-3 py-3 sm:px-4" x-show="composer.open" @keydown.escape="closeComposer()">
+                        {{-- What the mark is tied to; your agent gets the same. --}}
+                        <div class="mb-2 space-y-1.5" x-show="composer.target" data-pending-element>
+                            <div class="flex items-center gap-1">
+                                @include('mcp.partials.element-chip', ['source' => 'composer.target', 'class' => 'min-w-0 flex-1'])
+                                <button type="button" class="h-6 shrink-0 rounded-md px-1.5 text-[11px] font-medium text-zinc-500 transition hover:bg-chip hover:text-zinc-900"
+                                    x-show="composer.target && composer.target.parent !== null && composer.element !== null" @click="widen()" title="Mark the part around it instead">Wider</button>
+                                <button type="button" class="flex size-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-chip hover:text-zinc-700"
+                                    @click="dropElement()" aria-label="Just this area, not the element" title="Just this area, not the element">×</button>
+                            </div>
+                            @include('mcp.partials.element-inspect', ['source' => 'composer.target'])
+                        </div>
                         {{-- One row, as on the review page: what kind of mark this is. --}}
                         <div class="flex w-full max-w-md items-center gap-0.5 rounded-xl bg-chip p-0.5" role="radiogroup" aria-label="Kind of mark">
                             <template x-for="sev in severities" :key="sev.value">
@@ -656,7 +684,14 @@
             decidingTimer: null,
             previousOpen: false,
             draft: { drawing: false, x0: 0, y0: 0, x: 0, y: 0, w: 0, h: 0 },
-            composer: { open: false, x: 0, y: 0, area: null, severity: 'must-fix', body: '' },
+            composer: { open: false, x: 0, y: 0, area: null, severity: 'must-fix', body: '', element: null, snap: true, target: null },
+            // Element picking: each shot's element list (from get_shot_elements),
+            // the one under the pointer, a touch tap in progress, and whether
+            // clicks snap. Hit-testing is window.rmPick, shared with the web.
+            elementLists: {},
+            hover: null,
+            tap: null,
+            pickOn: (() => { try { return localStorage.getItem('rm-pick') !== 'off'; } catch (e) { return true; } })(),
             severities: [
                 { value: 'must-fix', label: 'Must fix' },
                 { value: 'nit', label: 'Nice to have' },
@@ -705,6 +740,8 @@
                     this.safeArea = ctx.safeAreaInsets || null;
                 };
                 window.mcpBridge.onteardown = () => this.stop();
+                this.$watch('payload', () => this.loadElements());
+                this.$watch('activeIndex', () => { this.hover = null; this.loadElements(); });
 
                 // Only poll while someone can see it, and only the live copy.
                 if (typeof IntersectionObserver !== 'undefined') {
@@ -1084,15 +1121,23 @@
 
             startDraw(e) {
                 if (!this.isPending) return;
-                // Touch scrolls the capture viewport; draw with mouse/pen only.
-                if (e.pointerType === 'touch') return;
+                this.hover = null;
+                // Touch scrolls the capture viewport: a drag stays a scroll,
+                // and only a short tap marks.
+                if (e.pointerType === 'touch') {
+                    this.tap = { x: e.clientX, y: e.clientY, t: Date.now() };
+                    return;
+                }
                 if (e.button != null && e.button !== 0) return;
                 const p = this.norm(e);
                 if (! p) return;
                 this.draft = { drawing: true, x0: p.x, y0: p.y, x: p.x, y: p.y, w: 0, h: 0 };
             },
             moveDraw(e) {
-                if (!this.draft.drawing) return;
+                if (!this.draft.drawing) {
+                    if (e.pointerType !== 'touch' && this.isPending && !this.composer.open) this.hover = this.pickAt(e);
+                    return;
+                }
                 const p = this.norm(e);
                 if (! p) return;
                 this.draft.x = p.x; this.draft.y = p.y;
@@ -1100,22 +1145,107 @@
                 this.draft.h = Math.abs(p.y - this.draft.y0);
             },
             endDraw(e) {
+                if (e.pointerType === 'touch') {
+                    const tap = this.tap;
+                    this.tap = null;
+                    if (tap && this.isPending && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) <= 8 && Date.now() - tap.t <= 350) this.clickAt(e);
+                    return;
+                }
                 if (!this.draft.drawing) return;
                 this.draft.drawing = false;
                 const p = this.norm(e) || { x: this.draft.x, y: this.draft.y };
                 const w = Math.abs(p.x - this.draft.x0), h = Math.abs(p.y - this.draft.y0);
-                if (w >= 0.01 && h >= 0.01) {
+                // A drag of a few screen pixels is a box; anything less is a click.
+                const r = this.$refs.overlay.getBoundingClientRect();
+                if (w * r.width >= 6 && h * r.height >= 6) {
                     const x = Math.min(p.x, this.draft.x0), y = Math.min(p.y, this.draft.y0);
-                    this.openComposer(x + w / 2, y + h / 2, { x, y, w, h });
+                    this.openComposer(x + w / 2, y + h / 2, { x, y, w, h }, { snap: this.pickOn });
+                    if (this.pickOn && this.elementsFor(this.activeShot())) this.describeElement({ area: { x, y, w, h } });
                 } else {
-                    this.openComposer(p.x, p.y, null);
+                    this.clickAt(e);
                 }
             },
-            cancelDraw() { this.draft.drawing = false; },
+            cancelDraw() { this.draft.drawing = false; this.tap = null; },
 
-            openComposer(x, y, area) {
+            // A click snaps to the element under it; Alt-click drops a spot.
+            clickAt(e) {
+                const picked = this.pickAt(e);
+                const list = this.elementsFor(this.activeShot());
+                if (picked !== null) {
+                    const b = window.rmPick.box(list, picked);
+                    this.openComposer(b.x + b.w / 2, b.y + b.h / 2, b, { element: picked });
+                    this.describeElement({ element: picked });
+                    return;
+                }
+                const p = this.norm(e);
+                if (p) this.openComposer(p.x, p.y, null, { snap: false });
+            },
+
+            elementsFor(shot) { return shot ? this.elementLists[shot.id] || null : null; },
+            loadElements() {
+                const shot = this.activeShot();
+                if (!shot || !this.isPending || !(shot.meta && shot.meta.element_count) || shot.id in this.elementLists) return;
+                this.elementLists[shot.id] = null;
+                window.mcpBridge.callTool('get_shot_elements', { review_id: this.payload.id, screenshot_id: shot.id })
+                    .then((result) => {
+                        const list = result && result.structuredContent && result.structuredContent.elements;
+                        if (list && Array.isArray(list.e)) this.elementLists[shot.id] = list;
+                    })
+                    .catch(() => {});
+            },
+            pickAt(e) {
+                const list = this.elementsFor(this.activeShot());
+                if (!list || !this.pickOn || e.altKey || !window.rmPick) return null;
+                const p = this.norm(e);
+                return p ? window.rmPick.at(list, p.x, p.y) : null;
+            },
+            hoverStyle() {
+                const list = this.elementsFor(this.activeShot());
+                return this.hover === null || !list ? 'display:none' : this.rectStyle(window.rmPick.box(list, this.hover));
+            },
+            hoverLabel() {
+                const list = this.elementsFor(this.activeShot());
+                return this.hover === null || !list ? '' : window.rmPick.label(list, this.hover);
+            },
+            togglePick() {
+                this.pickOn = !this.pickOn;
+                this.hover = null;
+                try { localStorage.setItem('rm-pick', this.pickOn ? 'on' : 'off'); } catch (e) {}
+            },
+            // The server names the element (chip, Inspect rows, the one around it).
+            async describeElement(args) {
+                const shot = this.activeShot();
+                if (!shot) return;
+                const asked = this.composer;
+                try {
+                    const result = await window.mcpBridge.callTool('get_shot_elements', { review_id: this.payload.id, screenshot_id: shot.id, ...args });
+                    const target = result && result.structuredContent && result.structuredContent.target;
+                    // Ignore an answer for a composer that has since closed or moved on.
+                    if (this.composer !== asked || !this.composer.open || !target) return;
+                    this.composer.target = target;
+                    if (args.element !== undefined) {
+                        this.composer.area = target.area;
+                        this.composer.x = target.area.x + target.area.w / 2;
+                        this.composer.y = target.area.y + target.area.h / 2;
+                    }
+                } catch (e) {}
+            },
+            widen() {
+                const parent = this.composer.target && this.composer.target.parent;
+                if (parent === null || parent === undefined) return;
+                this.composer.element = parent;
+                this.describeElement({ element: parent });
+            },
+            dropElement() {
+                this.composer.element = null;
+                this.composer.target = null;
+                this.composer.snap = false;
+            },
+
+            openComposer(x, y, area, opts = {}) {
                 this.closeDetail();
-                this.composer = { open: true, x, y, area, severity: 'must-fix', body: '' };
+                this.hover = null;
+                this.composer = { open: true, x, y, area, severity: 'must-fix', body: '', element: opts.element ?? null, snap: opts.snap ?? true, target: null };
                 // A phone caps the inline frame's height: mark in full screen.
                 if (this.platform === 'mobile' && this.canFullscreen && this.displayMode !== 'fullscreen') this.toggleFullscreen();
             },
@@ -1129,9 +1259,12 @@
                     screenshot_id: shot.id,
                     x: this.composer.x,
                     y: this.composer.y,
-                    area: this.composer.area || undefined,
+                    // A plain copy: an area from get_shot_elements is reactive, and postMessage can't clone that.
+                    area: this.composer.area ? { x: +this.composer.area.x, y: +this.composer.area.y, w: +this.composer.area.w, h: +this.composer.area.h } : undefined,
                     severity: this.composer.severity,
                     body: this.composer.body.trim(),
+                    element: this.composer.element ?? undefined,
+                    snap: this.composer.snap,
                 }));
                 // Keep the note on screen if the server refused it, so nothing typed is lost.
                 if (ok) this.closeComposer();
@@ -1219,4 +1352,5 @@
         };
     }
 </script>
+<script>{!! $picker ?? '' !!}</script>
 <script type="module">{!! $script !!}</script>

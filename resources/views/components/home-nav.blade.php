@@ -22,6 +22,7 @@
         'More' => [
             ['/connectors', 'Connectors'],
             ['/for', 'Use cases'],
+            ['/skills', 'Skills'],
             ['/guest-links', 'Guest links'],
             ['/reviews', 'Your reviews'],
             ['/alternatives', 'Alternatives'],
@@ -38,7 +39,7 @@
 <nav {{ $attributes->class('flex flex-col gap-8 text-[14px]') }} aria-label="Site">
     @foreach ($groups as $label => $links)
         <div>
-            <p class="mb-3 text-sm font-medium text-muted-foreground">{{ $label }}</p>
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{{ $label }}</p>
             <ul class="space-y-2.5 text-zinc-600">
                 @foreach ($links as [$href, $text])
                     <li>
@@ -52,6 +53,9 @@
                             @if (str_starts_with($href, 'http')) target="_blank" rel="noreferrer" @endif
                             @if ($drawer) x-on:click="mobileNav = false" @endif
                         >{{ $text }}</a>
+                        @if (! $home && $current($href))
+                            <x-page-toc :drawer="$drawer" />
+                        @endif
                     </li>
                 @endforeach
             </ul>

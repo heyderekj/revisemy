@@ -12,8 +12,8 @@ type HostMessage = { copy: 'older' | 'newer'; method: string; params: any };
  * Both are served by Playwright, on the app's origin, so the copies share
  * a BroadcastChannel and tools/call reaches the real MCP server.
  */
-async function openInHost(page: Page, title: string, { silentMessage = false } = {}) {
-    const { api, token, review } = await seedReview(title);
+async function openInHost(page: Page, title: string, { silentMessage = false, elements = false } = {}) {
+    const { api, token, review } = await seedReview(title, { elements });
 
     // A mark, so asking for changes has something to send.
     const shot = (await (await api.get(`/api/reviews/${review.id}`)).json()).screenshots[0];
@@ -95,4 +95,35 @@ test('a host that never takes the message leaves the person a nudge', async ({ p
     await expect.poll(async () => (await sent('newer', 'ui/message')).length).toBe(1);
     // The app gives the host eight seconds to answer.
     await expect(newer.getByText('Tell your agent in the chat to carry on.')).toBeVisible({ timeout: 12_000 });
+});
+
+test('the inline review marks the element under a click, as the web does', async ({ page }) => {
+    const { api, review, sent, newer } = await openInHost(page, 'Inline elements', { elements: true });
+
+    // The frame asks for the shot's elements, then Snap shows.
+    await expect(newer.getByRole('button', { name: 'Snap' })).toBeVisible();
+    expect((await sent('newer', 'tools/call')).some((m) => m.params.name === 'get_shot_elements')).toBeTruthy();
+
+    // Hover the fixture's #buy button (100,200 200×60 on a 1200×800 shot).
+    const shot = newer.locator('[x-ref="overlay"]');
+    await shot.scrollIntoViewIfNeeded();
+    const box = (await shot.boundingBox())!;
+    const x = box.x + (200 / 1200) * box.width;
+    const y = box.y + (230 / 800) * box.height;
+    await page.mouse.move(x, y);
+    await expect(newer.locator('[data-element-hover]')).toContainText('Button · Buy now · 200 × 60');
+
+    // Click: the composer names it and shows what the page says about it.
+    await page.mouse.click(x, y);
+    const pending = newer.locator('[data-pending-element]');
+    await expect(pending.locator('[data-element-chip]')).toContainText('Button');
+    await pending.getByText('Inspect').click();
+    await expect(pending.locator('[data-element-inspect]')).toContainText('#2563eb');
+
+    await newer.getByPlaceholder('What should change here?').fill('Make the button say what you get.');
+    await newer.getByRole('button', { name: 'Add mark' }).click();
+
+    await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).work_packets.pins
+        .find((p: any) => p.body === 'Make the button say what you get.')?.element?.selector).toBe('#buy');
+    await expect(newer.locator('[data-element-chip]:visible', { hasText: 'Buy now' }).first()).toBeVisible();
 });
