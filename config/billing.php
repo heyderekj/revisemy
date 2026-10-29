@@ -108,6 +108,9 @@ return [
         // a capture that fails still makes a board.
         'submit_per_hour' => (int) env('REVISEMY_SUBMIT_PER_HOUR', 10),
         'submit_per_day' => (int) env('REVISEMY_SUBMIT_PER_DAY', 30),
+        // Every new workspace from one address in a day, across all three
+        // paths above, so their allowances can't add up to ~60 free months.
+        'workspaces_per_day' => (int) env('REVISEMY_WORKSPACES_PER_DAY', 20),
     ],
 
     /*

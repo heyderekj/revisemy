@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\TryLimitReachedException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use RuntimeException;
 
 class TryTokenGate
 {
@@ -16,6 +16,8 @@ class TryTokenGate
 
     public const SUBMIT_HOUR_MESSAGE = 'Too many reviews started from this network in the last hour. Try again in a little while.';
 
+    public const WORKSPACES_DAY_MESSAGE = 'Too many new try workspaces from this network today. Come back tomorrow, or use the one you already have.';
+
     public const SUBMIT_DAY_MESSAGE = 'Too many reviews started from this network today. Come back tomorrow, or ask your agent to start one.';
 
     public function assertCanMint(Request $request): void
@@ -24,14 +26,33 @@ class TryTokenGate
         $hourKey = $this->hourKey($ip);
         $dayKey = $this->dayKey($ip);
         $perHour = max(1, (int) config('billing.try_token.per_hour', 3));
-        $perDay = max(1, (int) config('billing.try_token.per_day', 3));
+        $perDay = max(1, (int) config('billing.try_token.per_day', 12));
 
         if (RateLimiter::tooManyAttempts($hourKey, $perHour) || RateLimiter::tooManyAttempts($dayKey, $perDay)) {
-            throw new RuntimeException(self::MESSAGE);
+            throw new TryLimitReachedException(self::MESSAGE);
         }
+
+        $this->assertCanOpenWorkspace($request);
 
         RateLimiter::hit($hourKey, 3600);
         RateLimiter::hit($dayKey, 86400);
+    }
+
+    /**
+     * Every new try workspace from one address in a day, however it was
+     * made: a try token, Connect, or a review started on the site. Each path
+     * keeps its own limits too; this one stops them adding up, since every
+     * workspace comes with a month of free credits.
+     */
+    public function assertCanOpenWorkspace(Request $request): void
+    {
+        $key = 'new-workspace:day:'.($request->ip() ?: 'unknown');
+
+        if (RateLimiter::tooManyAttempts($key, max(1, (int) config('billing.try_token.workspaces_per_day', 20)))) {
+            throw new TryLimitReachedException(self::WORKSPACES_DAY_MESSAGE);
+        }
+
+        RateLimiter::hit($key, 86400);
     }
 
     /**
@@ -49,12 +70,14 @@ class TryTokenGate
         $dayKey = 'try-connect:day:'.$ip;
 
         if (RateLimiter::tooManyAttempts($hourKey, max(1, (int) config('billing.try_token.connect_per_hour', 6)))) {
-            throw new RuntimeException(self::HOUR_MESSAGE);
+            throw new TryLimitReachedException(self::HOUR_MESSAGE);
         }
 
         if (RateLimiter::tooManyAttempts($dayKey, max(1, (int) config('billing.try_token.connect_per_day', 20)))) {
-            throw new RuntimeException(self::DAY_MESSAGE);
+            throw new TryLimitReachedException(self::DAY_MESSAGE);
         }
+
+        $this->assertCanOpenWorkspace($request);
 
         RateLimiter::hit($hourKey, 3600);
         RateLimiter::hit($dayKey, 86400);
@@ -72,11 +95,11 @@ class TryTokenGate
         $dayKey = 'submit:day:'.$ip;
 
         if (RateLimiter::tooManyAttempts($hourKey, max(1, (int) config('billing.try_token.submit_per_hour', 10)))) {
-            throw new RuntimeException(self::SUBMIT_HOUR_MESSAGE);
+            throw new TryLimitReachedException(self::SUBMIT_HOUR_MESSAGE);
         }
 
         if (RateLimiter::tooManyAttempts($dayKey, max(1, (int) config('billing.try_token.submit_per_day', 30)))) {
-            throw new RuntimeException(self::SUBMIT_DAY_MESSAGE);
+            throw new TryLimitReachedException(self::SUBMIT_DAY_MESSAGE);
         }
 
         RateLimiter::hit($hourKey, 3600);

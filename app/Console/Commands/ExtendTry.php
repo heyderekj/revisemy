@@ -33,7 +33,7 @@ class ExtendTry extends Command
             : (int) ($this->option('credits') ?: 0);
 
         $tokenDays = $this->option('pack')
-            ? (int) config('billing.plans.free.token_days', 14)
+            ? (int) config('billing.plans.free.token_days', 90)
             : (int) ($this->option('token-days') ?: 0);
 
         if ($addCredits <= 0 && $tokenDays <= 0) {

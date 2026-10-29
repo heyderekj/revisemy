@@ -133,6 +133,14 @@ class CreateReviewTool extends Tool
         return "{$tag}Capture failed, so this review has no page shot yet. Call add_screenshot with id `{$payload['id']}` and the page as an image data URL, once for desktop and once for mobile, before you share the link.\n\n";
     }
 
+    /** A source's cost from config/billing.php, as the schema says it. */
+    protected function cost(string $source): string
+    {
+        $credits = (int) config("billing.costs.{$source}", 1);
+
+        return $credits.' '.($credits === 1 ? 'credit' : 'credits');
+    }
+
     /**
      * @return array<string, JsonSchema>
      */
@@ -151,17 +159,17 @@ class CreateReviewTool extends Tool
                 ->items($schema->string()->description('Screenshot as https image URL, data URL, or base64 — not a page URL'))
                 ->min(1)
                 ->max(5)
-                ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs 1 credit). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
+                ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs '.$this->cost('images').'). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
             'image_details' => $schema->array()
                 ->items($schema->object()->description('{dpr, elements} for the image at the same position'))
                 ->max(5)
                 ->description('Optional, one per image in the same order. dpr: device pixels per CSS px (2 for a retina screenshot), so the human sees it at its real size. elements: the element map from running the script at '.url('/capture/elements.js').' (also the revisemy://capture/elements.js resource) with page.evaluate in the browser you screenshot, at the top of the page, right after a full-page shot. With it, the human can click a button or heading to mark it, and each mark tells you its selector, text and styles.'),
             'capture_url' => $schema->boolean()
-                ->description('Capture page_url server-side (desktop, mobile and tablet, sharp at 2×; costs 5 credits). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
+                ->description('Capture page_url server-side (desktop, mobile and tablet, sharp at 2×; costs '.$this->cost('capture_url').'). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
             'pdf' => $schema->string()
-                ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
+                ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`; costs '.$this->cost('pdf').').'),
             'html' => $schema->string()
-                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email). Requires REVISEMY_CAPTURE_DRIVER. On [capture_not_configured] or [capture_provider_failed], fall back to images with data URLs.'),
+                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email; costs '.$this->cost('html').'). Requires REVISEMY_CAPTURE_DRIVER. On [capture_not_configured] or [capture_provider_failed], fall back to images with data URLs.'),
         ];
     }
 }

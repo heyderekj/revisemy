@@ -56,7 +56,8 @@ class CreditsService
     /**
      * Ensure the workspace has an initial grant; lazily refill Try monthly.
      * Plus refills when Polar bills the subscription (order.paid webhook), so
-     * its refill follows the real billing cycle instead of this clock.
+     * its refill follows the real billing cycle instead of this clock. Comped
+     * Plus has no bill, so it refills on this clock like Try.
      */
     public function ensurePeriod(Workspace $workspace): Workspace
     {
@@ -66,7 +67,7 @@ class CreditsService
             return $this->grantPeriod($workspace);
         }
 
-        if ($workspace->normalizedPlan() === Workspace::PLAN_FREE
+        if (($workspace->normalizedPlan() === Workspace::PLAN_FREE || $workspace->isComped())
             && $this->planRenews($workspace)
             && $workspace->credits_period_start->lte(now()->subMonth())) {
             return $this->grantPeriod($workspace);
@@ -226,6 +227,28 @@ class CreditsService
     }
 
     /**
+     * Give a workspace Plus without a subscription, or take it back. Turning
+     * it on grants Plus's month at once; turning it off leaves the balance,
+     * and Try refills a month after the last grant, as on any downgrade.
+     */
+    public function comp(Workspace $workspace, bool $on = true, ?string $note = null): Workspace
+    {
+        if (! $on) {
+            $workspace->forceFill(['comped_at' => null, 'comp_note' => null])->save();
+
+            return $workspace->isPlusActive() ? $workspace : $this->activateFree($workspace);
+        }
+
+        $workspace->forceFill([
+            'plan' => Workspace::PLAN_PRO,
+            'comped_at' => $workspace->comped_at ?? now(),
+            'comp_note' => $note ?? $workspace->comp_note,
+        ])->save();
+
+        return $this->grantPeriod($workspace->fresh() ?? $workspace);
+    }
+
+    /**
      * Downgrade to Try — no immediate grant (leftover balance kept; Try refills a month after the last grant).
      */
     public function activateFree(Workspace $workspace): Workspace
@@ -254,6 +277,7 @@ class CreditsService
         return [
             'plan' => $plan,
             'plan_name' => config("billing.plans.{$plan}.name", $plan),
+            'comped' => $workspace->isComped(),
             'credits_remaining' => $workspace->totalCredits(),
             'credits_monthly' => (int) $workspace->credits_balance,
             'credits_purchased' => (int) $workspace->purchased_credits,

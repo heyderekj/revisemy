@@ -44,14 +44,13 @@ new class extends Component
         try {
             $gate->assertCanMint(request());
             $result = $tryTokens->create();
-        } catch (\RuntimeException $e) {
-            $this->error = $e->getMessage() === TryTokenGate::MESSAGE
-                ? $e->getMessage()
-                : 'Couldn’t start a try just now. Give it a minute and try again.';
+        } catch (\App\Exceptions\TryLimitReachedException $e) {
+            $this->error = $e->getMessage();
 
-            if ($e->getMessage() !== TryTokenGate::MESSAGE) {
-                report($e);
-            }
+            return;
+        } catch (\RuntimeException $e) {
+            $this->error = 'Couldn’t start a try just now. Give it a minute and try again.';
+            report($e);
 
             return;
         }

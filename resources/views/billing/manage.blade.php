@@ -1,6 +1,6 @@
 <x-simple-page :shell="false" title="Manage billing — ReviseMy" eyebrow="Billing" heading="Billing" robots="noindex, nofollow">
     <p>
-        Plan: <span class="font-semibold text-zinc-900">{{ $status['plan_name'] }}</span>
+        Plan: <span class="font-semibold text-zinc-900">{{ $status['plan_name'] }}@if ($status['comped']) · comped @endif</span>
         · Credits: {{ $status['credits_monthly'] }} / {{ $status['credits_grant'] }} this period
         @if ($status['credits_purchased'] > 0)
             + {{ $status['credits_purchased'] }} purchased
@@ -33,12 +33,14 @@
 
     @if ($subscribed && ! $status['cancel_at_period_end'])
         <p class="mt-8">Receipts and payment method live in Polar, our merchant of record. Cancel to stop renewal; you keep Plus until the current period ends.</p>
-        <form method="post" action="{{ URL::temporarySignedRoute('billing.cancel-subscription', now()->addHours(6), ['workspace' => $workspace->public_id]) }}" class="mt-4">
+        <form method="post" action="{{ URL::temporarySignedRoute('billing.cancel-subscription', now()->addHours(6), ['workspace' => $workspace->public_id]) }}" class="mt-4" onsubmit="return confirm('Cancel Plus? It stops renewing, and you keep Plus until this period ends.')">
             @csrf
             <button type="submit" class="btn-quiet inline-flex h-10 items-center rounded-full px-5 text-sm font-medium">Cancel Plus</button>
         </form>
+    @elseif ($status['comped'])
+        <p class="mt-8">Plus is on the house here. Credits refill each month, and there’s nothing to cancel.</p>
     @elseif (! $subscribed)
-        <p class="mt-8">You’re on Try. Ask your agent for create_checkout to get Plus ({{ $status['pro_credits'] }} credits a month for ${{ $status['pro_price_usd'] }}) when you’re ready to keep going.</p>
+        <p class="mt-8">You’re on Try. When you’re ready to keep going, ask your agent to upgrade you to Plus: {{ $status['pro_credits'] }} credits a month for ${{ $status['pro_price_usd'] }}.</p>
     @endif
 
     <a href="/" class="link mt-10 inline-block text-sm">Back to ReviseMy</a>

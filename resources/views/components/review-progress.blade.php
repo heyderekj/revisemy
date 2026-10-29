@@ -160,6 +160,8 @@
                     if (response.status === 422 && type.includes('json')) {
                         const body = await response.json().catch(() => ({}));
                         this.errors = body.errors || {};
+                        // A Turnstile answer works once; ask for a fresh one.
+                        window.turnstile?.reset();
                         return this.close();
                     }
 
