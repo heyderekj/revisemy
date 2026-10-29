@@ -1,6 +1,8 @@
 ---
 name: revisemy-voice
 description: Use before writing or editing any user-facing words for ReviseMy: marketing pages, use cases, guides, host setup steps, empty states, toasts, dialogs, MCP tool descriptions, or next_action summaries. Also use when asked "what is ReviseMy" or to check copy against its positioning.
+metadata:
+  internal: true
 ---
 
 # ReviseMy voice
