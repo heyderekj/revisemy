@@ -39,6 +39,9 @@ class ReviewApp extends AppResource
             'styles' => $this->fontFaces().$this->built('resources/css/mcp-app.css'),
             // A literal `</script` inside the bundle would end the inline tag early.
             'script' => str_ireplace('</script', '<\\/script', $this->built('resources/js/mcp-app.js')),
+            // Element picking, the same file the web review imports. Inlined as
+            // source: a module import here would point at a chunk the sandbox can't load.
+            'picker' => str_ireplace('</script', '<\\/script', (string) rescue(fn () => file_get_contents(resource_path('js/element-pick.js')), '', report: false)),
         ]);
     }
 

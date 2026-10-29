@@ -266,6 +266,12 @@ class Annotation extends Model
      *
      * @var array<string, array{tag: string, dot: string}>
      */
+    /**
+     * The chip that names the element a mark is on (Button “Get started”),
+     * on the review, the board and the inline review alike.
+     */
+    public const ELEMENT_CHIP = 'bg-chip text-zinc-700';
+
     public const TONES = [
         'neutral' => ['tag' => 'bg-chip text-zinc-700', 'dot' => 'bg-zinc-400'],
         'agent' => ['tag' => 'bg-sky-50 text-sky-800', 'dot' => 'bg-sky-500'],
@@ -372,6 +378,7 @@ class Annotation extends Model
         'x',
         'y',
         'area',
+        'target',
         'severity',
         'body',
         'suggested_copy',
@@ -393,6 +400,7 @@ class Annotation extends Model
             'x' => 'float',
             'y' => 'float',
             'area' => 'array',
+            'target' => 'array',
             'resolved_at' => 'datetime',
             'verified_at' => 'datetime',
         ];
@@ -421,7 +429,7 @@ class Annotation extends Model
      */
     public function region(): ?array
     {
-        $normalized = NormalizedArea::from($this->area);
+        $normalized = NormalizedArea::from($this->area, NormalizedArea::MIN_MARK_SIDE);
 
         if ($normalized !== null) {
             return $normalized;
@@ -437,7 +445,7 @@ class Annotation extends Model
             'y' => $this->area['y'] ?? $this->y,
             'w' => $this->area['w'] ?? $this->area['width'] ?? 0,
             'h' => $this->area['h'] ?? $this->area['height'] ?? 0,
-        ]);
+        ], NormalizedArea::MIN_MARK_SIDE);
     }
 
     public function screenshot(): BelongsTo

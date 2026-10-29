@@ -37,7 +37,7 @@ MCP has no keyword triggers: the model picks a tool from its description and the
 
 - Each mark's **timeline**: who marked it, every step after (started, resolved with an after image, reopened, verified) and every comment, with the agent's labelled **Agent**. "Talk only" folds the bare steps away. The owner replies from the same card.
 
-These are backed by the app-only `add_mark`, `add_comment`, `decide_review`, and `verify_mark` tools. Hosts without MCP Apps (Grok, Claude Code CLI) ignore the UI metadata. `create_review` and `get_review` still return `review_url` as plain text, and the agent must paste that link. The loop is unchanged.
+These are backed by the app-only `add_mark`, `add_comment`, `decide_review`, `verify_mark` and `get_shot_elements` tools. Hosts without MCP Apps (Grok, Claude Code CLI) ignore the UI metadata. `create_review` and `get_review` still return `review_url` as plain text, and the agent must paste that link. The loop is unchanged.
 
 ### MCP ↔ web parity checklist
 
@@ -54,10 +54,11 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Control height | Web Flux `size="sm"` (`h-8`) |
 | Mark timeline: steps and comments, who did each, "Talk only" | `App\Support\MarkTimeline` → pin `timeline`; `components/mark-timeline` on the web, `mcp/partials/mark-timeline` inline |
 | Who did it: the Agent / You / guest pills | `Annotation::ACTOR_PILLS`; `components/who-pill` on the web |
+| Element picking: hover outline, click snaps, Alt-click for a spot, drag matches, Snap toggle, Wider, Inspect, the element chip on marks | `resources/js/element-pick.js` (one hit-test; inlined as source in the inline review), `App\Support\ElementTarget`, `components/element-chip` + `element-inspect` on the web, `mcp/partials/element-chip` + `element-inspect` inline, chip colour `Annotation::ELEMENT_CHIP`. The inline review gets the element list from the app-only `get_shot_elements`, because its sandbox can't fetch it. |
 
 **Intentionally web-only:** share/guest link management, the “Hand this to your agent” panel on reviews started at `/new`, the guests’ “Start your own review” link, link previews for pasted review links, the “Your reviews” link in the header, drag-and-drop column moves, second-opinion accept/dismiss/refresh, title edit, Echo realtime.
 
-The four app tools are marked `Visibility::App`, so the model does not see them in its tool list. Note this is **hiding, not authorization**: any holder of the Sanctum token can still invoke them by name over the same endpoint. That matches ReviseMy's existing trust model — the token owner *is* the human, exactly as the token-gated `/r/{token}` owner link already assumes. Their descriptions say "human-in-the-loop UI only — agents must never call this," mirroring the "never verify a mark yourself" instruction agents already follow.
+The five app tools (`add_mark`, `add_comment`, `decide_review`, `verify_mark`, `get_shot_elements`) are marked `Visibility::App`, so the model does not see them in its tool list. Note this is **hiding, not authorization**: any holder of the Sanctum token can still invoke them by name over the same endpoint. That matches ReviseMy's existing trust model — the token owner *is* the human, exactly as the token-gated `/r/{token}` owner link already assumes. Their descriptions say "human-in-the-loop UI only — agents must never call this," mirroring the "never verify a mark yourself" instruction agents already follow.
 
 **Handoff by link.** A review started on the site at `/new` (`reviews.origin = web`) belongs to the try workspace that browser got, the same one a later Connect from that browser lands in. `get_review`, `look_at_marks`, `wait_for_review` and REST `GET /api/reviews/{id}` also take the review link (or its bare owner token) through `ReviewService::findOrAdopt()`. The first agent to present it moves the review, and any later passes, into its own workspace and sets `handed_off_at`; after that the link only reaches the agent that holds it. Guest links never hand a review over, and agent-made reviews never move. It's the same trust model: the owner link is the reviewer's whole login.
 

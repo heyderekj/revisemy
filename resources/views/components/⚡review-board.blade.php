@@ -436,6 +436,9 @@ new class extends Component
                                             </span>
                                         @endif
                                     </div>
+                                    @if ($mark->target)
+                                        <x-element-chip :target="$mark->target" class="mb-1.5" />
+                                    @endif
                                     <p class="text-sm leading-relaxed text-zinc-700">{{ $mark->body }}</p>
                                     @if ($mark->resolution_note)
                                         <div class="mt-2 flex items-start gap-1.5 rounded-lg bg-emerald-50/70 px-2.5 py-1.5 text-xs leading-relaxed text-emerald-900">
@@ -553,6 +556,15 @@ new class extends Component
                                 <dt class="text-xs text-muted-foreground">Feedback</dt>
                                 <dd class="mt-1 leading-relaxed text-pretty text-zinc-800 sm:text-[15px]">{{ $selectedMark->body }}</dd>
                             </div>
+                            @if ($selectedMark->target)
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">On the page</dt>
+                                    <dd class="mt-1 space-y-1.5">
+                                        <x-element-chip :target="$selectedMark->target" />
+                                        <x-element-inspect :target="$selectedMark->target" />
+                                    </dd>
+                                </div>
+                            @endif
                             @if ($markReview?->context)
                                 <div>
                                     <dt class="text-xs text-muted-foreground">What to look at</dt>

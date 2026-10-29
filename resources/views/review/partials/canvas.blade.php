@@ -130,6 +130,12 @@
                         startY: 0,
                         draft: null,
                         resizeObserver: null,
+                        {{-- Element picking: the shot's element list, the one under the cursor, and whether clicks snap to it. --}}
+                        elementsUrl: @js($review->isOpenForFeedback() ? $shot->elementsUrl() : null),
+                        elements: null,
+                        hover: null,
+                        hoverFrame: null,
+                        pickOn: (() => { try { return localStorage.getItem('rm-pick') !== 'off'; } catch (e) { return true; } })(),
                         init() {
                             this.$nextTick(() => {
                                 this.measureLayout();
@@ -144,6 +150,38 @@
                                     this.resizeObserver.observe(this.$refs.viewport);
                                 }
                             });
+                            window.rmPick?.load(this.elementsUrl).then((list) => { this.elements = list; });
+                        },
+                        togglePick() {
+                            this.pickOn = ! this.pickOn;
+                            this.hover = null;
+                            try { localStorage.setItem('rm-pick', this.pickOn ? 'on' : 'off'); } catch (e) {}
+                        },
+                        canPick(e) {
+                            return this.pickOn && this.elements && window.rmPick && ! (e && e.altKey);
+                        },
+                        {{-- The element under the pointer, or null when it's off the shot. --}}
+                        elementAt(e) {
+                            const target = this.$refs.shotImg;
+                            if (! target || ! this.canPick(e)) return null;
+                            const rect = target.getBoundingClientRect();
+                            if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return null;
+                            return window.rmPick.at(this.elements, (e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height);
+                        },
+                        trackHover(e) {
+                            if (this.hoverFrame) return;
+                            this.hoverFrame = requestAnimationFrame(() => {
+                                this.hoverFrame = null;
+                                this.hover = this.drawing || this.spaceHeld || $wire.pendingX !== null ? null : this.elementAt(e);
+                            });
+                        },
+                        hoverStyle() {
+                            if (this.hover === null || ! this.elements) return 'display:none';
+                            const b = window.rmPick.box(this.elements, this.hover);
+                            return 'left:' + (b.x * 100) + '%;top:' + (b.y * 100) + '%;width:' + (b.w * 100) + '%;height:' + (b.h * 100) + '%';
+                        },
+                        hoverLabel() {
+                            return this.hover === null || ! this.elements ? '' : window.rmPick.label(this.elements, this.hover);
                         },
                         destroy() {
                             this.resizeObserver?.disconnect();
@@ -310,6 +348,7 @@
                                 return;
                             }
                             this.moveDraw(e);
+                            this.trackHover(e);
                         },
                         onMouseUp(e) {
                             if (this.panning) {
@@ -328,6 +367,7 @@
                             const p = this.norm(e);
                             if (! p) return;
                             this.drawing = true;
+                            this.hover = null;
                             this.startX = p.x;
                             this.startY = p.y;
                             this.draft = { x: p.x, y: p.y, w: 0, h: 0 };
@@ -352,8 +392,17 @@
                             const draft = this.draft;
                             this.draft = null;
                             if (! draft) return;
-                            if (draft.w >= 0.01 && draft.h >= 0.01) {
-                                $wire.startPin(draft.x, draft.y, draft.w, draft.h);
+                            {{-- A drag of a few screen pixels is a box; anything less is a click. --}}
+                            const rect = this.$refs.shotImg?.getBoundingClientRect();
+                            if (rect && draft.w * rect.width >= 6 && draft.h * rect.height >= 6) {
+                                $wire.startPin(draft.x, draft.y, draft.w, draft.h, null, this.pickOn);
+                                return;
+                            }
+                            {{-- A click snaps to the element under it; Alt-click drops a spot. --}}
+                            const picked = this.elementAt(e);
+                            if (picked !== null) {
+                                const b = window.rmPick.box(this.elements, picked);
+                                $wire.startPin(b.x, b.y, b.w, b.h, picked);
                             } else {
                                 $wire.startPin(this.startX, this.startY);
                             }
@@ -362,6 +411,7 @@
                             this.drawing = false;
                             this.draft = null;
                             this.panning = false;
+                            this.hover = null;
                         }
                     }"
                     x-init="init(); return () => destroy()"
@@ -372,6 +422,20 @@
                         'relative flex min-h-0 flex-1 flex-col',
                     ])>
                         <div data-zoom-controls class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
+                            <template x-if="elements">
+                                <div class="flex items-center">
+                                    <button
+                                        type="button"
+                                        data-pick-toggle
+                                        class="flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
+                                        x-bind:class="pickOn ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                        x-bind:aria-pressed="pickOn.toString()"
+                                        x-on:click="togglePick()"
+                                        title="When on, a click marks the whole part of the page under it"
+                                    ><flux:icon.cursor-arrow-rays variant="micro" class="size-3.5" />Snap</button>
+                                    <span class="mx-0.5 h-4 w-px bg-zinc-200" aria-hidden="true"></span>
+                                </div>
+                            </template>
                             <button
                                 type="button"
                                 class="hidden size-7 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:flex"
@@ -571,6 +635,19 @@
                                 @endif
                             @endforeach
 
+                            {{-- The element a click would mark. --}}
+                            <div
+                                data-element-hover
+                                class="pointer-events-none absolute z-[16] rounded-sm bg-key/5 ring-2 ring-key/70"
+                                x-bind:style="hoverStyle()"
+                                x-cloak
+                            >
+                                <span
+                                    class="absolute bottom-full left-0 mb-1 max-w-[min(20rem,90vw)] truncate rounded-md bg-foreground px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-background shadow-sm"
+                                    x-text="hoverLabel()"
+                                ></span>
+                            </div>
+
                             <template x-if="draft && draft.w > 0 && draft.h > 0">
                                 <div
                                     class="pointer-events-none absolute z-[15] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-zinc-400 bg-zinc-400/15' : 'border-key bg-key/15' }}"
@@ -579,7 +656,7 @@
                             </template>
 
                             @if ($pendingX !== null && $pendingY !== null)
-                                @if ($pendingW !== null && $pendingH !== null && $pendingW >= 0.01 && $pendingH >= 0.01)
+                                @if ($pendingW !== null && $pendingH !== null && $pendingW >= \App\Support\NormalizedArea::MIN_MARK_SIDE && $pendingH >= \App\Support\NormalizedArea::MIN_MARK_SIDE)
                                     <div
                                         data-pending-mark
                                         class="pointer-events-none absolute z-[18] rounded-md border-2 border-dashed {{ $mode === 'guest' ? 'border-zinc-400 bg-zinc-400/15' : 'border-key bg-key/15' }}"
@@ -604,9 +681,13 @@
                     </div>
 
                 @if ($review->isOpenForFeedback())
-                    <p class="pointer-events-none absolute bottom-3 left-3 z-20 hidden rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] md:block xl:left-1/2 xl:-translate-x-1/2">
-                        {{ $mode === 'guest' ? 'Drag to suggest a change · click for a point' : 'Drag to mark · click for a point' }} · Space+drag pans
-                    </p>
+                    {{-- Pinned left beside the zoom bar, never under it: it gives way first. --}}
+                    @php($canvasHint = $shot->elementsUrl() ? ($mode === 'guest' ? 'Click a part to suggest a change · drag for an area · Alt-click for a spot · Space+drag pans' : 'Click a part to mark it · drag for an area · Alt-click for a spot · Space+drag pans') : ($mode === 'guest' ? 'Drag to suggest a change · click for a point · Space+drag pans' : 'Drag to mark · click for a point · Space+drag pans'))
+                    <p
+                        data-canvas-hint
+                        class="pointer-events-none absolute bottom-3 left-3 z-20 hidden max-w-[calc(100%-26rem)] truncate rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] lg:block"
+                        title="{{ $canvasHint }}"
+                    >{{ $canvasHint }}</p>
                 @endif
                 </div>
             @else
@@ -839,7 +920,10 @@
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-zinc-200 md:hidden" aria-hidden="true"></div>
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <flux:heading size="sm">
-                            @if ($pendingW !== null && $pendingH !== null && $pendingW >= 0.01 && $pendingH >= 0.01)
+                            @if ($pendingTarget)
+                                @php($thing = 'this '.strtolower($pendingTarget['kind'] ?? 'element'))
+                                {{ $mode === 'guest' ? "Suggest a change to {$thing}" : "Leave a note on {$thing}" }}
+                            @elseif ($pendingW !== null && $pendingH !== null && $pendingW >= \App\Support\NormalizedArea::MIN_MARK_SIDE && $pendingH >= \App\Support\NormalizedArea::MIN_MARK_SIDE)
                                 {{ $mode === 'guest' ? 'Suggest a change here' : 'Leave a note here' }}
                             @else
                                 {{ $mode === 'guest' ? 'Suggest a change on this spot' : 'Leave a note on this spot' }}
@@ -855,6 +939,21 @@
                         </button>
                     </div>
                     <div class="space-y-3">
+                        @if ($pendingTarget)
+                            {{-- What the mark is tied to; the agent gets the same. --}}
+                            <div class="space-y-1.5" data-pending-element>
+                                <div class="flex items-center gap-1">
+                                    <x-element-chip :target="$pendingTarget" class="min-w-0 flex-1" />
+                                    @if ($pendingParent !== null)
+                                        <button type="button" class="h-6 shrink-0 rounded-md px-1.5 text-[11px] font-medium text-zinc-500 transition hover:bg-chip hover:text-zinc-900" wire:click="widenPendingElement" title="Mark the part around it instead">Wider</button>
+                                    @endif
+                                    <button type="button" class="flex size-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-chip hover:text-zinc-700" wire:click="dropPendingElement" aria-label="Just this area, not the element" title="Just this area, not the element">
+                                        <flux:icon.x-mark variant="micro" class="size-3.5" />
+                                    </button>
+                                </div>
+                                <x-element-inspect :target="$pendingTarget" />
+                            </div>
+                        @endif
                         @if ($mode === 'guest')
                             <flux:input
                                 wire:model="guestName"

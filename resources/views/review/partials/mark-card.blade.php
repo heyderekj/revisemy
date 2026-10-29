@@ -28,6 +28,9 @@
         @endif
     </div>
 
+    @if ($pin->target)
+        <x-element-chip :target="$pin->target" class="mb-1.5" />
+    @endif
     <p class="text-sm leading-relaxed text-zinc-700">{{ $pin->body }}</p>
 
     @if ($pin->suggested_copy)
