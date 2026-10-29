@@ -19,9 +19,10 @@ final class SkillPacks
     }
 
     /**
-     * Each category with its packs as links, in config order.
+     * Each category with its packs as links, in config order. Categories
+     * marked tab are review types, shown as tabs on /skills.
      *
-     * @return list<array{label: string, line: string, soon: ?string, links: list<array{href: string, label: string, line: string, icon: ?string}>}>
+     * @return list<array{key: string, tab: bool, label: string, line: string, soon: ?string, links: list<array{href: string, label: string, line: string, icon: ?string}>}>
      */
     public static function categories(): array
     {
@@ -29,6 +30,8 @@ final class SkillPacks
 
         return collect(config('skills.categories', []))
             ->map(fn (array $category, string $key) => [
+                'key' => $key,
+                'tab' => $category['tab'] ?? false,
                 'label' => $category['label'],
                 'line' => $category['line'],
                 'soon' => $category['soon'] ?? null,

@@ -11,9 +11,13 @@ class SkillsPageTest extends TestCase
         $response = $this->get('/skills')->assertOk()
             ->assertSee('npx skills add heyderekj/revisemy', false);
 
-        foreach (config('skills.categories') as $category) {
+        foreach (config('skills.categories') as $key => $category) {
             $response->assertSee($category['label']);
+            if ($category['tab'] ?? false) {
+                $response->assertSee('id="panel-'.$key.'"', false);
+            }
         }
+        $response->assertSee('role="tablist"', false);
         foreach (config('skills.packs') as $pack) {
             $response->assertSee('href="'.($pack['path'] ?? $pack['href']).'"', false);
         }

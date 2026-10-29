@@ -7,8 +7,8 @@ return [
     | Skill packs
     |--------------------------------------------------------------------------
     |
-    | /skills lists the packs by what they review (the same four review
-    | types as /for), then industry packs and the review loop. A category
+    | /skills shows the packs by what they review (the same four review
+    | types as /for) as tabs, then industry packs and the review loop. A category
     | with no packs yet shows only its "soon" line. Each pack with a path
     | gets its own page, drawn by the guide template; an entry with an href
     | links to where that skill is already explained. The skills themselves
@@ -18,21 +18,25 @@ return [
 
     'categories' => [
         'websites' => [
+            'tab' => true,
             'label' => 'Websites',
             'line' => 'Review and fix the pages people see before they try your product.',
             'soon' => 'Packs for pricing, feature and launch pages.',
         ],
         'apps' => [
+            'tab' => true,
             'label' => 'Apps',
             'line' => 'Screens inside your product, on the web or a phone.',
             'soon' => 'Packs for onboarding, empty states and settings.',
         ],
         'email' => [
+            'tab' => true,
             'label' => 'Email',
             'line' => 'What lands in the inbox.',
             'soon' => 'Packs for launch emails and newsletters.',
         ],
         'slides' => [
+            'tab' => true,
             'label' => 'Slides',
             'line' => 'Decks people present or send.',
             'soon' => 'Packs for pitch decks and talks.',

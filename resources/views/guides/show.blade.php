@@ -47,5 +47,5 @@
         @include('use-cases.partials.faq')
     @endif
 
-    <x-link-list heading="Keep going" :links="\App\Support\MarketingPages::more($page['path'])" />
+    <x-link-list data-no-toc heading="Keep going" :links="\App\Support\MarketingPages::more($page['path'])" />
 </x-layouts.marketing>

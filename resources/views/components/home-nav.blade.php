@@ -53,6 +53,9 @@
                             @if (str_starts_with($href, 'http')) target="_blank" rel="noreferrer" @endif
                             @if ($drawer) x-on:click="mobileNav = false" @endif
                         >{{ $text }}</a>
+                        @if (! $home && $current($href))
+                            <x-page-toc :drawer="$drawer" />
+                        @endif
                     </li>
                 @endforeach
             </ul>
