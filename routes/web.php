@@ -9,6 +9,7 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PolarWebhookController;
 use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
+use App\Http\Controllers\SkillsController;
 use App\Http\Controllers\SubmitReviewController;
 use App\Http\Controllers\UseCaseController;
 use App\Models\Review;
@@ -45,6 +46,9 @@ Route::get('/board', [GuideController::class, 'show'])
     ->defaults('slug', 'board');
 Route::get('/guest-links', [GuideController::class, 'show'])
     ->defaults('slug', 'guest-links');
+Route::get('/skills', [SkillsController::class, 'index']);
+Route::get('/skills/{slug}', [SkillsController::class, 'show'])
+    ->where('slug', '[a-z]+');
 Route::get('/changelog', [GuideController::class, 'show'])
     ->defaults('slug', 'changelog');
 

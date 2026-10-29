@@ -85,18 +85,26 @@ class DiscoveryTest extends TestCase
         $this->getJson('/.well-known/mcp.json')->assertOk()->assertJsonPath('name', $card['name']);
     }
 
-    public function test_the_plugin_skill_only_names_real_tools_and_actions(): void
+    public function test_the_plugin_skills_only_name_real_tools_and_actions(): void
     {
-        $skill = file_get_contents(base_path('plugin/skills/design-checkup/SKILL.md'));
         config(['billing.pricing_enabled' => true]);
         $tools = McpCatalog::toolNames();
+        $paths = glob(base_path('plugin/skills/*/SKILL.md'));
+        $this->assertGreaterThan(1, count($paths));
 
-        preg_match_all('/`((?:create|get|list|add|resolve|request|cancel)_[a-z_]+)`/', $skill, $named);
-        $this->assertNotEmpty($named[1]);
-        foreach (array_unique($named[1]) as $tool) {
-            $this->assertContains($tool, $tools, "The skill names {$tool}, which the server doesn't offer.");
+        foreach ($paths as $path) {
+            $folder = basename(dirname($path));
+            $skill = file_get_contents($path);
+
+            $this->assertMatchesRegularExpression('/\A---\nname: '.preg_quote($folder, '/').'\ndescription: \S.+\n/', $skill, "{$folder} needs a name that matches its folder and a description.");
+
+            preg_match_all('/`((?:create|get|list|add|resolve|request|cancel)_[a-z_]+)`/', $skill, $named);
+            foreach (array_unique($named[1]) as $tool) {
+                $this->assertContains($tool, $tools, "{$folder} names {$tool}, which the server doesn't offer.");
+            }
         }
 
+        $skill = file_get_contents(base_path('plugin/skills/design-checkup/SKILL.md'));
         foreach (array_keys(Review::NEXT_ACTIONS) as $action) {
             if ($action !== 'expired') {
                 $this->assertStringContainsString('`'.$action.'`', $skill);

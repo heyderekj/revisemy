@@ -100,6 +100,8 @@ Add a small `SKILL.md` that teaches agents *when* to call ReviseMy:
 
 The skill should not reimplement tools — it only points at the MCP server.
 
+The plugin also ships the **homepage skills** (`homepage-craft`, `review-homepage`, `find-strongest-section`, `show-dont-tell`, `cut-homepage`, `brand-pass`, `faith-homepage`) in `plugin/skills/`. They work without the server; `review-homepage` uses `create_review` and `add_findings` when it's connected and hands the rest to `design-checkup`. `skills.sh.json` points the `npx skills` CLI at `plugin/skills/`; see `docs/INDUSTRY-PACKS.md` for how industry overlays build on them. `DiscoveryTest` checks every skill there names only real tools.
+
 For **taste while implementing** (animation easing, press feedback, depth), pair with [emilkowalski/skills](https://github.com/emilkowalski/skills) (`npx skills@latest add emilkowalski/skills`). Those skills guide the coding agent; ReviseMy second opinion stays hints only, discloses craft lenses via the review chip / `taste` payload, and never overrides human marks. After human marks are fixed (or on a polish pass), run `find-animation-opportunities` against the codebase — not as a second-opinion lens (captures are stills).
 
 ## Design rule
