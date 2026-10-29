@@ -22,6 +22,7 @@
         'More' => [
             ['/connectors', 'Connectors'],
             ['/for', 'Use cases'],
+            ['/skills', 'Skills'],
             ['/guest-links', 'Guest links'],
             ['/reviews', 'Your reviews'],
             ['/alternatives', 'Alternatives'],

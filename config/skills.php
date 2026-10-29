@@ -18,14 +18,17 @@ return [
         'marketing' => [
             'label' => 'Marketing sites',
             'line' => 'Review and fix the pages people see before they try your product.',
+            'soon' => 'Packs for pricing, feature and launch pages.',
         ],
         'industries' => [
             'label' => 'Industry packs',
             'line' => 'Extra rules for one kind of product, on top of the homepage skills.',
+            'soon' => 'More industries, each built from real feedback.',
         ],
         'review' => [
             'label' => 'The review loop',
             'line' => 'How your agent asks you to look, and works through your marks.',
+            'soon' => 'More ways for your agent to check its own work before you look.',
         ],
     ],
 

@@ -7,7 +7,7 @@
     <x-marketing-hero eyebrow="Skills" icon="squares-2x2" headline="Skills for your agent" subheadline="Packs that teach your agent what good looks like, so it can review your work and fix it. Pick a pack, or install them all at once." />
 
     @foreach ($categories as $category)
-        <x-link-list :heading="$category['label']" :intro="$category['line']" :links="$category['links']" />
+        <x-link-list :heading="$category['label']" :intro="$category['line']" :soon="$category['soon']" :links="$category['links']" />
     @endforeach
 
     <x-list-section

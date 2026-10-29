@@ -1,5 +1,5 @@
 {{-- Where to go next: each link with an icon, its name and a line. --}}
-@props(['heading', 'links' => [], 'intro' => null])
+@props(['heading', 'links' => [], 'intro' => null, 'soon' => null])
 
 <x-home-section {{ $attributes }}>
     <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">{{ $heading }}</h2>
@@ -22,5 +22,14 @@
                 </a>
             </li>
         @endforeach
+        @if ($soon)
+            <li class="flex h-full items-start gap-3 rounded-xl border border-dashed border-border-strong px-3 py-3">
+                <x-use-case-icon name="sparkles" size="sm" class="mt-0.5 shrink-0" />
+                <span class="min-w-0">
+                    <span class="block text-sm font-medium text-zinc-500">More on the way</span>
+                    <span class="mt-0.5 block text-sm leading-relaxed text-zinc-500">{{ $soon }}</span>
+                </span>
+            </li>
+        @endif
     </ul>
 </x-home-section>

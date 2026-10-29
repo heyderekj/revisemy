@@ -21,7 +21,7 @@ final class SkillPacks
     /**
      * Each category with its packs as links, in config order.
      *
-     * @return list<array{label: string, line: string, links: list<array{href: string, label: string, line: string, icon: ?string}>}>
+     * @return list<array{label: string, line: string, soon: ?string, links: list<array{href: string, label: string, line: string, icon: ?string}>}>
      */
     public static function categories(): array
     {
@@ -31,6 +31,7 @@ final class SkillPacks
             ->map(fn (array $category, string $key) => [
                 'label' => $category['label'],
                 'line' => $category['line'],
+                'soon' => $category['soon'] ?? null,
                 'links' => $packs->where('category', $key)
                     ->map(fn (array $pack) => [
                         'href' => $pack['path'] ?? $pack['href'],
