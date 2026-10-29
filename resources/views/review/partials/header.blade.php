@@ -73,6 +73,13 @@
                 @php($sourceKind = $review->sourceKind())
                 <p class="flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
                     <span class="shrink-0 tabular-nums">Pass {{ $review->pass }}</span>
+                    @if ($openUntil = $review->openUntil())
+                        <span aria-hidden="true">·</span>
+                        <span
+                            @class(['shrink-0', 'font-medium text-attention-ink' => $openUntil->lt(now()->addHours(48))])
+                            title="Open for marks until {{ $openUntil->timezone(config('app.timezone'))->toDayDateTimeString() }}"
+                        >open until {{ $openUntil->timezone(config('app.timezone'))->format('M j') }}</span>
+                    @endif
                     <span aria-hidden="true">·</span>
                     @if ($sourceKind === \App\Models\Review::SOURCE_URL && $review->sourceDomain())
                         <span

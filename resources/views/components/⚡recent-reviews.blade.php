@@ -4,7 +4,9 @@ use App\Models\Annotation;
 use App\Models\Review;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\CreditsService;
 use App\Services\ReviewService;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Attributes\Locked;
@@ -39,6 +41,29 @@ new class extends Component
 
     /** @var array<string, int> */
     public array $shelfCounts = ['open' => 0, 'archived' => 0];
+
+    /**
+     * The workspace's plan and credits, and its signed billing page.
+     *
+     * @return array{plan: string, credits: int, renews_at: ?string, url: string}|null
+     */
+    public function billing(): ?array
+    {
+        $workspace = $this->workspaceId ? Workspace::find($this->workspaceId) : null;
+
+        if (! $workspace) {
+            return null;
+        }
+
+        $summary = app(CreditsService::class)->summary($workspace);
+
+        return [
+            'plan' => $summary['plan_name'].($summary['comped'] ?? false ? ' · comped' : ''),
+            'credits' => (int) $summary['credits_remaining'],
+            'renews_at' => $summary['credits_period_ends_at'],
+            'url' => URL::temporarySignedRoute('billing.manage', now()->addHours(6), ['workspace' => $workspace->public_id]),
+        ];
+    }
 
     public function mount(): void
     {
@@ -205,6 +230,7 @@ new class extends Component
             'mark_count' => $marks->count(),
             'guest_mark_count' => $marks->where('source', Annotation::SOURCE_GUEST)->count(),
             'updated_at' => $updated?->toIso8601String(),
+            'open_until' => $review->openUntil()?->toIso8601String(),
         ];
     }
 
@@ -289,7 +315,14 @@ new class extends Component
                 @else
                     @php
                         $filtered = $shelf === 'archived' || $statusFilter !== '';
+                        $billing = $this->billing();
                     @endphp
+                    @if ($billing)
+                        <p class="mb-4 text-sm text-muted-foreground">
+                            {{ $billing['plan'] }} · <span class="tabular-nums">{{ $billing['credits'] }}</span> {{ \Illuminate\Support\Str::plural('credit', $billing['credits']) }} left{{ $billing['renews_at'] ? ', refills '.\Illuminate\Support\Carbon::parse($billing['renews_at'])->timezone(config('app.timezone'))->format('M j') : '' }}
+                            · <a href="{{ $billing['url'] }}" class="link">Billing</a>
+                        </p>
+                    @endif
                     @if ($shelfCounts['open'] + $shelfCounts['archived'] > 0)
                         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <div class="inline-flex rounded-lg bg-chip p-0.5 text-sm" role="tablist" aria-label="Which reviews">
@@ -329,7 +362,8 @@ new class extends Component
                     @elseif ($reviews === [])
                         <div class="hatch rounded-2xl px-6 py-10 text-center text-zinc-300">
                             <p class="text-base font-semibold text-zinc-900">No reviews yet</p>
-                            <p class="mt-1 text-sm text-muted-foreground">Ask your agent for a design checkup, and it lands here.</p>
+                            <p class="mt-1 text-sm text-muted-foreground">Ask your agent to “check this with ReviseMy”, or start one here.</p>
+                            <a href="{{ route('reviews.new') }}" class="btn-lit mt-4 inline-flex h-9 items-center rounded-full px-4 text-sm font-medium">Start a review</a>
                         </div>
                     @else
                         {{-- One line per review: the whole row opens it, the menu copies links. --}}
@@ -360,6 +394,12 @@ new class extends Component
                                             <p class="mt-0.5 truncate text-xs text-muted-foreground">
                                                 {{ $item['type_label'] }}@if ($item['domain'])<span class="max-sm:hidden"> · {{ $item['domain'] }}</span>@endif
                                                 · Pass {{ $item['pass'] }}
+                                                @if ($item['open_until'])
+                                                    @php
+                                                        $openUntil = \Illuminate\Support\Carbon::parse($item['open_until']);
+                                                    @endphp
+                                                    · <span @class(['font-medium text-attention-ink' => $openUntil->lt(now()->addHours(48))])>open until {{ $openUntil->timezone(config('app.timezone'))->format('M j') }}</span>
+                                                @endif
                                                 @if ($updated)
                                                     · <time datetime="{{ $item['updated_at'] }}" title="{{ $updated->timezone(config('app.timezone'))->toDayDateTimeString() }}">{{ $updated->diffForHumans(short: true) }}</time>
                                                 @endif
@@ -429,9 +469,9 @@ new class extends Component
                     </div>
 
                     @if ($tryToken !== '')
-                        <button type="button" wire:click="clearToken" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this token in this browser</button>
+                        <button type="button" wire:click="clearToken" wire:confirm="Forget the try token in this browser? You’ll need to paste it again to see this list." class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this token in this browser</button>
                     @else
-                        <button type="button" wire:click="forgetBrowser" class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this browser</button>
+                        <button type="button" wire:click="forgetBrowser" wire:confirm="Forget this browser? It stops opening your reviews until you connect an assistant again or paste a try token. Your reviews stay." class="mt-6 text-xs text-muted-foreground underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900">Forget this browser</button>
                     @endif
                 @endif
             </div>

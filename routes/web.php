@@ -115,7 +115,14 @@ Route::get('/r/{token}', function (string $token, ReviewPreview $preview) {
 })->middleware('noindex')->name('reviews.show');
 
 Route::get('/r/{token}/board', function (string $token, ReviewPreview $preview) {
-    return view('review-board', ['token' => $token, 'preview' => $preview->meta(Review::forLink($token) ?? abort(404), $token)]);
+    $review = Review::forLink($token) ?? abort(404);
+
+    // The board is the owner's; a guest who follows a board link gets the review.
+    if (! hash_equals((string) $review->token, $token)) {
+        return redirect('/r/'.$token);
+    }
+
+    return view('review-board', ['token' => $token, 'preview' => $preview->meta($review, $token)]);
 })->middleware('noindex')->name('reviews.board');
 
 Route::get('/r/{token}/preview.jpg', [ScreenshotController::class, 'previewForReview'])

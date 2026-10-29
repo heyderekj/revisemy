@@ -338,6 +338,12 @@ new class extends Component
                     <x-revisemy-logo size="sm" />
                 </a>
                 <h1 class="shrink-0 text-lg font-semibold tracking-tight text-zinc-900">Board</h1>
+                @if (auth('web')->user()?->workspace_id === $review->workspace_id)
+                    <a href="/reviews" class="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-zinc-900" aria-label="Your reviews">
+                        <flux:icon.queue-list variant="micro" class="size-4 sm:hidden" />
+                        <span class="hidden sm:inline">Your reviews</span>
+                    </a>
+                @endif
             </div>
 
             <div class="col-span-3 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:col-span-1 sm:row-start-1 sm:flex-1 sm:flex-nowrap">
@@ -366,6 +372,14 @@ new class extends Component
             </flux:button>
         </div>
     </header>
+
+    @if ($newer = $review->newestPass())
+        <a
+            href="{{ $newer->boardUrl() }}"
+            data-newer-pass
+            class="flex items-center justify-center gap-1.5 bg-key/15 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-key/25"
+        >Pass {{ $newer->pass }} is ready <flux:icon.arrow-right variant="micro" class="size-4" /></a>
+    @endif
 
     @if (session('board_message'))
         <div class="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6">

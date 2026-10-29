@@ -61,12 +61,13 @@ class ReviewBoardTest extends TestCase
             ->assertSee('Board');
     }
 
-    public function test_board_rejects_the_guest_share_token(): void
+    public function test_a_guest_board_link_goes_to_the_review(): void
     {
         [$review] = $this->reviewWithMark();
 
-        // The board is owner-only; the share token must not open it.
-        $this->get('/r/'.$review->share_token.'/board')->assertNotFound();
+        // The board is owner-only; the share token lands on the guest review instead.
+        $this->get('/r/'.$review->share_token.'/board')->assertRedirect('/r/'.$review->share_token);
+        $this->get('/r/nope/board')->assertNotFound();
     }
 
     public function test_keep_marks_show_in_the_verified_column(): void
