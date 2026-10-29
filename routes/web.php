@@ -143,6 +143,10 @@ Route::get('/r/{token}/shots/{screenshot}/elements', [ScreenshotController::clas
     ->middleware('noindex')
     ->name('reviews.screenshot.elements');
 
+Route::get('/r/{token}/shots/{screenshot}/live', [ScreenshotController::class, 'liveForReview'])
+    ->middleware('noindex')
+    ->name('reviews.screenshot.live');
+
 Route::get('/shots/{screenshot}/elements', [ScreenshotController::class, 'elements'])
     ->middleware(['signed', 'noindex'])
     ->name('screenshots.elements');

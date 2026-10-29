@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Services\ReviewPreview;
+use App\Support\LiveSnapshot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ScreenshotController extends Controller
@@ -93,6 +95,49 @@ class ScreenshotController extends Controller
         abort_if($list === null, 404);
 
         return response()->json($list, headers: ['Cache-Control' => 'private, max-age=86400']);
+    }
+
+    /**
+     * The page's code as captured, made safe to frame (LiveSnapshot), for the
+     * review's Live view. Only reviews with a stored DOM (a captured page or
+     * an email) have one. The CSP sandboxes it into an opaque origin, lets
+     * only our picker run, and stops it fetching, posting or framing.
+     */
+    public function liveForReview(string $token, Screenshot $screenshot): Response
+    {
+        $this->assertReviewToken($token, $screenshot);
+        $review = $screenshot->review;
+
+        if (! hash_equals((string) $review->token, $token) && ! $review->allowsGuestAccess()) {
+            abort(404);
+        }
+
+        $html = $review->domHtml();
+        abort_if($html === null || trim($html) === '', 404);
+
+        $nonce = Str::random(24);
+        $script = (string) file_get_contents(resource_path('js/live-pick.js'));
+        $base = $review->sourceKind() === Review::SOURCE_URL ? $review->page_url : null;
+
+        return response(LiveSnapshot::prepare($html, $base, $nonce, $script), headers: [
+            'Content-Type' => 'text/html; charset=utf-8',
+            'Content-Security-Policy' => implode('; ', [
+                'sandbox allow-scripts',
+                "default-src 'none'",
+                "script-src 'nonce-{$nonce}'",
+                "style-src * data: 'unsafe-inline'",
+                'img-src * data: blob:',
+                'font-src * data:',
+                'media-src * data: blob:',
+                "connect-src 'none'",
+                "form-action 'none'",
+                "frame-src 'none'",
+                "frame-ancestors 'self'",
+            ]),
+            'Referrer-Policy' => 'no-referrer',
+            'X-Robots-Tag' => 'noindex, nofollow',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     protected function assertReviewToken(string $token, Screenshot $screenshot): void

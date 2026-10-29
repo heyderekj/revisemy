@@ -292,6 +292,40 @@ new class extends Component
         $this->pendingH = $box['h'];
     }
 
+    /**
+     * A pick from the Live view: the element the person chose on the page's
+     * own code, named by the capture's selector rules. It lands as a normal
+     * mark on the active shot, on the same element in the shot's map when
+     * the selector is there, else on the box the frame measured. Edited
+     * words become the mark's suggested copy.
+     *
+     * @param  array{x?: mixed, y?: mixed, w?: mixed, h?: mixed}  $box
+     */
+    public function markLiveElement(string $selector, array $box, ?string $edited = null): void
+    {
+        $screenshot = $this->activeScreenshot();
+
+        if (! $screenshot || ! $this->review->dom_path) {
+            return;
+        }
+
+        $css = $screenshot->cssSize();
+        $elements = array_values((array) ($screenshot->elementMap()['elements'] ?? []));
+        $index = $selector === '' ? false : array_search($selector, array_column($elements, 'selector'), true);
+
+        if ($index !== false && is_array($elements[$index]['box'] ?? null) && $css['w'] > 0 && $css['h'] > 0) {
+            $b = $elements[$index]['box'];
+            $this->startPin(($b['x'] + $b['w'] / 2) / $css['w'], ($b['y'] + $b['h'] / 2) / $css['h'], element: $index);
+        } elseif ($css['w'] > 0 && $css['h'] > 0) {
+            $num = fn (string $key) => is_numeric($box[$key] ?? null) ? (float) $box[$key] : 0.0;
+            $this->startPin($num('x') / $css['w'], $num('y') / $css['h'], $num('w') / $css['w'], $num('h') / $css['h']);
+        }
+
+        if ($this->pendingX !== null && $edited !== null && trim($edited) !== '') {
+            $this->draftSuggestedCopy = mb_substr(FeedbackText::sanitizeBody($edited), 0, 2000);
+        }
+    }
+
     protected function activeScreenshot(): ?Screenshot
     {
         return $this->review->screenshots->values()->get($this->activeScreenshotIndex);

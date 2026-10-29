@@ -79,6 +79,7 @@ The element picker is one package, shared with Koati.
 
 ## Still open
 
+- **Live view first.** Since 2026-10-29 the review has a Live view for captured pages and emails. `App\Support\LiveSnapshot` frames the page's captured code in a sandbox, and `resources/js/live-pick.js` picks with the capture's selector rules. Mark this or Edit words then becomes a normal mark with `target` and `suggested_copy`. The extension would do the same on the live site; reuse that picker's gestures.
 - **Design tokens.** Koati's Website view lets a person turn a CSS custom property as a proposed change. It isn't settled whether the extension offers the same thing, a colour or spacing slider on the live page that becomes a mark, or stays with text and marks. Start with text.
 - **Firefox and Safari.** Chrome first. The picker package has no Chrome-only code, so other browsers are mostly a packaging job.
 - **Store listing.** Its copy follows ReviseMy's own voice. It never describes the extension as editing a site, because the only thing it changes is what's on your screen.
