@@ -41,10 +41,18 @@ class LiveSnapshot
 
         $head = $document->head;
 
+        // The same rules as the response's CSP, inside the page, for when the
+        // review hands it to the frame as srcdoc and no header comes with it.
+        $policy = $document->createElement('meta');
+        $policy->setAttribute('http-equiv', 'Content-Security-Policy');
+        $policy->setAttribute('content', self::policy($nonce));
+
         $referrer = $document->createElement('meta');
         $referrer->setAttribute('name', 'referrer');
         $referrer->setAttribute('content', 'no-referrer');
         $head?->prepend($referrer);
+
+        $head?->prepend($policy);
 
         if ($baseUrl !== null && preg_match('#^https?://#i', $baseUrl)) {
             $base = $document->createElement('base');
@@ -58,6 +66,26 @@ class LiveSnapshot
         ($document->body ?? $document->documentElement)?->append($picker);
 
         return $document->saveHtml();
+    }
+
+    /**
+     * Only our picker runs; the page can show its styles, images and fonts
+     * but can't fetch, post or frame anything. `sandbox` can't go in a meta
+     * tag, so the route sends it as a header and the frame sets it too.
+     */
+    public static function policy(string $nonce): string
+    {
+        return implode('; ', [
+            "default-src 'none'",
+            "script-src 'nonce-{$nonce}'",
+            "style-src * data: 'unsafe-inline'",
+            'img-src * data: blob:',
+            'font-src * data:',
+            'media-src * data: blob:',
+            "connect-src 'none'",
+            "form-action 'none'",
+            "frame-src 'none'",
+        ]);
     }
 
     /** Event handlers off, script URLs gone, forms going nowhere. */

@@ -121,19 +121,7 @@ class ScreenshotController extends Controller
 
         return response(LiveSnapshot::prepare($html, $base, $nonce, $script), headers: [
             'Content-Type' => 'text/html; charset=utf-8',
-            'Content-Security-Policy' => implode('; ', [
-                'sandbox allow-scripts',
-                "default-src 'none'",
-                "script-src 'nonce-{$nonce}'",
-                "style-src * data: 'unsafe-inline'",
-                'img-src * data: blob:',
-                'font-src * data:',
-                'media-src * data: blob:',
-                "connect-src 'none'",
-                "form-action 'none'",
-                "frame-src 'none'",
-                "frame-ancestors 'self'",
-            ]),
+            'Content-Security-Policy' => 'sandbox allow-scripts; '.LiveSnapshot::policy($nonce)."; frame-ancestors 'self'",
             'Referrer-Policy' => 'no-referrer',
             'X-Robots-Tag' => 'noindex, nofollow',
             'Cache-Control' => 'private, no-store',

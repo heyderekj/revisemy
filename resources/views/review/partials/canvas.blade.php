@@ -148,8 +148,21 @@
                             this.hover = null;
                             if (this.live) {
                                 this.liveLoaded = true;
-                                this.$nextTick(() => this.measureLive());
+                                this.$nextTick(() => { this.measureLive(); this.loadLive(); });
                             }
+                        },
+                        {{-- Fetched here and handed to the frame as srcdoc, not loaded by the
+                             frame itself: some browsers and extensions block a framed page load.
+                             The frame's sandbox and the CSP inside the page still hold. --}}
+                        liveFetched: false,
+                        liveFailed: false,
+                        loadLive() {
+                            if (this.liveFetched || ! this.$refs.liveFrame) return;
+                            this.liveFetched = true;
+                            fetch(this.liveUrl, { credentials: 'same-origin', headers: { Accept: 'text/html' } })
+                                .then((response) => (response.ok ? response.text() : Promise.reject(response.status)))
+                                .then((html) => { this.$refs.liveFrame.srcdoc = html; })
+                                .catch(() => { this.liveFailed = true; this.liveFetched = false; });
                         },
                         measureLive() {
                             const box = this.$refs.liveViewport;
@@ -520,10 +533,12 @@
                             <p class="mx-auto mb-2 max-w-full text-xs text-muted-foreground" x-bind:style="'width:' + (liveWidth * liveScale) + 'px'">
                                 The page’s code as captured. Click a part, then mark it or change its words. Fonts and images may differ from the screenshot.
                             </p>
+                            <p x-show="liveFailed" x-cloak class="mx-auto mb-2 text-sm text-problem-ink" role="alert" x-bind:style="{ width: (liveWidth * liveScale) + 'px' }">
+                                The page’s code didn’t load. <button type="button" class="link" x-on:click="liveFailed = false; loadLive()">Try again</button>
+                            </p>
                             <div class="relative mx-auto overflow-hidden rounded-lg bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]" x-bind:style="'width:' + (liveWidth * liveScale) + 'px;height:' + (liveHeight * liveScale) + 'px'">
                                 <iframe
                                     x-ref="liveFrame"
-                                    x-bind:src="liveUrl"
                                     sandbox="allow-scripts"
                                     referrerpolicy="no-referrer"
                                     title="Live page"

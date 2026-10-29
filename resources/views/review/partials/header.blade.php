@@ -71,7 +71,8 @@
                     <p class="min-w-0 truncate text-sm font-semibold text-zinc-900" title="{{ $review->title }}">{{ $review->title }}</p>
                 @endif
                 @php($sourceKind = $review->sourceKind())
-                <p class="flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
+                {{-- A div, not a p: the status menu holds block elements, and a p would spill them out. --}}
+                <div class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
                     <span class="shrink-0 tabular-nums">Pass {{ $review->pass }}</span>
                     @if ($openUntil = $review->openUntil())
                         <span aria-hidden="true">·</span>
@@ -98,7 +99,7 @@
                     @elseif ($review->effectiveStatus() === 'expired')
                         <x-signal-tag class="ms-1 shrink-0">Expired</x-signal-tag>
                     @endif
-                </p>
+                </div>
             </div>
 
             @include('review.partials.viewport-tabs', ['class' => 'hidden md:flex'])

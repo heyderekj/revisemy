@@ -37,6 +37,9 @@ HTML;
         $this->assertStringContainsString('<meta name="referrer" content="no-referrer">', $out);
         $this->assertStringContainsString('<script nonce="abc123">window.rmLive = 1;</script>', $out);
         $this->assertSame(1, substr_count($out, '<script'));
+        // The rules ride inside the page too, for when it's handed to the frame as srcdoc.
+        $this->assertStringContainsString('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'nonce-abc123\'', $out);
+        $this->assertStringContainsString("connect-src 'none'; form-action 'none'", $out);
     }
 
     public function test_an_email_gets_no_base(): void
