@@ -17,6 +17,11 @@ class DesignCheckupLoop extends Prompt
     {
         $focus = trim((string) $request->get('focus', 'the UI you just changed'));
         $outOfCredits = $this->outOfCreditsStep();
+        $cost = fn (string $source) => trans_choice('{1} :count credit|[2,*] :count credits', (int) config("billing.costs.{$source}", 1));
+        $page = $cost('capture_url');
+        $email = $cost('html');
+        $pdf = $cost('pdf');
+        $images = $cost('images');
 
         return Response::text(<<<PROMPT
 You are running a ReviseMy design checkup loop for: {$focus}
@@ -24,10 +29,10 @@ You are running a ReviseMy design checkup loop for: {$focus}
 ## The loop (do not skip steps)
 
 1. **Pick one ingest source** — `create_review` accepts exactly one. Choose before calling:
-   - **Public website** → `capture_url: true` + `page_url` (type `website`, **5 credits**). Server renders desktop, mobile and tablet. Do not put the page URL in `images`.
-   - **Email HTML** → `html: "…"` (type `email`, **3 credits**). Server renders at ~600px.
-   - **Slides / PDF** → `pdf: "…"` (type `presentation`, **1 credit**). One screenshot per page (max 5).
-   - **Local or app UI** → `images: [data URL or base64]` (type `ui`, **1 credit**). Prefer this for localhost — never pass `http://localhost…` to remote capture; encode as data URLs.
+   - **Public website** → `capture_url: true` + `page_url` (type `website`, **{$page}**). Server renders desktop, mobile and tablet. Do not put the page URL in `images`.
+   - **Email HTML** → `html: "…"` (type `email`, **{$email}**). Server renders at ~600px.
+   - **Slides / PDF** → `pdf: "…"` (type `presentation`, **{$pdf}**). One screenshot per page (max 5).
+   - **Local or app UI** → `images: [data URL or base64]` (type `ui`, **{$images}**). Prefer this for localhost — never pass `http://localhost…` to remote capture; encode as data URLs.
    - `page_url` alone does **not** trigger capture. Use `capture_url: true` for live pages.
    - If `create_review` returns `[capture_not_configured]` or `[capture_provider_failed]`, immediately fall back to `images` with desktop and mobile data URLs — do not keep retrying `capture_url`.
    - {$outOfCredits}

@@ -74,7 +74,8 @@ class BillingService
     {
         return $this->pricingEnabled()
             && $this->polarConfigured()
-            && ! $workspace->isPlusActive();
+            && ! $workspace->isPlusActive()
+            && ! $workspace->isComped();
     }
 
     public function packCheckoutAvailable(): bool
@@ -484,7 +485,8 @@ class BillingService
             'polar_cancel_at_period_end' => false,
         ])->save();
 
-        if ($workspace->normalizedPlan() === Workspace::PLAN_PRO) {
+        // A comped workspace keeps Plus whatever happens to a subscription.
+        if ($workspace->normalizedPlan() === Workspace::PLAN_PRO && ! $workspace->isComped()) {
             $this->credits->activateFree($workspace);
             Log::info('Workspace downgraded to Try', ['workspace' => $workspace->public_id]);
         }

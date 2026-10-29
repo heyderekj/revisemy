@@ -129,6 +129,14 @@ class CreateReviewTool extends Tool
         return "{$tag}Capture failed, so this review has no page shot yet. Call add_screenshot with id `{$payload['id']}` and the page as an image data URL, once for desktop and once for mobile, before you share the link.\n\n";
     }
 
+    /** A source's cost from config/billing.php, as the schema says it. */
+    protected function cost(string $source): string
+    {
+        $credits = (int) config("billing.costs.{$source}", 1);
+
+        return $credits.' '.($credits === 1 ? 'credit' : 'credits');
+    }
+
     /**
      * @return array<string, JsonSchema>
      */
@@ -147,13 +155,13 @@ class CreateReviewTool extends Tool
                 ->items($schema->string()->description('Screenshot as https image URL, data URL, or base64 — not a page URL'))
                 ->min(1)
                 ->max(5)
-                ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs 1 credit). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
+                ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs '.$this->cost('images').'). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
             'capture_url' => $schema->boolean()
-                ->description('Capture page_url server-side (desktop, mobile and tablet, sharp at 2×; costs 5 credits). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
+                ->description('Capture page_url server-side (desktop, mobile and tablet, sharp at 2×; costs '.$this->cost('capture_url').'). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
             'pdf' => $schema->string()
-                ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`).'),
+                ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`; costs '.$this->cost('pdf').').'),
             'html' => $schema->string()
-                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email). Requires REVISEMY_CAPTURE_DRIVER. On [capture_not_configured] or [capture_provider_failed], fall back to images with data URLs.'),
+                ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email; costs '.$this->cost('html').'). Requires REVISEMY_CAPTURE_DRIVER. On [capture_not_configured] or [capture_provider_failed], fall back to images with data URLs.'),
         ];
     }
 }

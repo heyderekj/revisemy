@@ -117,6 +117,13 @@
                         @enderror
                     </div>
 
+                    {{-- Only for a browser that would get a new try workspace. Invisible
+                         unless Cloudflare wants a click. --}}
+                    @if ($credits === null && app(\App\Services\Turnstile::class)->enabled())
+                        <div class="cf-turnstile" data-sitekey="{{ app(\App\Services\Turnstile::class)->siteKey() }}" data-appearance="interaction-only" data-size="flexible"></div>
+                        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                    @endif
+
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <button
                             type="submit"

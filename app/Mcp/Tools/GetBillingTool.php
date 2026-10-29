@@ -8,7 +8,6 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\ResponseFactory;
-use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tool;
@@ -17,7 +16,6 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_billing')]
 #[Title('Check credits')]
-#[Description('Show this workspace plan, credits remaining, and the burn table (images/pdf=1, html=3, capture_url=5). Try is 40 credits that renew monthly (no rollover); purchased pack credits never expire and are spent last. When credits run out and checkout is available, offer Plus or a credit pack via create_checkout; otherwise wait for the monthly refill.')]
 #[IsReadOnly]
 #[IsOpenWorld(false)]
 class GetBillingTool extends Tool
@@ -25,6 +23,20 @@ class GetBillingTool extends Tool
     use ResolvesWorkspace;
 
     public function __construct(protected BillingService $billing) {}
+
+    /** Read from config/billing.php, so it says what the workspace is charged. */
+    public function description(): string
+    {
+        $costs = config('billing.costs', []);
+
+        return sprintf(
+            'Show this workspace plan, credits remaining, and the burn table (images/pdf=%d, html=%d, capture_url=%d). Try is %d credits that renew monthly (no rollover); purchased pack credits never expire and are spent last. When credits run out and checkout is available, offer Plus or a credit pack via create_checkout; otherwise wait for the monthly refill.',
+            (int) ($costs['images'] ?? 1),
+            (int) ($costs['html'] ?? 3),
+            (int) ($costs['capture_url'] ?? 5),
+            (int) config('billing.plans.free.credits', 40),
+        );
+    }
 
     public function handle(Request $request): Response|ResponseFactory
     {

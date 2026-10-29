@@ -33,6 +33,7 @@ class Workspace extends Model
             'credits_balance' => 'integer',
             'purchased_credits' => 'integer',
             'credits_period_start' => 'datetime',
+            'comped_at' => 'datetime',
             'assistant_seen_at' => 'datetime',
             'assistant_phrases' => 'array',
             'polar_current_period_end' => 'datetime',
@@ -76,6 +77,12 @@ class Workspace extends Model
     public function billingOrders(): HasMany
     {
         return $this->hasMany(BillingOrder::class);
+    }
+
+    /** Given Plus without a subscription (`revisemy:comp`). */
+    public function isComped(): bool
+    {
+        return $this->comped_at !== null && $this->normalizedPlan() === self::PLAN_PRO;
     }
 
     /** On Plus with a Polar subscription that still grants access. */

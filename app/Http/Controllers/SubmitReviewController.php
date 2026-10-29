@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\ReviewService;
 use App\Services\TryTokenGate;
 use App\Services\TryTokenService;
+use App\Services\Turnstile;
 use App\Support\OutboundUrl;
 use App\Support\ToolProgress;
 use Illuminate\Http\JsonResponse;
@@ -50,7 +51,7 @@ class SubmitReviewController extends Controller
         ]);
     }
 
-    public function store(Request $request, ReviewService $reviews, TryTokenService $tryTokens, TryTokenGate $gate): RedirectResponse|JsonResponse|StreamedResponse
+    public function store(Request $request, ReviewService $reviews, TryTokenService $tryTokens, TryTokenGate $gate, Turnstile $turnstile): RedirectResponse|JsonResponse|StreamedResponse
     {
         $kind = $request->input('kind');
 
@@ -100,6 +101,16 @@ class SubmitReviewController extends Controller
         $user = $this->browserUser();
 
         if (! $user) {
+            if (! $turnstile->passes($request)) {
+                return $this->retry($request, $kind, [$field => Turnstile::MESSAGE]);
+            }
+
+            try {
+                $gate->assertCanOpenWorkspace($request);
+            } catch (RuntimeException $e) {
+                return $this->retry($request, $kind, [$field => $e->getMessage()]);
+            }
+
             // The same order Connect uses, so a later Connect from this
             // browser reuses this workspace instead of making another.
             $user = $tryTokens->createWorkspaceUser();

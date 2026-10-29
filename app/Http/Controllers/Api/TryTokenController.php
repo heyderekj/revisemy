@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\TryLimitReachedException;
 use App\Http\Controllers\Controller;
 use App\Services\TryTokenGate;
 use App\Services\TryTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use RuntimeException;
 
 class TryTokenController extends Controller
 {
@@ -16,14 +16,10 @@ class TryTokenController extends Controller
         try {
             $gate->assertCanMint($request);
             $result = $tryTokens->create();
-        } catch (RuntimeException $e) {
-            if ($e->getMessage() === TryTokenGate::MESSAGE) {
-                return response()->json([
-                    'message' => $e->getMessage(),
-                ], 429);
-            }
-
-            throw $e;
+        } catch (TryLimitReachedException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 429);
         } catch (\Throwable $e) {
             report($e);
 
