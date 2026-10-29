@@ -1,8 +1,9 @@
 /**
  * The picker inside the Live view: the page's code as captured, framed on
  * the review (App\Support\LiveSnapshot). Hover outlines an element. A click
- * on words opens them for editing straight away (Done, or Just mark it); a
- * click on anything else selects it with Mark this. Either way it goes to the
+ * on words opens them for editing straight away (Done, Mark, Cancel); a
+ * click on anything else selects it, named by kind, with Mark, Edit (when it
+ * has words) and Wider (the part around it), each with a key: M, E, W. Either way it goes to the
  * review as a message, and the review makes the mark.
  *
  * Plain script, no imports: LiveSnapshot inlines it into the page under the
@@ -102,11 +103,21 @@
         <style>
             .box { position: absolute; pointer-events: none; border-radius: 3px; box-sizing: border-box; }
             .hover { outline: 2px solid rgba(59, 130, 246, .9); background: rgba(59, 130, 246, .08); }
-            .picked { outline: 2px solid #f5b400; background: rgba(245, 180, 0, .1); }
-            .bar { position: absolute; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: #18181b; box-shadow: 0 6px 20px rgba(0,0,0,.25); font: 500 12px/1 system-ui, sans-serif; }
-            .bar button { all: unset; cursor: pointer; color: #fff; padding: 7px 11px; border-radius: 999px; white-space: nowrap; }
-            .bar button:hover { background: rgba(255,255,255,.12); }
+            .picked { outline: 2px solid #f5b400; background: rgba(245, 180, 0, .1); transition: left .18s var(--ease), top .18s var(--ease), width .18s var(--ease), height .18s var(--ease); }
+            :host, .bar, .picked { --ease: cubic-bezier(.2, .8, .2, 1); }
+            .bar { position: absolute; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: #18181b; color: #fff;
+                box-shadow: 0 8px 24px -6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.06) inset; font: 500 12px/1 system-ui, -apple-system, sans-serif; white-space: nowrap;
+                opacity: 0; transform: translateY(4px) scale(.96); transform-origin: left bottom;
+                transition: left .18s var(--ease), top .18s var(--ease), opacity .14s ease, transform .18s var(--ease); }
+            .bar.in { opacity: 1; transform: none; }
+            .kind { padding: 0 8px 0 9px; color: rgba(255,255,255,.55); font-size: 11px; letter-spacing: .01em; }
+            .bar button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px; color: #fff; transition: background .12s ease; }
+            .bar button:hover, .bar button:focus-visible { background: rgba(255,255,255,.12); }
             .bar button.primary { background: #f5b400; color: #18181b; }
+            .bar button.primary:hover { background: #ffc61a; }
+            .bar svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+            .bar kbd { font: inherit; font-size: 10px; opacity: .45; margin-left: 1px; }
+            .bar button.primary kbd { opacity: .55; }
             [hidden] { display: none !important; }
         </style>
         <div class="box hover" hidden></div>
@@ -126,19 +137,63 @@
     const ours = (target) => target === host || host.contains(target);
     const pickable = (el) => el && el !== document.documentElement && el !== document.body && !ours(el);
 
-    const showBar = (buttons) => {
-        bar.replaceChildren(...buttons.map(([label, run, primary]) => {
+    const ICONS = {
+        mark: '<path d="M3.5 4.5a1.5 1.5 0 0 1 1.5-1.5h6a1.5 1.5 0 0 1 1.5 1.5v4.5a1.5 1.5 0 0 1-1.5 1.5H7.5L5 12.5v-2a1.5 1.5 0 0 1-1.5-1.5z"/>',
+        edit: '<path d="M10.5 3.5l2 2-6.75 6.75H3.75v-2z"/><path d="M9 5l2 2"/>',
+        wider: '<path d="M3 6.5V3h3.5M13 6.5V3H9.5M3 9.5V13h3.5M13 9.5V13H9.5"/>',
+        done: '<path d="M3.5 8.5l3 3 6-7"/>',
+        cancel: '<path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>',
+    };
+    const KINDS = { h1: 'Heading', h2: 'Heading', h3: 'Heading', h4: 'Heading', h5: 'Heading', h6: 'Heading', p: 'Paragraph', a: 'Link', button: 'Button',
+        img: 'Image', picture: 'Image', svg: 'Icon', video: 'Video', li: 'List item', ul: 'List', ol: 'List', input: 'Field', textarea: 'Field', select: 'Field',
+        label: 'Label', nav: 'Navigation', header: 'Header', footer: 'Footer', form: 'Form', table: 'Table', blockquote: 'Quote', span: 'Text', strong: 'Text', em: 'Text' };
+    const kindOf = (el) => (el.getAttribute('role') === 'button' ? 'Button' : KINDS[el.tagName.toLowerCase()] || 'Box');
+
+    let actions = [];
+    // Follows the picked element: above it when there's room, below when not,
+    // gliding from one pick to the next.
+    const placeBar = () => {
+        if (!picked || bar.hidden) return;
+        const b = boxOf(picked);
+        const top = b.y - bar.offsetHeight - 8;
+        const left = Math.min(Math.max(4, b.x), scrollX + innerWidth - bar.offsetWidth - 4);
+        Object.assign(bar.style, { left: left + 'px', top: (top < scrollY + 4 ? b.y + b.h + 8 : top) + 'px' });
+    };
+    // Each action: [icon, one-word label, run, primary?, key].
+    const showBar = (list) => {
+        actions = list;
+        const kind = document.createElement('span');
+        kind.className = 'kind';
+        kind.textContent = editing ? 'Editing' : kindOf(picked);
+        bar.replaceChildren(kind, ...list.map(([icon, label, run, primary, key]) => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.textContent = label;
+            button.title = key ? label + ' (' + key.toUpperCase() + ')' : label;
+            button.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true">' + ICONS[icon] + '</svg>';
+            button.append(label);
+            if (key) button.insertAdjacentHTML('beforeend', '<kbd>' + key.toUpperCase() + '</kbd>');
             if (primary) button.className = 'primary';
             button.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); run(); });
             return button;
         }));
-        const b = boxOf(picked);
+        const appearing = bar.hidden;
         bar.hidden = false;
-        const top = b.y - bar.offsetHeight - 6;
-        Object.assign(bar.style, { left: Math.max(4, b.x) + 'px', top: (top < scrollY ? b.y + b.h + 6 : top) + 'px' });
+        if (appearing) bar.classList.remove('in');
+        placeBar();
+        requestAnimationFrame(() => bar.classList.add('in'));
+    };
+    // What a selected (not editing) element offers: Mark always, Edit when it
+    // has words, Wider when there's a part around it.
+    const selectBar = () => showBar([
+        ['mark', 'Mark', mark, true, 'm'],
+        ...(textOf(picked) !== '' && !picked.querySelector('img, svg, video, input, select, textarea') ? [['edit', 'Edit', () => startEdit(), false, 'e']] : []),
+        ...(pickable(picked.parentElement) ? [['wider', 'Wider', wider, false, 'w']] : []),
+    ]);
+    const wider = () => {
+        if (!picked || !pickable(picked.parentElement)) return;
+        picked = picked.parentElement;
+        place(pickedBox, picked);
+        selectBar();
     };
 
     const clear = () => {
@@ -146,6 +201,7 @@
         picked = null;
         pickedBox.hidden = true;
         bar.hidden = true;
+        bar.classList.remove('in');
     };
 
     const mark = () => {
@@ -165,7 +221,7 @@
         if (!caret) range.selectNodeContents(picked);
         getSelection().removeAllRanges();
         getSelection().addRange(range);
-        showBar([['Done', () => finishEdit(true), true], ['Just mark it', markInstead], ['Cancel', cancelEdit]]);
+        showBar([['done', 'Done', () => finishEdit(true), true, null], ['mark', 'Mark', markInstead, false, null], ['cancel', 'Cancel', cancelEdit, false, null]]);
     };
     const markInstead = () => {
         editing.el.innerHTML = editing.html;
@@ -197,7 +253,7 @@
         stopEditing();
         editing = null;
         if (direct) return clear();
-        if (picked) showBar([['Mark this', mark, true], ['Edit words', () => startEdit()]]);
+        if (picked) selectBar();
     };
 
     document.addEventListener('mousemove', (e) => {
@@ -226,7 +282,7 @@
             end.collapse(false);
             return startEdit(caret && picked.contains(caret.startContainer) ? caret : end);
         }
-        showBar([['Mark this', mark, true], ['Edit words', () => startEdit()]]);
+        selectBar();
     }, true);
 
     document.addEventListener('submit', (e) => e.preventDefault(), true);
@@ -239,12 +295,27 @@
         } else if (e.key === 'Escape') {
             e.preventDefault();
             editing ? cancelEdit() : clear();
+        } else if (picked && !editing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            const action = actions.find((a) => a[4] === e.key.toLowerCase());
+            if (action) {
+                e.preventDefault();
+                action[2]();
+            }
         }
     }, true);
 
     addEventListener('message', (e) => {
         if (e.source === parent && e.data && e.data.source === 'rm-review' && e.data.type === 'clear') clear();
     });
+
+    // Keep the picked outline and its bar on the element as the page moves.
+    const follow = () => {
+        if (!picked) return;
+        place(pickedBox, picked);
+        placeBar();
+    };
+    addEventListener('scroll', follow, { passive: true });
+    addEventListener('resize', follow);
 
     const size = () => send('size', {
         width: document.documentElement.scrollWidth,
