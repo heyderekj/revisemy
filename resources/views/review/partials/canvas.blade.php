@@ -469,22 +469,39 @@
                     <div @class([
                         'relative flex min-h-0 flex-1 flex-col',
                     ])>
-                        <div data-zoom-controls class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
-                            <template x-if="liveUrl">
-                                <div class="flex items-center">
-                                    <button
-                                        type="button"
-                                        data-live-toggle
-                                        class="flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
-                                        x-bind:class="live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
-                                        x-bind:aria-pressed="live.toString()"
-                                        x-on:click="toggleLive()"
-                                        title="The page’s code as captured: click a part to mark it, or change its words"
-                                    ><flux:icon.code-bracket variant="micro" class="size-3.5" />Live</button>
-                                    <span class="mx-0.5 h-4 w-px bg-zinc-200" aria-hidden="true"></span>
-                                </div>
-                            </template>
-                            <template x-if="elements && ! live">
+                        {{-- Which view: the screenshot, or the page's code as captured. A
+                             segmented switch of its own, apart from the tools for the view. --}}
+                        <template x-if="liveUrl">
+                            <div
+                                data-view-switch
+                                role="tablist"
+                                aria-label="View"
+                                class="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur"
+                            >
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    class="flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
+                                    x-bind:class="! live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                    x-bind:aria-selected="(! live).toString()"
+                                    x-on:click="live && toggleLive()"
+                                    title="The captured screenshot"
+                                ><flux:icon.photo variant="micro" class="size-3.5" />Screenshot</button>
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    data-live-toggle
+                                    class="flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
+                                    x-bind:class="live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                    x-bind:aria-selected="live.toString()"
+                                    x-on:click="live || toggleLive()"
+                                    title="The page’s code as captured: click a part to mark it, or change its words"
+                                ><flux:icon.code-bracket variant="micro" class="size-3.5" />Live</button>
+                            </div>
+                        </template>
+
+                        <div data-zoom-controls x-show="! live" class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
+                            <template x-if="elements">
                                 <div class="flex items-center">
                                     <button
                                         type="button"
@@ -528,7 +545,7 @@
                             x-show="live"
                             x-ref="liveViewport"
                             data-live-view
-                            class="absolute inset-0 z-20 overflow-auto overscroll-contain bg-well px-3 pt-3 pb-20 md:px-6 md:pt-6"
+                            class="absolute inset-0 z-20 overflow-auto overscroll-contain bg-well px-3 pt-14 pb-20 md:px-6"
                         >
                             <p class="mx-auto mb-2 max-w-full text-xs text-muted-foreground" x-bind:style="'width:' + (liveWidth * liveScale) + 'px'">
                                 The page’s code as captured. Click a part, then mark it or change its words. Fonts and images may differ from the screenshot.
@@ -553,6 +570,7 @@
                         x-ref="viewport"
                         class="relative min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-3 pb-20 md:px-6 md:pt-6"
                         x-bind:class="{
+                            '!pt-14': liveUrl,
                             'cursor-grab': canPan() && spaceHeld && !panning,
                             'cursor-grabbing': panning
                         }"
@@ -773,6 +791,7 @@
                     @php($canvasHint = $shot->elementsUrl() ? ($mode === 'guest' ? 'Click a part to suggest a change · drag for an area · Alt-click for a spot · Space+drag pans' : 'Click a part to mark it · drag for an area · Alt-click for a spot · Space+drag pans') : ($mode === 'guest' ? 'Drag to suggest a change · click for a point · Space+drag pans' : 'Drag to mark · click for a point · Space+drag pans'))
                     <p
                         data-canvas-hint
+                        x-show="! live"
                         class="pointer-events-none absolute bottom-3 left-3 z-20 hidden max-w-[calc(100%-26rem)] truncate rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] lg:block"
                         title="{{ $canvasHint }}"
                     >{{ $canvasHint }}</p>
