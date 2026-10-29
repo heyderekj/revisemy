@@ -38,7 +38,7 @@
 <nav {{ $attributes->class('flex flex-col gap-8 text-[14px]') }} aria-label="Site">
     @foreach ($groups as $label => $links)
         <div>
-            <p class="mb-3 text-sm font-medium text-muted-foreground">{{ $label }}</p>
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{{ $label }}</p>
             <ul class="space-y-2.5 text-zinc-600">
                 @foreach ($links as [$href, $text])
                     <li>
