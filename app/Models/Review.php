@@ -426,6 +426,28 @@ class Review extends Model
         return $this->status;
     }
 
+    /**
+     * The newest pass built on this one, following the chain down; null when
+     * this is the latest.
+     */
+    public function newestPass(): ?self
+    {
+        $newest = null;
+        $node = $this;
+
+        for ($hops = 0; $hops < 50 && ($child = $node->children()->latest('pass')->latest('id')->first()); $hops++) {
+            $newest = $node = $child;
+        }
+
+        return $newest;
+    }
+
+    /** The day an open review stops taking marks, while it's still open. */
+    public function openUntil(): ?Carbon
+    {
+        return $this->effectiveStatus() === self::STATUS_PENDING ? $this->expires_at : null;
+    }
+
     /** No later pass builds on this one. */
     public function isLatestPass(): bool
     {

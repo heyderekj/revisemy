@@ -334,6 +334,7 @@ class ReviewService
             ...($webhookHealth ?? []),
             'pass' => $pass,
             'expires_at' => now()->addDays($retentionDays),
+            ...$this->guestSharingFrom($parent),
         ]);
 
         if ($domHtml !== null && trim($domHtml) !== '') {
@@ -504,6 +505,28 @@ class ReviewService
         ReviewDecided::dispatch($review);
 
         return true;
+    }
+
+    /**
+     * A next pass keeps how its parent was shared: comments on or off, and a
+     * guest link that lasts at least as long as the parent's did. The link
+     * itself is new; the parent's page points guests to it.
+     *
+     * @return array<string, mixed>
+     */
+    protected function guestSharingFrom(?Review $parent): array
+    {
+        if (! $parent) {
+            return [];
+        }
+
+        $default = now()->addDays(Review::SHARE_EXPIRY_DAYS)->endOfDay();
+        $expires = $parent->share_expires_at;
+
+        return [
+            'comments_enabled' => $parent->allowsComments(),
+            'share_expires_at' => $expires !== null && $expires->gt($default) ? $expires : $default,
+        ];
     }
 
     /**

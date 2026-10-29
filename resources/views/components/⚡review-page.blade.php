@@ -1123,6 +1123,37 @@ new class extends Component
      *
      * @return \Illuminate\Support\Collection<int, Annotation>
      */
+    /**
+     * The newest pass built on this one, for the "Pass N is ready" link. A
+     * guest goes to that pass's guest link, while it's open to guests.
+     *
+     * @return array{pass: int, url: string}|null
+     */
+    #[Computed]
+    public function newerPass(): ?array
+    {
+        $newest = $this->review->newestPass();
+
+        if (! $newest) {
+            return null;
+        }
+
+        if ($this->isOwner()) {
+            return ['pass' => (int) $newest->pass, 'url' => $newest->reviewUrl()];
+        }
+
+        return $newest->allowsGuestAccess() ? ['pass' => (int) $newest->pass, 'url' => $newest->shareUrl()] : null;
+    }
+
+    /** Marks still open on this review, for the tab title. */
+    public function openMarkCount(): int
+    {
+        return $this->review->screenshots
+            ->flatMap->annotations
+            ->whereIn('status', [Annotation::STATUS_OPEN, Annotation::STATUS_IN_PROGRESS])
+            ->count();
+    }
+
     #[Computed]
     public function activeMarks()
     {
@@ -1196,9 +1227,33 @@ new class extends Component
         wire:poll.visible.30s="loadReview"
     @endif
 >
+    {{-- What the A/C/J/K keys read at the moment they're pressed. --}}
+    <span hidden @if ($review->isOpenForFeedback()) data-open-for-feedback @endif>
+        @foreach ($this->activeMarks->sortBy('number') as $orderedMark)
+            <span data-mark-order="{{ $orderedMark->id }}"></span>
+        @endforeach
+    </span>
+
+    {{-- Open marks in the tab title, so a background tab says when there's work. --}}
+    @php($openCount = $this->openMarkCount())
+    <span
+        hidden
+        wire:key="tab-title-{{ $openCount }}"
+        x-data
+        x-init="document.title = document.title.replace(/^\(\d+\) /, '') ; if ({{ $openCount }} > 0) document.title = '({{ $openCount }}) ' + document.title"
+    ></span>
+
     {{-- Koati's shell: the work sits on an inset panel over the desk. --}}
     <div class="rm-shell">
     @include('review.partials.header')
+
+    @if ($newer = $this->newerPass)
+        <a
+            href="{{ $newer['url'] }}"
+            data-newer-pass
+            class="flex items-center justify-center gap-1.5 bg-key/15 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-key/25"
+        >Pass {{ $newer['pass'] }} is ready <flux:icon.arrow-right variant="micro" class="size-4" /></a>
+    @endif
 
     @if ($mode === 'guest' && ! $review->allowsGuestAccess())
         <div class="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
@@ -1266,10 +1321,14 @@ new class extends Component
                 },
                 {{-- Keys, Linear-style: A approves, C asks for changes (both keep
                      the undo window), J/K step through marks. Never while typing. --}}
-                marks: @js($this->activeMarks->sortBy('number')->pluck('id')->values()),
+                {{-- Read from the page when a key is pressed, not when this first rendered:
+                     marks come and go, and the review can be decided, without a reload. --}}
+                get marks() {
+                    return Array.from(document.querySelectorAll('[data-mark-order]')).map((el) => Number(el.dataset.markOrder));
+                },
                 key(e) {
                     if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
-                    const open = @js($review->isOpenForFeedback());
+                    const open = !! document.querySelector('[data-open-for-feedback]');
                     if (open && e.key === 'a') { e.preventDefault(); this.decide('approve'); }
                     else if (open && e.key === 'c') { e.preventDefault(); this.decide('changes'); }
                     else if ((e.key === 'j' || e.key === 'k') && this.marks.length) {

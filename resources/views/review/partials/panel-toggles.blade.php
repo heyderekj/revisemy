@@ -5,8 +5,9 @@
     @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
         <button
             type="button"
-            class="hidden h-8 items-center rounded-full px-3 text-sm font-medium transition-colors md:inline-flex"
-            x-bind:class="($store.rmPanel?.brief ?? true) ? 'bg-chip text-zinc-900 hover:bg-chip-hover' : 'text-zinc-500 hover:bg-chip hover:text-zinc-900'"
+            class="h-8 items-center rounded-full px-3 text-sm font-medium transition-colors md:inline-flex"
+            {{-- On a phone it shows only once the brief is hidden, as the way back. --}}
+            x-bind:class="[($store.rmPanel?.brief ?? true) ? 'hidden bg-chip text-zinc-900 hover:bg-chip-hover' : 'inline-flex text-zinc-500 hover:bg-chip hover:text-zinc-900']"
             x-on:click="$store.rmPanel.brief = ! $store.rmPanel.brief"
             x-bind:aria-pressed="($store.rmPanel?.brief ?? true).toString()"
             title="What to look at"

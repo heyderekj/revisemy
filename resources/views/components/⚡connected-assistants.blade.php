@@ -118,6 +118,7 @@ new class extends Component
                         type="button"
                         class="inline-flex h-8 shrink-0 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover"
                         wire:click="disconnect('{{ $connection['kind'] }}', '{{ $connection['id'] }}')"
+                        wire:confirm="{{ $connection['kind'] === 'app' ? 'Disconnect '.$connection['name'].'? It loses access until it connects again. Your reviews stay.' : 'Revoke this try token? Anything using it stops working, this page included if you opened it with the token. Your reviews stay.' }}"
                     >{{ $connection['kind'] === 'app' ? 'Disconnect' : 'Revoke' }}</button>
                 </li>
             @endforeach
