@@ -415,6 +415,70 @@ class ReviewService
         return true;
     }
 
+    /**
+     * The person sets a review's status. While it waits on them this is the
+     * first decision (decide()); after that they can reopen it or switch it
+     * between approved and changes requested, on the latest pass only (see
+     * Review::canChangeStatus). Marks keep their own statuses. Fires
+     * ReviewDecided either way, so open pages, the webhook and a waiting
+     * agent all hear it.
+     */
+    public function setStatus(Review $review, string $status, ?string $note = null): bool
+    {
+        if ($review->status === Review::STATUS_PENDING) {
+            return $this->decide($review, $status, $note);
+        }
+
+        $statuses = [Review::STATUS_PENDING, Review::STATUS_APPROVED, Review::STATUS_CHANGES_REQUESTED];
+
+        if (! in_array($status, $statuses, true) || $status === $review->status || ! $review->canChangeStatus()) {
+            return false;
+        }
+
+        $reopening = $status === Review::STATUS_PENDING;
+
+        $review->update([
+            'status' => $status,
+            'decision_note' => $reopening || $note === null || $note === '' ? null : $note,
+            'decision_at' => $reopening ? null : now(),
+        ]);
+
+        if ($status === Review::STATUS_APPROVED) {
+            $lifecycle = app(MarkLifecycleService::class);
+            $lifecycle->verifyResolvedForReview($review);
+
+            if ($review->parent) {
+                $lifecycle->verifyResolvedForReview($review->parent);
+            }
+        }
+
+        ReviewDecided::dispatch($review);
+
+        return true;
+    }
+
+    /** Puts every pass of the review's chain away, or brings them back. */
+    public function archive(Review $review, bool $archived = true): void
+    {
+        Review::query()
+            ->whereIn('id', $review->chain()->pluck('id'))
+            ->update(['archived_at' => $archived ? now() : null]);
+
+        $review->refresh();
+    }
+
+    /**
+     * Deletes every pass of the review's chain with its files, newest pass
+     * first so no parent is removed under a child. The same clean-up the
+     * nightly prune runs.
+     */
+    public function deleteChain(Review $review): void
+    {
+        $review->chain()
+            ->sortByDesc('pass')
+            ->each(fn (Review $pass) => $pass->prune());
+    }
+
     public function findForWorkspace(Workspace $workspace, string $publicId): ?Review
     {
         return $workspace->reviews()

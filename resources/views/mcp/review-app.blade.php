@@ -364,10 +364,24 @@
                     <input type="text" x-model="decisionNote" placeholder="Optional note for the agent…"
                         class="h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-key/40">
                     <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-sm font-medium disabled:opacity-50"
-                            :disabled="busy" @click="decide('approved')">Approve</button>
-                        <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-800 transition hover:bg-chip-hover disabled:opacity-50"
-                            :disabled="busy" @click="decide('changes_requested')">Changes</button>
+                        <template x-if="!deciding">
+                            <div class="contents">
+                                <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-sm font-medium disabled:opacity-50"
+                                    :disabled="busy" @click="startDecision('approved')">Approve</button>
+                                <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-800 transition hover:bg-chip-hover disabled:opacity-50"
+                                    :disabled="busy" @click="startDecision('changes_requested')">Changes</button>
+                            </div>
+                        </template>
+                        {{-- The web's few seconds to take a decision back, here too. --}}
+                        <template x-if="deciding">
+                            <div class="contents" role="status" aria-live="polite">
+                                <span class="text-sm tabular-nums text-zinc-700" x-text="(deciding === 'approved' ? 'Approving' : 'Sending changes') + ' in ' + decidingLeft + 's'"></span>
+                                <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-800 transition hover:bg-chip-hover"
+                                    @click="cancelDecision()">Undo</button>
+                                <button type="button" class="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-zinc-500 transition hover:text-zinc-800"
+                                    @click="commitDecision()">Send now</button>
+                            </div>
+                        </template>
                         <button type="button" class="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-zinc-500 transition hover:text-zinc-800"
                             @click="openFullReview()">Open full review</button>
                     </div>
@@ -390,8 +404,12 @@
                         <strong class="font-medium text-zinc-900">Loop complete for this pass.</strong>
                         Ask the agent for another checkup anytime if the UI changes again.
                     </div>
-                    <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-700 transition hover:bg-chip-hover"
-                        @click="openFullReview()">Open full review</button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-sm font-medium text-zinc-700 transition hover:bg-chip-hover"
+                            @click="openFullReview()">Open full review</button>
+                        <button type="button" class="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-zinc-500 transition hover:text-zinc-800 disabled:opacity-50"
+                            x-show="payload.can_change_status" :disabled="busy" @click="reopen()">Reopen for review</button>
+                    </div>
                 </div>
 
                 <p class="mt-2 text-sm text-problem-ink" x-show="error && !composer.open" x-text="error"></p>
@@ -633,6 +651,9 @@
             failed: '',
             failedTitle: '',
             decisionNote: '',
+            deciding: null,
+            decidingLeft: 0,
+            decidingTimer: null,
             previousOpen: false,
             draft: { drawing: false, x0: 0, y0: 0, x: 0, y: 0, w: 0, h: 0 },
             composer: { open: false, x: 0, y: 0, area: null, severity: 'must-fix', body: '' },
@@ -1130,6 +1151,29 @@
                 await this.run(() => window.mcpBridge.callTool('verify_mark', {
                     review_id: this.payload.id, mark_id: pin.id, action,
                 }));
+            },
+
+            startDecision(decision) {
+                this.cancelDecision();
+                this.deciding = decision;
+                this.decidingLeft = 8;
+                this.decidingTimer = setInterval(() => { if (--this.decidingLeft <= 0) this.commitDecision(); }, 1000);
+            },
+
+            cancelDecision() {
+                clearInterval(this.decidingTimer);
+                this.decidingTimer = null;
+                this.deciding = null;
+            },
+
+            commitDecision() {
+                const decision = this.deciding;
+                this.cancelDecision();
+                if (decision) this.decide(decision);
+            },
+
+            async reopen() {
+                await this.run(() => window.mcpBridge.callTool('decide_review', { review_id: this.payload.id, decision: 'pending' }));
             },
 
             async decide(decision) {

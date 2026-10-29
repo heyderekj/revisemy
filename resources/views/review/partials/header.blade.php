@@ -82,7 +82,9 @@
                     @else
                         <span class="min-w-0 truncate">{{ $review->sourceKindLabel() }}</span>
                     @endif
-                    @if ($review->effectiveStatus() === 'changes_requested')
+                    @if ($this->isOwner())
+                        @include('review.partials.status-menu', ['undoable' => true, 'class' => 'ms-1'])
+                    @elseif ($review->effectiveStatus() === 'changes_requested')
                         <x-signal-tag tone="attention" class="ms-1 shrink-0">Changes requested</x-signal-tag>
                     @elseif ($review->effectiveStatus() === 'approved')
                         <x-signal-tag tone="done" class="ms-1 shrink-0">Approved</x-signal-tag>

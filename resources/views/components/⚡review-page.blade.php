@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\ChangesReviewStatus;
 use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
 use App\Models\AnnotationComment;
@@ -16,7 +17,7 @@ use Livewire\Component;
 
 new class extends Component
 {
-    use FindsReviewMarks;
+    use ChangesReviewStatus, FindsReviewMarks;
 
     #[Locked]
     public string $token;
@@ -120,6 +121,16 @@ new class extends Component
     public function isOwner(): bool
     {
         return $this->mode === 'owner';
+    }
+
+    protected function managesReview(): bool
+    {
+        return $this->isOwner();
+    }
+
+    protected function reloadReview(): void
+    {
+        $this->loadReview();
     }
 
     /** This browser connected the workspace behind the review, so it can jump to the rest. */
@@ -1109,9 +1120,11 @@ new class extends Component
                 pending: null,
                 left: 0,
                 timer: null,
-                show(message) {
+                plain: false,
+                show(message, plain = false) {
                     this.clear();
                     this.message = message;
+                    this.plain = plain;
                     this.timer = setTimeout(() => this.clear(), 12000);
                 },
                 decide(kind) {
@@ -1154,6 +1167,7 @@ new class extends Component
                 },
             }"
             x-on:undoable.window="show($event.detail.message)"
+            x-on:rm-toast.window="show($event.detail.message, true)"
             x-on:rm-decide.window="decide($event.detail.kind)"
             x-on:keydown.window="key($event)"
             x-on:beforeunload.window="if (pending) { $event.preventDefault(); $event.returnValue = ''; }"
@@ -1170,7 +1184,7 @@ new class extends Component
             <div class="pointer-events-auto flex items-center gap-1 rounded-full bg-zinc-900 py-1.5 pl-4 pr-1.5 text-sm text-white shadow-lg shadow-black/20">
                 <span x-show="! pending" x-text="message"></span>
                 <span x-show="pending" class="tabular-nums" x-text="(pending === 'approve' ? 'Approving' : @js($review->isAwaitingAgent() ? 'Asking for changes' : 'Sending changes to the agent')) + ' in ' + left + 's'"></span>
-                <button type="button" class="ml-2 rounded-full px-3 py-1 font-medium text-key transition-colors night:text-white hover:bg-white/10" x-on:click="undo()">Undo</button>
+                <button type="button" class="ml-2 rounded-full px-3 py-1 font-medium text-key transition-colors night:text-white hover:bg-white/10" x-show="pending || ! plain" x-on:click="undo()">Undo</button>
                 <button type="button" x-show="pending" class="rounded-full bg-white/10 px-3 py-1 font-medium transition-colors hover:bg-white/20" x-on:click="commit()">Send now</button>
             </div>
         </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\ChangesReviewStatus;
 use App\Livewire\Concerns\FindsReviewMarks;
 use App\Models\Annotation;
 use App\Models\AnnotationComment;
@@ -11,7 +12,7 @@ use Livewire\Component;
 
 new class extends Component
 {
-    use FindsReviewMarks;
+    use ChangesReviewStatus, FindsReviewMarks;
 
     #[Locked]
     public string $token;
@@ -27,6 +28,17 @@ new class extends Component
     public function mount(string $token): void
     {
         $this->token = $token;
+        $this->loadBoard();
+    }
+
+    /** The board opens on the owner token only. */
+    protected function managesReview(): bool
+    {
+        return true;
+    }
+
+    protected function reloadReview(): void
+    {
         $this->loadBoard();
     }
 
@@ -337,6 +349,7 @@ new class extends Component
                 </span>
                 <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
                 <p class="min-w-0 truncate text-sm text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
+                @include('review.partials.status-menu', ['class' => 'ms-1'])
             </div>
 
             @if ($total > 0)
