@@ -37,6 +37,8 @@ class AddScreenshotTool extends Tool
         $data = $request->validate([
             'id' => 'required|string',
             'image' => 'required|string',
+            'dpr' => 'nullable|numeric|between:0.5,4',
+            'elements' => 'nullable',
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['id']);
@@ -46,7 +48,12 @@ class AddScreenshotTool extends Tool
         }
 
         try {
-            $this->reviews->addScreenshot($review, $data['image']);
+            $this->reviews->addScreenshot(
+                $review,
+                $data['image'],
+                isset($data['dpr']) ? (float) $data['dpr'] : null,
+                ReviewService::elementsFrom($data['elements'] ?? null),
+            );
         } catch (ValidationException $e) {
             return Response::error(collect($e->errors())->flatten()->first() ?? 'Could not add that screenshot.');
         }
@@ -67,6 +74,8 @@ class AddScreenshotTool extends Tool
         return [
             'id' => $schema->string()->description('The review public id')->required(),
             'image' => $schema->string()->description('Screenshot as https URL, data URL, or base64')->required(),
+            'dpr' => $schema->number()->description('Optional device pixels per CSS px (2 for a retina screenshot)'),
+            'elements' => $schema->object()->description('Optional element map from the script at '.url('/capture/elements.js').', run in the browser you screenshot. Lets the human mark a whole element and tells you its selector.'),
         ];
     }
 }

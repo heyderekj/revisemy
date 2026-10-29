@@ -56,6 +56,8 @@ ReviseMy and Koati are separate products from the same studio, with no connectio
 
 ## New in the code
 
+Marks already carry their element: `annotations.target` holds the selector, kind, text, box and styles, resolved by `App\Support\ElementTarget` from the shot's element map, and `MarkLifecycleService::createMark()` takes an `element` (index or selector). The extension's marks fit the same shape; what it adds is the live page instead of a picture.
+
 - `POST /api/reviews/{publicId}/marks`, behind `auth:sanctum` like the rest of `routes/api.php`.
   - It lets a human add marks over HTTP, which today only the MCP Apps `add_mark` tool can do.
   - Marks made this way are human marks, and therefore authoritative.

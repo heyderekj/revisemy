@@ -15,6 +15,18 @@ return [
     'entries' => [
 
         [
+            'version' => '1.12.0',
+            'date' => '2026-10-29',
+            'title' => 'Mark the part, not just the pixels',
+            'highlights' => [
+                'Click a button, a heading or a card to mark the whole thing. Wider steps out to the part around it, and Alt-click still drops a spot',
+                'Inspect shows what the page has there: size, type, colours, padding and corners',
+                'Your agent gets the element with each mark, so it changes the right one and starts from its real values',
+                'Works in the inline review too, and on your agent’s own screenshots when it sends the page’s elements along',
+            ],
+        ],
+
+        [
             'version' => '1.11.0',
             'date' => '2026-10-23',
             'title' => 'Faster captures you can watch',

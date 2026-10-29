@@ -136,4 +136,28 @@ class AgentPayloadSizeTest extends TestCase
             "get_review payload grew to {$bytes} bytes for 2 screenshots and 6 marks."
         );
     }
+
+    public function test_an_element_on_every_mark_rides_in_full_once_and_slim_in_the_buckets(): void
+    {
+        $review = $this->setUpReview();
+        $plain = strlen((string) json_encode($review->toAgentPayload(), JSON_UNESCAPED_SLASHES));
+
+        foreach ($review->screenshots->flatMap->annotations as $mark) {
+            $mark->update(['target' => [
+                'v' => 1, 'index' => 3, 'selector' => '#pricing > div.card:nth-of-type(2) > a.btn', 'tag' => 'a', 'kind' => 'Button',
+                'text' => 'Start your free trial today', 'role' => 'link', 'box' => ['x' => 812, 'y' => 1460, 'w' => 220, 'h' => 52],
+                'styles' => ['fs' => 18, 'lh' => 24, 'fw' => 600, 'ff' => 'Inter', 'c' => '#ffffff', 'bg' => '#2563eb', 'p' => [14, 28, 14, 28], 'r' => 10],
+                'via' => 'picked',
+            ]]);
+        }
+
+        $payload = $review->fresh()->toAgentPayload();
+        $grown = strlen((string) json_encode($payload, JSON_UNESCAPED_SLASHES)) - $plain;
+
+        // Six marks: the full element once per copy under the screenshot and
+        // in pins, a slim one in each bucket. Under 1KB a mark all told.
+        $this->assertLessThan(6 * 1024, $grown);
+        $this->assertArrayHasKey('styles', $payload['work_packets']['pins'][0]['element']);
+        $this->assertArrayNotHasKey('styles', $payload['work_packets']['must_fix'][0]['element']);
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Services\ReviewPreview;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
@@ -66,6 +67,32 @@ class ScreenshotController extends Controller
             'Content-Type' => 'image/jpeg',
             'Cache-Control' => 'public, max-age=86400',
         ]);
+    }
+
+    /**
+     * The shot's element list for the review canvas to hit-test (see
+     * ElementMap::pickList). It holds only what the shot already shows, so
+     * it is gated the same way as the image.
+     */
+    public function elements(Request $request, Screenshot $screenshot): JsonResponse
+    {
+        return $this->pickList($screenshot);
+    }
+
+    public function elementsForReview(string $token, Screenshot $screenshot): JsonResponse
+    {
+        $this->assertReviewToken($token, $screenshot);
+
+        return $this->pickList($screenshot);
+    }
+
+    protected function pickList(Screenshot $screenshot): JsonResponse
+    {
+        $list = $screenshot->pickList();
+
+        abort_if($list === null, 404);
+
+        return response()->json($list, headers: ['Cache-Control' => 'private, max-age=86400']);
     }
 
     protected function assertReviewToken(string $token, Screenshot $screenshot): void

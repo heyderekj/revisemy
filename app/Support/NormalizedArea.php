@@ -9,9 +9,21 @@ namespace App\Support;
 class NormalizedArea
 {
     /**
+     * Smallest side a model-supplied region may have: anything thinner is
+     * noise, not a place on the page.
+     */
+    public const MIN_SIDE = 0.01;
+
+    /**
+     * Smallest side a person's mark may have. On a 6,000px page 1% is 60px,
+     * taller than most buttons, so marks get a far lower floor.
+     */
+    public const MIN_MARK_SIDE = 0.001;
+
+    /**
      * @return array{x: float, y: float, w: float, h: float}|null
      */
-    public static function from(mixed $area): ?array
+    public static function from(mixed $area, float $min = self::MIN_SIDE): ?array
     {
         if (! is_array($area)) {
             return null;
@@ -35,7 +47,7 @@ class NormalizedArea
         $w = max(0, min(1 - $x, $w));
         $h = max(0, min(1 - $y, $h));
 
-        if ($w < 0.01 || $h < 0.01) {
+        if ($w < $min || $h < $min) {
             return null;
         }
 
