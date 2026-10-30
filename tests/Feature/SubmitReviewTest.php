@@ -307,11 +307,11 @@ class SubmitReviewTest extends TestCase
         $this->get('/reviews')->assertOk()->assertSee('93.184.215.14');
     }
 
-    public function test_the_home_hero_posts_a_link_here(): void
+    public function test_the_home_hero_starts_a_review_here(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('action="'.route('reviews.submit').'"', false)
-            ->assertSee('Paste a page to review');
+            ->assertSee('href="'.route('reviews.new').'"', false)
+            ->assertDontSee('Paste a page to review');
     }
 }

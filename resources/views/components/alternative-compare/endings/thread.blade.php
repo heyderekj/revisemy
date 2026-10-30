@@ -3,7 +3,7 @@
 @php($agent = $compare['agent'] ?? false)
 
 <x-alternative-compare.shot muted>
-    <span class="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full rounded-bl-none bg-zinc-700 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 32%; top: 24%;">Y</span>
+    <span class="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full rounded-bl-none bg-zinc-700 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 43%; top: 23%;">Y</span>
 </x-alternative-compare.shot>
 
 <div class="rounded-xl bg-raised p-3 shadow-xs ring-1 ring-black/[0.04]">

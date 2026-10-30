@@ -340,18 +340,30 @@ new class extends Component
                                     >{{ $label }} <span class="tabular-nums text-zinc-400">{{ $shelfCounts[$value] }}</span></button>
                                 @endforeach
                             </div>
-                            <label class="sr-only" for="status-filter">Status</label>
-                            <select
-                                id="status-filter"
-                                wire:model.live="statusFilter"
-                                class="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm text-zinc-700 outline-none focus:border-zinc-400"
-                            >
-                                <option value="">Any status</option>
-                                <option value="pending">Waiting on your eye</option>
-                                <option value="changes_requested">Changes requested</option>
-                                <option value="approved">Approved</option>
-                                <option value="expired">Expired</option>
-                            </select>
+                            {{-- Same chip as the tabs beside it, not a form field. --}}
+                            @php
+                                $statusLabels = ['' => 'Any status', 'pending' => 'Needs review', 'changes_requested' => 'Changes requested', 'approved' => 'Approved', 'expired' => 'Expired'];
+                            @endphp
+                            <flux:dropdown position="bottom" align="end">
+                                <button
+                                    type="button"
+                                    data-status-filter
+                                    @class([
+                                        'inline-flex h-8 items-center gap-1 rounded-lg px-3 text-sm font-medium transition-colors',
+                                        'bg-chip text-zinc-600 hover:text-zinc-900' => $statusFilter === '',
+                                        'bg-foreground text-background' => $statusFilter !== '',
+                                    ])
+                                    aria-label="Status: {{ $statusLabels[$statusFilter] ?? 'Any status' }}"
+                                >
+                                    {{ $statusLabels[$statusFilter] ?? 'Any status' }}
+                                    <flux:icon.chevron-down variant="micro" class="size-3.5 opacity-60" />
+                                </button>
+                                <flux:menu class="min-w-48">
+                                    @foreach ($statusLabels as $value => $label)
+                                        <flux:menu.item wire:click="$set('statusFilter', '{{ $value }}')" :icon="$statusFilter === $value ? 'check' : null">{{ $label }}</flux:menu.item>
+                                    @endforeach
+                                </flux:menu>
+                            </flux:dropdown>
                         </div>
                     @endif
                     @if ($reviews === [] && $filtered)
@@ -408,10 +420,11 @@ new class extends Component
                                         <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:mt-0 sm:shrink-0 sm:flex-col sm:items-end sm:gap-1">
                                             <x-signal-tag :tone="$item['tag']['tone']">{{ $item['tag']['label'] }}</x-signal-tag>
                                             <span class="text-xs tabular-nums text-muted-foreground">
-                                                @if ($marks['must_fix_count'] > 0)
-                                                    <span class="inline-flex items-center gap-1"><span class="size-1.5 rounded-full {{ \App\Models\Annotation::TONES['problem']['dot'] }}" aria-hidden="true"></span>{{ $marks['must_fix_count'] }} must fix</span> ·
-                                                @endif
-                                                {{ implode(' · ', $counts) }}
+                                                {{-- Must fix is part of open, so it follows it: "6 open, 3 must fix", never "3 must fix · 6 open". --}}
+                                                @php
+                                                    $openLabel = array_shift($counts);
+                                                @endphp
+                                                {{ $openLabel }}@if ($marks['must_fix_count'] > 0 && $marks['outstanding_count'] > 0), <span class="inline-flex items-center gap-1 text-problem-ink"><span class="size-1.5 rounded-full {{ \App\Models\Annotation::TONES['problem']['dot'] }}" aria-hidden="true"></span>{{ $marks['must_fix_count'] }} must fix</span>@endif{{ $counts !== [] ? ' · '.implode(' · ', $counts) : '' }}
                                             </span>
                                         </div>
                                     </div>

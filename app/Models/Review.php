@@ -744,7 +744,7 @@ class Review extends Model
     public function statusLabel(): string
     {
         return match ($this->effectiveStatus()) {
-            self::STATUS_PENDING => 'Waiting on your eye',
+            self::STATUS_PENDING => 'Needs your review',
             self::STATUS_CHANGES_REQUESTED => 'Changes requested — apply marks, then open the next pass',
             self::STATUS_APPROVED => 'Looks good — approved',
             self::STATUS_EXPIRED => 'This review link expired',
@@ -764,7 +764,7 @@ class Review extends Model
             self::STATUS_CHANGES_REQUESTED => ['tone' => 'attention', 'label' => 'Changes requested'],
             self::STATUS_APPROVED => ['tone' => 'done', 'label' => 'Approved'],
             self::STATUS_EXPIRED => ['tone' => 'neutral', 'label' => 'Expired'],
-            default => ['tone' => 'neutral', 'label' => 'Waiting on your eye'],
+            default => ['tone' => 'neutral', 'label' => 'Needs review'],
         };
     }
 

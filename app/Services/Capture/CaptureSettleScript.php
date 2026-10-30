@@ -477,6 +477,57 @@ class CaptureSettleScript
   const docArea = Math.max(1, docWidth * docHeight);
   const kept = new Map();
   const elements = [];
+  // Hidden by an ancestor (opacity 0, or a screen-reader-only clip), as a
+  // menu's chevron button is until hover: there in layout, never seen, and
+  // small enough to win every click over the link beside it.
+  const clippedAway = (cs) => (cs.clip && cs.clip !== 'auto' && /rect\(\s*0/.test(cs.clip)) || /inset\(\s*50%/.test(cs.clipPath || '');
+  const hiddenMemo = new Map();
+  const hiddenAbove = (node) => {
+    if (!node || node === document.body || node === document.documentElement) {
+      return false;
+    }
+    if (hiddenMemo.has(node)) {
+      return hiddenMemo.get(node);
+    }
+    const ncs = getComputedStyle(node);
+    const hidden = parseFloat(ncs.opacity) === 0 || clippedAway(ncs) || hiddenAbove(node.parentElement);
+    hiddenMemo.set(node, hidden);
+    return hidden;
+  };
+  // A control with nothing on screen: no words, no fill or border, and every
+  // icon inside it faded out — a menu's chevron waiting for hover.
+  const showsNothing = (el, cs) => {
+    if (painted(cs) || cs.backgroundImage !== 'none' || (el.innerText || '').trim() !== '') {
+      return false;
+    }
+    // An icon font or a drawn mark in ::before / ::after still shows.
+    for (const pseudo of ['::before', '::after']) {
+      const pcs = getComputedStyle(el, pseudo);
+      if (pcs.content && pcs.content !== 'none' && pcs.content !== 'normal' && pcs.content !== '""' && parseFloat(pcs.opacity) !== 0) {
+        return false;
+      }
+    }
+    const media = el.querySelectorAll('img, svg, video, canvas, picture');
+    for (let j = 0; j < media.length && j < 12; j++) {
+      const m = media[j];
+      const mr = m.getBoundingClientRect();
+      if (mr.width < 1 || mr.height < 1) {
+        continue;
+      }
+      let shown = true;
+      for (let node = m; node && node !== el.parentElement; node = node.parentElement) {
+        const ncs = getComputedStyle(node);
+        if (parseFloat(ncs.opacity) === 0 || ncs.visibility === 'hidden') {
+          shown = false;
+          break;
+        }
+      }
+      if (shown) {
+        return false;
+      }
+    }
+    return true;
+  };
   const nodes = document.body ? document.body.getElementsByTagName('*') : [];
   for (let i = 0; i < nodes.length && elements.length < cfg.maxElements; i++) {
     if (Date.now() - started > cfg.elementsBudgetMs) {
@@ -492,7 +543,7 @@ class CaptureSettleScript
       continue;
     }
     const cs = getComputedStyle(el);
-    if (cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) {
+    if (cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0 || clippedAway(cs) || hiddenAbove(el.parentElement)) {
       continue;
     }
     const box = {
@@ -502,6 +553,9 @@ class CaptureSettleScript
       h: Math.round(r.height),
     };
     let kind = kindOf(el, cs, tag) || (ownText(el) ? 'Text' : null);
+    if ((kind === 'Button' || kind === 'Link') && showsNothing(el, cs)) {
+      continue;
+    }
     if (!kind && painted(cs) && box.w >= 24 && box.h >= 24 && box.w * box.h < docArea * 0.6) {
       kind = 'Box';
     }
@@ -906,6 +960,20 @@ async (hardMs) => {
     if (!cfg.collectElements) {
       return true;
     }
+    // Scripts set some media in code (a video's source, a lazy image), which
+    // the saved markup doesn't keep. Note what each one is showing, in data
+    // attributes so the shot is untouched; the Live view puts them back.
+    try {
+      for (const media of document.querySelectorAll('video, img')) {
+        const src = media.currentSrc || '';
+        if (src && !src.startsWith('blob:') && !src.startsWith('data:') && media.getAttribute('src') !== src) {
+          media.setAttribute('data-rm-src', src);
+        }
+        if (media.tagName === 'VIDEO' && media.poster) {
+          media.setAttribute('data-rm-poster', media.poster);
+        }
+      }
+    } catch (e) {}
     try {
       since = Date.now();
       window.__rmElements = collectElements();

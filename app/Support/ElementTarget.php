@@ -79,7 +79,8 @@ class ElementTarget
                 continue;
             }
 
-            if ($size <= $viewport && $size < $bestArea
+            // Equal boxes go to the later, innermost one, as the canvas picker does.
+            if ($size <= $viewport && $size <= $bestArea
                 && $x >= $box['x'] && $x <= $box['x'] + $box['w'] && $y >= $box['y'] && $y <= $box['y'] + $box['h']) {
                 [$best, $bestArea] = [$index, $size];
             }

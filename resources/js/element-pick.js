@@ -16,6 +16,8 @@
     // Words inside these belong to them: a click on a button's label picks the button.
     const HOLDS_TEXT = new Set(['Heading', 'Paragraph', 'Link', 'Button', 'List item', 'Label', 'Quote', 'Tab', 'Field']);
 
+    const HOLDS_GRAPHIC = new Set(['Link', 'Button', 'Tab']);
+
     const NOT_PICKABLE = 1;
 
     const loaded = new Map();
@@ -57,7 +59,9 @@
         for (let i = 0; i < list.e.length; i++) {
             const [, ex, ey, ew, eh, , , flags] = list.e[i];
             const area = ew * eh;
-            if (flags & NOT_PICKABLE || area > screen || area >= bestArea) {
+            // Equal boxes go to the later one: map order is document order, so
+            // that's the innermost (a list, its item, the link: the link).
+            if (flags & NOT_PICKABLE || area > screen || area > bestArea) {
                 continue;
             }
             if (x >= ex && x <= ex + ew && y >= ey && y <= ey + eh) {
@@ -65,10 +69,12 @@
                 bestArea = area;
             }
         }
-        // Loose words go to the element they're part of.
-        if (best !== null && kindOf(list, best) === 'Text') {
+        // Loose words go to the element they're part of, and so does a graphic
+        // inside a link or button: often it is the label, drawn (Apple's nav).
+        if (best !== null && ['Text', 'Graphic'].includes(kindOf(list, best))) {
             const parent = list.e[best][5];
-            if (parent !== null && list.e[parent] && HOLDS_TEXT.has(kindOf(list, parent))) {
+            const holders = kindOf(list, best) === 'Text' ? HOLDS_TEXT : HOLDS_GRAPHIC;
+            if (parent !== null && list.e[parent] && holders.has(kindOf(list, parent))) {
                 best = parent;
             }
         }

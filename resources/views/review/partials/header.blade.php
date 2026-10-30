@@ -42,7 +42,11 @@
                                 {{ $review->title }}
                             </button>
                         @endif
-                        <div class="flex w-14 shrink-0 items-center justify-end gap-0.5">
+                        {{-- Beside the title: Save and Cancel while editing it, the status menu otherwise. --}}
+                        <div @class(['flex shrink-0 items-center justify-end gap-0.5', 'w-14' => $editingTitle])>
+                            @if (! $editingTitle)
+                                @include('review.partials.status-menu', ['undoable' => true, 'class' => 'ms-1'])
+                            @endif
                             @if ($editingTitle)
                                 <button
                                     type="button"
@@ -67,16 +71,23 @@
                             @endif
                         </div>
                     </div>
+                @elseif ($this->isOwner())
+                    <div class="flex min-w-0 items-center gap-1">
+                        <p class="min-w-0 truncate text-sm font-semibold text-zinc-900" title="{{ $review->title }}">{{ $review->title }}</p>
+                        @include('review.partials.status-menu', ['undoable' => true, 'class' => 'ms-1'])
+                    </div>
                 @else
                     <p class="min-w-0 truncate text-sm font-semibold text-zinc-900" title="{{ $review->title }}">{{ $review->title }}</p>
                 @endif
                 @php($sourceKind = $review->sourceKind())
-                <p class="flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
+                {{-- The facts clip and truncate on their own, so they never run under the tabs. --}}
+                <div class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+                    <span class="flex min-w-0 items-center gap-1.5 overflow-hidden">
                     <span class="shrink-0 tabular-nums">Pass {{ $review->pass }}</span>
                     @if ($openUntil = $review->openUntil())
                         <span aria-hidden="true">·</span>
                         <span
-                            @class(['shrink-0', 'font-medium text-attention-ink' => $openUntil->lt(now()->addHours(48))])
+                            @class(['min-w-0 truncate', 'font-medium text-attention-ink' => $openUntil->lt(now()->addHours(48))])
                             title="Open for marks until {{ $openUntil->timezone(config('app.timezone'))->toDayDateTimeString() }}"
                         >open until {{ $openUntil->timezone(config('app.timezone'))->format('M j') }}</span>
                     @endif
@@ -89,8 +100,9 @@
                     @else
                         <span class="min-w-0 truncate">{{ $review->sourceKindLabel() }}</span>
                     @endif
+                    </span>
                     @if ($this->isOwner())
-                        @include('review.partials.status-menu', ['undoable' => true, 'class' => 'ms-1'])
+                        {{-- The owner's status is a menu beside the title. --}}
                     @elseif ($review->effectiveStatus() === 'changes_requested')
                         <x-signal-tag tone="attention" class="ms-1 shrink-0">Changes requested</x-signal-tag>
                     @elseif ($review->effectiveStatus() === 'approved')
@@ -98,7 +110,7 @@
                     @elseif ($review->effectiveStatus() === 'expired')
                         <x-signal-tag class="ms-1 shrink-0">Expired</x-signal-tag>
                     @endif
-                </p>
+                </div>
             </div>
 
             @include('review.partials.viewport-tabs', ['class' => 'hidden md:flex'])

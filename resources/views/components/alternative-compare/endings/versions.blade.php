@@ -1,6 +1,6 @@
 {{-- Comments on a version, ticked off, then the next version by hand. --}}
 <x-alternative-compare.shot muted>
-    <span class="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-zinc-700 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 32%; top: 24%;">1</span>
+    <span class="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-zinc-700 text-[10px] font-semibold text-white shadow ring-2 ring-white" style="left: 43%; top: 23%;">1</span>
     <span class="absolute right-[3%] top-[6%] rounded bg-zinc-700 px-1.5 py-0.5 text-[10px] font-medium text-white">v3</span>
 </x-alternative-compare.shot>
 

@@ -17,6 +17,9 @@
 (() => {
     const ATTRIBUTES = ['data-w-id', 'data-testid'];
     const send = (type, data = {}) => parent.postMessage({ source: 'rm-live', type, ...data }, '*');
+    // Opened on its own there's no review to hear a pick, so the bar says so
+    // instead of quietly closing.
+    const framed = parent !== window;
 
     const isStableId = (id) => id.length > 0 && id.length < 64 && !/\d{4,}|^[a-f0-9-]{16,}$|^(ember|react|radix|headlessui|:r)/i.test(id);
     const unique = (selector, el) => {
@@ -102,14 +105,19 @@
     root.innerHTML = `
         <style>
             .box { position: absolute; pointer-events: none; border-radius: 3px; box-sizing: border-box; }
-            .hover { outline: 2px solid rgba(59, 130, 246, .9); background: rgba(59, 130, 246, .08); }
-            .picked { outline: 2px solid #f5b400; background: rgba(245, 180, 0, .1); transition: left .18s var(--ease), top .18s var(--ease), width .18s var(--ease), height .18s var(--ease); }
+            .hover { outline: calc(2px * var(--k)) solid rgba(59, 130, 246, .9); background: rgba(59, 130, 246, .08); }
+            .picked { outline: calc(2px * var(--k)) solid #f5b400; background: rgba(245, 180, 0, .1); transition: left .18s var(--ease), top .18s var(--ease), width .18s var(--ease), height .18s var(--ease); }
             :host, .bar, .picked { --ease: cubic-bezier(.2, .8, .2, 1); }
+            /* --k undoes the review's scale-to-fit, so the bar reads at full size. */
+            :host { --k: 1; }
             .bar { position: absolute; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: #18181b; color: #fff;
                 box-shadow: 0 8px 24px -6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.06) inset; font: 500 12px/1 system-ui, -apple-system, sans-serif; white-space: nowrap;
-                opacity: 0; transform: translateY(4px) scale(.96); transform-origin: left bottom;
+                opacity: 0; transform: translateY(4px) scale(calc(var(--k) * .96)); transform-origin: left bottom;
                 transition: left .18s var(--ease), top .18s var(--ease), opacity .14s ease, transform .18s var(--ease); }
-            .bar.in { opacity: 1; transform: none; }
+            .bar.in { opacity: 1; transform: scale(var(--k)); }
+            .bar.below { transform-origin: left top; }
+            .note { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px 0 9px; height: 26px; }
+            .note.ok svg { color: #f5b400; }
             .kind { padding: 0 8px 0 9px; color: rgba(255,255,255,.55); font-size: 11px; letter-spacing: .01em; }
             .bar button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px; color: #fff; transition: background .12s ease; }
             .bar button:hover, .bar button:focus-visible { background: rgba(255,255,255,.12); }
@@ -147,20 +155,34 @@
     const KINDS = { h1: 'Heading', h2: 'Heading', h3: 'Heading', h4: 'Heading', h5: 'Heading', h6: 'Heading', p: 'Paragraph', a: 'Link', button: 'Button',
         img: 'Image', picture: 'Image', svg: 'Icon', video: 'Video', li: 'List item', ul: 'List', ol: 'List', input: 'Field', textarea: 'Field', select: 'Field',
         label: 'Label', nav: 'Navigation', header: 'Header', footer: 'Footer', form: 'Form', table: 'Table', blockquote: 'Quote', span: 'Text', strong: 'Text', em: 'Text' };
-    const kindOf = (el) => (el.getAttribute('role') === 'button' ? 'Button' : KINDS[el.tagName.toLowerCase()] || 'Box');
+    const ROLES = { button: 'Button', img: 'Image', link: 'Link', heading: 'Heading', tab: 'Tab' };
+    const kindOf = (el) => ROLES[el.getAttribute('role')] || KINDS[el.tagName.toLowerCase()] || 'Box';
 
     let actions = [];
     // Follows the picked element: above it when there's room, below when not,
     // gliding from one pick to the next.
+    // The review scales the page down to fit; k is the inverse, so the bar
+    // and outlines stay at their real size on screen.
+    let k = 1;
+    const setScale = (scale) => {
+        k = Math.min(3, Math.max(1, 1 / (Number(scale) || 1)));
+        host.style.setProperty('--k', String(k));
+        placeBar();
+    };
     const placeBar = () => {
         if (!picked || bar.hidden) return;
         const b = boxOf(picked);
-        const top = b.y - bar.offsetHeight - 8;
-        const left = Math.min(Math.max(4, b.x), scrollX + innerWidth - bar.offsetWidth - 4);
-        Object.assign(bar.style, { left: left + 'px', top: (top < scrollY + 4 ? b.y + b.h + 8 : top) + 'px' });
+        const gap = 8 * k;
+        // The bar scales from its bottom-left corner above, its top-left below.
+        const above = b.y - gap - bar.offsetHeight * k >= scrollY + 4;
+        bar.classList.toggle('below', !above);
+        const top = above ? b.y - gap - bar.offsetHeight : b.y + b.h + gap;
+        const left = Math.min(Math.max(4, b.x), scrollX + innerWidth - bar.offsetWidth * k - 4);
+        Object.assign(bar.style, { left: left + 'px', top: top + 'px' });
     };
     // Each action: [icon, one-word label, run, primary?, key].
     const showBar = (list) => {
+        clearTimeout(noteTimer);
         actions = list;
         const kind = document.createElement('span');
         kind.className = 'kind';
@@ -197,6 +219,7 @@
     };
 
     const clear = () => {
+        clearTimeout(noteTimer);
         if (editing) cancelEdit();
         picked = null;
         pickedBox.hidden = true;
@@ -204,10 +227,29 @@
         bar.classList.remove('in');
     };
 
+    // Says what happened in the bar for a moment, then lets go.
+    let noteTimer = null;
+    const note = (text, ok) => {
+        const span = document.createElement('span');
+        span.className = 'note' + (ok ? ' ok' : '');
+        span.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true">' + (ok ? ICONS.done : ICONS.mark) + '</svg>';
+        span.append(text);
+        actions = [];
+        bar.replaceChildren(span);
+        placeBar();
+        clearTimeout(noteTimer);
+        noteTimer = setTimeout(clear, ok ? 900 : 2600);
+    };
+    // A pick or an edit goes to the review, which makes the mark.
+    const deliver = (type, data) => {
+        if (!framed) return note('Open Live from a review to mark this', false);
+        send(type, data);
+        note(type === 'edit' ? 'Marked with your words' : 'Marked', true);
+    };
+
     const mark = () => {
         if (!picked) return;
-        send('pick', { selector: selectorFor(picked), box: boxOf(picked), text: textOf(picked) });
-        clear();
+        deliver('pick', { selector: selectorFor(picked), box: boxOf(picked), text: textOf(picked) });
     };
 
     // From a click on words (caret where you clicked), or from Edit words
@@ -241,7 +283,7 @@
         stopEditing();
         editing = null;
         if (after !== '' && after !== before) {
-            send('edit', { selector: selectorFor(el), box: boxOf(el), text: before, after });
+            return deliver('edit', { selector: selectorFor(el), box: boxOf(el), text: before, after });
         } else if (marking) {
             return mark();
         }
@@ -256,12 +298,22 @@
         if (picked) selectBar();
     };
 
+    // What a pointer is on, looking past empty overlays: a link laid over a
+    // whole card with nothing in it (aria-hidden, no words) would otherwise
+    // take every click, as the screenshot's smallest-element pick never does.
+    const overlay = (el) => el.getAttribute('aria-hidden') === 'true' && textOf(el) === '' && !el.querySelector('img, svg, video, picture, canvas');
+    const targetAt = (e) => {
+        if (!overlay(e.target)) return e.target;
+        return document.elementsFromPoint(e.clientX, e.clientY).find((el) => !ours(el) && pickable(el) && !overlay(el)) || e.target;
+    };
+
     document.addEventListener('mousemove', (e) => {
-        if (editing || ours(e.target) || !pickable(e.target)) {
+        const target = targetAt(e);
+        if (editing || ours(e.target) || !pickable(target)) {
             hoverBox.hidden = true;
             return;
         }
-        place(hoverBox, e.target);
+        place(hoverBox, target);
     }, true);
 
     // Nothing on the page acts on a click: links don't go, buttons don't press.
@@ -271,8 +323,9 @@
         e.preventDefault();
         e.stopPropagation();
         if (editing) finishEdit();
-        if (!pickable(e.target)) return clear();
-        picked = e.target;
+        const target = targetAt(e);
+        if (!pickable(target)) return clear();
+        picked = target;
         hoverBox.hidden = true;
         place(pickedBox, picked);
         if (holdsWords(picked)) {
@@ -305,7 +358,9 @@
     }, true);
 
     addEventListener('message', (e) => {
-        if (e.source === parent && e.data && e.data.source === 'rm-review' && e.data.type === 'clear') clear();
+        if (e.source !== parent || !e.data || e.data.source !== 'rm-review') return;
+        if (e.data.type === 'clear') clear();
+        if (e.data.type === 'scale') setScale(e.data.value);
     });
 
     // Keep the picked outline and its bar on the element as the page moves.
