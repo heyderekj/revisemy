@@ -89,6 +89,16 @@ return [
     |
     */
 
+    /*
+    | The Live view: after a capture, archive the page's stylesheets, fonts and
+    | images with the review and compare Live with the screenshot. A review
+    | opens on Live where the match is at least match_threshold (0–1).
+    */
+    'live' => [
+        'prepare' => (bool) env('REVISEMY_LIVE_PREPARE', true),
+        'match_threshold' => (float) env('REVISEMY_LIVE_MATCH_THRESHOLD', 0.87),
+    ],
+
     'capture' => [
         // Empty string must be null — Cloud UI sometimes stores blank vars,
         // and match() would otherwise treat "" as an unknown (disabled) driver.

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Capture\LiveArchive;
 use App\Services\ScreenshotStorage;
 use App\Support\ElementTarget;
 use App\Support\MarkFocus;
@@ -41,6 +42,9 @@ class Review extends Model
     public const STATUS_EXPIRED = 'expired';
 
     /** Default lifetime for guest share links (aligned with review expires_at). */
+    /** The most of a page's captured code that's kept (see ReviewService::fitDom). */
+    public const DOM_MAX_BYTES = 16 * 1024 * 1024;
+
     /** The statuses a list can be narrowed to. */
     public const LIST_STATUSES = [self::STATUS_PENDING, self::STATUS_CHANGES_REQUESTED, self::STATUS_APPROVED, self::STATUS_EXPIRED];
 
@@ -223,6 +227,22 @@ class Review extends Model
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * What the Live view frames: the archived page (LiveArchive) once it's
+     * ready, until then the page's code as captured.
+     */
+    public function liveHtml(): ?string
+    {
+        if (! $this->dom_path) {
+            return null;
+        }
+
+        $disk = Storage::disk(ScreenshotStorage::diskName());
+        $archived = LiveArchive::livePath($this);
+
+        return rescue(fn () => $disk->exists($archived) ? $disk->get($archived) : null, null, report: false) ?? $this->domHtml();
     }
 
     public function workspace(): BelongsTo

@@ -97,6 +97,31 @@ class PageCaptureService
     }
 
     /**
+     * Render a page's HTML at a width and return the image, for the Live
+     * fidelity check (LiveFidelity). Null when there's no driver or it fails.
+     */
+    public function renderHtml(string $html, int $width, int $height): ?string
+    {
+        $driver = $this->driver();
+
+        if (! $driver || ! $driver->enabled()) {
+            return null;
+        }
+
+        try {
+            $shots = $driver->captureHtml($html, [
+                ['width' => $width, 'height' => $height, 'label' => 'live-check-'.$width, 'dpr' => 1, 'mobile' => $width < 600],
+            ]);
+        } catch (\Throwable $e) {
+            Log::info('Live render failed', ['width' => $width, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+
+        return $shots[0]['binary'] ?? null;
+    }
+
+    /**
      * Best-effort rendered-DOM snapshot for AI context; null when the driver
      * is missing, unconfigured for content, or the fetch fails. Never blocks
      * review creation.

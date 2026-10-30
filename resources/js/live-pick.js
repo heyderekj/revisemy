@@ -126,11 +126,17 @@
             .bar svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
             .bar kbd { font: inherit; font-size: 10px; opacity: .45; margin-left: 1px; }
             .bar button.primary kbd { opacity: .55; }
+            .mark { position: absolute; display: flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 5px; box-sizing: border-box;
+                border-radius: 999px; background: #f5b400; color: #18181b; font: 600 11px/1 system-ui, -apple-system, sans-serif; cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,.3), 0 0 0 2px #fff; transform: translate(-40%, -40%) scale(var(--k)); transform-origin: center; }
+            .mark.done { background: #d4d4d8; }
+            .mark-box { position: absolute; pointer-events: none; border-radius: 3px; outline: calc(2px * var(--k)) dashed rgba(245, 180, 0, .85); }
             [hidden] { display: none !important; }
         </style>
         <div class="box hover" hidden></div>
         <div class="box picked" hidden></div>
-        <div class="bar" hidden></div>`;
+        <div class="bar" hidden></div>
+        <div class="marks"></div>`;
     document.documentElement.appendChild(host);
 
     const [hoverBox, pickedBox, bar] = root.querySelectorAll('.hover, .picked, .bar');
@@ -357,8 +363,44 @@
         }
     }, true);
 
+    // The review's marks, numbered on their elements (by the selector the
+    // mark keeps), or where they sit on the shot when the element isn't here.
+    const marksLayer = root.querySelector('.marks');
+    let marks = [];
+    const drawMarks = () => {
+        const width = document.documentElement.scrollWidth;
+        const height = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
+        marksLayer.replaceChildren(...marks.flatMap((m) => {
+            let el = null;
+            try {
+                el = m.s ? document.querySelector(m.s) : null;
+            } catch (e) {}
+            const b = el ? boxOf(el) : null;
+            const badge = document.createElement('button');
+            badge.type = 'button';
+            badge.className = 'mark' + (m.done ? ' done' : '');
+            badge.textContent = String(m.n);
+            badge.title = 'Mark ' + m.n;
+            // Kept inside the page, so a mark on something at its edge still shows whole.
+            const edge = 14 * k;
+            const x = Math.min(Math.max(b ? b.x : m.x * width, edge), width - edge);
+            const y = Math.min(Math.max(b ? b.y : m.y * height, edge), height - edge);
+            Object.assign(badge.style, { left: x + 'px', top: y + 'px' });
+            badge.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); send('open-mark', { id: m.id }); });
+            if (!b) return [badge];
+            const outline = document.createElement('div');
+            outline.className = 'mark-box';
+            Object.assign(outline.style, { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px' });
+            return [outline, badge];
+        }));
+    };
+
     addEventListener('message', (e) => {
         if (e.source !== parent || !e.data || e.data.source !== 'rm-review') return;
+        if (e.data.type === 'marks' && Array.isArray(e.data.marks)) {
+            marks = e.data.marks;
+            drawMarks();
+        }
         if (e.data.type === 'clear') clear();
         if (e.data.type === 'scale') setScale(e.data.value);
     });
@@ -371,6 +413,8 @@
     };
     addEventListener('scroll', follow, { passive: true });
     addEventListener('resize', follow);
+
+    new ResizeObserver(() => marks.length && drawMarks()).observe(document.documentElement);
 
     const size = () => send('size', {
         width: document.documentElement.scrollWidth,

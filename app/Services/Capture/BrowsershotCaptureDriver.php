@@ -110,7 +110,7 @@ class BrowsershotCaptureDriver implements CaptureDriver
             $shot = $this->configure(Browsershot::url($url), $sweep, $hideConsent, collectElements: true, hideChat: $hideChat);
             $this->emulate($shot, $viewport, 1);
 
-            $json = $shot->evaluate('JSON.stringify({ elements: window.__rmElements || null, html: document.documentElement.outerHTML })');
+            $json = $shot->evaluate('JSON.stringify({ elements: window.__rmElements || null, html: ('.CaptureSettleScript::serializer().')() || document.documentElement.outerHTML })');
             $data = json_decode($json, true);
 
             return is_array($data) ? $data : null;

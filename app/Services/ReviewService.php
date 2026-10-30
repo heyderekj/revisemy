@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\ReviewDecided;
 use App\Events\ReviewHandedOff;
 use App\Exceptions\InsufficientCreditsException;
+use App\Jobs\PrepareLiveView;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
@@ -340,7 +341,7 @@ class ReviewService
         if ($domHtml !== null && trim($domHtml) !== '') {
             try {
                 $path = 'reviews/'.$review->public_id.'/dom.html';
-                Storage::disk(ScreenshotStorage::diskName())->put($path, substr($domHtml, 0, 2 * 1024 * 1024));
+                Storage::disk(ScreenshotStorage::diskName())->put($path, $this->fitDom($domHtml));
                 $review->update(['dom_path' => $path]);
             } catch (Throwable $e) {
                 Log::warning('DOM snapshot persist failed', ['review' => $review->public_id, 'error' => $e->getMessage()]);
@@ -371,6 +372,11 @@ class ReviewService
         // Every shot is stored first, so the review's one checklist sees all viewports.
         foreach ($shots as $shot) {
             $this->opinions->queue($shot);
+        }
+
+        // With the shots stored, the Live view can be archived and scored.
+        if ($review->dom_path && config('revisemy.live.prepare')) {
+            PrepareLiveView::dispatch($review->id)->afterCommit();
         }
 
         return $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent']) ?? $review;
@@ -505,6 +511,20 @@ class ReviewService
         ReviewDecided::dispatch($review);
 
         return true;
+    }
+
+    /**
+     * The page's code, kept whole up to Review::DOM_MAX_BYTES (it now carries
+     * its runtime CSS and canvases, for the Live view). Over that, canvas
+     * images go first; only then is it cut.
+     */
+    protected function fitDom(string $html): string
+    {
+        if (strlen($html) > Review::DOM_MAX_BYTES) {
+            $html = (string) preg_replace('/\sdata-rm-src="data:[^"]*"/', '', $html);
+        }
+
+        return substr($html, 0, Review::DOM_MAX_BYTES);
     }
 
     /**

@@ -617,6 +617,115 @@ class CaptureSettleScript
 }
 JS;
 
+    /**
+     * The page's code for the Live view, as faithful as markup can be: the
+     * CSS a script put in through the CSSOM (CSS-in-JS leaves its <style>
+     * tags empty), adopted stylesheets, open shadow roots as declarative
+     * templates, and each canvas as an image. Runs after the shots, and
+     * leaves the page as it found it.
+     */
+    protected const SERIALIZER = <<<'JS'
+() => {
+  const undo = [];
+  const rulesOf = (sheet) => {
+    try {
+      return Array.from(sheet.cssRules).map((r) => r.cssText).join('\n');
+    } catch (e) {
+      return '';
+    }
+  };
+  const safe = (css) => css.replace(/<\/style/gi, '<\\/style');
+  try {
+    const css = {};
+    let n = 0;
+    for (const sheet of Array.from(document.styleSheets)) {
+      const owner = sheet.ownerNode;
+      if (!owner || owner.tagName !== 'STYLE') {
+        continue;
+      }
+      const rules = rulesOf(sheet);
+      if (rules.length > (owner.textContent || '').trim().length + 20) {
+        const id = String(n++);
+        owner.setAttribute('data-rm-css', id);
+        css[id] = rules;
+        undo.push(() => owner.removeAttribute('data-rm-css'));
+      }
+    }
+    const adopted = (document.adoptedStyleSheets || []).map(rulesOf).join('\n');
+
+    const roots = [];
+    const canvases = Array.from(document.querySelectorAll('canvas'));
+    const walk = (root) => {
+      for (const el of root.querySelectorAll('*')) {
+        const shadow = el.shadowRoot;
+        if (!shadow) {
+          continue;
+        }
+        roots.push(shadow);
+        const sheets = (shadow.adoptedStyleSheets || []).map(rulesOf).join('\n');
+        if (sheets) {
+          const tag = document.createElement('style');
+          tag.textContent = sheets;
+          shadow.appendChild(tag);
+          undo.push(() => tag.remove());
+        }
+        canvases.push(...shadow.querySelectorAll('canvas'));
+        walk(shadow);
+      }
+    };
+    walk(document);
+
+    // Where each video was, so Live shows the same frame.
+    for (const video of document.querySelectorAll('video')) {
+      if (Number.isFinite(video.currentTime) && video.currentTime > 0) {
+        video.setAttribute('data-rm-time', String(Math.round(video.currentTime * 100) / 100));
+        undo.push(() => video.removeAttribute('data-rm-time'));
+      }
+    }
+
+    let budget = 4e6;
+    for (const canvas of canvases) {
+      try {
+        const url = canvas.toDataURL('image/png');
+        if (url.length > 32 && url.length < budget) {
+          budget -= url.length;
+          canvas.setAttribute('data-rm-src', url);
+          undo.push(() => canvas.removeAttribute('data-rm-src'));
+        }
+      } catch (e) {}
+    }
+
+    const root = document.documentElement;
+    let html;
+    if (typeof root.getHTML === 'function') {
+      const attrs = Array.from(root.attributes)
+        .map((a) => ' ' + a.name + '="' + a.value.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"')
+        .join('');
+      html = '<!DOCTYPE html><html' + attrs + '>' + root.getHTML({ serializableShadowRoots: true, shadowRoots: roots }) + '</html>';
+    } else {
+      html = '<!DOCTYPE html>' + root.outerHTML;
+    }
+    html = html.replace(/(<style\b[^>]*\sdata-rm-css="(\d+)"[^>]*>)([\s\S]*?)(<\/style>)/g, (m, open, id, body, close) => open + safe(css[id] || body) + close);
+    if (adopted) {
+      html = html.replace(/<\/head>/i, '<style data-rm-adopted>' + safe(adopted) + '</style></head>');
+    }
+    return html;
+  } catch (e) {
+    return null;
+  } finally {
+    for (const fn of undo.reverse()) {
+      try { fn(); } catch (e) {}
+    }
+  }
+}
+JS;
+
+    /** The serializer as an expression, for a driver to run after the shots. */
+    public static function serializer(): string
+    {
+        return self::SERIALIZER;
+    }
+
     protected const SCRIPT = <<<'JS'
 async (hardMs) => {
   if (window.__rmSettleDone) {
