@@ -374,9 +374,11 @@ class ReviewService
             $this->opinions->queue($shot);
         }
 
-        // With the shots stored, the Live view can be archived and scored.
+        // With the shots stored, the Live view can be archived and scored:
+        // after the response, like the second opinion, so create_review stays
+        // fast and no queue worker is needed.
         if ($review->dom_path && config('revisemy.live.prepare')) {
-            PrepareLiveView::dispatch($review->id)->afterCommit();
+            PrepareLiveView::dispatch($review->id)->afterResponse();
         }
 
         return $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent']) ?? $review;
