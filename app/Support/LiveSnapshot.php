@@ -39,6 +39,8 @@ class LiveSnapshot
             self::defuse($element);
         }
 
+        self::restoreMedia($document);
+
         $head = $document->head;
 
         // The same rules as the response's CSP, inside the page, for when the
@@ -86,6 +88,46 @@ class LiveSnapshot
             "form-action 'none'",
             "frame-src 'none'",
         ]);
+    }
+
+    /**
+     * Media the page's scripts loaded in code, noted by the capture as
+     * data-rm-src (CaptureSettleScript). With no scripts here, they'd stay
+     * empty: a video with no source shows black, a lazy image nothing. A
+     * video gets its source back and shows a still frame; it never plays.
+     */
+    protected static function restoreMedia(HTMLDocument $document): void
+    {
+        $url = fn (?string $value) => $value !== null && preg_match('#^https?://#i', $value) ? $value : null;
+
+        foreach (iterator_to_array($document->querySelectorAll('video[data-rm-src], video[data-rm-poster]')) as $video) {
+            $hasSource = $video->hasAttribute('src') || $video->querySelector('source[src]') !== null;
+
+            if (! $hasSource && ($src = $url($video->getAttribute('data-rm-src')))) {
+                $video->setAttribute('src', $src.(str_contains($src, '#') ? '' : '#t=0.1'));
+            }
+
+            if (! $video->hasAttribute('poster') && ($poster = $url($video->getAttribute('data-rm-poster')))) {
+                $video->setAttribute('poster', $poster);
+            }
+
+            foreach (['autoplay', 'loop'] as $attribute) {
+                $video->removeAttribute($attribute);
+            }
+            $video->setAttribute('muted', '');
+            $video->setAttribute('playsinline', '');
+            $video->setAttribute('preload', 'metadata');
+        }
+
+        foreach (iterator_to_array($document->querySelectorAll('img[data-rm-src]')) as $image) {
+            $src = $url($image->getAttribute('data-rm-src'));
+
+            if ($src && (! $image->hasAttribute('src') || $image->getAttribute('src') === '' || str_starts_with((string) $image->getAttribute('src'), 'data:'))) {
+                $image->setAttribute('src', $src);
+                $image->removeAttribute('srcset');
+            }
+            $image->removeAttribute('loading');
+        }
     }
 
     /** Event handlers off, script URLs gone, forms going nowhere. */

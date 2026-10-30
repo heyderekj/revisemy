@@ -42,6 +42,23 @@ HTML;
         $this->assertStringContainsString("connect-src 'none'; form-action 'none'", $out);
     }
 
+    public function test_media_a_script_loaded_comes_back_still(): void
+    {
+        $html = '<video class="hero" autoplay loop data-rm-src="https://cdn.test/hero.mp4" data-rm-poster="https://cdn.test/hero.jpg"></video>'
+            .'<img alt="lazy" data-rm-src="https://cdn.test/a.jpg" loading="lazy">'
+            .'<img alt="kept" src="https://cdn.test/b.jpg" data-rm-src="https://cdn.test/b@2x.jpg">'
+            .'<video data-rm-src="javascript:alert(1)"></video>';
+
+        $out = LiveSnapshot::prepare($html, null, 'n', '');
+
+        $this->assertStringContainsString('src="https://cdn.test/hero.mp4#t=0.1"', $out);
+        $this->assertStringContainsString('poster="https://cdn.test/hero.jpg"', $out);
+        $this->assertStringNotContainsString('autoplay', $out);
+        $this->assertStringContainsString('<img alt="lazy" data-rm-src="https://cdn.test/a.jpg" src="https://cdn.test/a.jpg">', $out);
+        $this->assertStringContainsString('src="https://cdn.test/b.jpg"', $out);
+        $this->assertStringNotContainsString(' src="javascript', $out);
+    }
+
     public function test_an_email_gets_no_base(): void
     {
         $out = LiveSnapshot::prepare('<table><tr><td>Hi there</td></tr></table>', null, 'n', '');

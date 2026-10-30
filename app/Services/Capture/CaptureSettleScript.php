@@ -906,6 +906,20 @@ async (hardMs) => {
     if (!cfg.collectElements) {
       return true;
     }
+    // Scripts set some media in code (a video's source, a lazy image), which
+    // the saved markup doesn't keep. Note what each one is showing, in data
+    // attributes so the shot is untouched; the Live view puts them back.
+    try {
+      for (const media of document.querySelectorAll('video, img')) {
+        const src = media.currentSrc || '';
+        if (src && !src.startsWith('blob:') && !src.startsWith('data:') && media.getAttribute('src') !== src) {
+          media.setAttribute('data-rm-src', src);
+        }
+        if (media.tagName === 'VIDEO' && media.poster) {
+          media.setAttribute('data-rm-poster', media.poster);
+        }
+      }
+    } catch (e) {}
     try {
       since = Date.now();
       window.__rmElements = collectElements();
