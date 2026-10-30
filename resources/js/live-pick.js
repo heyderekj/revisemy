@@ -106,7 +106,7 @@
         <style>
             .box { position: absolute; pointer-events: none; border-radius: 3px; box-sizing: border-box; }
             .hover { outline: calc(2px * var(--k)) solid rgba(59, 130, 246, .9); background: rgba(59, 130, 246, .08); }
-            .picked { outline: calc(2px * var(--k)) solid #f5b400; background: rgba(245, 180, 0, .1); transition: left .18s var(--ease), top .18s var(--ease), width .18s var(--ease), height .18s var(--ease); }
+            .picked { outline: calc(2px * var(--k)) dashed #f5b400; background: rgba(245, 180, 0, .15); transition: left .18s var(--ease), top .18s var(--ease), width .18s var(--ease), height .18s var(--ease); }
             :host, .bar, .picked { --ease: cubic-bezier(.2, .8, .2, 1); }
             /* --k undoes the review's scale-to-fit, so the bar reads at full size. */
             :host { --k: 1; }
