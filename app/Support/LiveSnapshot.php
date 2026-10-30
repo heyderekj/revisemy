@@ -62,6 +62,13 @@ class LiveSnapshot
             $head?->prepend($base);
         }
 
+        // As the capture leaves a page before its shot: every animation at
+        // its end, no transitions, so Live shows the state the shot does.
+        $settled = $document->createElement('style');
+        $settled->setAttribute('data-rm-live', '');
+        $settled->textContent = '*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-fill-mode:both!important;transition-duration:0s!important;transition-delay:0s!important;caret-color:transparent!important}';
+        $head?->append($settled);
+
         $picker = $document->createElement('script');
         $picker->setAttribute('nonce', $nonce);
         $picker->textContent = $script;
@@ -93,8 +100,9 @@ class LiveSnapshot
     /**
      * Media the page's scripts loaded in code, noted by the capture as
      * data-rm-src (CaptureSettleScript). With no scripts here, they'd stay
-     * empty: a video with no source shows black, a lazy image nothing. A
-     * video gets its source back and shows a still frame; it never plays.
+     * empty: a video with no source shows black, a lazy image nothing, a
+     * canvas a blank box. A video gets its source back and shows a still
+     * frame; it never plays. A canvas becomes the image it was showing.
      */
     protected static function restoreMedia(HTMLDocument $document): void
     {
@@ -104,7 +112,9 @@ class LiveSnapshot
             $hasSource = $video->hasAttribute('src') || $video->querySelector('source[src]') !== null;
 
             if (! $hasSource && ($src = $url($video->getAttribute('data-rm-src')))) {
-                $video->setAttribute('src', $src.(str_contains($src, '#') ? '' : '#t=0.1'));
+                // The frame the capture saw, or just past the first.
+                $time = is_numeric($video->getAttribute('data-rm-time')) ? max(0.1, (float) $video->getAttribute('data-rm-time')) : 0.1;
+                $video->setAttribute('src', $src.(str_contains($src, '#') ? '' : '#t='.$time));
             }
 
             if (! $video->hasAttribute('poster') && ($poster = $url($video->getAttribute('data-rm-poster')))) {
@@ -117,6 +127,27 @@ class LiveSnapshot
             $video->setAttribute('muted', '');
             $video->setAttribute('playsinline', '');
             $video->setAttribute('preload', 'metadata');
+        }
+
+        // A canvas was drawn by a script; the capture kept what it showed.
+        foreach (iterator_to_array($document->querySelectorAll('canvas[data-rm-src]')) as $canvas) {
+            $src = (string) $canvas->getAttribute('data-rm-src');
+
+            if (! preg_match('#^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$#', $src)) {
+                $canvas->removeAttribute('data-rm-src');
+
+                continue;
+            }
+
+            $image = $document->createElement('img');
+            foreach (['id', 'class', 'style', 'width', 'height'] as $attribute) {
+                if ($canvas->hasAttribute($attribute)) {
+                    $image->setAttribute($attribute, (string) $canvas->getAttribute($attribute));
+                }
+            }
+            $image->setAttribute('src', $src);
+            $image->setAttribute('alt', '');
+            $canvas->replaceWith($image);
         }
 
         foreach (iterator_to_array($document->querySelectorAll('img[data-rm-src]')) as $image) {

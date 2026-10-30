@@ -234,7 +234,11 @@ export default async function ({ page, context }) {
     incomplete: window.__rmIncomplete || 0,
     timings: window.__rmTimings || {},
   }));
-  const html = context.withHtml ? await page.content() : null;
+  // The page's code with its runtime CSS, shadow roots and canvases kept
+  // (CaptureSettleScript::SERIALIZER), else the plain markup.
+  const html = context.withHtml
+    ? (await page.evaluate('(' + context.serializer + ')()').catch(() => null)) || await page.content()
+    : null;
   timed('read');
   // The settle's own phases, inside 'settle' and 'again' above.
   for (const [key, ms] of Object.entries(state.timings)) {
@@ -478,6 +482,7 @@ JS;
             'maxSlices' => self::MAX_SLICES,
             'collectElements' => $collect,
             'withHtml' => $withHtml,
+            'serializer' => $withHtml ? CaptureSettleScript::serializer() : null,
         ];
 
         // Browserless ends a session at its own timeout, and turns the whole

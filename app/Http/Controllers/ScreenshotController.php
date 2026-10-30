@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Review;
 use App\Models\Screenshot;
+use App\Services\Capture\LiveArchive;
 use App\Services\ReviewPreview;
 use App\Support\LiveSnapshot;
 use Illuminate\Http\JsonResponse;
@@ -112,7 +113,7 @@ class ScreenshotController extends Controller
             abort(404);
         }
 
-        $html = $review->domHtml();
+        $html = $review->liveHtml();
         abort_if($html === null || trim($html) === '', 404);
 
         $nonce = Str::random(24);
@@ -125,6 +126,32 @@ class ScreenshotController extends Controller
             'Referrer-Policy' => 'no-referrer',
             'X-Robots-Tag' => 'noindex, nofollow',
             'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /**
+     * An archived asset for the Live view (LiveArchive): fetched the first
+     * time it's asked for, then served as kept. Only URLs the archive
+     * recorded for the review are fetched, so this is no open proxy. Fonts
+     * need CORS from an opaque-origin frame; an SVG gets its own sandbox.
+     */
+    public function liveAsset(string $review, string $key, LiveArchive $archive): Response
+    {
+        abort_unless(preg_match('/^[a-f0-9]{40}$/', $key) === 1, 404);
+
+        $model = Review::query()->where('public_id', $review)->first();
+        $asset = $model && $model->dom_path ? $archive->asset($model, $key) : null;
+
+        abort_if($asset === null, 404);
+
+        return response($asset['body'], headers: [
+            'Content-Type' => $asset['type'],
+            'Cache-Control' => 'public, max-age=31536000, immutable',
+            'Access-Control-Allow-Origin' => '*',
+            'Cross-Origin-Resource-Policy' => 'cross-origin',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; sandbox",
+            'X-Robots-Tag' => 'noindex, nofollow',
         ]);
     }
 

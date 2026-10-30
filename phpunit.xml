@@ -34,6 +34,7 @@
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <!-- Billing is off and unconfigured unless a test turns it on, whatever a local .env says. -->
         <env name="REVISEMY_PRICING_ENABLED" value="false"/>
+        <env name="REVISEMY_LIVE_PREPARE" value="false"/>
         <env name="POLAR_ACCESS_TOKEN" value=""/>
         <env name="POLAR_WEBHOOK_SECRET" value=""/>
         <env name="POLAR_PRODUCT_PLUS" value=""/>

@@ -106,6 +106,11 @@
             <div class="relative flex min-h-0 min-w-0 flex-1 flex-col">
 
             @if ($shot)
+                {{-- Live opens first where the fidelity check says it matches the shot
+                     (LiveFidelity, meta.live_match); otherwise the screenshot does. --}}
+                @php($liveMatch = is_numeric($shot->meta['live_match'] ?? null) ? (float) $shot->meta['live_match'] : null)
+                @php($liveFaithful = $liveMatch !== null && $liveMatch >= (float) config('revisemy.live.match_threshold'))
+                @php($opensOnLive = $liveFaithful && $review->isOpenForFeedback() && $review->dom_path)
                 <div
                     wire:key="shot-viewer-{{ $activeScreenshotIndex }}"
                     class="relative flex min-h-0 min-w-0 flex-1 flex-col"
@@ -138,8 +143,9 @@
                         pickOn: (() => { try { return localStorage.getItem('rm-pick') !== 'off'; } catch (e) { return true; } })(),
                         {{-- Live: the page's code as captured, framed so a click picks the real element (LiveSnapshot). --}}
                         liveUrl: @js($review->isOpenForFeedback() && $review->dom_path ? route('reviews.screenshot.live', [$token, $shot]) : null),
-                        live: false,
-                        liveLoaded: false,
+                        live: @js((bool) $opensOnLive),
+                        liveLoaded: @js((bool) $opensOnLive),
+                        liveFaithful: @js($liveFaithful),
                         liveWidth: {{ (int) round($shot->cssSize()['w']) ?: 1280 }},
                         liveHeight: {{ (int) round($shot->cssSize()['h']) ?: 800 }},
                         liveScale: 1,
@@ -173,6 +179,12 @@
                             this.tellLiveScale();
                         },
                         {{-- The picker draws its bar at 1 / scale, so it reads at full size. --}}
+                        liveMarks: [],
+                        backToLive: false,
+                        {{-- The marks on this shot, drawn on the Live page by their element. --}}
+                        tellLiveMarks() {
+                            this.$refs.liveFrame?.contentWindow?.postMessage({ source: 'rm-review', type: 'marks', marks: JSON.parse(JSON.stringify(this.liveMarks)) }, '*');
+                        },
                         tellLiveScale() {
                             this.$refs.liveFrame?.contentWindow?.postMessage({ source: 'rm-review', type: 'scale', value: this.liveScale }, '*');
                         },
@@ -182,13 +194,29 @@
                             if (data.type === 'size' && data.height > 0) {
                                 this.liveHeight = Math.min(data.height, 40000);
                                 this.tellLiveScale();
+                                this.tellLiveMarks();
+                            } else if (data.type === 'open-mark') {
+                                $store.rmFocus.mark = Number(data.id) || null;
+                                $store.rmPanel?.show();
                             } else if (data.type === 'pick' || data.type === 'edit') {
+                                {{-- Write the mark on the screenshot, then come back to Live. --}}
+                                this.backToLive = true;
                                 this.live = false;
                                 $wire.markLiveElement(String(data.selector || ''), data.box || {}, data.type === 'edit' ? String(data.after || '') : null)
                                     .then(() => this.$nextTick(() => this.$root.querySelector('[data-pending-mark]')?.scrollIntoView({ block: 'center', behavior: 'smooth' })));
                             }
                         },
                         init() {
+                            $wire.$watch('pendingX', (value) => {
+                                if (value === null && this.backToLive) {
+                                    this.backToLive = false;
+                                    this.live = true;
+                                    this.$nextTick(() => this.measureLive());
+                                }
+                            });
+                            if (this.live) {
+                                this.$nextTick(() => { this.measureLive(); this.loadLive(); });
+                            }
                             this.$nextTick(() => {
                                 this.measureLayout();
                                 const img = this.$refs.shotImg;
@@ -470,6 +498,7 @@
                     x-on:keydown.window="onKeyDown($event)"
                     x-on:keyup.window="onKeyUp($event)"
                     x-on:message.window="onLiveMessage($event)"
+                    x-on:rm-live-marks="liveMarks = $event.detail; tellLiveMarks()"
                     x-on:resize.window.debounce.100ms="live && measureLive()"
                 >
                     <div @class([
@@ -477,6 +506,11 @@
                     ])>
                         {{-- Which view: the screenshot, or the page's code as captured. A
                              segmented switch of its own, apart from the tools for the view. --}}
+                        {{-- Re-made whenever the marks change, which tells the Live page. --}}
+                        @if ($review->dom_path)
+                            @php($liveMarkRows = $this->activeMarks->sortBy('number')->map(fn ($m) => ['id' => $m->id, 'n' => $m->number, 's' => $m->target['selector'] ?? null, 'x' => (float) $m->x, 'y' => (float) $m->y, 'done' => in_array($m->status, [\App\Models\Annotation::STATUS_RESOLVED, \App\Models\Annotation::STATUS_VERIFIED], true)])->values()->all())
+                            <span hidden wire:key="live-marks-{{ md5(json_encode($liveMarkRows)) }}" x-init="$dispatch('rm-live-marks', @js($liveMarkRows))"></span>
+                        @endif
                         <template x-if="liveUrl">
                             <div
                                 data-view-switch
@@ -553,8 +587,9 @@
                             data-live-view
                             class="absolute inset-0 z-20 overflow-auto overscroll-contain bg-well px-3 pt-14 pb-20 md:px-6"
                         >
-                            <p class="mx-auto mb-2 max-w-full text-xs text-muted-foreground" x-bind:style="'width:' + (liveWidth * liveScale) + 'px'">
-                                The page’s code as captured. Click a part, then mark it or change its words. Fonts and images may differ from the screenshot.
+                            {{-- Only when the fidelity check hasn't vouched for it. --}}
+                            <p x-show="! liveFaithful" class="mx-auto mb-2 max-w-full text-xs text-muted-foreground" x-bind:style="{ width: (liveWidth * liveScale) + 'px' }">
+                                Parts of this may look different from the screenshot.
                             </p>
                             <p x-show="liveFailed" x-cloak class="mx-auto mb-2 text-sm text-problem-ink" role="alert" x-bind:style="{ width: (liveWidth * liveScale) + 'px' }">
                                 The page’s code didn’t load. <button type="button" class="link" x-on:click="liveFailed = false; loadLive()">Try again</button>
@@ -801,6 +836,12 @@
                         class="pointer-events-none absolute bottom-3 left-3 z-20 hidden max-w-[calc(100%-26rem)] truncate rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] lg:block"
                         title="{{ $canvasHint }}"
                     >{{ $canvasHint }}</p>
+                    <p
+                        data-live-hint
+                        x-show="live"
+                        x-cloak
+                        class="pointer-events-none absolute bottom-3 left-3 z-30 hidden max-w-[calc(100%-1.5rem)] truncate rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] lg:block"
+                    >{{ $mode === 'guest' ? 'Click a part to suggest a change · click words to change them' : 'Click a part to mark it · click words to change them' }}</p>
                 @endif
                 </div>
             @else

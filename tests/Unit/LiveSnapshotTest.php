@@ -59,6 +59,21 @@ HTML;
         $this->assertStringNotContainsString(' src="javascript', $out);
     }
 
+    public function test_a_canvas_becomes_its_picture_and_a_video_keeps_its_frame(): void
+    {
+        $html = '<canvas class="chart" width="300" height="150" data-rm-src="data:image/png;base64,iVBORw0KGgo="></canvas>'
+            .'<canvas data-rm-src="data:text/html;base64,PHNjcmlwdD4="></canvas>'
+            .'<video data-rm-src="https://cdn.test/a.mp4" data-rm-time="4.25"></video>';
+
+        $out = LiveSnapshot::prepare($html, null, 'n', '');
+
+        $this->assertStringContainsString('<img class="chart" width="300" height="150" src="data:image/png;base64,iVBORw0KGgo=" alt="">', $out);
+        $this->assertStringNotContainsString('data:text/html', $out);
+        $this->assertStringContainsString('src="https://cdn.test/a.mp4#t=4.25"', $out);
+        // Animations land on their end state, as the capture leaves them.
+        $this->assertStringContainsString('animation-duration:0s!important', $out);
+    }
+
     public function test_an_email_gets_no_base(): void
     {
         $out = LiveSnapshot::prepare('<table><tr><td>Hi there</td></tr></table>', null, 'n', '');
