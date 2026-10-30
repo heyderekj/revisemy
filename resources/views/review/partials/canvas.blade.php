@@ -170,12 +170,18 @@
                             const cs = getComputedStyle(box);
                             const avail = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
                             this.liveScale = Math.min(1, Math.max(0.1, avail / this.liveWidth));
+                            this.tellLiveScale();
+                        },
+                        {{-- The picker draws its bar at 1 / scale, so it reads at full size. --}}
+                        tellLiveScale() {
+                            this.$refs.liveFrame?.contentWindow?.postMessage({ source: 'rm-review', type: 'scale', value: this.liveScale }, '*');
                         },
                         onLiveMessage(e) {
                             const data = e.data;
                             if (! this.$refs.liveFrame || e.source !== this.$refs.liveFrame.contentWindow || ! data || data.source !== 'rm-live') return;
                             if (data.type === 'size' && data.height > 0) {
                                 this.liveHeight = Math.min(data.height, 40000);
+                                this.tellLiveScale();
                             } else if (data.type === 'pick' || data.type === 'edit') {
                                 this.live = false;
                                 $wire.markLiveElement(String(data.selector || ''), data.box || {}, data.type === 'edit' ? String(data.after || '') : null)
