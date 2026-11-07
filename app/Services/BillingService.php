@@ -57,7 +57,7 @@ class BillingService
                 'product' => $product,
                 'plan' => Workspace::PLAN_PRO,
                 'price_usd' => (int) config('billing.plans.pro.price_usd', 9),
-                'credits_grant' => (int) config('billing.plans.pro.credits', 100),
+                'credits_grant' => (int) config('billing.plans.pro.credits', 150),
                 'recurring' => 'monthly',
             ];
         }
@@ -369,7 +369,7 @@ class BillingService
 
         $isPlus = $productKey === self::PRODUCT_PLUS;
         $credits = $isPlus
-            ? (int) config('billing.plans.pro.credits', 100)
+            ? (int) config('billing.plans.pro.credits', 150)
             : (int) config("billing.packs.{$productKey}.credits", 0);
 
         $granted = DB::transaction(function () use ($workspace, $data, $orderId, $productKey, $isPlus, $credits): bool {

@@ -361,7 +361,7 @@ class BillingCreditsTest extends TestCase
         $workspace->refresh();
 
         $this->assertSame(Workspace::PLAN_PRO, $workspace->plan);
-        $this->assertSame(100, $workspace->credits_balance);
+        $this->assertSame(150, $workspace->credits_balance);
         $this->assertSame('founder@example.com', $workspace->billing_email);
         $this->assertSame(90, $workspace->reviewRetentionDays());
     }
@@ -562,7 +562,7 @@ class BillingCreditsTest extends TestCase
         $this->configurePolar();
 
         ReviseMyServer::prompt(DesignCheckupLoop::class, [])
-            ->assertSee(['create_checkout', 'credits_50', 'Plus ($9/mo, 100 credits/mo)']);
+            ->assertSee(['create_checkout', 'credits_50', 'Plus ($9/mo, 150 credits/mo)']);
     }
 
     public function test_checkup_prompt_says_checkout_is_off_when_paused(): void

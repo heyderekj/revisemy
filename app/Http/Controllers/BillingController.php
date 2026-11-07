@@ -77,7 +77,7 @@ class BillingController extends Controller
         return view('billing.upgrade', [
             'tryCredits' => (int) config('billing.plans.free.credits', 40),
             'priceUsd' => (int) config('billing.plans.pro.price_usd', 9),
-            'credits' => (int) config('billing.plans.pro.credits', 100),
+            'credits' => (int) config('billing.plans.pro.credits', 150),
             'packs' => $credits->packs(),
         ]);
     }

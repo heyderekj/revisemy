@@ -31,7 +31,7 @@ class InsufficientCreditsException extends Exception
                 $this->required === 1 ? '' : 's',
                 $this->remaining,
                 (int) config('billing.plans.pro.price_usd', 9),
-                (int) config('billing.plans.pro.credits', 100),
+                (int) config('billing.plans.pro.credits', 150),
                 $pack ? sprintf(' or a one-time %d-credit pack ($%d, product "%s")', $pack['credits'], $pack['price_usd'], $pack['key']) : '',
             );
         }
