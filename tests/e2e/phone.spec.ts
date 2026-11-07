@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { path, seedReview } from './support/app';
+import { mcp, path, seedReview } from './support/app';
 
 /**
  * The review on a phone, by touch: a finger scrolls and opens marks, Mark
@@ -131,4 +131,35 @@ test('two fingers zoom the shot, never the page @phone', async ({ page }) => {
     await expect.poll(async () => (await page.getByRole('img', { name: 'Screenshot 1' }).boundingBox())!.width).toBeGreaterThan(before.width * 2);
     expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(1);
     await expect(page.getByRole('dialog', { name: /Leave a note/ })).toHaveCount(0);
+});
+
+test('the board reads one column at a time, and moves marks by its buttons @phone', async ({ page }) => {
+    const { review, api } = await seedReview('Board in hand');
+    const shot = (await (await api.get(`/api/reviews/${review.id}`)).json()).screenshots[0];
+    for (const body of ['Logo is blurry.', 'Footer links are cramped.']) {
+        await mcp(api, 'tools/call', { name: 'add_mark', arguments: { review_id: review.id, screenshot_id: shot.id, x: 0.5, y: 0.5, severity: 'must-fix', body } });
+    }
+    await mcp(api, 'tools/call', { name: 'decide_review', arguments: { review_id: review.id, decision: 'changes_requested' } });
+    const pins = (await (await api.get(`/api/reviews/${review.id}`)).json()).work_packets.pins;
+    const logo = pins.find((p: any) => p.body === 'Logo is blurry.');
+    await api.post(`/api/reviews/${review.id}/marks/resolve`, { data: { marks: [{ id: logo.id, status: 'resolved', note: 'Swapped in the SVG.' }] } });
+
+    await page.goto(path(review.board_url));
+
+    // Tabs name the columns; the one in view is lit, and tapping another goes there.
+    const tabs = page.locator('[data-col-tab]');
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    await tabs.filter({ hasText: 'Resolved' }).tap();
+    await expect(tabs.filter({ hasText: 'Resolved' })).toHaveAttribute('aria-selected', 'true');
+    const card = page.getByText('Logo is blurry.').first();
+    await expect(card).toBeInViewport();
+
+    // Swipe back, then a tap still opens the card: a drag never swallows the next tap.
+    await tabs.first().tap();
+    await tabs.filter({ hasText: 'Resolved' }).tap();
+    await card.tap();
+    const footer = page.locator('[data-sheet-actions]');
+    await expect(footer.getByRole('button', { name: 'Verify' })).toBeInViewport();
+    await footer.getByRole('button', { name: 'Verify' }).tap();
+    await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).loop.verified_count).toBe(1);
 });
