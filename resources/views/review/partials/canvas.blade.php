@@ -416,6 +416,12 @@
                             }
                             if (e.button !== 0) return;
                             if (e.target.closest('[data-finding], [data-pin], [data-zoom-controls]')) return;
+                            {{-- With a mark open, a click on the shot first puts it away. --}}
+                            if (this.$store.rmFocus?.mark) {
+                                this.$store.rmFocus.close();
+                                e.preventDefault();
+                                return;
+                            }
                             const p = this.norm(e);
                             if (! p) return;
                             this.drawing = true;
@@ -715,12 +721,10 @@
                                         data-pin
                                         class="absolute z-[8] block cursor-pointer border-0 bg-transparent p-0 text-left {{ $markState }}"
                                         style="left: {{ $region['x'] * 100 }}%; top: {{ $region['y'] * 100 }}%; width: {{ $region['w'] * 100 }}%; height: {{ $region['h'] * 100 }}%;"
-                                        title="{{ $annotation->body }}"
-                                        x-on:click.stop="
-                                            $store.rmFocus.mark = $store.rmFocus.mark === {{ $annotation->id }} ? null : {{ $annotation->id }};
-                                            $store.rmFocus.finding = null;
-                                            document.getElementById('fb-mark-{{ $annotation->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                        "
+                                        data-mark-id="{{ $annotation->id }}"
+                                        aria-label="Open mark M{{ $annotation->number }}"
+                                        aria-haspopup="dialog"
+                                        x-on:click.stop="$store.rmFocus.open({{ $annotation->id }}, 'canvas')"
                                     >
                                         <div
                                             class="pointer-events-none absolute inset-0 rounded-md border-2 border-key/80 bg-key/10 transition"
@@ -739,7 +743,10 @@
                                         data-pin
                                         class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
                                         style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
-                                        title="{{ $annotation->body }}"
+                                        data-mark-id="{{ $annotation->id }}"
+                                        aria-label="Open mark M{{ $annotation->number }}"
+                                        aria-haspopup="dialog"
+                                        x-on:click.stop="$store.rmFocus.open({{ $annotation->id }}, 'canvas')"
                                         x-bind:class="$store.rmFocus?.mark === {{ $annotation->id }} ? 'scale-110 ring-4 ring-key/60' : ''"
                                     >
                                         M{{ $annotation->number }}
@@ -832,12 +839,8 @@
                                         type="button"
                                         class="flex h-6 min-w-6 shrink-0 items-center justify-center bg-accent px-1 text-xs font-semibold text-ink ring-1 ring-zinc-200/80 transition hover:ring-zinc-300"
                                         x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'ring-2 ring-key' : ''"
-                                        x-on:click="
-                                            $store.rmFocus.mark = $store.rmFocus.mark === {{ $pin->id }} ? null : {{ $pin->id }};
-                                            $store.rmFocus.finding = null;
-                                            document.getElementById('fb-mark-{{ $pin->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                        "
-                                        aria-label="Jump to mark M{{ $pin->number }}"
+                                        x-on:click.stop="$store.rmFocus.open({{ $pin->id }}, 'canvas')"
+                                        aria-label="Open mark M{{ $pin->number }}"
                                     >
                                         M{{ $pin->number }}
                                     </button>
@@ -917,6 +920,8 @@
             </div>
         @endif
 
+        @include('review.partials.mark-popover')
+
         @if ($pendingX !== null)
             {{-- Real wrapper (not display:contents) so Alpine $refs stay reliable; position via
                  x-bind:style so Livewire morphs cannot wipe left/top back to the top-left. --}}
@@ -957,26 +962,15 @@
                         const mark = document.querySelector('[data-pending-mark]');
                         if (! mark) return false;
 
-                        const rect = mark.getBoundingClientRect();
-                        // Mark not laid out yet — retry rather than pinning to 0,0 → top-left.
-                        if (rect.width < 1 && rect.height < 1) return false;
-
-                        const gap = 12;
-                        const pw = panel.offsetWidth || 320;
-                        const measured = panel.offsetHeight || 280;
                         if (this.anchorHeight == null) {
-                            this.anchorHeight = measured;
+                            this.anchorHeight = panel.offsetHeight || 280;
                         }
-                        const ph = this.anchorHeight;
-                        const spaceRight = window.innerWidth - rect.right;
-                        const placeRight = spaceRight >= pw + gap || spaceRight >= rect.left;
-                        let left = placeRight ? rect.right + gap : rect.left - pw - gap;
-                        let top = rect.top + (rect.height / 2) - (ph / 2);
-                        left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
-                        top = Math.max(8, Math.min(top, window.innerHeight - ph - 8));
-                        this.left = left;
-                        this.top = top;
-                        this.origin = placeRight ? 'left center' : 'right center';
+                        // Mark not laid out yet: null, so we retry rather than pin to the top-left.
+                        const at = window.rmPlaceBeside(mark.getBoundingClientRect(), panel.offsetWidth || 320, this.anchorHeight);
+                        if (! at) return false;
+                        this.left = at.left;
+                        this.top = at.top;
+                        this.origin = at.origin;
                         this.placed = true;
                         return true;
                     },

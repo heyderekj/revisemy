@@ -48,6 +48,7 @@ When changing review/board chrome, ship the matching update in `resources/views/
 | Marker / status / severity colors & labels | `Annotation::markerClass()`, `statusBadgeClass()`, `severityLabels()`, `statusLabels()` |
 | Board column owners & empty copy | `Annotation::boardColumnMeta()` |
 | Mark focus crop | `MarkFocus` → pin `focus_preview` in `Review::markToArray()` |
+| Opening a mark: click its pin, chip, card or board card to see the crop, feedback, suggested copy, answer, element, before/after and timeline | `components/mark-detail` (review page popover, board sheet) on the web; `mcp/partials/mark-detail` inline. A `?mark=` link opens one on the web. |
 | Shot display size (width ÷ DPR, so 2× captures stay sharp) | `Screenshot::pixelRatio()` on the board; `shotFrameStyle()` reads `meta.dpr` inline |
 | The Agent tag on the agent's notes, statuses, after images, replies and findings | `x-agent-tag` (`Annotation::TONES['agent']`), used by both |
 | Canvas first: viewport tabs, floating brief, fit width / whole page / 100% | `review.partials.viewport-tabs` and the canvas's `setFit()` on the web; `setFit()` and `shotFrameStyle()` inline |

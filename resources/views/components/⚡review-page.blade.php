@@ -15,6 +15,7 @@ use App\Support\FeedbackText;
 use App\Support\NormalizedArea;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 new class extends Component
@@ -76,6 +77,10 @@ new class extends Component
 
     public ?int $activeCommentMarkId = null;
 
+    /** The mark opened in the popover (sheet on phones). In the URL, so a link can open one. */
+    #[Url(as: 'mark', history: false)]
+    public ?int $openMarkId = null;
+
     /**
      * The last thing that can be taken back, for the toast's Undo: Koati's
      * way of deleting without asking first. Locked, so the browser can't
@@ -129,6 +134,83 @@ new class extends Component
         }
 
         $this->syncHintFilter();
+
+        if ($this->openMarkId !== null) {
+            $index = $this->shotIndexForMark($this->openMarkId);
+
+            if ($index === null) {
+                $this->openMarkId = null;
+            } elseif ($this->pendingX === null && $index !== $this->activeScreenshotIndex) {
+                // Opened from a link: show the shot it sits on.
+                $this->activeScreenshotIndex = $index;
+            }
+        }
+    }
+
+    /** Which of this pass's shots holds the mark, or null when it isn't on this pass. */
+    protected function shotIndexForMark(int $annotationId): ?int
+    {
+        foreach ($this->review->screenshots->values() as $index => $shot) {
+            if ($shot->annotations->contains('id', $annotationId)) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Open a mark beside where it sits on the shot. Marks from the pass this
+     * one built on aren't on this canvas, so they stay in the list.
+     */
+    public function openMark(int $annotationId): void
+    {
+        $index = $this->shotIndexForMark($annotationId);
+
+        if ($index === null) {
+            return;
+        }
+
+        if ($this->pendingX !== null) {
+            $this->cancelPin();
+        }
+
+        if ($this->openMarkId !== $annotationId) {
+            $this->cancelMarkComment();
+            $this->cancelAnswerQuestion();
+        }
+
+        $this->activeScreenshotIndex = $index;
+        $this->openMarkId = $annotationId;
+    }
+
+    public function closeMark(): void
+    {
+        if ($this->openMarkId !== null && ($this->activeCommentMarkId === $this->openMarkId || $this->answeringMarkId === $this->openMarkId)) {
+            $this->cancelMarkComment();
+            $this->cancelAnswerQuestion();
+        }
+
+        $this->openMarkId = null;
+    }
+
+    /** The open mark, with the shot it sits on, or null. */
+    public function openedMark(): ?Annotation
+    {
+        if ($this->openMarkId === null) {
+            return null;
+        }
+
+        foreach ($this->review->screenshots as $shot) {
+            $mark = $shot->annotations->firstWhere('id', $this->openMarkId);
+
+            if ($mark) {
+                // A copy with a bare shot, so the loaded review never points back at itself.
+                return (clone $mark)->setRelation('screenshot', $shot->withoutRelations());
+            }
+        }
+
+        return null;
     }
 
     public function isOwner(): bool
@@ -171,6 +253,7 @@ new class extends Component
     {
         $this->activeScreenshotIndex = $index;
         $this->hintFilter = 'all';
+        $this->openMarkId = null;
         $this->cancelPin();
     }
 
@@ -230,6 +313,8 @@ new class extends Component
         if (! $this->review->isOpenForFeedback()) {
             return;
         }
+
+        $this->openMarkId = null;
 
         $x = max(0, min(1, $x));
         $y = max(0, min(1, $y));
@@ -1205,7 +1290,25 @@ new class extends Component
     x-data
     x-init="
         if (! Alpine.store('rmFocus')) {
-            Alpine.store('rmFocus', { finding: null, mark: null });
+            {{-- mark: the one open in the popover. from: canvas, list or key, so the
+                 drawer knows whether to come forward for it. --}}
+            Alpine.store('rmFocus', {
+                finding: null,
+                mark: null,
+                from: null,
+                open(id, from = 'canvas', toggle = true) {
+                    this.finding = null;
+                    if (toggle && this.mark === id) { this.close(); return; }
+                    this.from = from;
+                    this.mark = id;
+                    window.dispatchEvent(new CustomEvent('rm-mark', { detail: { id } }));
+                },
+                close() {
+                    if (this.mark === null) return;
+                    this.mark = null;
+                    window.dispatchEvent(new CustomEvent('rm-mark', { detail: { id: null } }));
+                },
+            });
         }
         if (! Alpine.store('rmPanel')) {
             let saved = null;
@@ -1221,12 +1324,16 @@ new class extends Component
             });
         }
     "
+    x-on:rm-mark.window="$event.detail.id ? $wire.openMark($event.detail.id) : $wire.closeMark()"
     @if ($this->opinionPending)
         wire:poll.visible.3s="loadReview"
     @else
         wire:poll.visible.30s="loadReview"
     @endif
 >
+    {{-- Keeps the ring in step when the server closes a mark (deleted, other shot). --}}
+    <span hidden wire:key="open-mark-{{ $openMarkId ?? 0 }}" x-init="$store.rmFocus.mark = @js($openMarkId)"></span>
+
     {{-- What the A/C/J/K keys read at the moment they're pressed. --}}
     <span hidden @if ($review->isOpenForFeedback()) data-open-for-feedback @endif>
         @foreach ($this->activeMarks->sortBy('number') as $orderedMark)
@@ -1335,7 +1442,7 @@ new class extends Component
                         e.preventDefault();
                         const at = this.marks.indexOf($store.rmFocus?.mark);
                         const next = e.key === 'j' ? Math.min(at + 1, this.marks.length - 1) : Math.max(at - 1, 0);
-                        $store.rmFocus.mark = this.marks[at === -1 ? 0 : next];
+                        $store.rmFocus.open(this.marks[at === -1 ? 0 : next], 'key', false);
                     }
                 },
                 clear() {

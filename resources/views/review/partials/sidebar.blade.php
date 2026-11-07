@@ -42,7 +42,10 @@
                     init() {
                         this.$watch(() => this.$store.rmFocus.mark, (id) => {
                             if (! id) return;
-                            this.$store.rmPanel?.show();
+                            {{-- Below lg the drawer would cover the shot the mark opened on. --}}
+                            if (window.innerWidth >= 1024) {
+                                this.$store.rmPanel?.show();
+                            }
                             this.panels.marks = true;
                             this.$nextTick(() => document.getElementById('fb-mark-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                         });

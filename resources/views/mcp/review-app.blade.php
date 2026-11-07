@@ -1004,6 +1004,13 @@
                 this.activeFinding = null;
                 this.replyBody = '';
                 this.activePin = this.activePin && this.activePin.id === pin.id ? null : pin;
+                // Bring the opened mark into view, like the popover on the web review.
+                if (this.activePin) {
+                    this.$nextTick(() => {
+                        const detail = Array.from(this.$root.querySelectorAll('[data-mark-detail]')).find((el) => el.offsetParent !== null);
+                        detail?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                }
             },
 
             showFinding(finding) {

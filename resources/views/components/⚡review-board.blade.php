@@ -569,43 +569,13 @@ new class extends Component
                         </div>
                     </div>
 
-                    @if ($shot)
-                        <x-mark-focus-preview :mark="$selectedMark" />
-                    @else
+                    @unless ($shot)
                         <div class="hatch rounded-xl bg-well px-4 py-10 text-center text-sm text-muted-foreground">
                             No screenshot for this mark.
                         </div>
-                    @endif
+                    @endunless
 
-                    <div class="rounded-xl bg-card p-4 sm:p-5">
-                        <dl class="space-y-4 text-sm">
-                            <div>
-                                <dt class="text-xs text-muted-foreground">Feedback</dt>
-                                <dd class="mt-1 leading-relaxed text-pretty text-zinc-800 sm:text-[15px]">{{ $selectedMark->body }}</dd>
-                            </div>
-                            @if ($selectedMark->target)
-                                <div>
-                                    <dt class="text-xs text-muted-foreground">On the page</dt>
-                                    <dd class="mt-1 space-y-1.5">
-                                        <x-element-chip :target="$selectedMark->target" />
-                                        <x-element-inspect :target="$selectedMark->target" />
-                                    </dd>
-                                </div>
-                            @endif
-                            @if ($markReview?->context)
-                                <div>
-                                    <dt class="text-xs text-muted-foreground">What to look at</dt>
-                                    <dd class="mt-1 whitespace-pre-wrap text-pretty text-zinc-700">{{ $markReview->context }}</dd>
-                                </div>
-                            @endif
-                            @if ($selectedMark->afterScreenshot)
-                                <div>
-                                    <dt class="text-xs text-muted-foreground">Before / after</dt>
-                                    <dd class="mt-1"><x-mark-before-after :mark="$selectedMark" /></dd>
-                                </div>
-                            @endif
-                        </dl>
-                    </div>
+                    <x-mark-detail :mark="$selectedMark" :context="$markReview?->context" />
                 </div>
 
                 {{-- What happened: every step and comment, who took it, and the composer at the bottom --}}

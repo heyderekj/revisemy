@@ -84,6 +84,51 @@ test('the review answers to the keyboard', async ({ page }) => {
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('approved');
 });
 
+test('clicking a mark opens it beside the shot', async ({ page }) => {
+    const { review } = await seedReview('Open a mark');
+
+    await page.goto(path(review.review_url));
+    await outline(page);
+    let note = page.getByRole('dialog', { name: 'Leave a note' });
+    await note.getByPlaceholder(/Be specific/).fill('The headline crowds the nav.');
+    await note.getByRole('button', { name: 'Save mark' }).click();
+    await expect(note).toBeHidden();
+
+    // A click without a drag drops a spot: that one opens too.
+    const shot = page.getByRole('img', { name: 'Screenshot 1' });
+    const box = (await shot.boundingBox())!;
+    await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.8);
+    note = page.getByRole('dialog', { name: /Leave a note/ });
+    await note.getByPlaceholder(/Be specific/).fill('Price needs a period.');
+    await note.getByRole('button', { name: 'Save mark' }).click();
+    await expect(note).toBeHidden();
+
+    const m1 = page.getByRole('dialog', { name: 'Mark M1' });
+    await page.getByRole('button', { name: 'Open mark M1' }).first().click();
+    await expect(m1).toBeVisible();
+    await expect(m1.getByText('The headline crowds the nav.')).toBeVisible();
+    await expect(page).toHaveURL(/[?&]mark=\d+/);
+
+    await page.keyboard.press('Escape');
+    await expect(m1).toBeHidden();
+
+    await page.getByRole('button', { name: 'Open mark M2' }).first().click();
+    const m2 = page.getByRole('dialog', { name: 'Mark M2' });
+    await expect(m2.getByText('Price needs a period.')).toBeVisible();
+
+    // The card in the list opens its mark as well, and J steps along.
+    await page.locator('[id^="fb-mark-"]').filter({ hasText: 'The headline crowds the nav.' }).getByText('The headline crowds the nav.').click();
+    await expect(m1).toBeVisible();
+    await expect(m2).toBeHidden();
+    await page.keyboard.press('j');
+    await expect(m2).toBeVisible();
+
+    // A click on the shot puts the open mark away before it marks anything.
+    await page.mouse.click(box.x + box.width * 0.05, box.y + box.height * 0.95);
+    await expect(m2).toBeHidden();
+    await expect(page.getByRole('dialog', { name: /Leave a note/ })).toBeHidden();
+});
+
 test('the decision bar sits under the thumb on a phone @phone', async ({ page }) => {
     const { review } = await seedReview('On the go');
     await page.goto(path(review.review_url));

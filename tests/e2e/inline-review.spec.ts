@@ -19,7 +19,7 @@ async function openInHost(page: Page, title: string, { silentMessage = false, el
     const shot = (await (await api.get(`/api/reviews/${review.id}`)).json()).screenshots[0];
     const marked = await mcp(api, 'tools/call', {
         name: 'add_mark',
-        arguments: { review_id: review.id, screenshot_id: shot.id, x: 0.5, y: 0.5, severity: 'must-fix', body: 'Button label is vague.' },
+        arguments: { review_id: review.id, screenshot_id: shot.id, x: 0.5, y: 0.5, severity: 'must-fix', body: 'Button label is vague.', suggested_copy: 'Start my free trial' },
     });
     expect(marked.isError, JSON.stringify(marked.content)).toBeFalsy();
 
@@ -84,6 +84,16 @@ test('the inline review hands the decision back to the chat', async ({ page }) =
     await newer.getByRole('button', { name: 'Full screen' }).click();
     await expect.poll(async () => (await sent('newer', 'ui/request-display-mode')).map((m) => m.params.mode)).toEqual(['fullscreen']);
     await expect(newer.getByRole('button', { name: 'Back to the chat' })).toBeVisible();
+});
+
+test('opening a mark inline shows what the web shows', async ({ page }) => {
+    const { newer } = await openInHost(page, 'Inline detail');
+
+    await newer.locator('button', { hasText: /^M1$/ }).first().click();
+    const detail = newer.locator('[data-mark-detail]:visible');
+    await expect(detail.getByText('Button label is vague.')).toBeVisible();
+    await expect(detail.getByText('Suggested copy')).toBeVisible();
+    await expect(detail.getByText('Start my free trial')).toBeVisible();
 });
 
 test('a host that never takes the message leaves the person a nudge', async ({ page }) => {
