@@ -1,4 +1,4 @@
-@props(['mark'])
+@props(['mark', 'compact' => false])
 
 @php
     $focus = \App\Support\MarkFocus::forMark($mark);
@@ -11,7 +11,12 @@
   Full image width, vertical band only. Outer max-height may clip; inner keeps
   true crop aspect so the capture never stretches and never loses horizontal content.
 --}}
-<div class="w-full max-h-[min(48dvh,28rem)] overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 lg:max-h-[min(62dvh,36rem)]">
+{{-- compact: the review page's popover and phone sheet, where the words matter more than the crop. --}}
+<div @class([
+    'w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100',
+    'max-h-[min(48dvh,28rem)] lg:max-h-[min(62dvh,36rem)]' => ! $compact,
+    'max-h-[min(26svh,13rem)] md:max-h-[min(30svh,16rem)]' => $compact,
+])>
     <div
         class="relative w-full bg-zinc-100 bg-no-repeat"
         style="aspect-ratio: {{ $ratio }}; {{ $focus['bg_style'] }}"

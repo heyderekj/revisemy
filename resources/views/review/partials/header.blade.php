@@ -23,7 +23,7 @@
                                 type="text"
                                 wire:model="titleDraft"
                                 maxlength="200"
-                                class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold text-zinc-900 outline-none ring-0 placeholder:text-zinc-400"
+                                class="min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-semibold sm:text-sm text-zinc-900 outline-none ring-0 placeholder:text-zinc-400"
                                 placeholder="Review title"
                                 x-data
                                 x-init="$el.focus(); $el.select()"
@@ -325,5 +325,4 @@
                 </div>
             @endif
         </div>
-        @include('review.partials.viewport-tabs', ['class' => 'mx-3 mb-2 flex w-fit md:hidden'])
     </header>

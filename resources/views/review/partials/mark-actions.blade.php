@@ -13,6 +13,7 @@
                 placeholder="Your name"
                 maxlength="40"
                 size="sm"
+                class="max-md:[&_input]:!text-base"
                 x-data
                 x-init="if (! $wire.guestName) { $wire.guestName = localStorage.getItem('revisemy_guest_name') || '' }"
                 x-on:change="if ($event.target.value) { localStorage.setItem('revisemy_guest_name', $event.target.value) }"
@@ -39,18 +40,18 @@
     {{-- Quiet controls: the only filled button on the page is Approve. --}}
     <div class="mt-2 flex flex-wrap items-center gap-1.5">
         @if ($canManage && $pin->awaitsVerification())
-            <button type="button" class="inline-flex h-7 items-center gap-1 rounded-full bg-done-soft px-2.5 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200" wire:click="verifyMark({{ $pin->id }})">
+            <button type="button" class="inline-flex h-9 items-center md:h-7 gap-1 rounded-full bg-done-soft px-2.5 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200" wire:click="verifyMark({{ $pin->id }})">
                 <flux:icon.check variant="micro" class="size-3.5" /> Verify
             </button>
         @endif
         @if ($canManage && $pin->status !== \App\Models\Annotation::STATUS_OPEN)
-            <button type="button" class="inline-flex h-7 items-center rounded-full bg-chip px-2.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover" wire:click="reopenMark({{ $pin->id }})">Reopen</button>
+            <button type="button" class="inline-flex h-9 items-center md:h-7 rounded-full bg-chip px-2.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover" wire:click="reopenMark({{ $pin->id }})">Reopen</button>
         @endif
         @if (! $previous && $mode === 'owner' && $pin->severity === \App\Models\Annotation::SEVERITY_QUESTION && $review->isOpenForFeedback())
-            <button type="button" class="inline-flex h-7 items-center rounded-full bg-chip px-2.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover" wire:click="startAnswerQuestion({{ $pin->id }})">{{ $pin->question_answer ? 'Edit answer' : 'Answer' }}</button>
+            <button type="button" class="inline-flex h-9 items-center md:h-7 rounded-full bg-chip px-2.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover" wire:click="startAnswerQuestion({{ $pin->id }})">{{ $pin->question_answer ? 'Edit answer' : 'Answer' }}</button>
         @endif
         @if (! $previous && $review->allowsComments())
-            <button type="button" class="inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900" wire:click="startMarkComment({{ $pin->id }})">
+            <button type="button" class="inline-flex h-9 items-center md:h-7 gap-1 rounded-full px-2 text-xs font-medium text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900" wire:click="startMarkComment({{ $pin->id }})">
                 Comment
                 @if ($pin->comments->isNotEmpty())
                     <span class="tabular-nums text-zinc-400">{{ $pin->comments->count() }}</span>

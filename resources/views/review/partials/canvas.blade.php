@@ -1,12 +1,15 @@
         <section class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-well">
             @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
                 {{-- The brief floats over the shot's corner: there when you want it, gone with Hide. --}}
+                {{-- On a phone it folds to one line until tapped, so the shot keeps its top. --}}
                 <div
-                    class="absolute left-3 top-3 z-20 w-[min(20rem,calc(100%-1.5rem))] rounded-2xl bg-lift p-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07] md:left-4 md:top-4"
+                    class="absolute left-3 top-3 z-20 rounded-2xl bg-lift shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07] md:left-4 md:top-4"
+                    x-bind:class="open ? 'w-[min(20rem,calc(100%-1.5rem))] p-3' : '{{ $review->screenshots->count() > 1 ? 'max-w-[calc(100%-9.5rem)]' : 'max-w-[calc(100%-1.5rem)]' }}'"
                     x-show="$store.rmPanel?.brief ?? true"
                     x-transition.opacity.duration.120ms
                     data-brief
                     x-data="{
+                        open: window.innerWidth >= 768,
                         more: false,
                         clamped: false,
                         measure() {
@@ -17,6 +20,20 @@
                     x-init="$nextTick(() => measure())"
                     x-on:resize.window.debounce.100ms="measure()"
                 >
+                    <button
+                        type="button"
+                        data-brief-fold
+                        x-show="! open"
+                        x-cloak
+                        class="flex h-9 w-full min-w-0 items-center gap-1.5 px-3 text-left text-sm"
+                        x-on:click="open = true; $nextTick(() => measure())"
+                        aria-label="Show what to look at"
+                    >
+                        <flux:icon.document-text variant="micro" class="size-4 shrink-0 text-zinc-500" />
+                        <span class="shrink-0 font-medium text-zinc-900">Brief</span>
+                        <span class="min-w-0 truncate text-zinc-500">{{ $review->context ? \Illuminate\Support\Str::limit($review->context, 80) : ($this->isOwner() ? 'Add what to look at' : '') }}</span>
+                    </button>
+                    <div x-show="open">
                     <div class="mb-1.5 flex items-center gap-3">
                         <h2 class="min-w-0 flex-1 text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
                         @if ($review->context && ! $editingContext)
@@ -29,7 +46,8 @@
                                 x-text="more ? 'Show less' : 'Show all'"
                             ></button>
                         @endif
-                        <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900" x-on:click="$store.rmPanel.brief = false">Hide</button>
+                        <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900 md:hidden" x-on:click="open = false">Less</button>
+                        <button type="button" class="hidden text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900 md:inline" x-on:click="$store.rmPanel.brief = false">Hide</button>
                     </div>
 
                     {{-- Clamped so the shot stays in view; Show all, up by Hide, opens the rest. --}}
@@ -41,7 +59,7 @@
                                 rows="5"
                                 maxlength="5000"
                                 placeholder="What should they look at on this pass?"
-                                class="block w-full resize-y rounded-lg border-0 bg-well px-2.5 py-2 text-sm leading-relaxed text-pretty text-zinc-800 outline-none ring-1 ring-black/[0.06] placeholder:text-zinc-400 focus:ring-2 focus:ring-key/50"
+                                class="block w-full resize-y rounded-lg border-0 bg-well px-2.5 py-2 text-base leading-relaxed sm:text-sm text-pretty text-zinc-800 outline-none ring-1 ring-black/[0.06] placeholder:text-zinc-400 focus:ring-2 focus:ring-key/50"
                                 x-data
                                 x-init="$el.focus(); $el.setSelectionRange($el.value.length, $el.value.length)"
                                 x-on:keydown.meta.enter.prevent="$wire.saveContext()"
@@ -98,7 +116,25 @@
                         @endif
 
                     </div>
+                    </div>
                 </div>
+            @endif
+
+            {{-- Phones: which shot, as a picker over the shot's corner rather than a row of its own. --}}
+            @if ($review->screenshots->count() > 1)
+                <label class="absolute right-3 top-3 z-20 md:hidden">
+                    <span class="sr-only">Screenshot</span>
+                    <select
+                        data-shot-picker
+                        class="h-9 max-w-[8.5rem] appearance-none truncate rounded-full bg-lift py-0 pl-3 pr-8 text-base font-medium text-zinc-900 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07] outline-none focus-visible:ring-2 focus-visible:ring-key/60"
+                        x-on:change="$store.rmFocus?.close(); $wire.selectScreenshot(Number($event.target.value))"
+                    >
+                        @foreach ($review->screenshots as $index => $shotOption)
+                            <option value="{{ $index }}" @selected($activeScreenshotIndex === $index)>{{ $shotOption->railLabel($index) }}</option>
+                        @endforeach
+                    </select>
+                    <flux:icon.chevron-down variant="micro" class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-zinc-500" />
+                </label>
             @endif
 
             <div class="relative flex min-h-0 flex-1 flex-col">
@@ -136,6 +172,80 @@
                         hover: null,
                         hoverFrame: null,
                         pickOn: (() => { try { return localStorage.getItem('rm-pick') !== 'off'; } catch (e) { return true; } })(),
+                        {{-- Touch: a finger scrolls the shot and opens marks; Mark turns the next
+                             drag or tap into a mark. Two fingers zoom the shot, never the page. --}}
+                        coarse: window.matchMedia('(pointer: coarse)').matches,
+                        marking: false,
+                        lastTouch: 0,
+                        pinch: null,
+                        toggleMarking() {
+                            this.marking = ! this.marking;
+                            this.hover = null;
+                            if (this.marking) this.$store.rmFocus?.close();
+                        },
+                        touchedRecently() {
+                            return Date.now() - this.lastTouch < 800;
+                        },
+                        onTouchStart(e) {
+                            this.lastTouch = Date.now();
+                            if (e.touches.length === 2) {
+                                this.cancelDraw();
+                                this.startPinch(e);
+                                return;
+                            }
+                            if (e.touches.length !== 1 || ! this.marking || this.pinch) return;
+                            const p = this.norm(e.touches[0]);
+                            if (! p) return;
+                            this.drawing = true;
+                            this.hover = null;
+                            this.startX = p.x;
+                            this.startY = p.y;
+                            this.draft = { x: p.x, y: p.y, w: 0, h: 0 };
+                        },
+                        onTouchMove(e) {
+                            if (this.pinch && e.touches.length === 2) {
+                                e.preventDefault();
+                                this.movePinch(e);
+                                return;
+                            }
+                            if (this.drawing && this.marking) {
+                                e.preventDefault();
+                                this.moveDraw(e.touches[0]);
+                            }
+                        },
+                        onTouchEnd(e) {
+                            this.lastTouch = Date.now();
+                            if (this.pinch) {
+                                if (e.touches.length < 2) this.pinch = null;
+                                return;
+                            }
+                            if (! this.drawing || ! this.marking) return;
+                            {{-- No emulated mouse events or click after: this tap was a mark. --}}
+                            e.preventDefault();
+                            this.marking = false;
+                            this.endDraw(e.changedTouches[0], 14);
+                        },
+                        startPinch(e) {
+                            const [a, b] = e.touches;
+                            this.pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, zoom: this.zoom };
+                        },
+                        movePinch(e) {
+                            const vp = this.$refs.viewport;
+                            if (! vp) return;
+                            const [a, b] = e.touches;
+                            const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+                            const next = Math.min(this.zoomMax, Math.max(this.zoomMin, +(this.pinch.zoom * d / this.pinch.d).toFixed(3)));
+                            if (next === this.zoom) return;
+                            {{-- Keep the point between the fingers where it is. --}}
+                            const rect = vp.getBoundingClientRect();
+                            const mx = (a.clientX + b.clientX) / 2 - rect.left;
+                            const my = (a.clientY + b.clientY) / 2 - rect.top;
+                            const r = next / this.zoom;
+                            const left = (vp.scrollLeft + mx) * r - mx;
+                            const top = (vp.scrollTop + my) * r - my;
+                            this.zoom = next;
+                            this.$nextTick(() => { vp.scrollLeft = left; vp.scrollTop = top; });
+                        },
                         {{-- Live: the page's code as captured, framed so a click picks the real element (LiveSnapshot). --}}
                         liveUrl: @js($review->isOpenForFeedback() && $review->dom_path ? route('reviews.screenshot.live', [$token, $shot]) : null),
                         live: false,
@@ -224,7 +334,7 @@
                             if (this.hoverFrame) return;
                             this.hoverFrame = requestAnimationFrame(() => {
                                 this.hoverFrame = null;
-                                this.hover = this.drawing || this.spaceHeld || $wire.pendingX !== null ? null : this.elementAt(e);
+                                this.hover = this.drawing || this.spaceHeld || this.touchedRecently() || $wire.pendingX !== null ? null : this.elementAt(e);
                             });
                         },
                         hoverStyle() {
@@ -410,6 +520,8 @@
                             this.endDraw(e);
                         },
                         beginDraw(e) {
+                            {{-- A tap's emulated mouse events: touch marks only in Mark mode (onTouchStart). --}}
+                            if (this.touchedRecently()) return;
                             if (this.isPanMode(e)) {
                                 this.beginPan(e);
                                 return;
@@ -444,7 +556,7 @@
                                 h: Math.abs(p.y - this.startY),
                             };
                         },
-                        endDraw(e) {
+                        endDraw(e, minDrag = 6) {
                             if (! this.drawing) return;
                             this.drawing = false;
                             const draft = this.draft;
@@ -452,7 +564,7 @@
                             if (! draft) return;
                             {{-- A drag of a few screen pixels is a box; anything less is a click. --}}
                             const rect = this.$refs.shotImg?.getBoundingClientRect();
-                            if (rect && draft.w * rect.width >= 6 && draft.h * rect.height >= 6) {
+                            if (rect && draft.w * rect.width >= minDrag && draft.h * rect.height >= minDrag) {
                                 $wire.startPin(draft.x, draft.y, draft.w, draft.h, null, this.pickOn);
                                 return;
                             }
@@ -488,7 +600,7 @@
                                 data-view-switch
                                 role="tablist"
                                 aria-label="View"
-                                class="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur"
+                                class="absolute left-1/2 top-3 z-30 hidden -translate-x-1/2 items-center gap-0.5 rounded-full bg-raised/95 p-0.5 md:flex shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur"
                             >
                                 <button
                                     type="button"
@@ -512,13 +624,13 @@
                             </div>
                         </template>
 
-                        <div data-zoom-controls x-show="! live" class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur">
+                        <div data-zoom-controls x-show="! live" class="absolute bottom-3 left-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur md:left-auto md:right-3">
                             <template x-if="elements">
                                 <div class="flex items-center">
                                     <button
                                         type="button"
                                         data-pick-toggle
-                                        class="flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
+                                        class="flex h-9 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors md:h-7"
                                         x-bind:class="pickOn ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
                                         x-bind:aria-pressed="pickOn.toString()"
                                         x-on:click="togglePick()"
@@ -529,15 +641,19 @@
                             </template>
                             <button
                                 type="button"
-                                class="hidden size-7 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:flex"
+                                class="flex size-9 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:size-7"
                                 x-on:click="zoomOut()"
                                 x-bind:disabled="zoom <= zoomMin"
                                 aria-label="Zoom out"
                             >−</button>
-                            @foreach (['width' => ['Fit width', 'Width'], 'page' => ['Whole page', 'Page'], 'actual' => ['100%', '100%']] as $fitMode => [$fitLabel, $fitShort])
+                            {{-- Phones keep Fit; pinch and −/+ do the rest. --}}
+                            @foreach (['width' => ['Fit width', 'Fit'], 'page' => ['Whole page', 'Page'], 'actual' => ['100%', '100%']] as $fitMode => [$fitLabel, $fitShort])
                                 <button
                                     type="button"
-                                    class="h-7 rounded-full px-2.5 text-xs font-medium transition-colors"
+                                    @class([
+                                        'h-9 rounded-full px-2.5 text-xs font-medium transition-colors md:h-7',
+                                        'hidden sm:block' => $fitMode !== 'width',
+                                    ])
                                     x-bind:class="fit === '{{ $fitMode }}' && zoom === 1 ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
                                     x-bind:aria-pressed="(fit === '{{ $fitMode }}' && zoom === 1).toString()"
                                     x-on:click="setFit('{{ $fitMode }}')"
@@ -545,12 +661,38 @@
                             @endforeach
                             <button
                                 type="button"
-                                class="hidden size-7 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:flex"
+                                class="flex size-9 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:size-7"
                                 x-on:click="zoomIn()"
                                 x-bind:disabled="zoom >= zoomMax"
                                 aria-label="Zoom in"
                             >+</button>
                         </div>
+
+                        @if ($review->isOpenForFeedback() && ($mode === 'owner' || $review->allowsGuestAccess()))
+                            {{-- Touch: the way in to marking, so a scroll or a stray tap never leaves a mark. --}}
+                            <button
+                                type="button"
+                                data-mark-toggle
+                                x-show="coarse && ! live"
+                                x-cloak
+                                class="absolute right-3 bottom-3 z-30 inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-md shadow-black/[0.12] transition-colors"
+                                x-bind:class="marking ? 'bg-foreground text-background' : 'bg-key text-accent-contrast'"
+                                x-on:click="toggleMarking()"
+                                x-bind:aria-pressed="marking.toString()"
+                            >
+                                <flux:icon.plus variant="micro" class="size-4" x-show="! marking" />
+                                <flux:icon.x-mark variant="micro" class="size-4" x-show="marking" x-cloak />
+                                <span x-text="marking ? 'Cancel' : '{{ $mode === 'guest' ? 'Suggest' : 'Mark' }}'">{{ $mode === 'guest' ? 'Suggest' : 'Mark' }}</span>
+                            </button>
+                            <p
+                                data-marking-hint
+                                x-show="marking"
+                                x-cloak
+                                x-transition.opacity.duration.120ms
+                                class="pointer-events-none absolute inset-x-3 bottom-[4.25rem] z-30 mx-auto w-fit max-w-[calc(100%-1.5rem)] rounded-full bg-foreground px-3 py-1.5 text-center text-xs font-medium text-background shadow-md"
+                                x-text="elements && pickOn ? 'Drag over an area, or tap a part of the page' : 'Drag over an area, or tap a spot'"
+                            ></p>
+                        @endif
 
                     <template x-if="liveLoaded">
                         <div
@@ -580,9 +722,11 @@
 
                     <div
                         x-ref="viewport"
-                        class="relative min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-3 pb-20 md:px-6 md:pt-6"
+                        class="relative min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-14 pb-20 md:px-6 md:pt-6"
                         x-bind:class="{
-                            '!pt-14': liveUrl,
+                            'md:!pt-14': liveUrl,
+                            '[touch-action:none]': marking,
+                            '[touch-action:pan-x_pan-y]': ! marking,
                             'cursor-grab': canPan() && spaceHeld && !panning,
                             'cursor-grabbing': panning
                         }"
@@ -590,13 +734,24 @@
                         x-on:mousedown="isPanMode($event) && beginPan($event)"
                         x-on:mousemove.window="onMouseMove($event)"
                         x-on:mouseup.window="onMouseUp($event)"
+                        @if ($review->isOpenForFeedback())
+                            x-on:touchstart="onTouchStart($event)"
+                            x-on:touchmove="onTouchMove($event)"
+                            x-on:touchend="onTouchEnd($event)"
+                            x-on:touchcancel="cancelDraw(); pinch = null"
+                        @else
+                            x-on:touchstart.passive="lastTouch = Date.now(); $event.touches.length === 2 && startPinch($event)"
+                            x-on:touchmove="pinch && $event.touches.length === 2 && ($event.preventDefault(), movePinch($event))"
+                            x-on:touchend.passive="if ($event.touches.length < 2) pinch = null"
+                        @endif
+                        x-on:gesturestart.prevent
                     >
                         <div
                             x-ref="canvas"
                             class="relative mx-auto max-w-full select-none rounded-lg bg-raised shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]"
                             x-bind:style="canvasStyle()"
                             @if ($review->isOpenForFeedback())
-                                x-bind:class="(zoom > 1 || fit === 'actual' ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair' : '')"
+                                x-bind:class="(zoom > 1 || fit === 'actual' ? '!max-w-none ' : '') + (! spaceHeld ? 'cursor-crosshair ' : '') + (marking ? '[&_[data-pin]]:pointer-events-none [&_[data-finding]]:pointer-events-none ring-2 ring-key/60' : '')"
                                 x-on:mousedown="beginDraw($event)"
                                 x-on:keydown.escape.window="cancelDraw()"
                             @else
@@ -741,7 +896,7 @@
                                     <button
                                         type="button"
                                         data-pin
-                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition {{ $annotation->markerClass() }} {{ $markState }}"
+                                        class="absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition before:absolute before:-inset-2 before:content-[''] {{ $annotation->markerClass() }} {{ $markState }}"
                                         style="left: {{ $annotation->x * 100 }}%; top: {{ $annotation->y * 100 }}%;"
                                         data-mark-id="{{ $annotation->id }}"
                                         aria-label="Open mark M{{ $annotation->number }}"
@@ -818,108 +973,6 @@
             </div>
         </section>
 
-        @php($stripMarks = $this->activeMarks)
-        @php($stripSecondOpinion = $this->openSecondOpinion->filter(fn ($f) => $f->hasRegion())->values())
-        @php($stripGuest = $this->openGuestSuggestions->filter(
-            fn ($f) => $f->hasRegion() || ($f->x !== null && $f->y !== null)
-        )->values())
-
-        @if ($shot && ($stripMarks->isNotEmpty() || $stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
-            <div class="shrink-0 overflow-x-auto overscroll-x-contain bg-card px-3 py-2 [scrollbar-width:none] md:hidden sm:px-4 [&::-webkit-scrollbar]:hidden">
-                <div class="flex w-max items-center gap-x-3 gap-y-2 text-[11px] text-zinc-600">
-                    @if ($stripMarks->isNotEmpty())
-                        <div class="inline-flex items-center gap-2">
-                            <span class="relative h-4 w-7 shrink-0 rounded border-2 border-key/80 bg-key/10" aria-hidden="true">
-                                <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-key text-[8px] font-semibold text-accent-contrast ring-2 ring-white">M</span>
-                            </span>
-                            <span class="sr-only">Your marks</span>
-                            <div class="flex items-center gap-1">
-                                @foreach ($stripMarks as $pin)
-                                    <button
-                                        type="button"
-                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center bg-accent px-1 text-xs font-semibold text-ink ring-1 ring-zinc-200/80 transition hover:ring-zinc-300"
-                                        x-bind:class="$store.rmFocus?.mark === {{ $pin->id }} ? 'ring-2 ring-key' : ''"
-                                        x-on:click.stop="$store.rmFocus.open({{ $pin->id }}, 'canvas')"
-                                        aria-label="Open mark M{{ $pin->number }}"
-                                    >
-                                        M{{ $pin->number }}
-                                    </button>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    @if ($stripMarks->isNotEmpty() && ($stripSecondOpinion->isNotEmpty() || $stripGuest->isNotEmpty()))
-                        <span class="h-3 w-px shrink-0 bg-zinc-300" aria-hidden="true"></span>
-                    @endif
-
-                    @if ($stripSecondOpinion->isNotEmpty())
-                        <div class="inline-flex items-center gap-2">
-                            <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-sky-400/80 bg-sky-400/10" aria-hidden="true">
-                                <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-sky-500 bg-white text-[8px] font-semibold text-sky-700 ring-2 ring-white">S</span>
-                            </span>
-                            <span class="sr-only">Second opinion</span>
-                            <div class="flex items-center gap-1">
-                                @foreach ($stripSecondOpinion as $finding)
-                                    <button
-                                        type="button"
-                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-sky-500 bg-white px-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
-                                        x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-sky-600 bg-sky-50 ring-2 ring-sky-300' : ''"
-                                        x-on:click="
-                                            $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
-                                            $store.rmFocus.mark = null;
-                                            @if ($hintFilter !== 'all' && $hintFilter !== $finding->severity)
-                                                $wire.setHintFilter('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-                                            @else
-                                                document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                            @endif
-                                        "
-                                        aria-label="Jump to second opinion S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}"
-                                    >
-                                        S{{ $suggestionNumbers['s'][$finding->id] ?? '' }}
-                                    </button>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    @if ($stripSecondOpinion->isNotEmpty() && $stripGuest->isNotEmpty())
-                        <span class="h-3 w-px shrink-0 bg-zinc-300" aria-hidden="true"></span>
-                    @endif
-
-                    @if ($stripGuest->isNotEmpty())
-                        <div class="inline-flex items-center gap-2">
-                            <span class="relative h-4 w-7 shrink-0 rounded border border-dashed border-zinc-400/80 bg-zinc-400/10" aria-hidden="true">
-                                <span class="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-dashed border-zinc-500 bg-white text-[8px] font-semibold text-zinc-700 ring-2 ring-white">G</span>
-                            </span>
-                            <span class="sr-only">Guest</span>
-                            <div class="flex items-center gap-1">
-                                @foreach ($stripGuest as $finding)
-                                    <button
-                                        type="button"
-                                        class="flex h-6 min-w-6 shrink-0 items-center justify-center border border-dashed border-zinc-500 bg-white px-1 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                                        x-bind:class="$store.rmFocus?.finding === {{ $finding->id }} ? 'border-zinc-600 bg-zinc-50 ring-2 ring-zinc-300' : ''"
-                                        x-on:click="
-                                            $store.rmFocus.finding = $store.rmFocus.finding === {{ $finding->id }} ? null : {{ $finding->id }};
-                                            $store.rmFocus.mark = null;
-                                            @if (! in_array($hintFilter, ['all', 'guest'], true))
-                                                $wire.setHintFilter('all').then(() => document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-                                            @else
-                                                document.getElementById('fb-finding-{{ $finding->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                            @endif
-                                        "
-                                        aria-label="Jump to guest suggestion G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}"
-                                    >
-                                        G{{ $suggestionNumbers['g'][$finding->id] ?? '' }}
-                                    </button>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        @endif
-
         @include('review.partials.mark-popover')
 
         @if ($pendingX !== null)
@@ -933,6 +986,7 @@
                     top: null,
                     origin: 'left center',
                     placed: false,
+                    revealed: false,
                     anchorHeight: null,
                     _placeScheduled: false,
                     mobile() {
@@ -956,6 +1010,10 @@
                             this.top = null;
                             this.placed = true;
                             this.origin = 'bottom center';
+                            if (! this.revealed) {
+                                this.revealed = true;
+                                this.$nextTick(() => window.rmRevealAbove(document.querySelector('[data-pending-mark]'), panel.offsetHeight));
+                            }
                             return true;
                         }
 
@@ -1019,7 +1077,7 @@
                 <div
                     x-ref="panel"
                     x-bind:style="panelStyle"
-                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(22rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
+                    class="rm-note-composer pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[min(78svh,34rem)] overflow-y-auto rounded-t-2xl bg-lift p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-3.5 shadow-[0_-12px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:inset-x-auto md:bottom-auto md:w-[min(22rem,calc(100vw-1rem))] md:rounded-2xl md:p-3.5 md:shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]"
                     role="dialog"
                     aria-label="{{ $mode === 'guest' ? 'Suggest a change' : 'Leave a note' }}"
                     x-on:keydown.escape.window="$wire.cancelPin()"
@@ -1038,7 +1096,7 @@
                         </flux:heading>
                         <button
                             type="button"
-                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                            class="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 md:size-7"
                             wire:click="cancelPin"
                             aria-label="Cancel"
                         >
@@ -1052,9 +1110,9 @@
                                 <div class="flex items-center gap-1">
                                     <x-element-chip :target="$pendingTarget" class="min-w-0 flex-1" />
                                     @if ($pendingParent !== null)
-                                        <button type="button" class="h-6 shrink-0 rounded-md px-1.5 text-[11px] font-medium text-zinc-500 transition hover:bg-chip hover:text-zinc-900" wire:click="widenPendingElement" title="Mark the part around it instead">Wider</button>
+                                        <button type="button" class="h-9 shrink-0 rounded-md px-2 text-xs font-medium text-zinc-500 transition hover:bg-chip hover:text-zinc-900 md:h-6 md:px-1.5 md:text-[11px]" wire:click="widenPendingElement" title="Mark the part around it instead">Wider</button>
                                     @endif
-                                    <button type="button" class="flex size-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-chip hover:text-zinc-700" wire:click="dropPendingElement" aria-label="Just this area, not the element" title="Just this area, not the element">
+                                    <button type="button" class="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-chip hover:text-zinc-700 md:size-6" wire:click="dropPendingElement" aria-label="Just this area, not the element" title="Just this area, not the element">
                                         <flux:icon.x-mark variant="micro" class="size-3.5" />
                                     </button>
                                 </div>

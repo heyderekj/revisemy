@@ -1318,7 +1318,8 @@ new class extends Component
                 {{-- A review made on the site opens with its handoff in view. --}}
                 open: window.innerWidth < 1024 ? false : (saved ? saved === 'open' : (window.innerWidth >= 1280 || @js($this->isOwner() && $review->isAwaitingAgent()))),
                 brief: true,
-                remember() { try { localStorage.setItem('revisemy_drawer', this.open ? 'open' : 'closed'); } catch (e) {} },
+                {{-- Only the docked drawer is remembered: a phone or tablet toggle says nothing about the desk. --}}
+                remember() { if (window.innerWidth < 1024) return; try { localStorage.setItem('revisemy_drawer', this.open ? 'open' : 'closed'); } catch (e) {} },
                 toggle() { this.open = ! this.open; this.remember(); },
                 show() { this.open = true; },
             });
@@ -1380,19 +1381,14 @@ new class extends Component
         @php($shot = $this->activeScreenshot)
         @php($suggestionNumbers = $review->suggestionDisplayNumbers())
 
-        <div @class([
-            'flex min-h-0 min-w-0 flex-1 flex-col',
-            'pb-[4.25rem] md:pb-0' => $this->isOwner() && $review->isOpenForFeedback(),
-        ])>
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
             @include('review.partials.canvas')
         </div>
 
         @include('review.partials.sidebar')
     </div>
 
-    @if ($this->isOwner() && $review->isOpenForFeedback())
-        @include('review.partials.mobile-decision-bar')
-    @endif
+    @include('review.partials.phone-dock')
     @endif
     {{-- Koati's way: act at once, offer Undo. A decision waits a few seconds
          before it reaches the agent, so it can be taken back too. --}}
@@ -1464,7 +1460,7 @@ new class extends Component
             x-transition:enter-start="translate-y-2 opacity-0"
             x-transition:leave="transition duration-150"
             x-transition:leave-end="opacity-0"
-            class="pointer-events-none fixed inset-x-0 bottom-24 z-[70] flex justify-center px-4 md:bottom-6"
+            class="pointer-events-none fixed inset-x-0 top-16 z-[70] flex justify-center px-4 md:top-auto md:bottom-6"
             role="status"
             aria-live="polite"
         >

@@ -15,7 +15,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
     {{-- Light or dark before first paint, always the system's. Clears any choice
          saved by the old footer toggle so nobody is stuck on it. --}}

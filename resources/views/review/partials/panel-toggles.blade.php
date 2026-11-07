@@ -13,9 +13,10 @@
             title="What to look at"
         >Brief</button>
     @endif
+    {{-- On a phone the dock under the shot opens the list instead. --}}
     <button
         type="button"
-        class="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors"
+        class="hidden h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors md:inline-flex"
         x-bind:class="$store.rmPanel?.open ? 'bg-foreground text-background' : 'bg-chip text-zinc-900 hover:bg-chip-hover'"
         x-on:click="$store.rmPanel.toggle()"
         x-bind:aria-expanded="(!! $store.rmPanel?.open).toString()"

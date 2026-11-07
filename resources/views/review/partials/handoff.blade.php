@@ -11,7 +11,7 @@
         @php($steps = [
             [
                 'label' => 'Mark what matters',
-                'detail' => $markCount > 0 ? $markCount.' '.\Illuminate\Support\Str::plural('mark', $markCount) : 'Drag on the page to mark a spot',
+                'detail' => $markCount > 0 ? $markCount.' '.\Illuminate\Support\Str::plural('mark', $markCount) : 'Mark something on the page',
                 'done' => $markCount > 0,
             ],
             [

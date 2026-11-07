@@ -8,7 +8,7 @@
 
 <div {{ $attributes->class(['min-w-0 space-y-4']) }}>
     @if ($mark->screenshot)
-        <x-mark-focus-preview :mark="$mark" />
+        <x-mark-focus-preview :mark="$mark" :compact="$compact" />
     @endif
 
     <dl @class(['space-y-3 text-sm', 'rounded-xl bg-card p-4 sm:p-5' => ! $compact])>
