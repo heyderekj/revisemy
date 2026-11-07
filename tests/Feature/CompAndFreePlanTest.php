@@ -33,14 +33,14 @@ class CompAndFreePlanTest extends TestCase
         $workspace->refresh();
         $this->assertTrue($workspace->isComped());
         $this->assertSame(Workspace::PLAN_PRO, $workspace->plan);
-        $this->assertSame(100, (int) $workspace->credits_balance);
+        $this->assertSame(150, (int) $workspace->credits_balance);
         $this->assertSame('Derek', $workspace->comp_note);
         $this->assertSame(90, $workspace->reviewRetentionDays());
 
         $workspace->forceFill(['credits_balance' => 3, 'credits_period_start' => now()->subMonth()->subDay()])->save();
         $workspace = app(CreditsService::class)->ensurePeriod($workspace);
 
-        $this->assertSame(100, (int) $workspace->credits_balance);
+        $this->assertSame(150, (int) $workspace->credits_balance);
     }
 
     public function test_comp_takes_an_owner_review_link(): void

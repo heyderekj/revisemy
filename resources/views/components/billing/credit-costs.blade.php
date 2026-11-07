@@ -9,7 +9,7 @@
 @php
     $burn = config('billing.costs', []);
     $tryCredits = (int) config('billing.plans.free.credits', 40);
-    $plusCredits = (int) config('billing.plans.pro.credits', 100);
+    $plusCredits = (int) config('billing.plans.pro.credits', 150);
     $tryRetention = (int) config('billing.plans.free.review_retention_days', 7);
     $plusRetention = (int) config('billing.plans.pro.review_retention_days', 90);
     $tryRenews = (bool) config('billing.plans.free.renews', true);

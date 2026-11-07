@@ -288,7 +288,7 @@ class CreditsService
             'burn_table' => $this->burnTable(),
             'review_retention_days' => $workspace->reviewRetentionDays(),
             'pro_price_usd' => (int) config('billing.plans.pro.price_usd', 9),
-            'pro_credits' => (int) config('billing.plans.pro.credits', 100),
+            'pro_credits' => (int) config('billing.plans.pro.credits', 150),
             'packs' => $this->packs(),
         ];
     }

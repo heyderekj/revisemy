@@ -136,7 +136,7 @@ class PolarWebhookTest extends TestCase
 
         $fresh = $this->workspace->fresh();
         $this->assertSame(Workspace::PLAN_PRO, $fresh->plan);
-        $this->assertSame(100, (int) $fresh->credits_balance);
+        $this->assertSame(150, (int) $fresh->credits_balance);
         $this->assertTrue($fresh->isPlusActive());
         $this->assertSame('cus_1', $fresh->polar_customer_id);
         $this->assertSame('buyer@example.com', $fresh->billing_email);
@@ -156,7 +156,7 @@ class PolarWebhookTest extends TestCase
 
         $this->deliver('order.paid', $this->order('ord_2', 'prod_plus', 'subscription_cycle'));
 
-        $this->assertSame(100, (int) $this->workspace->fresh()->credits_balance);
+        $this->assertSame(150, (int) $this->workspace->fresh()->credits_balance);
         $this->assertSame(10, (int) $this->workspace->fresh()->purchased_credits);
     }
 
@@ -200,7 +200,7 @@ class PolarWebhookTest extends TestCase
         $fresh = $this->workspace->fresh();
         $this->assertSame(Workspace::PLAN_FREE, $fresh->plan);
         $this->assertFalse($fresh->isPlusActive());
-        $this->assertSame(100, (int) $fresh->credits_balance); // leftover kept
+        $this->assertSame(150, (int) $fresh->credits_balance); // leftover kept
     }
 
     public function test_unknown_workspace_is_acknowledged_and_ignored(): void

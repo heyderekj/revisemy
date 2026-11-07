@@ -80,7 +80,7 @@ PROMPT);
             return 'If `create_review` returns `[insufficient_credits]`, call `get_billing` and tell the human when the monthly credits refill. Paid checkout is off on this server — do not ask them to pay or invent a payment link.';
         }
 
-        $plus = sprintf('Plus ($%d/mo, %d credits/mo)', (int) config('billing.plans.pro.price_usd', 9), (int) config('billing.plans.pro.credits', 100));
+        $plus = sprintf('Plus ($%d/mo, %d credits/mo)', (int) config('billing.plans.pro.price_usd', 9), (int) config('billing.plans.pro.credits', 150));
         $packs = collect(config('billing.packs', []))
             ->map(fn (array $pack, string $key) => sprintf('a %d-credit pack ($%d once, never expires — `product: "%s"`)', $pack['credits'], $pack['price_usd'], $key))
             ->implode(' or ');

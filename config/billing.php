@@ -35,7 +35,7 @@ return [
         ],
         'pro' => [
             'name' => 'Plus',
-            'credits' => (int) env('REVISEMY_PRO_CREDITS', 100),
+            'credits' => (int) env('REVISEMY_PRO_CREDITS', 150),
             'renews' => true,
             'review_retention_days' => (int) env('REVISEMY_PRO_RETENTION_DAYS', 90),
             'token_days' => (int) env('REVISEMY_PRO_TOKEN_DAYS', 365),
