@@ -14,8 +14,12 @@ async function open(page: Page, url: string) {
     await page.goto(path(url));
     // The element list has loaded once Snap shows.
     await expect(page.locator('[data-pick-toggle]')).toBeVisible();
-    await page.getByRole('button', { name: 'Hide', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Hide', exact: true })).toBeHidden();
+    // On a phone the brief starts folded to one line, so there's nothing to hide.
+    const hide = page.getByRole('button', { name: 'Hide', exact: true });
+    if (await hide.isVisible()) {
+        await hide.click();
+        await expect(hide).toBeHidden();
+    }
 }
 
 async function pins(api: any, id: string) {
@@ -102,8 +106,10 @@ test('a tap on a phone marks the element under it @phone', async ({ page }) => {
     const { review, api } = await seedReview('Element tap', { elements: true });
     await open(page, review.review_url);
 
+    // A tap marks only once Mark is on, so scrolling never leaves marks behind.
+    await page.getByRole('button', { name: 'Mark', exact: true }).tap();
     const button = await at(page, 200, 230);
-    await page.mouse.click(button.x, button.y);
+    await page.touchscreen.tap(button.x, button.y);
     const note = page.getByRole('dialog', { name: 'Leave a note' });
     await expect(note.getByText('Leave a note on this button', { exact: true })).toBeVisible();
     await note.getByPlaceholder(/Be specific/).fill('Bigger tap target.');

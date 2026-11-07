@@ -30,6 +30,7 @@ export function appEnv(): Record<string, string> {
         REVISEMY_SECOND_OPINION: 'false',
         REVISEMY_TRY_TOKEN_PER_HOUR: '1000',
         REVISEMY_TRY_TOKEN_PER_DAY: '1000',
+        REVISEMY_WORKSPACES_PER_DAY: '1000',
         VITE_REVERB_APP_KEY: '',
         NIGHTWATCH_ENABLED: 'false',
     };

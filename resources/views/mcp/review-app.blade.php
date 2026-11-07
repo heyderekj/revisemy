@@ -155,11 +155,19 @@
                                 @click="setFit(mode[0])" x-text="mode[1]"></button>
                         </template>
                     </div>
+                    <button type="button" data-mark-toggle
+                        class="absolute bottom-3 left-3 z-30 inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-md shadow-black/[0.12] transition-colors"
+                        x-show="coarse && isPending" x-cloak
+                        :class="marking ? 'bg-foreground text-background' : 'bg-key text-accent-contrast'"
+                        :aria-pressed="marking.toString()"
+                        @click="marking = ! marking; hover = null; if (marking) closeDetail()"
+                        x-text="marking ? 'Cancel' : 'Mark'"></button>
                     <div class="relative max-h-[min(70dvh,36rem)] overflow-auto overscroll-contain rounded-2xl bg-well p-3 pb-14"
                         x-ref="shotBox">
                         <div class="relative w-full rounded-lg bg-raised shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]" x-show="activeShot()" :style="shotFrameStyle(activeShot())">
                             <img class="block w-full rounded-lg" :src="activeShot()?.url" :alt="payload.title" draggable="false">
-                            <div class="absolute inset-0 cursor-crosshair touch-pan-y" x-ref="overlay"
+                            <div class="absolute inset-0 cursor-crosshair" x-ref="overlay"
+                                :class="marking ? 'touch-none ring-2 ring-key/60 rounded-lg [&_button]:pointer-events-none' : 'touch-pan-y'"
                                 @pointerdown="startDraw($event)" @pointermove="moveDraw($event)"
                                 @pointerup="endDraw($event)" @pointercancel="cancelDraw()" @pointerleave="cancelDraw(); hover = null">
 
@@ -170,7 +178,7 @@
                                             x-show="pin.area"
                                             :class="{ 'opacity-50': isSettled(pin) }" :style="pin.area ? rectStyle(pin.area) : ''"></div>
                                         <button type="button"
-                                            class="pointer-events-auto absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition"
+                                            class="pointer-events-auto absolute z-10 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full px-1 text-xs font-semibold shadow-lg ring-2 ring-white transition before:absolute before:-inset-2 before:content-['']"
                                             :class="markerBg(pin.severity) + (isSettled(pin) ? ' opacity-60' : '') + (activePin && activePin.id === pin.id ? ' ring-zinc-900' : '')"
                                             :style="pinStyle(pin)" x-text="'M' + pin.number"
                                             @pointerdown.stop @pointerup.stop @click.stop="showPin(pin)"></button>
@@ -691,6 +699,10 @@
             elementLists: {},
             hover: null,
             tap: null,
+            // Touch, as on the review page: a finger scrolls and opens marks, and
+            // Mark turns the next drag or tap into one.
+            coarse: window.matchMedia('(pointer: coarse)').matches,
+            marking: false,
             pickOn: (() => { try { return localStorage.getItem('rm-pick') !== 'off'; } catch (e) { return true; } })(),
             severities: [
                 { value: 'must-fix', label: 'Must fix' },
@@ -1004,6 +1016,13 @@
                 this.activeFinding = null;
                 this.replyBody = '';
                 this.activePin = this.activePin && this.activePin.id === pin.id ? null : pin;
+                // Bring the opened mark into view, like the popover on the web review.
+                if (this.activePin) {
+                    this.$nextTick(() => {
+                        const detail = Array.from(this.$root.querySelectorAll('[data-mark-detail]')).find((el) => el.offsetParent !== null);
+                        detail?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                }
             },
 
             showFinding(finding) {
@@ -1122,12 +1141,8 @@
             startDraw(e) {
                 if (!this.isPending) return;
                 this.hover = null;
-                // Touch scrolls the capture viewport: a drag stays a scroll,
-                // and only a short tap marks.
-                if (e.pointerType === 'touch') {
-                    this.tap = { x: e.clientX, y: e.clientY, t: Date.now() };
-                    return;
-                }
+                // Touch scrolls the capture viewport and never marks, until Mark is on.
+                if (e.pointerType === 'touch' && ! this.marking) return;
                 if (e.button != null && e.button !== 0) return;
                 const p = this.norm(e);
                 if (! p) return;
@@ -1145,19 +1160,16 @@
                 this.draft.h = Math.abs(p.y - this.draft.y0);
             },
             endDraw(e) {
-                if (e.pointerType === 'touch') {
-                    const tap = this.tap;
-                    this.tap = null;
-                    if (tap && this.isPending && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) <= 8 && Date.now() - tap.t <= 350) this.clickAt(e);
-                    return;
-                }
                 if (!this.draft.drawing) return;
+                const touch = e.pointerType === 'touch';
+                if (touch) this.marking = false;
                 this.draft.drawing = false;
                 const p = this.norm(e) || { x: this.draft.x, y: this.draft.y };
                 const w = Math.abs(p.x - this.draft.x0), h = Math.abs(p.y - this.draft.y0);
                 // A drag of a few screen pixels is a box; anything less is a click.
                 const r = this.$refs.overlay.getBoundingClientRect();
-                if (w * r.width >= 6 && h * r.height >= 6) {
+                const min = touch ? 14 : 6;
+                if (w * r.width >= min && h * r.height >= min) {
                     const x = Math.min(p.x, this.draft.x0), y = Math.min(p.y, this.draft.y0);
                     this.openComposer(x + w / 2, y + h / 2, { x, y, w, h }, { snap: this.pickOn });
                     if (this.pickOn && this.elementsFor(this.activeShot())) this.describeElement({ area: { x, y, w, h } });

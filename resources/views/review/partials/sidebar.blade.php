@@ -4,28 +4,57 @@
 
              A drawer, so the shot gets the room: docked beside it on wide
              screens, over it on narrow ones. --}}
+        {{-- Below lg the drawer sits over the shot: a tap outside puts it away. --}}
+        <div
+            class="fixed inset-0 z-[45] bg-black/25 lg:hidden"
+            x-show="$store.rmPanel?.open"
+            x-cloak
+            x-transition.opacity.duration.150ms
+            x-on:click="$store.rmPanel.toggle()"
+            aria-hidden="true"
+        ></div>
+        {{-- Phones: a sheet from the bottom, over the dock, with the top of the
+             shot still in view. md: a panel from the right. lg: docked beside. --}}
         <div
             id="rm-drawer"
-            class="absolute inset-y-0 right-0 z-30 flex w-full flex-col sm:max-w-[22rem] border-l border-border bg-background shadow-[-16px_0_40px_-24px_rgba(0,0,0,0.35)] lg:static lg:z-auto lg:w-[22rem] lg:shrink-0 lg:shadow-none"
+            class="fixed inset-x-0 bottom-0 z-[46] flex h-[min(78svh,44rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-background shadow-[0_-16px_40px_-24px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:absolute md:inset-x-auto md:inset-y-0 md:right-0 md:h-auto md:max-w-[22rem] md:rounded-none md:border-l md:border-border md:shadow-[-16px_0_40px_-24px_rgba(0,0,0,0.35)] md:ring-0 lg:static lg:z-auto lg:w-[22rem] lg:shrink-0 lg:shadow-none"
             x-show="$store.rmPanel?.open"
             x-cloak
             x-transition:enter="transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
-            x-transition:enter-start="translate-x-4 opacity-0"
+            x-transition:enter-start="max-md:translate-y-8 md:translate-x-4 opacity-0"
             x-transition:leave="transition duration-150"
-            x-transition:leave-end="translate-x-4 opacity-0"
+            x-transition:leave-end="max-md:translate-y-8 md:translate-x-4 opacity-0"
+            x-on:keydown.escape.window="if (window.innerWidth < 1024 && $store.rmPanel.open && ! $event.target.closest('input, textarea')) $store.rmPanel.toggle()"
+            x-data="{
+                startY: null,
+                {{-- Swipe the handle down to put the sheet away. --}}
+                grab(e) { this.startY = e.touches[0].clientY; },
+                drop(e) {
+                    if (this.startY !== null && e.changedTouches[0].clientY - this.startY > 48) $store.rmPanel.toggle();
+                    this.startY = null;
+                },
+            }"
         >
-            <div class="flex shrink-0 items-center justify-between gap-2 px-4 pt-3">
+            <button
+                type="button"
+                class="flex h-5 w-full shrink-0 items-center justify-center md:hidden"
+                x-on:click="$store.rmPanel.toggle()"
+                x-on:touchstart.passive="grab($event)"
+                x-on:touchend="drop($event)"
+                aria-label="Close marks and hints"
+            ><span class="h-1 w-10 rounded-full bg-zinc-300"></span></button>
+            <div class="flex shrink-0 items-center justify-between gap-2 px-4 pt-1 md:pt-3">
                 <p class="text-xs font-medium text-muted-foreground">{{ $mode === 'owner' ? 'Marks and hints' : 'Marks and suggestions' }}</p>
                 <button
                     type="button"
-                    class="inline-flex size-7 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900"
+                    class="inline-flex size-9 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900 md:size-7"
                     x-on:click="$store.rmPanel.toggle()"
                     aria-label="Close marks and hints"
                 >
                     <flux:icon.x-mark variant="micro" class="size-4" />
                 </button>
             </div>
-        <aside class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-3 pt-2 pb-28 [scroll-padding-top:1rem] md:pb-4">
+        <aside class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] [scroll-padding-top:1rem] md:pb-4">
             @php($pins = $this->activeMarks->sortBy(fn ($p) => [$p->awaitsVerification() ? 0 : 1, $p->number])->values())
             @php($parent = $mode === 'owner' ? $review->parent : null)
             @php($previousMarks = $parent ? $parent->screenshots->flatMap->annotations->sortBy(fn ($p) => [$p->awaitsVerification() ? 0 : 1, $p->number])->values() : collect())
@@ -42,7 +71,10 @@
                     init() {
                         this.$watch(() => this.$store.rmFocus.mark, (id) => {
                             if (! id) return;
-                            this.$store.rmPanel?.show();
+                            {{-- Below lg the drawer would cover the shot the mark opened on. --}}
+                            if (window.innerWidth >= 1024) {
+                                this.$store.rmPanel?.show();
+                            }
                             this.panels.marks = true;
                             this.$nextTick(() => document.getElementById('fb-mark-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                         });
@@ -81,7 +113,7 @@
 
                         @if ($pins->isEmpty())
                             <p class="text-sm text-muted-foreground">
-                                {{ $mode === 'owner' ? 'No marks yet. Drag to outline a region, or click for a point.' : 'Nothing marked yet.' }}
+                                {{ $mode === 'owner' ? 'No marks yet. Outline a region or pick a spot on the shot.' : 'Nothing marked yet.' }}
                             </p>
                         @else
                             <ul class="space-y-2.5">
@@ -208,7 +240,7 @@
                                 @if ($mode === 'owner')
                                     No hints open. Share a guest link for another set of eyes.
                                 @else
-                                    Nothing yet. Drag or click on the screenshot to suggest something.
+                                    Nothing yet. Mark the screenshot to suggest a change.
                                 @endif
                             </p>
                         @else

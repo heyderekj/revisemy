@@ -1,6 +1,7 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import './element-pick';
+import './anchor-place';
 
 window.Pusher = Pusher;
 

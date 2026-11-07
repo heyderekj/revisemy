@@ -277,7 +277,7 @@ class SubmitReviewTest extends TestCase
         $this->get(route('reviews.show', $review->token))
             ->assertOk()
             ->assertSee('Hand this to your agent')
-            ->assertSeeInOrder(['Mark what matters', 'Drag on the page to mark a spot', 'Ask for changes', 'Send it to your agent'])
+            ->assertSeeInOrder(['Mark what matters', 'Mark something on the page', 'Ask for changes', 'Send it to your agent'])
             ->assertSee($prompt)
             ->assertSee(e('https://claude.ai/new?q='.rawurlencode($prompt)), false)
             ->assertSee(e('https://chatgpt.com/?q='.rawurlencode($prompt)), false)

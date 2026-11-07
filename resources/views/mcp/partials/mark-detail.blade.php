@@ -1,6 +1,6 @@
 {{-- The open mark: focus crop, the feedback, the fix, and verify/reopen. One
      copy for the screenshot and board views (parity with the board's sheet). --}}
-<div class="mt-3 overflow-hidden rounded-2xl bg-lift shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.06]">
+<div data-mark-detail class="mt-3 scroll-mt-3 overflow-hidden rounded-2xl bg-lift shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.06]">
     <div class="flex items-start justify-between gap-3 px-3 py-3 sm:px-4">
         <div class="flex min-w-0 flex-wrap items-center gap-2">
             <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold" :class="markerBg()" x-text="activePin && ('M' + activePin.number)"></span>
@@ -30,7 +30,16 @@
 
     <div class="space-y-3 px-3 py-3 sm:px-4">
         <div class="mb-1.5" x-show="activePin && activePin.element">@include('mcp.partials.element-chip', ['source' => 'activePin && activePin.element'])</div>
-        <p class="text-sm leading-relaxed text-pretty text-zinc-800" x-text="activePin && activePin.body"></p>
+        <p class="text-sm leading-relaxed text-pretty whitespace-pre-line text-zinc-800" x-text="activePin && activePin.body"></p>
+        {{-- Same as the web detail (components/mark-detail). --}}
+        <div x-show="activePin && activePin.suggested_copy">
+            <p class="text-xs text-muted-foreground">Suggested copy</p>
+            <p class="mt-1 rounded-lg bg-well px-2.5 py-1.5 font-mono text-xs leading-relaxed text-zinc-700" x-text="activePin && activePin.suggested_copy"></p>
+        </div>
+        <div x-show="activePin && activePin.question_answer">
+            <p class="text-xs text-muted-foreground">Answer</p>
+            <p class="mt-1 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs leading-relaxed text-sky-900" x-text="activePin && activePin.question_answer"></p>
+        </div>
         @include('mcp.partials.before-after', ['pin' => 'activePin'])
         {{-- Who did what on this mark, then your reply. --}}
         @include('mcp.partials.mark-timeline', ['pin' => 'activePin'])
