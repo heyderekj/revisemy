@@ -79,11 +79,13 @@ class SkillsPageTest extends TestCase
         }
     }
 
-    public function test_the_product_flow_pack_has_an_installable_skill(): void
+    public function test_the_app_packs_have_installable_skills(): void
     {
-        $this->get('/skills/product-flow')->assertOk()->assertSee('review-product-flow');
-        $this->get('/skills/product-flow.md')->assertOk()->assertSee('review-product-flow');
-        $this->assertFileExists(base_path('plugin/skills/review-product-flow/SKILL.md'));
+        foreach (['product-flow' => 'review-product-flow', 'prototype-review' => 'review-prototypes'] as $pack => $skill) {
+            $this->get("/skills/{$pack}")->assertOk()->assertSee($skill);
+            $this->get("/skills/{$pack}.md")->assertOk()->assertSee($skill);
+            $this->assertFileExists(base_path("plugin/skills/{$skill}/SKILL.md"));
+        }
     }
 
     public function test_an_unknown_pack_or_a_link_only_entry_is_not_a_page(): void
