@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Prompts;
 
+use App\Mcp\Tools\GetReviewSkillTool;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -27,13 +28,14 @@ class CheckPage extends Prompt
 
         $focus = trim(str_replace('"', "'", (string) $request->get('focus', '')));
         $context = $focus !== '' ? $focus : 'First look: hierarchy above the fold, spacing and type, and anything off on mobile.';
+        $skillRouting = GetReviewSkillTool::ROUTING_GUIDANCE;
 
         return Response::text(<<<PROMPT
 Run a ReviseMy design checkup on {$url}.
 
-1. Tell me you're capturing the page; it takes 20 to 60 seconds.
-2. Call `create_review` with `capture_url: true`, `page_url: "{$url}"`, `type: "website"`, a short title, and `context: "{$context}"`.
-3. Share the `review_url` it returns, even if the review also shows here.
+1. {$skillRouting} Tell me you're capturing the page; it takes 20 to 60 seconds.
+2. For a public page as it first loads, call `create_review` with `capture_url: true`, `page_url: "{$url}"`, `type: "website"`, a short title, and `context: "{$context}"`. If the task depends on an interaction or a later state, reproduce it in a browser and send screenshots as `images` with names in `image_details[].state` instead of setting `capture_url`.
+3. If I asked for critique, apply any relevant guidance and post observed findings with `add_findings`. Share the `review_url` even if the review also shows here.
 4. Wait with `wait_for_review` (call it again when it says nothing changed) and follow `next_action` until I approve. Before fixing, `look_at_marks` shows you what I marked. Apply my marks when I ask for changes, then open the next pass with `parent_id`. Never mark your own work verified.
 PROMPT);
     }

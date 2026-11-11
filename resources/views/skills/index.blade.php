@@ -61,7 +61,7 @@
 
     <x-home-section id="community">
         <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Community skills</h2>
-        <p class="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-600">Pick the skill that fits your question. Open its example prompt and swap in your screen or task. Each skill comes from its original author and installs separately.</p>
+        <p class="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-600">Describe what you want reviewed. A connected agent can choose relevant guidance from the skills available through ReviseMy MCP. You can also ask for a skill by name.</p>
 
         <ul class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             @foreach ($community as $skill)
@@ -71,6 +71,9 @@
                     <p class="mt-0.5 text-sm text-zinc-600">By {{ $skill['author'] }}</p>
                     <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-600">{{ $skill['line'] }}</p>
                     <a href="{{ $skill['source'] }}" class="mt-3 w-fit text-sm font-medium text-zinc-900 underline underline-offset-4" aria-label="Original source for {{ $skill['name'] }}">{{ $skill['get'] ?? 'Original source' }}</a>
+                    @isset($skill['mcp'])
+                        <p class="mt-1 text-xs text-zinc-600">Available through ReviseMy MCP</p>
+                    @endisset
                     @isset($skill['setup'])
                         <p class="mt-1 text-xs text-zinc-600">{{ $skill['setup'] }}</p>
                     @endisset
