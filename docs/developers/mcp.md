@@ -48,6 +48,14 @@ Claude Code also has a plugin that adds the server and a `design-checkup` skill:
 
 The server offers two prompts. `design_checkup_loop` walks an agent through the whole loop: capture, `create_review`, share the link, wait with `wait_for_review`, follow `next_action`. `check_page` reviews one live page. Hosts that show prompts list them as starting points.
 
+## Community skills
+
+Describe what you want reviewed, for example, “Are our failed-payment messages clear enough to help someone recover? Put your findings on a ReviseMy review.” The agent can call `get_review_skill` with `focus: copy` to load Better Writing and a workflow for gathering evidence and posting findings. Other supported focuses are `typography`, `motion`, and `variants`. The agent can skip this tool for a general review.
+
+Pass `skill` when the user names one, or call the tool without arguments to list the options. When available, the tool supplies the author's instructions at a fixed revision, source, and license. For motion and variants, it supplies ReviseMy guidance when the agent selects the focus, and loads the author's opt-in skill when the user asks for it. If the original instructions are unavailable, the agent can use an installed copy or ReviseMy's guidance and tell you what it used.
+
+The tool suggests the relevant next calls. Use `get_review` to work on an existing review or `create_review` for a new one when the task calls for it. Use `add_findings` when you have observed issues to share. Findings are suggestions the person can accept or dismiss.
+
 ## Waiting and looking
 
 Two tools keep your agent from guessing:
@@ -80,7 +88,7 @@ Six tools exist only for that inline view: `add_mark`, `add_comment`, `set_comme
 
 ## Tool reference
 
-These are the tools your agent sees, with the descriptions it reads. Each one's REST twin is on [REST API](/docs/rest-api).
+These are the tools your agent sees, with the descriptions it reads. Review operations are also documented in the [REST API](/docs/rest-api).
 
 <!-- generated:tools -->
 The tool list is generated from the server on the site. Read it at [revisemy.com/docs/mcp](https://revisemy.com/docs/mcp#tool-reference), or in `app/Mcp/Tools`.

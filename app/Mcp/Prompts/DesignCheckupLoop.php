@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Prompts;
 
+use App\Mcp\Tools\GetReviewSkillTool;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -16,6 +17,7 @@ class DesignCheckupLoop extends Prompt
     public function handle(Request $request): Response
     {
         $focus = trim((string) $request->get('focus', 'the UI you just changed'));
+        $skillRouting = GetReviewSkillTool::ROUTING_GUIDANCE;
         $outOfCredits = $this->outOfCreditsStep();
         $cost = fn (string $source) => trans_choice('{1} :count credit|[2,*] :count credits', (int) config("billing.costs.{$source}", 1));
         $page = $cost('capture_url');
@@ -28,16 +30,16 @@ You are running a ReviseMy design checkup loop for: {$focus}
 
 ## The loop (do not skip steps)
 
-1. **Pick one ingest source** — `create_review` accepts exactly one. Choose before calling:
+1. **Plan the review** — {$skillRouting} `create_review` accepts exactly one ingest source:
    - **Public website** → `capture_url: true` + `page_url` (type `website`, **{$page}**). Server renders desktop, mobile and tablet. Do not put the page URL in `images`.
    - **Email HTML** → `html: "…"` (type `email`, **{$email}**). Server renders at ~600px.
    - **Slides / PDF** → `pdf: "…"` (type `presentation`, **{$pdf}**). One screenshot per page (max 5).
-   - **Local or app UI** → `images: [data URL or base64]` (type `ui`, **{$images}**). Prefer this for localhost — never pass `http://localhost…` to remote capture; encode as data URLs.
+   - **Local or app UI, interactions, or variants** → reproduce the relevant states in a browser and send `images: [data URL or base64]` (type `ui`, **{$images}**). Name distinct states in `image_details[].state`. Use this for localhost and for tasks that depend on behavior after the page loads.
    - `page_url` alone does **not** trigger capture. Use `capture_url: true` for live pages.
    - If `create_review` returns `[capture_not_configured]` or `[capture_provider_failed]`, immediately fall back to `images` with desktop and mobile data URLs — do not keep retrying `capture_url`.
    - {$outOfCredits}
 2. **Open a review** — Call `create_review` with a short title, optional context (what the human should look at), and the source from step 1.
-3. **Optional subagent critique** — Call `add_findings` with suggestion/a11y/polish notes only (never must-fix). The human still decides.
+3. **Optional critique** — Apply any relevant guidance within the task scope. Call `add_findings` with observed suggestion/a11y/polish notes only (never must-fix). The human still decides.
 4. **Hand off** — Share `review_url` with the human as a markdown image link using the yellow mark (`![ReviseMy](https://revisemy.com/images/app-icon-v9.png?v=9)` wrapping the URL), and put the raw URL in backticks — never a bare `https://revisemy.com/...` autolink (hosts cache an old pink domain favicon). Tell them to mark feedback and approve or request changes.
 5. **Wait** — Call `wait_for_review` with the review id and `since` = `updated_at` (`next_action.wait_with`). It returns the moment the human acts, or after about 45 seconds with `changed: false`; then call it again. If you can't hold a call that long, poll `get_review` about every `next_action.poll_after_seconds` instead. In hosts that show the review inline, the human's decision also arrives as a chat message; when it does, call `get_review` and carry on. While `status` is `pending`, do not claim the UI is done.
 6. **Act on the work packet** — When status changes:

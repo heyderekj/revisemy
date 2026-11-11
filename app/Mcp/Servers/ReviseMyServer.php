@@ -16,6 +16,7 @@ use App\Mcp\Tools\CreatePortalTool;
 use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\DecideReviewTool;
 use App\Mcp\Tools\GetBillingTool;
+use App\Mcp\Tools\GetReviewSkillTool;
 use App\Mcp\Tools\GetReviewTool;
 use App\Mcp\Tools\GetShotElementsTool;
 use App\Mcp\Tools\ListReviewsTool;
@@ -67,6 +68,7 @@ class ReviseMyServer extends Server
         ResolveMarksTool::class,
         ReplyToMarksTool::class,
         RequestSecondOpinionTool::class,
+        GetReviewSkillTool::class,
         // Always on: it reports remaining credits, which gate every create_review.
         GetBillingTool::class,
         CreateCheckoutTool::class,
@@ -115,6 +117,7 @@ class ReviseMyServer extends Server
             self::BASE_INSTRUCTIONS,
             $this->billingInstructions(),
             self::LOOP_INSTRUCTIONS,
+            GetReviewSkillTool::ROUTING_GUIDANCE,
         ]);
     }
 

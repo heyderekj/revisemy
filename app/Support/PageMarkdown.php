@@ -264,9 +264,12 @@ final class PageMarkdown
         $md .= '**A useful mark:** '.$example['mark']."\n\n";
         $md .= '**What to check on the next pass:** '.$example['verify']."\n\n";
 
-        $md .= "## Community skills\n\nEach skill is maintained by its original author and installed separately.\n\n";
+        $md .= "## Community skills\n\nDescribe what you want reviewed. A connected agent can choose relevant guidance from the skills available through ReviseMy MCP. You can also ask for a skill by name.\n\n";
         foreach (config('skills.community', []) as $skill) {
             $md .= '- ['.$skill['name'].']('.$skill['source'].') by '.$skill['author'].' ('.$skill['focus'].'). '.$skill['line'];
+            if (isset($skill['mcp'])) {
+                $md .= ' Available through ReviseMy MCP.';
+            }
             if (isset($skill['install'])) {
                 $md .= ' Install with `'.$skill['install'].'`.';
             }

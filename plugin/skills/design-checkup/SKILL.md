@@ -9,6 +9,8 @@ ReviseMy gives the person a review link. They mark what matters on your capture 
 
 ## Start
 
+When wording, rendered text, motion, or comparing variants is central to the task, call `get_review_skill` before choosing evidence. Use `focus` of `copy`, `typography`, `motion`, or `variants` based on what the person needs. Pass `skill` if they named one. Use `add_findings` to post observed issues as suggestions and say which guidance you used.
+
 1. Capture the work with exactly one source for `create_review`:
    - Local or app UI: `images` as data URLs or base64 (never `http://localhost…`). Type `ui`.
    - A public page: `capture_url: true` with `page_url`. Type `website`; ReviseMy captures desktop and phone.
