@@ -84,6 +84,36 @@ return [
             ],
         ],
 
+        'prototype-review' => [
+            'slug' => 'prototype-review',
+            'path' => '/skills/prototype-review',
+            'category' => 'apps',
+            'label' => 'Prototype review',
+            'line' => 'Compare working design options and capture the reasons behind your choice.',
+            'icon' => 'squares-2x2',
+            'title' => 'Prototype review skill for AI agents',
+            'description' => 'Try UI variants under the same conditions, collect feedback in ReviseMy, and verify the chosen direction on the next pass.',
+            'keywords' => ['prototype review', 'compare UI variants', 'design feedback', 'agent skills'],
+            'headline' => 'Try the options before you choose.',
+            'subheadline' => 'Give reviewers the same task in each prototype. Let them try the interaction, mark what helped or got in the way, and explain which direction they’d ship.',
+            'problem' => 'A filter sheet and an inline filter panel can both look clear in a screenshot. Trying the same search on a phone shows which one makes it easier to change filters and get back to the results.',
+            'loop_steps' => [
+                ['text' => 'Pick one decision and one scenario. For a filter redesign, ask someone to narrow a search and then clear one filter without losing the others.'],
+                ['text' => 'Use the same data, viewport, and starting state for every option. Share the working prototypes and capture a named frame for each direction.'],
+                ['text' => 'Ask reviewers which direction they would choose, what they would keep, and what would make them change their mind.'],
+                ['text' => 'Carry the chosen direction into the next pass and reuse its capture name and viewport so reviewers can compare the change.'],
+            ],
+            'features_heading' => 'One skill',
+            'features' => [
+                ['icon' => 'eye', 'title' => 'review-prototypes', 'body' => 'Plan a fair comparison, collect feedback on named captures, and record the decision with evidence.'],
+            ],
+            'checklist_heading' => 'Install it',
+            'checklist' => [
+                'Run npx skills add heyderekj/revisemy --skill review-prototypes, or install the ReviseMy plugin in Claude Code.',
+                'Ask your agent to compare two working mobile filter prototypes and set up a review where teammates can choose a direction.',
+            ],
+        ],
+
         'homepage' => [
             'slug' => 'homepage',
             'path' => '/skills/homepage',
@@ -277,6 +307,15 @@ return [
     // Original authors maintain these skills. ReviseMy publishes a short
     // recommendation and links to the source for each one.
     'community' => [
+        [
+            'name' => 'Prototype',
+            'author' => 'Emil Kowalski',
+            'focus' => 'Interactive design exploration',
+            'line' => 'Build distinct versions of a UI and switch between them in the browser to try each approach.',
+            'source' => 'https://aiforui.dev/skills/prototype',
+            'install' => 'npx skills@latest add emilkowalski/skills --skill prototype',
+            'prompt' => 'Use Prototype to explore a filter sheet and an inline filter panel. Use the same results and filters in both so I can compare how they behave on a phone.',
+        ],
         [
             'name' => 'Shift Nudge',
             'author' => 'Matt D. Smith',
