@@ -12,148 +12,200 @@ new class extends Component
 ?>
 
 <x-site-shell cta-href="#setup" fathom="Try token" sticky-event="Try token sidebar" :show-reviews-button="false">
-    {{-- Agents the headline cycles through; the hero chat follows the same
-         names on the same clock. Values are x-host-icon names. --}}
+    {{-- Agents the headline cycles through. Values are x-host-icon names. --}}
     @php
-        $heroAgents = ['ChatGPT' => 'chatgpt', 'Claude' => 'claude', 'Copilot' => 'copilot', 'Cursor' => 'cursor', 'Grok' => 'grok'];
+        $heroAgents = ['Claude' => 'claude', 'ChatGPT' => 'chatgpt', 'Copilot' => 'copilot', 'Cursor' => 'cursor', 'Grok' => 'grok'];
     @endphp
 
     {{-- Hero — bottom padding tightened so it reads with How it works below --}}
-    <x-home-section first class="rm-fade-up !pb-8 sm:!pb-10">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <h1 class="max-w-xl text-[clamp(2.4rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900">
-                <span class="rm-hero-mark">
-                    <svg class="rm-hero-mark-frame" aria-hidden="true" focusable="false">
-                        <rect />
-                    </svg>
-                    Visual feedback
-                </span>
-                <br>
-                <span class="sr-only">with your agent.</span>
-                <span aria-hidden="true">
-                    with&nbsp;<span class="rm-agent-cycle">
-                        @foreach (array_keys($heroAgents) as $i => $label)
-                            <span class="rm-agent-cycle-item" style="--i: {{ $i }}">{{ $label }}.</span>
+    <x-home-section first class="@container/hero rm-fade-up !pb-8 sm:!pb-10">
+        <div class="grid gap-8 @min-[44rem]/hero:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] @min-[44rem]/hero:items-center">
+            <div class="min-w-0">
+                <h1 class="max-w-xl text-[clamp(2.25rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900 max-[359px]:text-[2rem] @min-[44rem]/hero:text-[min(5.5vw,6.4cqw,3.75rem)]">
+                    Visual feedback<br aria-hidden="true">
+                    with <span class="sr-only">your agent</span><span class="rm-agent-cycle" aria-hidden="true">
+                        @foreach ($heroAgents as $label => $icon)
+                            <span class="rm-agent-cycle-item gap-[0.18em]" style="--i: {{ $loop->index }}">
+                                <x-host-icon :name="$icon" class="size-[1cap]!" />
+                                {{ $label }}
+                            </span>
                         @endforeach
                     </span>
-                </span>
-            </h1>
-            {{-- Holds the room the sticky Connect button takes on desktop. --}}
-            <div class="hidden h-8 w-48 shrink-0 lg:block" aria-hidden="true"></div>
-        </div>
+                </h1>
 
-        <p class="rm-fade-up-delay mt-5 w-full max-w-xl text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
-            Your agent captures the work — a screenshot, a page, a PDF or an email — and sends you a review. You mark what matters and approve or ask for changes. It reads your marks and keeps going.
-        </p>
+                <p class="rm-fade-up-delay mt-5 w-full max-w-sm text-[15px] leading-relaxed text-pretty text-zinc-600 sm:text-base">
+                    Mark up a page, screenshot, PDF, or email and approve your agent’s fixes when they’re ready.
+                </p>
 
-        {{-- Start a review here instead, and hand its link to an agent later.
-             /new takes a link, screenshots, a PDF or an email. --}}
-        <div class="rm-fade-up-delay mt-6 flex w-full max-w-xl flex-col items-start gap-2">
-            <div class="flex flex-wrap items-center gap-3">
-                <a href="{{ route('reviews.new') }}" class="btn-lit inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-medium">
-                    Start a review
-                    <flux:icon.arrow-right variant="micro" class="size-4" />
-                </a>
-                <a
-                    href="#setup"
-                    id="rm-hero-cta"
-                    data-rm-hero-cta
-                    class="link inline-flex min-h-11 items-center px-1 text-sm font-medium lg:hidden"
-                    onclick="if(window.fathom)fathom.trackEvent('Try token hero')"
-                >Connect your agent</a>
+                {{-- Start a review here instead, and hand its link to an agent later.
+                     /new takes a link, screenshots, a PDF or an email. --}}
+                <div class="rm-fade-up-delay mt-6 flex w-full max-w-xl flex-col items-start gap-2">
+                    <div data-rm-desktop-hero class="flex flex-wrap items-center gap-3">
+                        <a href="{{ route('reviews.new') }}" class="btn-lit inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-medium">
+                            Start a review
+                            <flux:icon.arrow-right variant="micro" class="size-4" />
+                        </a>
+                        <x-try-token-cta
+                            href="#setup"
+                            id="rm-hero-cta"
+                            data-rm-hero-cta
+                            variant="filled"
+                            fathom-event="Try token hero"
+                            class="!h-11 !px-6 lg:!hidden"
+                        />
+                    </div>
+                    <p class="px-1 text-xs text-muted-foreground">Paste a link or add a file. No agent needed.</p>
+                </div>
             </div>
-            <p class="px-1 text-xs text-muted-foreground">Paste a link or add a file. No agent needed.</p>
+            <x-hero-preview-chat class="rm-fade-up-delay @min-[44rem]/hero:justify-self-end" />
         </div>
 
         <div class="rm-fade-up-delay-2 relative mt-8 sm:mt-10">
-            <x-hero-loop-preview :agents="$heroAgents" />
+            <x-hero-loop-preview />
         </div>
     </x-home-section>
 
-    {{-- How it works: joined to hero (no top rule) --}}
-    <x-home-section id="how" joined>
-        <x-section-eyebrow number="01" label="How it works" />
-        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">One feedback loop for anything visual</h2>
-        <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
-            Capture, marks, fixes and approval in one place, so nothing gets lost between passes.
-        </p>
-
-        <div class="mt-6 grid gap-x-8 min-[38rem]:grid-cols-2">
-            <article class="flex items-start gap-3 border-b border-border py-4">
+    <x-home-section id="features" joined class="!pb-8">
+        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Features</h2>
+        <div class="mt-5 grid grid-cols-2 gap-px overflow-clip border-y border-border md:grid-cols-4">
+            <article class="flex min-w-0 flex-col items-start gap-2.5 p-3 shadow-[1px_0_var(--color-border),0_1px_var(--color-border)] sm:p-4">
                 <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-chip text-zinc-600">
                     <flux:icon.photo variant="micro" class="size-[18px]" />
                 </div>
                 <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-zinc-900">Capture anything visual</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Screenshots, a live page on desktop and phone, PDF slides or email HTML. Each kind gets its own checklist.</p>
+                    <h3 class="text-sm font-semibold tracking-tight text-zinc-900">Capture anything visual</h3>
+                    <p class="mt-1.5 text-[13px] leading-5 text-zinc-500">Capture responsive websites or add screenshots, PDFs, or email HTML.</p>
                 </div>
             </article>
 
-            <article class="flex items-start gap-3 border-b border-border py-4">
-                <x-mark-type-icon type="s" class="shrink-0" />
-                <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-zinc-900">Second opinion</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">A checklist on every capture, and vision hints when a key is set. Suggestions, never decisions.</p>
-                    <a
-                        href="/second-opinion"
-                        class="mt-2 inline-block text-sm link"
-                    >Learn more</a>
-                </div>
-            </article>
-
-            <article class="flex items-start gap-3 border-b border-border py-4">
+            <article class="flex min-w-0 flex-col items-start gap-2.5 p-3 shadow-[1px_0_var(--color-border),0_1px_var(--color-border)] sm:p-4">
                 <x-mark-type-icon type="m" class="shrink-0" />
                 <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-zinc-900">Precise marks</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Outline the exact area and say what it is: must fix, nice to have, question or keep. Suggested copy goes straight to the agent.</p>
+                    <h3 class="text-sm font-semibold tracking-tight text-zinc-900">Precise marks</h3>
+                    <p class="mt-1.5 text-[13px] leading-5 text-zinc-500">Mark a spot, area, or element and share its exact styles.</p>
+                    <a href="/precise-marks" class="mt-2 inline-block text-[13px] leading-5 link" aria-label="Learn more about precise marks">Learn more</a>
                 </div>
             </article>
 
-            <article class="flex items-start gap-3 border-b border-border py-4">
+            <article class="flex min-w-0 flex-col items-start gap-2.5 p-3 shadow-[1px_0_var(--color-border),0_1px_var(--color-border)] sm:p-4">
+                <x-mark-type-icon type="s" class="shrink-0" />
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold tracking-tight text-zinc-900">Second opinion</h3>
+                    <p class="mt-1.5 text-[13px] leading-5 text-zinc-500">Get capture checklists and optional AI suggestions.</p>
+                    <a
+                        href="/second-opinion"
+                        class="mt-2 inline-block text-[13px] leading-5 link"
+                    >Learn more</a>
+                </div>
+            </article>
+
+            <article class="flex min-w-0 flex-col items-start gap-2.5 p-3 shadow-[1px_0_var(--color-border),0_1px_var(--color-border)] sm:p-4">
                 <x-mark-type-icon type="g" class="shrink-0" />
                 <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-zinc-900">Guest links</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Send a private link for another set of eyes. No accounts, and your marks still decide.</p>
+                    <h3 class="text-sm font-semibold tracking-tight text-zinc-900">Guest links</h3>
+                    <p class="mt-1.5 text-[13px] leading-5 text-zinc-500">Invite guests to review or reply to a mark without an account.</p>
                     <a
                         href="/guest-links"
-                        class="mt-2 inline-block text-sm link"
+                        class="mt-2 inline-block text-[13px] leading-5 link"
                     >Learn more</a>
                 </div>
             </article>
 
-            <article class="flex items-start gap-3 border-b border-border py-4">
+            <article class="flex min-w-0 flex-col items-start gap-2.5 p-3 shadow-[1px_0_var(--color-border),0_1px_var(--color-border)] sm:p-4">
                 <x-use-case-icon name="queue-list" />
                 <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-zinc-900">Board to done</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Marks go open, resolved, verified, with a before and after for each fix, across every pass.</p>
+                    <h3 class="text-sm font-semibold tracking-tight text-zinc-900">Board to done</h3>
+                    <p class="mt-1.5 text-[13px] leading-5 text-zinc-500">Track each mark from open to verified, with before and after views.</p>
                     <a
                         href="/board"
-                        class="mt-2 inline-block text-sm link"
+                        class="mt-2 inline-block text-[13px] leading-5 link"
                     >Learn more</a>
                 </div>
             </article>
 
-            <article class="flex items-start gap-3 border-b border-border py-4">
+            <article class="flex min-w-0 flex-col items-start gap-2.5 p-3 shadow-[1px_0_var(--color-border),0_1px_var(--color-border)] sm:p-4">
                 <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-chip text-zinc-600">
                     <flux:icon.arrow-path variant="micro" class="size-[18px]" />
                 </div>
                 <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-zinc-900">Approve and loop</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or ask for changes. Your agent reads what’s next and keeps going. <a href="/reviews" class="link">Your reviews</a> lists every one.</p>
+                    <h3 class="text-sm font-semibold tracking-tight text-zinc-900">Approve and loop</h3>
+                    <p class="mt-1.5 text-[13px] leading-5 text-zinc-500">Approve or ask for another pass. Revisit it in <a href="/reviews" class="link">Your reviews</a>.</p>
                 </div>
             </article>
-        </div>
 
-        <div class="mt-6 flex flex-wrap items-center gap-2">
-            <span class="mr-1 text-sm text-muted-foreground">Built for</span>
-            @foreach (config('use-cases.pages', []) + config('use-cases.audiences', []) as $slug => $page)
-                <a href="{{ url('/for/'.$slug) }}" class="inline-flex h-8 items-center gap-1.5 rounded-full bg-chip px-3 text-sm text-zinc-700 transition-colors hover:bg-chip-hover hover:text-zinc-900">
-                    <x-use-case-icon :name="$page['icon']" size="sm" bare />
-                    {{ $page['label'] }}
-                </a>
+            @foreach ([
+                ['window', 'Live page review', 'Inspect and mark elements in a live view of the captured page.', '/live-page-review'],
+                ['document-arrow-down', 'PDF markup and export', 'Mark up PDF text and download a copy with your notes.', '/pdf-markup'],
+                ['chat-bubble-left-right', 'Replies and reactions', 'Reply or react in the same thread as the mark and its fixes.', null],
+                ['chat-bubble-oval-left', 'Reviews in chat', 'Mark up and approve in Claude or other supported chats.', null],
+                ['rectangle-stack', 'Capture UI states', 'Review menus, dialogs, and signed-in screens.', null],
+                ['command-line', 'API and webhooks', 'Create reviews in CI and get notified when a reviewer decides.', null],
+            ] as [$icon, $title, $description, $guide])
+                <article class="flex min-w-0 flex-col items-start gap-2.5 p-3 shadow-[1px_0_var(--color-border),0_1px_var(--color-border)] sm:p-4">
+                    <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-chip text-zinc-600">
+                        <flux:icon :name="$icon" variant="micro" class="size-[18px]" />
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold tracking-tight text-zinc-900">{{ $title }}</h3>
+                        <p class="mt-1.5 text-[13px] leading-5 text-zinc-500">{{ $description }}</p>
+                        @if ($guide)
+                            <a href="{{ $guide }}" class="mt-2 inline-block text-[13px] leading-5 link" aria-label="Learn more about {{ $title }}">Learn more</a>
+                        @endif
+                    </div>
+                </article>
             @endforeach
         </div>
-        <x-pitch-video class="mt-6" />
+    </x-home-section>
+
+    <x-home-section joined class="!pb-8" aria-labelledby="rm-built-for">
+        <x-home-carousel track-id="rm-home-use-cases" label="Use cases" item-name="use case" edge-fade>
+            <x-slot:heading>
+                <h2 id="rm-built-for" class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for</h2>
+            </x-slot:heading>
+
+            @foreach (config('use-cases.pages', []) + config('use-cases.audiences', []) as $slug => $page)
+                <a href="{{ url('/for/'.$slug) }}" class="group flex w-[clamp(9rem,25%,12rem)] shrink-0 snap-start flex-col items-start gap-4 rounded-2xl bg-card p-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-chip-hover focus-visible:outline-offset-[-2px]">
+                    <x-use-case-icon :name="$page['icon']" />
+                    <span class="flex w-full items-center justify-between gap-2">
+                        {{ $page['label'] }}
+                        <flux:icon.arrow-right variant="micro" class="size-3.5 shrink-0 text-zinc-500 group-hover:text-zinc-900" />
+                    </span>
+                </a>
+            @endforeach
+        </x-home-carousel>
+    </x-home-section>
+
+    <x-home-section id="how" joined class="!pb-8">
+        <x-section-eyebrow number="01" label="How it works" />
+        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">One feedback loop for anything visual</h2>
+        <x-home-carousel track-id="rm-home-workflow" label="Review workflow" item-name="step" class="@container/workflow mt-4">
+            <x-slot:heading>
+                <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+                    Capture, marks, fixes and approval in one place, so nothing gets lost between passes.
+                </p>
+            </x-slot:heading>
+
+            @foreach ([
+                ['Start a review', 'Paste a link or add a file, or ask your agent to open a review.', 'link', 'fieldnote.coffee', 'bg-raised text-zinc-700'],
+                ['Mark what should change', 'Point to the exact spot and leave a note your agent can act on.', null, 'Lead with the subscription', 'bg-key/15 text-zinc-900'],
+                ['Check the next pass', 'Review the fixes, then approve or ask for another pass.', 'check', 'Fix ready to verify', 'bg-done-soft text-done-ink'],
+            ] as [$title, $description, $icon, $example, $tone])
+                <article class="w-[calc(100%-2.5rem)] max-w-72 shrink-0 snap-start rounded-2xl bg-card p-4 sm:w-[calc((100%-5.5rem)/2)] @min-[42rem]/workflow:w-[calc((100%-1.5rem)/3)] @min-[42rem]/workflow:max-w-none">
+                    <div class="rm-dot-grid mb-3 flex min-h-16 items-center justify-center rounded-xl bg-well px-2 py-3">
+                        <span class="inline-flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium {{ $tone }}">
+                            @if ($icon)
+                                <flux:icon :name="$icon" variant="micro" class="size-3.5 shrink-0" />
+                            @else
+                                <span class="rounded bg-key px-1 text-[10px] font-semibold text-accent-contrast">M1</span>
+                            @endif
+                            {{ $example }}
+                        </span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-zinc-900">{{ $title }}</h3>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">{{ $description }}</p>
+                </article>
+            @endforeach
+        </x-home-carousel>
     </x-home-section>
 
     {{-- How agents use it --}}
@@ -401,7 +453,7 @@ new class extends Component
             </p>
         </div>
 
-        <p class="mt-6 max-w-xl text-[15px] leading-relaxed text-zinc-600">
+        <p class="mt-6 max-w-sm text-[15px] leading-relaxed text-pretty text-zinc-600">
             Made by <a href="https://heyderekj.com" target="_blank" rel="noreferrer" class="link">Derek</a>, who loves giving design feedback.
             Say hi at <a href="mailto:derekj@hey.com" class="link">derekj@hey.com</a>
             or <a href="https://x.com/heyderekj" target="_blank" rel="noreferrer" class="link">@heyderekj</a>.

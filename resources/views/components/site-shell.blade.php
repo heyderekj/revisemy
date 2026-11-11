@@ -18,16 +18,23 @@
     x-data="{
         mobileNav: false,
         pastHero: false,
+        pastDesktopHero: false,
         atEnd: false,
         get showHeaderCta() { return {{ $cta ? 'true' : 'false' }} && this.pastHero && ! this.atEnd },
         init() {
             const hero = document.querySelector('[data-rm-hero-cta]');
+            const desktopHero = document.querySelector('[data-rm-desktop-hero]');
             const end = document.querySelector('[data-rm-end-cta]');
             if (hero) {
                 // Flips only once the page's own button has fully left the viewport.
                 new IntersectionObserver(([e]) => { this.pastHero = ! e.isIntersecting }).observe(hero);
             } else {
                 this.pastHero = true;
+            }
+            if (desktopHero) {
+                new IntersectionObserver(([entry]) => {
+                    this.pastDesktopHero = entry.boundingClientRect.bottom <= 0;
+                }).observe(desktopHero);
             }
             if (end) {
                 new IntersectionObserver(
@@ -43,7 +50,7 @@
     }"
 >
     {{-- The page column, inset from the viewport. --}}
-    <div class="relative z-10 mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 sm:pt-12 lg:px-8 lg:pt-[var(--rm-site-top)] lg:[--rm-site-top:4rem]">
+    <div class="relative z-10 mx-auto max-w-[1200px] pt-8 sm:pt-12 lg:px-8 lg:pt-[var(--rm-site-top)] lg:[--rm-site-top:4rem]">
         <div class="relative flex min-h-screen gap-6">
 
         {{-- Sidebar --}}
@@ -58,7 +65,7 @@
         </aside>
 
         {{-- Main --}}
-        <main id="top" class="min-w-0 flex-1 lg:pt-10 [--rm-pad:1.25rem] sm:[--rm-pad:2rem] lg:[--rm-pad:3rem]">
+        <main id="top" class="min-w-0 flex-1 lg:pt-10 [--rm-pad:1rem] sm:[--rm-pad:1.5rem] lg:[--rm-pad:3rem]">
             {{-- Phone top bar: logo, then Connect once the page's own has scrolled
                  away, then the menu. The wordmark slides under the icon to make room. --}}
             <div class="sticky top-0 z-40 flex items-center justify-between gap-3 bg-canvas/85 px-[var(--rm-pad)] py-3 backdrop-blur-md lg:hidden">
@@ -132,7 +139,8 @@
                                 @if ($showReviewsButton)
                                     <x-your-reviews-button />
                                 @endif
-                                <x-try-token-cta :href="$ctaHref" :fathom-event="$stickyEvent ?? $fathom.' sticky'" />
+                                <x-try-token-cta :href="$ctaHref" :fathom-event="$stickyEvent ?? $fathom.' sticky'" variant="filled" x-show="! pastDesktopHero" />
+                                <x-try-token-cta :href="$ctaHref" :fathom-event="$stickyEvent ?? $fathom.' sticky'" x-show="pastDesktopHero" x-cloak />
                             </div>
                         </div>
                     </div>

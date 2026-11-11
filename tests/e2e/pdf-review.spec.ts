@@ -36,6 +36,7 @@ test('a 30-page PDF preserves a text mark through export and a moved, revised sl
     await search.press('Enter');
     await page.getByRole('button', { name: /Page 18.*wholesale dashboard/ }).click();
     await expect(page.getByRole('spinbutton', { name: 'PDF page number' })).toHaveValue('18');
+    await expect(page.getByRole('button', { name: 'Mark an area' })).toBeVisible();
     const line = page.locator('.textLayer span').filter({ hasText: original });
     await expect(line).toBeVisible();
     await line.evaluate((element) => {
@@ -84,6 +85,7 @@ test('a 30-page PDF preserves a text mark through export and a moved, revised sl
     const jump = page.getByRole('spinbutton', { name: 'PDF page number' });
     await jump.fill('4');
     await jump.press('Enter');
+    await expect(page.getByRole('button', { name: 'Screenshot: Page 4' })).toBeVisible();
     await page.getByRole('button', { name: 'Compare with previous pass' }).click();
     await expect(page.getByText('Previous pass · Page 18')).toBeVisible();
     await expect(page.getByText('This pass · Page 4')).toBeVisible();

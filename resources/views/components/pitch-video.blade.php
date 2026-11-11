@@ -1,4 +1,4 @@
-{{-- The one-minute tour: a thumbnail that opens a lightbox and plays with
+{{-- The one-minute tour opens a lightbox and plays with
      sound. There's a light and a dark cut; the lightbox plays whichever
      matches the page (Flux puts .dark on <html>) at the moment it opens.
      Sources live in public/videos; the video project is marketing/video. --}}
@@ -47,23 +47,15 @@
     <button
         type="button"
         x-on:click="show()"
-        class="group flex items-center gap-3 rounded-2xl bg-card p-1.5 pr-4 text-left transition hover:bg-chip active:scale-[0.98]"
+        class="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-card px-3 text-xs font-medium text-zinc-900 transition-colors hover:bg-chip"
         aria-haspopup="dialog"
+        aria-describedby="rm-tour-description"
     >
-        <span class="relative block aspect-video w-28 shrink-0 overflow-hidden rounded-xl ring-1 ring-black/[0.06] sm:w-32">
-            <img src="{{ $posters['light'] }}" alt="" width="1280" height="720" loading="lazy" decoding="async" class="size-full object-cover night:hidden">
-            <img src="{{ $posters['dark'] }}" alt="" width="1280" height="720" loading="lazy" decoding="async" class="hidden size-full object-cover night:block">
-            <span class="absolute inset-0 flex items-center justify-center bg-black/10 transition group-hover:bg-black/0">
-                <span class="flex size-9 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md transition group-hover:scale-110">
-                    <svg viewBox="0 0 16 16" class="ml-0.5 size-3.5" fill="currentColor" aria-hidden="true"><path d="M4 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.2 2.1A.8.8 0 0 0 4 2.8Z" /></svg>
-                </span>
-            </span>
-        </span>
-        <span class="min-w-0">
-            <span class="block text-sm font-semibold text-zinc-900">Watch the tour</span>
-            <span class="block text-sm text-zinc-500">See a review go from marks to verified · <span class="tabular-nums">{{ $duration }}</span></span>
-        </span>
+        <flux:icon.play variant="micro" class="size-3.5 shrink-0" />
+        <span>Watch the tour</span>
+        <span class="tabular-nums text-muted-foreground">· {{ $duration }}</span>
     </button>
+    <span id="rm-tour-description" class="sr-only">See a review go from marks to verified</span>
 
     <template x-teleport="body">
         <div

@@ -48,6 +48,12 @@ Route::get('/board', [GuideController::class, 'show'])
     ->defaults('slug', 'board');
 Route::get('/guest-links', [GuideController::class, 'show'])
     ->defaults('slug', 'guest-links');
+Route::get('/precise-marks', [GuideController::class, 'show'])
+    ->defaults('slug', 'precise-marks');
+Route::get('/live-page-review', [GuideController::class, 'show'])
+    ->defaults('slug', 'live-page-review');
+Route::get('/pdf-markup', [GuideController::class, 'show'])
+    ->defaults('slug', 'pdf-markup');
 Route::get('/skills', [SkillsController::class, 'index']);
 Route::get('/skills/{slug}', [SkillsController::class, 'show'])
     ->where('slug', '[a-z]+(?:-[a-z]+)*');

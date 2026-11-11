@@ -25,22 +25,15 @@
 
     {{-- Hero photo: a mug on a saucer, beans on the table --}}
     <div class="absolute left-[60%] top-[16%] h-[42%] w-[34%] overflow-hidden rounded-[1.2cqw] bg-attention-soft">
-        <svg viewBox="0 0 120 90" preserveAspectRatio="xMidYMid slice" class="size-full" aria-hidden="true">
-            <rect y="60" width="120" height="30" class="fill-attention/25" />
-            <path d="M40 22c-3-4 3-7 0-11M50 20c-3-4 3-7 0-11M60 22c-3-4 3-7 0-11" class="stroke-attention-ink/40" stroke-width="1.6" fill="none" stroke-linecap="round" />
-            <ellipse cx="50" cy="66" rx="32" ry="6.5" class="fill-zinc-50" />
-            <ellipse cx="50" cy="65" rx="22" ry="3.5" class="fill-black/5" />
-            <path d="M30 32h40v22a10 10 0 0 1-10 10H40a10 10 0 0 1-10-10Z" class="fill-zinc-50" />
-            <path d="M70 37h4a7 7 0 0 1 0 14h-4" class="stroke-zinc-50" stroke-width="3.2" fill="none" />
-            <ellipse cx="50" cy="32" rx="20" ry="3.6" class="fill-attention-ink" />
-            @foreach ([[92, 70, 20], [101, 76, -30], [86, 80, 60], [106, 66, 10]] as [$x, $y, $r])
-                <g transform="translate({{ $x }} {{ $y }}) rotate({{ $r }})">
-                    <ellipse rx="4.2" ry="2.8" class="fill-attention-ink" />
-                    <path d="M-3.4 0q1.7-1 3.4 0t3.4 0" class="stroke-attention-soft" stroke-width="0.7" fill="none" />
-                </g>
-            @endforeach
-        </svg>
-        <p class="absolute bottom-[6%] left-[6%] text-[1.15cqw] text-zinc-500">Kochere, washed. Light roast.</p>
+        <img
+            src="{{ asset('images/fieldnote-coffee.webp') }}"
+            alt=""
+            width="768"
+            height="576"
+            class="size-full object-cover"
+            decoding="async"
+        >
+        <p class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-[6%] pb-[5%] pt-[8%] text-[1.15cqw] text-white">Kochere, washed. Light roast.</p>
     </div>
 
     {{-- Product cards --}}
