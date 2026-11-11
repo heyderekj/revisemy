@@ -70,6 +70,7 @@ class CreateReviewTool extends Tool
             'image_details.*' => 'nullable|array',
             'image_details.*.dpr' => 'nullable|numeric|between:0.5,4',
             'image_details.*.elements' => 'nullable',
+            'image_details.*.state' => 'nullable|string|max:80',
             'capture_url' => 'nullable|boolean',
             'pdf' => 'nullable|string',
             'html' => 'nullable|string|max:500000',
@@ -95,7 +96,7 @@ class CreateReviewTool extends Tool
         $pagesNote = $truncated
             ? 'Only the first '.count($payload['screenshots']).' of '.$truncated['meta']['total_pages'].' PDF pages were rendered — split the deck to review the rest.'."\n\n"
             : '';
-        $captureNote = $this->captureFailedNote($payload);
+        $captureNote = $this->captureNote($payload);
 
         return Response::make(Response::text(
             "Review created{$passLabel} — waiting on the human.\n\n".
@@ -118,19 +119,23 @@ class CreateReviewTool extends Tool
      *
      * @param  array<string, mixed>  $payload
      */
-    protected function captureFailedNote(array $payload): string
+    protected function captureNote(array $payload): string
     {
-        $failed = collect($payload['screenshots'] ?? [])
-            ->contains(fn ($shot) => ($shot['meta']['origin'] ?? null) === 'capture_failed');
-
-        if (! $failed) {
-            return '';
+        $notes = [];
+        foreach ($payload['screenshots'] as $shot) {
+            $quality = $shot['capture_quality'];
+            if (($quality['status'] ?? null) === 'failed') {
+                $reason = $shot['meta']['capture_error'] ?? 'Capture failed.';
+                preg_match('/\[(capture_[a-z_]+)\]\s*(.*)/s', $reason, $failure);
+                $tag = isset($failure[1]) ? "[{$failure[1]}] " : '';
+                $detail = $failure[2] ?? $reason;
+                $notes[] = "{$tag}Capture failed for {$shot['label']}. {$detail} Call add_screenshot with id `{$payload['id']}` and replace_id {$shot['id']} before sharing the link.";
+            } elseif (($quality['status'] ?? null) === 'partial') {
+                $notes[] = "{$shot['label']}: {$quality['message']} Verify or recapture it before treating missing content as a design issue.";
+            }
         }
 
-        preg_match('/\[(capture_[a-z_]+)\]/', (string) ($payload['context'] ?? ''), $code);
-        $tag = isset($code[1]) ? "[{$code[1]}] " : '';
-
-        return "{$tag}Capture failed, so this review has no page shot yet. Call add_screenshot with id `{$payload['id']}` and the page as an image data URL, once for desktop and once for mobile, before you share the link.\n\n";
+        return $notes === [] ? '' : implode("\n", $notes)."\n\n";
     }
 
     /** A source's cost from config/billing.php, as the schema says it. */
@@ -161,13 +166,13 @@ class CreateReviewTool extends Tool
                 ->max(5)
                 ->description('Local or app UI: 1–5 screenshots as data URLs or base64 (costs '.$this->cost('images').'). Prefer this for localhost — do not send http://localhost to remote capture. For public websites use capture_url. Provide exactly one source: images, capture_url, pdf, or html.'),
             'image_details' => $schema->array()
-                ->items($schema->object()->description('{dpr, elements} for the image at the same position'))
+                ->items($schema->object()->description('{dpr, elements, state} for the image at the same position. State is an optional label such as Mobile menu open.'))
                 ->max(5)
-                ->description('Optional, one per image in the same order. dpr: device pixels per CSS px (2 for a retina screenshot), so the human sees it at its real size. elements: the element map from running the script at '.url('/capture/elements.js').' (also the revisemy://capture/elements.js resource) with page.evaluate in the browser you screenshot, at the top of the page, right after a full-page shot. With it, the human can click a button or heading to mark it, and each mark tells you its selector, text and styles.'),
+                ->description('Optional, one per image in the same order. dpr: device pixels per CSS px (2 for a retina screenshot). elements: run '.url('/capture/elements.js').' with page.evaluate in the browser you screenshot, right after a full-page shot at the top of the page. state: use the same name on each pass to compare. For menus, forms and signed-in pages, '.url('/capture/states.mjs').' can capture named states from an existing Playwright or Puppeteer page.'),
             'capture_url' => $schema->boolean()
                 ->description('Capture page_url server-side (desktop, mobile and tablet, sharp at 2×; costs '.$this->cost('capture_url').'). Public URLs only — for localhost use images data URLs. Requires REVISEMY_CAPTURE_DRIVER=hosted|browsershot. On [capture_not_configured] or [capture_provider_failed], immediately retry once with images. On [insufficient_credits], call get_billing (monthly refill); create_checkout only if pricing is enabled.'),
             'pdf' => $schema->string()
-                ->description('A PDF as https URL or base64 — rendered one screenshot per page, max 5 (type defaults to slide / `presentation`; costs '.$this->cost('pdf').').'),
+                ->description('A PDF as https URL or base64, up to 20 MB and 150 pages. The review link opens a searchable PDF with text selection and annotations. Type defaults to presentation; costs '.$this->cost('pdf').'.'),
             'html' => $schema->string()
                 ->description('Raw HTML of an email — rendered at ~600px like a mail client (type defaults to email; costs '.$this->cost('html').'). Requires REVISEMY_CAPTURE_DRIVER. On [capture_not_configured] or [capture_provider_failed], fall back to images with data URLs.'),
         ];

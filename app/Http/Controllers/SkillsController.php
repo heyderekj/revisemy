@@ -11,6 +11,8 @@ class SkillsController extends Controller
     {
         return view('skills.index', [
             'categories' => SkillPacks::categories(),
+            'community' => config('skills.community', []),
+            'example' => config('skills.review_example'),
         ]);
     }
 

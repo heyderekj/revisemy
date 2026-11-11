@@ -21,13 +21,15 @@ class ElementTarget
     /** How far outside a picked element's box the click may land (share). */
     public const PICK_TOLERANCE = 0.01;
 
+    public const MAX_REFERENCES = 6;
+
     /**
      * @param  array{x: float, y: float, w: float, h: float}|null  $area
      * @return array<string, mixed>|null
      */
     public static function resolve(Screenshot $shot, float $x, float $y, ?array $area, int|string|null $picked = null): ?array
     {
-        $map = $shot->elementMap();
+        $map = $shot->hasElementTargets() ? $shot->elementMap() : null;
 
         return $map === null ? null : self::fromMap($map, $shot->cssSize(), $x, $y, $area, $picked);
     }
@@ -181,7 +183,7 @@ class ElementTarget
 
     /**
      * The values a person sees under Inspect, in order, without defaults.
-     * Colour rows carry the hex for a swatch.
+     * Color rows carry the hex for a swatch.
      *
      * @param  array<string, mixed>  $target
      * @return list<array{label: string, value: string, swatch?: string}>
@@ -193,7 +195,7 @@ class ElementTarget
         $rows = [];
 
         if (is_array($box)) {
-            $rows[] = ['label' => 'Size', 'value' => "{$box['w']} × {$box['h']}"];
+            $rows[] = ['label' => 'Size', 'value' => "{$box['w']} × {$box['h']} px"];
         }
 
         if (isset($styles['fs'])) {
@@ -204,7 +206,7 @@ class ElementTarget
             ]))];
         }
 
-        foreach (['c' => 'Colour', 'bg' => 'Fill'] as $key => $label) {
+        foreach (['c' => 'Color', 'bg' => 'Background'] as $key => $label) {
             if (($hex = ElementMap::colour($styles[$key] ?? null)) !== null) {
                 $rows[] = ['label' => $label, 'value' => $hex, 'swatch' => $hex];
             }
@@ -227,6 +229,38 @@ class ElementTarget
             $rows[] = ['label' => 'Gap', 'value' => self::px($styles['g'])];
         }
 
+        $text = $target['text'] ?? $target['label'] ?? null;
+        if (is_string($text) && $text !== '') {
+            $rows[] = ['label' => 'Text', 'value' => $text];
+        }
+
+        if (isset($styles['d'])) {
+            $rows[] = ['label' => 'Layout', 'value' => ucfirst($styles['d'])];
+        }
+
+        foreach ([
+            'ff' => ['Font family', 'Typography'],
+            'fs' => ['Font size', 'Typography'],
+            'fw' => ['Font weight', 'Typography'],
+            'lh' => ['Line height', 'Typography'],
+            'ls' => ['Letter spacing', 'Typography'],
+            'fd' => ['Direction', 'Layout'],
+            'ai' => ['Align items', 'Layout'],
+            'jc' => ['Justify content', 'Layout'],
+            'fwra' => ['Wrap', 'Layout'],
+            'm' => ['Margin', 'Layout'],
+            'sh' => ['Shadow', 'Appearance'],
+        ] as $key => [$label, $group]) {
+            if (isset($styles[$key])) {
+                $value = match ($key) {
+                    'fs', 'lh', 'ls' => self::px($styles[$key]),
+                    'm' => self::sides($styles[$key]),
+                    default => (string) $styles[$key],
+                };
+                $rows[] = ['label' => $label, 'value' => $value, 'group' => $group];
+            }
+        }
+
         return $rows;
     }
 
@@ -242,7 +276,8 @@ class ElementTarget
         $names = [
             'fs' => 'font_size', 'lh' => 'line_height', 'fw' => 'font_weight', 'ff' => 'font_family',
             'c' => 'color', 'bg' => 'background', 'p' => 'padding', 'r' => 'radius', 'b' => 'border',
-            'g' => 'gap', 'd' => 'display',
+            'g' => 'gap', 'd' => 'display', 'ls' => 'letter_spacing', 'm' => 'margin', 'sh' => 'box_shadow',
+            'ai' => 'align_items', 'jc' => 'justify_content', 'fd' => 'flex_direction', 'fwra' => 'flex_wrap',
         ];
         $readable = [];
 
@@ -271,6 +306,83 @@ class ElementTarget
         }
 
         return null;
+    }
+
+    /** Resolve captured elements on the same screenshot as the feedback. */
+    public static function references(?Screenshot $shot, array $indices): array
+    {
+        if ($indices === [] || ! $shot?->hasElementTargets()) {
+            return [];
+        }
+
+        $elements = $shot?->elementMap()['elements'] ?? [];
+        $references = [];
+
+        foreach ($indices as $key) {
+            if ((! is_int($key) && ! is_string($key)) || ! preg_match('/^(\d+)(?::([A-Za-z ]{1,24}))?$/D', (string) $key, $parts)) {
+                continue;
+            }
+
+            $index = (int) $parts[1];
+            if (! isset($elements[$index])) {
+                continue;
+            }
+
+            $reference = self::snapshot($elements[$index], $index, 'mentioned');
+            if (isset($parts[2])) {
+                $row = collect(self::inspectRows($reference))->firstWhere('label', $parts[2]);
+                if (! $row) {
+                    continue;
+                }
+
+                $reference['property'] = array_diff_key($row, ['group' => true]);
+            }
+
+            $references[self::referenceKey($reference)] = $reference;
+
+            if (count($references) >= self::MAX_REFERENCES) {
+                break;
+            }
+        }
+
+        return array_values($references);
+    }
+
+    public static function toggleReference(?Screenshot $shot, array $selected, string $referenceKey): array
+    {
+        foreach ($selected as $key => $reference) {
+            if (self::referenceKey($reference) === $referenceKey) {
+                unset($selected[$key]);
+
+                return array_values($selected);
+            }
+        }
+
+        return count($selected) < self::MAX_REFERENCES
+            ? [...$selected, ...self::references($shot, [$referenceKey])]
+            : $selected;
+    }
+
+    public static function referenceKey(array $reference): string
+    {
+        return (string) $reference['index'].(isset($reference['property']) ? ':'.$reference['property']['label'] : '');
+    }
+
+    public static function referenceLabel(array $reference): string
+    {
+        return isset($reference['property'])
+            ? $reference['property']['label'].' · '.$reference['property']['value']
+            : ($reference['summary'] ?? self::summary($reference));
+    }
+
+    public static function referencesForAgent(?array $references): array
+    {
+        return array_values(array_filter(array_map(
+            fn (array $reference) => ($element = self::forAgent($reference))
+                ? $element + array_intersect_key($reference, ['property' => true])
+                : null,
+            $references ?? [],
+        )));
     }
 
     /**

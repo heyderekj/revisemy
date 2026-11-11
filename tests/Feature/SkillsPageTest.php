@@ -33,12 +33,8 @@ class SkillsPageTest extends TestCase
         $html = $this->get('/skills/homepage')->assertOk()->assertSee($page['headline'])->getContent();
         $markdown = $this->get('/skills/homepage.md')->assertOk()->getContent();
 
-        foreach (glob(base_path('plugin/skills/*'), GLOB_ONLYDIR) as $dir) {
-            $skill = basename($dir);
-            if (in_array($skill, ['design-checkup', 'faith-homepage'], true)) {
-                continue;
-            }
-
+        foreach (array_column($page['features'], 'title') as $skill) {
+            $this->assertFileExists(base_path("plugin/skills/{$skill}/SKILL.md"));
             $this->assertStringContainsString($skill, $html, "/skills/homepage is missing {$skill}.");
             $this->assertStringContainsString($skill, $markdown, "/skills/homepage.md is missing {$skill}.");
         }
@@ -50,6 +46,44 @@ class SkillsPageTest extends TestCase
             ->assertSee(config('skills.packs.faith.headline'))
             ->assertSee('faith-homepage');
         $this->get('/skills/faith.md')->assertOk()->assertSee('faith-homepage');
+    }
+
+    public function test_community_skills_credit_their_authors_and_link_to_the_original_source(): void
+    {
+        $html = $this->get('/skills')->assertOk()->assertSee('Community skills');
+        $markdown = $this->get('/skills.md')->assertOk()->assertSee('## Community skills');
+
+        foreach (config('skills.community') as $skill) {
+            $html->assertSee($skill['author'])->assertSee('href="'.$skill['source'].'"', false);
+            $markdown->assertSee($skill['author'])->assertSee($skill['source'], false);
+            $html->assertSee($skill['prompt']);
+            $markdown->assertSee($skill['prompt']);
+            if (isset($skill['install'])) {
+                $html->assertSee($skill['install']);
+                $markdown->assertSee($skill['install']);
+            }
+        }
+
+        $html->assertSee('Get the skill from Shift Nudge');
+        $markdown->assertSee('Shift Nudge sends the file by email.');
+    }
+
+    public function test_the_example_shows_how_to_request_feedback_and_verify_a_fix(): void
+    {
+        $example = config('skills.review_example');
+        foreach (['/skills', '/skills.md'] as $path) {
+            $this->get($path)->assertOk()
+                ->assertSee($example['request'])
+                ->assertSee($example['mark'])
+                ->assertSee($example['verify']);
+        }
+    }
+
+    public function test_the_product_flow_pack_has_an_installable_skill(): void
+    {
+        $this->get('/skills/product-flow')->assertOk()->assertSee('review-product-flow');
+        $this->get('/skills/product-flow.md')->assertOk()->assertSee('review-product-flow');
+        $this->assertFileExists(base_path('plugin/skills/review-product-flow/SKILL.md'));
     }
 
     public function test_an_unknown_pack_or_a_link_only_entry_is_not_a_page(): void

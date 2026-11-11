@@ -27,7 +27,6 @@ return [
             'tab' => true,
             'label' => 'Apps',
             'line' => 'Screens inside your product, on the web or a phone.',
-            'soon' => 'Packs for onboarding, empty states and settings.',
         ],
         'email' => [
             'tab' => true,
@@ -54,6 +53,36 @@ return [
     ],
 
     'packs' => [
+
+        'product-flow' => [
+            'slug' => 'product-flow',
+            'path' => '/skills/product-flow',
+            'category' => 'apps',
+            'label' => 'Product flow review',
+            'line' => 'Review onboarding, checkout or a form across the states people actually encounter.',
+            'icon' => 'squares-2x2',
+            'title' => 'Product flow review skill for AI agents',
+            'description' => 'Review onboarding, forms and checkout in the browser. Capture named states and put actionable findings on a ReviseMy review.',
+            'keywords' => ['product design review', 'onboarding review', 'checkout review', 'agent skills'],
+            'headline' => 'Review the whole flow.',
+            'subheadline' => 'Follow a real task and see what happens before, during, and after it. Give each state its own frame so people can mark the exact moment that needs work.',
+            'problem' => 'A screenshot of a completed screen misses the moments that make a flow confusing. A form can look great until an error appears, focus disappears, or a confirmation gives no next step.',
+            'loop_steps' => [
+                ['text' => 'Pick one task and capture the states that change what the person sees or can do. Name them, for example Checkout, Card declined, and Order confirmed.'],
+                ['text' => 'Bring in a community skill if it helps. Better Writing can review the error message, and Review Animations can inspect the transition in the browser.'],
+                ['text' => 'Ask the agent to open a ReviseMy review and add its findings as suggestions. You decide what to fix.'],
+                ['text' => 'On the next pass, capture the same states with the same names and viewport to compare the fix.'],
+            ],
+            'features_heading' => 'One skill',
+            'features' => [
+                ['icon' => 'eye', 'title' => 'review-product-flow', 'body' => 'Follow a task through key states, rank observed issues, and hand the person an annotated review or a short report.'],
+            ],
+            'checklist_heading' => 'Install it',
+            'checklist' => [
+                'Run npx skills add heyderekj/revisemy --skill review-product-flow, or install the ReviseMy plugin in Claude Code.',
+                'Ask your agent to review the checkout on a phone, including the declined card and confirmation states.',
+            ],
+        ],
 
         'homepage' => [
             'slug' => 'homepage',
@@ -235,6 +264,82 @@ return [
             'line' => 'Your agent sends a review when it changes something visual, then fixes what you mark.',
         ],
 
+    ],
+
+    'review_example' => [
+        'title' => 'Example: review a declined card',
+        'brief' => 'A shopper entered a card on mobile and the payment failed. Can they recover without re-entering their details?',
+        'request' => 'Review the mobile checkout with Better Writing. Use test payment data and capture Checkout ready, Card declined, and Order confirmed. Add only findings you can show on those states, and send me the ReviseMy link.',
+        'mark' => 'The error says “Something went wrong” above the form. I can’t tell whether to retry or change cards. Put the message beside the card field and say “Your card was declined. Try another card.”',
+        'verify' => 'Capture Card declined again at the same phone width. Check that the message sits beside the card field and that shoppers can change cards without re-entering their shipping address.',
+    ],
+
+    // Original authors maintain these skills. ReviseMy publishes a short
+    // recommendation and links to the source for each one.
+    'community' => [
+        [
+            'name' => 'Shift Nudge',
+            'author' => 'Matt D. Smith',
+            'focus' => 'Screen critique',
+            'line' => 'Start here when a screen feels off and you need a second pair of eyes on what to fix first.',
+            'source' => 'https://shiftnudge.com/skill',
+            'get' => 'Get the skill from Shift Nudge',
+            'setup' => 'Shift Nudge sends the file by email.',
+            'prompt' => 'Use Shift Nudge to critique this mobile settings screen. Its job is to help someone change who can see their profile. Point to the biggest issue you can see, and suggest one small change I can try.',
+        ],
+        [
+            'name' => 'Review Animations',
+            'author' => 'Emil Kowalski',
+            'focus' => 'Motion',
+            'line' => 'Check an existing menu, sheet, or transition for timing, easing, and responsiveness. Run the interaction in a browser to see how it moves.',
+            'source' => 'https://github.com/emilkowalski/skills/tree/main/skills/review-animations',
+            'install' => 'npx skills add emilkowalski/skills --skill review-animations',
+            'prompt' => 'Use Review Animations on this mobile filter sheet. Open it, dismiss it, and try it with reduced motion. Tell me what you reproduced, where it happens in the code, and what to adjust.',
+        ],
+        [
+            'name' => 'Better Writing',
+            'author' => 'Jakub Krehel',
+            'focus' => 'Interface copy',
+            'line' => 'Give buttons, empty states, and error messages clear next steps in the product’s voice.',
+            'source' => 'https://github.com/jakubkrehel/skills/tree/main/skills/better-writing',
+            'install' => 'npx skills add jakubkrehel/skills --skill better-writing',
+            'prompt' => 'Use Better Writing to review our empty inbox and failed-send states. For each unclear message, show the current words, an exact replacement, and the next step the person should take.',
+        ],
+        [
+            'name' => 'Better Typography',
+            'author' => 'Jakub Krehel',
+            'focus' => 'Typography',
+            'line' => 'Check how headings wrap, how long labels truncate, and whether the type scale holds up across viewport sizes.',
+            'source' => 'https://github.com/jakubkrehel/skills/tree/main/skills/better-typography',
+            'install' => 'npx skills add jakubkrehel/skills --skill better-typography',
+            'prompt' => 'Use Better Typography to check this pricing page on desktop and at 375 CSS pixels. Look for awkward wraps and truncated plan names. Name the affected heading or label and suggest a specific change.',
+        ],
+        [
+            'name' => 'Impeccable',
+            'author' => 'Paul Bakaus',
+            'focus' => 'Design critique',
+            'line' => 'Use critique for design priorities or audit for issues such as contrast, theming, and responsive layout.',
+            'source' => 'https://github.com/pbakaus/impeccable',
+            'install' => 'npx impeccable install',
+            'prompt' => 'Use Impeccable’s critique on this pricing page. A first-time buyer needs to choose a plan. Rank the three findings that most affect that decision and show me where each one appears.',
+        ],
+        [
+            'name' => 'Web Design Guidelines',
+            'author' => 'Vercel',
+            'focus' => 'Accessibility and UI checks',
+            'line' => 'Review interface code for issues such as keyboard focus, form behavior, and responsive layouts, with findings tied to source lines.',
+            'source' => 'https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines',
+            'install' => 'npx skills add vercel-labs/agent-skills --skill web-design-guidelines',
+            'prompt' => 'Use Web Design Guidelines to review the checkout form. Check keyboard focus and how errors are announced. Give me the steps to reproduce each issue and point to the relevant file and line.',
+        ],
+        [
+            'name' => 'Stitched Full-Page Capture',
+            'author' => 'Meng To',
+            'focus' => 'Capture',
+            'line' => 'Capture a page in settled slices when a single screenshot misses sections that reveal as you scroll.',
+            'source' => 'https://github.com/MengTo/Skills/tree/main/agent-skills/codex/stitched-full-page-capture',
+            'prompt' => 'Use Stitched Full-Page Capture on this page. Its customer stories appear only after scrolling. Check that the final image includes them and tell me which parts, if any, are still missing.',
+        ],
     ],
 
 ];

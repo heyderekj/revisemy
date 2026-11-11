@@ -45,7 +45,7 @@ class GetReviewTool extends Tool
         $review = $this->reviews->findOrAdopt($workspace, $data['id'], AssistantCallback::forCaller($request->user()));
 
         if (! $review) {
-            return Response::error('No review with that id for this try token. A review link started on the site works once — the first agent to open it keeps it.');
+            return Response::error('No review with that id for this try token. For a review started on the site, the first agent to open it keeps it. Use the owner link for a handoff. Guest links open in a browser.');
         }
 
         $payload = $review->toAgentPayload();
@@ -65,7 +65,7 @@ class GetReviewTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'id' => $schema->string()->description('The review id from create_review, or a review link someone pasted')->required(),
+            'id' => $schema->string()->description('The review id from create_review, or an owner review link someone pasted')->required(),
         ];
     }
 
@@ -89,6 +89,11 @@ class GetReviewTool extends Tool
             ])->description('What to do next. Follow it.')->required(),
             'review_url' => $schema->string()->required(),
             'board_url' => $schema->string(),
+            'guest_share_url' => $schema->string()->description('Guest link for collaborators. Share only while guest_access.open is true.'),
+            'guest_access' => $schema->object([
+                'open' => $schema->boolean()->required(),
+                'until' => $schema->string()->nullable(),
+            ]),
             'pass' => $schema->integer()->required(),
             'loop' => $schema->object()->required(),
             'work_packets' => $schema->object()->description('Human marks in work_packets.pins are authoritative.'),

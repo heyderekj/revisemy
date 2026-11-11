@@ -61,6 +61,7 @@ class ReviewController extends Controller
             'image_details.*' => ['nullable', 'array'],
             'image_details.*.dpr' => ['nullable', 'numeric', 'between:0.5,4'],
             'image_details.*.elements' => ['nullable'],
+            'image_details.*.state' => ['nullable', 'string', 'max:80'],
             'capture_url' => ['nullable', 'boolean'],
             'pdf' => ['nullable', 'string'],
             'html' => ['nullable', 'string', 'max:500000'],
@@ -122,6 +123,8 @@ class ReviewController extends Controller
             'image' => ['required'],
             'dpr' => ['nullable', 'numeric', 'between:0.5,4'],
             'elements' => ['nullable'],
+            'state' => ['nullable', 'string', 'max:80'],
+            'replace_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $reviews->addScreenshot(
@@ -129,6 +132,8 @@ class ReviewController extends Controller
             $data['image'],
             isset($data['dpr']) ? (float) $data['dpr'] : null,
             ReviewService::elementsFrom($data['elements'] ?? null),
+            $data['state'] ?? null,
+            isset($data['replace_id']) ? (int) $data['replace_id'] : null,
         );
 
         return response()->json($review->fresh(['screenshots.annotations', 'screenshots.findings'])?->toAgentPayload());
@@ -148,7 +153,7 @@ class ReviewController extends Controller
             'findings' => ['required', 'array', 'min:1', 'max:20'],
             'findings.*.body' => ['required', 'string', 'max:2000'],
             'findings.*.severity' => ['nullable', 'string', 'in:suggestion,a11y,polish'],
-            'findings.*.screenshot_index' => ['nullable', 'integer', 'min:0', 'max:4'],
+            'findings.*.screenshot_index' => ['nullable', 'integer', 'min:0'],
             'findings.*.related_pin' => ['nullable', 'integer', 'min:1'],
             'findings.*.area' => ['nullable', 'array'],
         ]);
@@ -252,7 +257,7 @@ class ReviewController extends Controller
         }
 
         $data = $request->validate([
-            'screenshot_index' => ['nullable', 'integer', 'min:0', 'max:4'],
+            'screenshot_index' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $count = $opinions->requestForReview(

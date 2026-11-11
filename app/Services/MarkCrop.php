@@ -41,6 +41,7 @@ class MarkCrop
             return null;
         }
 
+        app(PdfReviewService::class)->ensurePageImage($shot);
         $focus = MarkFocus::forMark($mark);
         $disk = Storage::disk($shot->disk ?: ScreenshotStorage::diskName());
 

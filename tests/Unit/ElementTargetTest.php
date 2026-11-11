@@ -103,13 +103,18 @@ class ElementTargetTest extends TestCase
 
         $rows = collect(ElementTarget::inspectRows($target))->mapWithKeys(fn ($row) => [$row['label'] => $row['value']])->all();
         $this->assertSame([
-            'Size' => '200 × 60',
+            'Size' => '200 × 60 px',
             'Type' => 'Inter · 18px/24px · 600',
-            'Colour' => '#ffffff',
-            'Fill' => '#2563eb',
+            'Color' => '#ffffff',
+            'Background' => '#2563eb',
             'Padding' => '18px 32px',
             'Corners' => '10px',
             'Border' => '1px #1d4ed8',
+            'Text' => 'Buy now',
+            'Font family' => 'Inter',
+            'Font size' => '18px',
+            'Font weight' => '600',
+            'Line height' => '24px',
         ], $rows);
     }
 

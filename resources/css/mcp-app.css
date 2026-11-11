@@ -14,6 +14,7 @@
 @source '../views/components/agent-tag.blade.php';
 @source '../views/components/signal-tag.blade.php';
 @source '../views/components/who-pill.blade.php';
+@source '../views/components/mark-type-picker.blade.php';
 
 @theme {
     --font-sans: 'Figtree', ui-sans-serif, system-ui, -apple-system, sans-serif;

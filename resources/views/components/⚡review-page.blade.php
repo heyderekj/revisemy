@@ -13,6 +13,10 @@ use App\Services\SecondOpinionService;
 use App\Support\ElementTarget;
 use App\Support\FeedbackText;
 use App\Support\NormalizedArea;
+use Flux\Flux;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
@@ -36,6 +40,9 @@ new class extends Component
 
     public string $draftBody = '';
 
+    #[Locked]
+    public array $draftBodyReferences = [];
+
     public string $draftSeverity = Annotation::SEVERITY_MUST_FIX;
 
     public string $draftSuggestedCopy = '';
@@ -54,6 +61,9 @@ new class extends Component
      */
     #[Locked]
     public ?array $pendingTarget = null;
+
+    #[Locked]
+    public ?array $pendingPdfAnchor = null;
 
     /** The element around the pending one, for "Wider". */
     #[Locked]
@@ -74,6 +84,9 @@ new class extends Component
 
 
     public string $markCommentBody = '';
+
+    #[Locked]
+    public array $markCommentBodyReferences = [];
 
     public ?int $activeCommentMarkId = null;
 
@@ -97,10 +110,39 @@ new class extends Component
 
     public string $shareExpiryDate = '';
 
+    public string $feedbackAudience = 'person';
+
+    public string $feedbackName = '';
+
+    public string $feedbackGroupNames = '';
+
+    public string $feedbackQuestion = '';
+
+    #[Locked]
+    public ?int $feedbackMarkId = null;
+
+    #[Locked]
+    public bool $showFeedbackRequests = false;
+
+    #[Locked]
+    public ?int $createdFeedbackId = null;
+
     public function mount(string $token): void
     {
         $this->token = $token;
         $this->loadReview();
+
+        if ($this->isOwner() && request()->boolean('feedback')) {
+            $this->showFeedbackRequests = true;
+            $this->feedbackMarkId = $this->openMarkId;
+        }
+    }
+
+    public function hydrate(): void
+    {
+        if ($this->mode === 'guest') {
+            abort_unless(hash_equals((string) $this->review->share_token, $this->token), 404);
+        }
     }
 
     public function loadReview(): void
@@ -111,6 +153,7 @@ new class extends Component
             ->firstOrFail();
 
         $this->mode = hash_equals((string) $review->token, $this->token) ? 'owner' : 'guest';
+        abort_if($this->mode === 'guest' && ! hash_equals((string) $review->share_token, $this->token), 404);
 
         // The previous-pass strip and the pass ledger are owner-only, and this
         // runs on a 3s poll — so guests and first passes never pay for the
@@ -124,6 +167,13 @@ new class extends Component
         }
 
         $this->review = $review;
+
+        if ($this->mode === 'guest' && ! $review->allowsGuestAccess()) {
+            $this->titleDraft = '';
+            $this->contextDraft = '';
+
+            return;
+        }
 
         if (! $this->editingContext) {
             $this->contextDraft = (string) ($review->context ?? '');
@@ -251,6 +301,10 @@ new class extends Component
 
     public function selectScreenshot(int $index): void
     {
+        if (! $this->review->screenshots->values()->has($index) || $this->activeScreenshotIndex === $index) {
+            return;
+        }
+
         $this->activeScreenshotIndex = $index;
         $this->hintFilter = 'all';
         $this->openMarkId = null;
@@ -310,7 +364,7 @@ new class extends Component
             return;
         }
 
-        if (! $this->review->isOpenForFeedback()) {
+        if (! $this->review->isOpenForFeedback() || $this->activeScreenshot()?->captureFailed()) {
             return;
         }
 
@@ -328,6 +382,7 @@ new class extends Component
         $this->pendingW = $hasRegion ? $w : null;
         $this->pendingH = $hasRegion ? $h : null;
         $this->pendingTarget = null;
+        $this->pendingPdfAnchor = null;
 
         if (($element !== null || ($hasRegion && $snap)) && $screenshot = $this->activeScreenshot()) {
             $area = $hasRegion ? ['x' => $x, 'y' => $y, 'w' => $w, 'h' => $h] : null;
@@ -335,6 +390,7 @@ new class extends Component
         }
 
         $this->draftBody = '';
+        $this->draftBodyReferences = [];
         $this->draftSuggestedCopy = '';
         $this->draftSeverity = Annotation::SEVERITY_MUST_FIX;
     }
@@ -354,6 +410,49 @@ new class extends Component
 
         $box = ElementTarget::area(['box' => $map['elements'][$parent]['box']], $screenshot->cssSize());
         $this->targetPending(ElementTarget::fromMap($map, $screenshot->cssSize(), $box['x'] + $box['w'] / 2, $box['y'] + $box['h'] / 2, null, $parent), $screenshot);
+    }
+
+    public function startPdfPin(int $shotId, string $kind, string $quote, array $rects): void
+    {
+        $shot = $this->activeScreenshot();
+        if (! $shot?->isPdfPage() || $shot->id !== $shotId || ! $this->review->isOpenForFeedback()
+            || (! $this->isOwner() && ! $this->review->allowsGuestAccess())
+            || ! in_array($kind, ['comment', 'highlight', 'strikeout', 'replace'], true)) {
+            return;
+        }
+
+        $quote = mb_substr(trim($quote), 0, 2000);
+        $boxes = [];
+        foreach (array_slice($rects, 0, 60) as $rect) {
+            if (! is_array($rect) || count(array_filter(array_intersect_key($rect, array_flip(['x', 'y', 'w', 'h'])), 'is_numeric')) !== 4) {
+                continue;
+            }
+            $x = max(0, min(1, (float) $rect['x']));
+            $y = max(0, min(1, (float) $rect['y']));
+            $w = min(1 - $x, (float) $rect['w']);
+            $h = min(1 - $y, (float) $rect['h']);
+            if ($w > 0 && $h > 0) {
+                $boxes[] = compact('x', 'y', 'w', 'h');
+            }
+        }
+        if ($quote === '' || $boxes === []) {
+            return;
+        }
+
+        $x = min(array_column($boxes, 'x'));
+        $y = min(array_column($boxes, 'y'));
+        $w = max(array_map(fn ($b) => $b['x'] + $b['w'], $boxes)) - $x;
+        $h = max(array_map(fn ($b) => $b['y'] + $b['h'], $boxes)) - $y;
+        $this->startPin($x, $y, $w, $h, snap: false);
+        [$this->pendingX, $this->pendingY, $this->pendingW, $this->pendingH] = [$x + $w / 2, $y + $h / 2, $w, $h];
+        $this->pendingPdfAnchor = ['page' => $shot->meta['page'], 'kind' => $kind, 'quote' => $quote, 'rects' => $boxes];
+        if ($kind === 'highlight' || $kind === 'strikeout' || $kind === 'replace') {
+            $this->draftBody = match ($kind) {
+                'highlight' => 'Highlighted text',
+                'strikeout' => 'Remove this text.',
+                'replace' => 'Replace the selected text.',
+            };
+        }
     }
 
     /**
@@ -391,40 +490,64 @@ new class extends Component
     /**
      * A pick from the Live view: the element the person chose on the page's
      * own code, named by the capture's selector rules. It lands as a normal
-     * mark on the active shot, on the same element in the shot's map when
-     * the selector is there, else on the box the frame measured. Edited
-     * words become the mark's suggested copy.
+     * mark on the active shot using the screenshot's element positions.
+     * Older review snapshots still support marks from the measured box.
      *
      * @param  array{x?: mixed, y?: mixed, w?: mixed, h?: mixed}  $box
      */
-    public function markLiveElement(string $selector, array $box, ?string $edited = null): void
+    public function markLiveElement(string $selector, array $box, ?string $edited = null, ?int $shotId = null): bool
     {
         $screenshot = $this->activeScreenshot();
 
-        if (! $screenshot || ! $this->review->dom_path) {
-            return;
+        if (! $screenshot?->canMarkPreview() || ($shotId !== null && $screenshot->id !== $shotId)
+            || ! $this->review->isOpenForFeedback() || (! $this->isOwner() && ! $this->review->allowsGuestAccess())) {
+            return false;
         }
 
         $css = $screenshot->cssSize();
-        $elements = array_values((array) ($screenshot->elementMap()['elements'] ?? []));
+        $elements = $screenshot->hasElementTargets() ? array_values((array) ($screenshot->elementMap()['elements'] ?? [])) : [];
         $index = $selector === '' ? false : array_search($selector, array_column($elements, 'selector'), true);
 
         if ($index !== false && is_array($elements[$index]['box'] ?? null) && $css['w'] > 0 && $css['h'] > 0) {
             $b = $elements[$index]['box'];
             $this->startPin(($b['x'] + $b['w'] / 2) / $css['w'], ($b['y'] + $b['h'] / 2) / $css['h'], element: $index);
-        } elseif ($css['w'] > 0 && $css['h'] > 0) {
+        } elseif ($screenshot->previewSource() === 'legacy' && $css['w'] > 0 && $css['h'] > 0) {
             $num = fn (string $key) => is_numeric($box[$key] ?? null) ? (float) $box[$key] : 0.0;
             $this->startPin($num('x') / $css['w'], $num('y') / $css['h'], $num('w') / $css['w'], $num('h') / $css['h']);
+        } else {
+            return false;
         }
 
         if ($this->pendingX !== null && $edited !== null && trim($edited) !== '') {
             $this->draftSuggestedCopy = mb_substr(FeedbackText::sanitizeBody($edited), 0, 2000);
         }
+
+        return $this->pendingX !== null;
     }
 
     protected function activeScreenshot(): ?Screenshot
     {
         return $this->review->screenshots->values()->get($this->activeScreenshotIndex);
+    }
+
+    public function toggleDraftElementReference(string $key): void
+    {
+        if ($this->pendingX !== null && ($this->isOwner() || $this->review->allowsGuestAccess())) {
+            $this->draftBodyReferences = ElementTarget::toggleReference($this->activeScreenshot(), $this->draftBodyReferences, $key);
+        }
+    }
+
+    public function toggleCommentElementReference(string $key, int $annotationId): void
+    {
+        if ($this->activeCommentMarkId !== $annotationId) {
+            $this->startMarkComment($annotationId);
+        }
+
+        if ($this->activeCommentMarkId === $annotationId && $this->review->allowsComments()
+            && ($this->isOwner() || $this->review->allowsGuestAccess())) {
+            $mark = $this->ownedAnnotation($annotationId);
+            $this->markCommentBodyReferences = ElementTarget::toggleReference($mark?->screenshot, $this->markCommentBodyReferences, $key);
+        }
     }
 
     public function cancelPin(): void
@@ -434,8 +557,10 @@ new class extends Component
         $this->pendingW = null;
         $this->pendingH = null;
         $this->pendingTarget = null;
+        $this->pendingPdfAnchor = null;
         $this->pendingParent = null;
         $this->draftBody = '';
+        $this->draftBodyReferences = [];
         $this->draftSuggestedCopy = '';
     }
 
@@ -456,7 +581,7 @@ new class extends Component
         $rules = [
             'draftBody' => FeedbackText::bodyRules(),
             'draftSeverity' => ['required', 'in:'.implode(',', Annotation::severities())],
-            'draftSuggestedCopy' => ['nullable', 'string', 'max:2000'],
+            'draftSuggestedCopy' => [($this->pendingPdfAnchor['kind'] ?? null) === 'replace' ? 'required' : 'nullable', 'string', 'max:2000'],
         ];
 
         $messages = [
@@ -477,12 +602,12 @@ new class extends Component
 
         $screenshot = $this->review->screenshots->values()->get($this->activeScreenshotIndex);
 
-        if (! $screenshot) {
+        if (! $screenshot || $screenshot->captureFailed()) {
             return;
         }
 
-        $hasRegion = $this->pendingW !== null && $this->pendingH !== null
-            && $this->pendingW >= NormalizedArea::MIN_MARK_SIDE && $this->pendingH >= NormalizedArea::MIN_MARK_SIDE;
+        $hasRegion = $this->pendingPdfAnchor !== null || ($this->pendingW !== null && $this->pendingH !== null
+            && $this->pendingW >= NormalizedArea::MIN_MARK_SIDE && $this->pendingH >= NormalizedArea::MIN_MARK_SIDE);
 
         $area = $hasRegion ? [
             'x' => max(0, min(1, $this->pendingX - ($this->pendingW / 2))),
@@ -508,6 +633,8 @@ new class extends Component
                     'suggested_copy' => $this->draftSuggestedCopy !== '' ? $this->draftSuggestedCopy : null,
                     'source' => Annotation::SOURCE_HUMAN,
                     'target' => $this->pendingTarget,
+                    'pdf_anchor' => $this->pendingPdfAnchor,
+                    'element_references' => $this->draftBodyReferences ?: null,
                 ],
             );
         } else {
@@ -520,6 +647,8 @@ new class extends Component
                 'y' => $this->pendingY,
                 'area' => $area,
                 'target' => $this->pendingTarget,
+                'pdf_anchor' => $this->pendingPdfAnchor,
+                'element_references' => $this->draftBodyReferences ?: null,
                 'status' => Finding::STATUS_OPEN,
             ]);
         }
@@ -737,12 +866,14 @@ new class extends Component
             return;
         }
 
-        if (! $this->ownedAnnotation($annotationId)) {
+        $this->openMark($annotationId);
+        if ($this->openMarkId !== $annotationId) {
             return;
         }
 
         $this->activeCommentMarkId = $annotationId;
         $this->markCommentBody = '';
+        $this->markCommentBodyReferences = [];
         $this->resetValidation(['markCommentBody', 'guestName']);
     }
 
@@ -750,6 +881,7 @@ new class extends Component
     {
         $this->activeCommentMarkId = null;
         $this->markCommentBody = '';
+        $this->markCommentBodyReferences = [];
         $this->resetValidation(['markCommentBody', 'guestName']);
     }
 
@@ -795,11 +927,29 @@ new class extends Component
             $this->mode === 'owner' ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST,
             $this->markCommentBody,
             $this->guestName,
+            $this->markCommentBodyReferences,
         );
 
         $this->activeCommentMarkId = null;
         $this->markCommentBody = '';
+        $this->markCommentBodyReferences = [];
         $this->loadReview();
+    }
+
+    public function setCommentReaction(int $commentId, string $reaction, bool $selected): void
+    {
+        if (! $this->review->allowsComments() || (! $this->isOwner() && ! $this->review->allowsGuestAccess())) {
+            return;
+        }
+
+        $comment = AnnotationComment::query()->whereKey($commentId)
+            ->whereHas('annotation.screenshot', fn ($query) => $query->where('review_id', $this->review->id))
+            ->first();
+
+        if ($comment) {
+            $comment->setReaction($reaction, AnnotationComment::reactionActor($this->isOwner()), $selected);
+            $this->loadReview();
+        }
     }
 
     public function acceptFinding(int $findingId, ?string $asSeverity = null): void
@@ -936,9 +1086,11 @@ new class extends Component
             [
                 'source' => Annotation::sourceFromFinding($finding),
                 'promoted_from_finding_id' => $finding->id,
+                'pdf_anchor' => $finding->pdf_anchor,
             ]
             // A guest's pick carries over as it was; a hint that points
             // nowhere on the page is tied to no element.
+            + ['element_references' => $finding->element_references]
             + ($finding->target !== null || ($area === null && $finding->x === null) ? ['target' => $finding->target] : []),
         );
 
@@ -958,6 +1110,97 @@ new class extends Component
 
         $opinions->requestForReview($this->review, $this->activeScreenshotIndex);
         $this->loadReview();
+    }
+
+    public function startFeedbackRequest(?int $markId = null): void
+    {
+        abort_unless($this->isOwner(), 404);
+        abort_if($markId !== null && $this->shotIndexForMark($markId) === null, 404);
+
+        $this->reset('feedbackAudience', 'feedbackName', 'feedbackGroupNames', 'feedbackQuestion', 'createdFeedbackId');
+        $this->resetValidation(['feedbackAudience', 'feedbackName', 'feedbackGroupNames', 'feedbackQuestion']);
+        $this->feedbackMarkId = $markId;
+        $this->showFeedbackRequests = true;
+
+        Flux::modal('share-review')->close();
+        Flux::modal('feedback-requests')->show();
+    }
+
+    #[Computed]
+    public function feedbackRequests()
+    {
+        return $this->review->feedbackRequests()->with('annotation:id,number')->latest('id')->get()
+            ->groupBy(fn ($feedback) => $feedback->group_id ?? 'person-'.$feedback->id);
+    }
+
+    public function createFeedbackRequest(): void
+    {
+        abort_unless($this->isOwner(), 404);
+        abort_if($this->review->isExpired() || ! $this->review->allowsComments(), 403);
+
+        $group = $this->feedbackAudience === 'group';
+        $nameField = $group ? 'feedbackGroupNames' : 'feedbackName';
+        $this->feedbackName = FeedbackText::sanitizeName($this->feedbackName);
+        $this->feedbackQuestion = FeedbackText::sanitizeBody($this->feedbackQuestion);
+        $data = $this->validate([
+            'feedbackAudience' => ['required', 'in:person,group'],
+            $nameField => ['required', 'string', $group ? 'max:1000' : 'max:40'],
+            'feedbackQuestion' => FeedbackText::bodyRules(1000),
+        ]);
+
+        $names = $group
+            ? collect(preg_split('/\R/u', $data[$nameField]))->map(FeedbackText::sanitizeName(...))->filter(fn ($name) => $name !== '')->values()
+            : collect([$data[$nameField]]);
+
+        if ($group) {
+            if ($names->count() < 2 || $names->count() > 12 || $names->contains(fn ($name) => mb_strlen($name) > 40)) {
+                $this->addError($nameField, 'Enter 2 to 12 names, one per line. Keep each name to 40 characters.');
+
+                return;
+            }
+
+            if ($names->map(fn ($name) => mb_strtolower($name))->uniqueStrict()->count() !== $names->count()) {
+                $this->addError($nameField, 'Use a different name for each reviewer.');
+
+                return;
+            }
+        }
+
+        $markId = $this->feedbackMarkId;
+        abort_if($markId !== null && $this->shotIndexForMark($markId) === null, 404);
+
+        $groupId = $group ? (string) Str::ulid() : null;
+        $expiresAt = now()->addDays(Review::SHARE_EXPIRY_DAYS);
+        $rows = $names->map(fn ($name) => [
+            'annotation_id' => $markId,
+            'group_id' => $groupId,
+            'reviewer_name' => $name,
+            'question' => $data['feedbackQuestion'],
+            'token' => 'f-'.Str::random(40),
+            'expires_at' => $expiresAt,
+        ]);
+
+        $created = RateLimiter::attempt('feedback-create:'.$this->review->id, 30, fn () => DB::transaction(
+            fn () => $this->review->feedbackRequests()->createMany($rows),
+        ), 3600);
+
+        if (! $created) {
+            $this->addError($nameField, 'Too many requests created. Try again in an hour.');
+
+            return;
+        }
+
+        $this->createdFeedbackId = $created->first()->id;
+        $this->reset('feedbackName', 'feedbackGroupNames', 'feedbackQuestion');
+        unset($this->feedbackRequests);
+    }
+
+    public function revokeFeedbackRequest(int $id): void
+    {
+        abort_unless($this->isOwner(), 404);
+
+        $this->review->feedbackRequests()->whereKey($id)->whereNull('revoked_at')->update(['revoked_at' => now()]);
+        unset($this->feedbackRequests);
     }
 
     public function regenerateShareToken(): void
@@ -1316,8 +1559,7 @@ new class extends Component
             Alpine.store('rmPanel', {
                 {{-- Below lg the drawer covers the shot, so it starts closed there. --}}
                 {{-- A review made on the site opens with its handoff in view. --}}
-                open: window.innerWidth < 1024 ? false : (saved ? saved === 'open' : (window.innerWidth >= 1280 || @js($this->isOwner() && $review->isAwaitingAgent()))),
-                brief: true,
+                open: window.innerWidth < 1024 ? false : (saved ? saved === 'open' : (@js($this->isOwner()) && (window.innerWidth >= 1280 || @js($review->isAwaitingAgent())))),
                 {{-- Only the docked drawer is remembered: a phone or tablet toggle says nothing about the desk. --}}
                 remember() { if (window.innerWidth < 1024) return; try { localStorage.setItem('revisemy_drawer', this.open ? 'open' : 'closed'); } catch (e) {} },
                 toggle() { this.open = ! this.open; this.remember(); },
@@ -1337,13 +1579,13 @@ new class extends Component
 
     {{-- What the A/C/J/K keys read at the moment they're pressed. --}}
     <span hidden @if ($review->isOpenForFeedback()) data-open-for-feedback @endif>
-        @foreach ($this->activeMarks->sortBy('number') as $orderedMark)
+        @foreach (($mode === 'owner' || $review->allowsGuestAccess() ? $this->activeMarks : collect())->sortBy('number') as $orderedMark)
             <span data-mark-order="{{ $orderedMark->id }}"></span>
         @endforeach
     </span>
 
     {{-- Open marks in the tab title, so a background tab says when there's work. --}}
-    @php($openCount = $this->openMarkCount())
+    @php($openCount = $mode === 'guest' && ! $review->allowsGuestAccess() ? 0 : $this->openMarkCount())
     <span
         hidden
         wire:key="tab-title-{{ $openCount }}"
@@ -1355,7 +1597,11 @@ new class extends Component
     <div class="rm-shell">
     @include('review.partials.header')
 
-    @if ($newer = $this->newerPass)
+    @if ($this->isOwner())
+        @include('review.partials.feedback-requests')
+    @endif
+
+    @if (($mode === 'owner' || $review->allowsGuestAccess()) && ($newer = $this->newerPass))
         <a
             href="{{ $newer['url'] }}"
             data-newer-pass

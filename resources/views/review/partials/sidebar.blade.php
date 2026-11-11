@@ -17,7 +17,7 @@
              shot still in view. md: a panel from the right. lg: docked beside. --}}
         <div
             id="rm-drawer"
-            class="fixed inset-x-0 bottom-0 z-[46] flex h-[min(78svh,44rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-background shadow-[0_-16px_40px_-24px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:absolute md:inset-x-auto md:inset-y-0 md:right-0 md:h-auto md:max-w-[22rem] md:rounded-none md:border-l md:border-border md:shadow-[-16px_0_40px_-24px_rgba(0,0,0,0.35)] md:ring-0 lg:static lg:z-auto lg:w-[22rem] lg:shrink-0 lg:shadow-none"
+            class="fixed inset-x-0 bottom-0 z-[46] flex h-[min(78svh,44rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-background shadow-[0_-16px_40px_-24px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.07] md:absolute md:inset-x-auto md:inset-y-2 md:right-2 md:h-auto md:max-w-[22rem] md:rounded-2xl md:border md:border-border md:shadow-[-16px_0_40px_-24px_rgba(0,0,0,0.35)] md:ring-0 lg:static lg:z-auto lg:my-2 lg:mr-2 lg:w-[22rem] lg:shrink-0 lg:shadow-none"
             x-show="$store.rmPanel?.open"
             x-cloak
             x-transition:enter="transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
@@ -44,7 +44,7 @@
                 aria-label="Close marks and hints"
             ><span class="h-1 w-10 rounded-full bg-zinc-300"></span></button>
             <div class="flex shrink-0 items-center justify-between gap-2 px-4 pt-1 md:pt-3">
-                <p class="text-xs font-medium text-muted-foreground">{{ $mode === 'owner' ? 'Marks and hints' : 'Marks and suggestions' }}</p>
+                <p class="text-xs font-medium text-muted-foreground">Feedback</p>
                 <button
                     type="button"
                     class="inline-flex size-9 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900 md:size-7"
@@ -65,7 +65,7 @@
             @php($hints = $this->visibleHints())
             @php($status = $shot?->second_opinion_status ?? 'idle')
             <div
-                class="space-y-4 pb-4 md:pb-6"
+                class="space-y-3 pb-4"
                 x-data="{
                     panels: { marks: true, previous: false, hints: {{ $secondOpinionCount + $guestCount > 0 ? 'true' : 'false' }} },
                     init() {
@@ -90,7 +90,7 @@
                 @include('review.partials.handoff')
 
                 {{-- My marks --}}
-                <section class="rounded-2xl bg-card" data-panel="marks">
+                <section class="border-b border-border" data-panel="marks">
                     <div class="flex items-center gap-2 px-3 py-3 sm:px-4">
                         <button type="button" class="flex min-w-0 flex-1 items-center gap-2 text-left" x-on:click="panels.marks = ! panels.marks" x-bind:aria-expanded="panels.marks.toString()">
                             <flux:heading size="sm">{{ $mode === 'owner' ? 'My marks' : 'Owner marks' }}</flux:heading>
@@ -151,7 +151,7 @@
                 </section>
 
                 {{-- Hints: second opinion (owner) and guest suggestions, one list. --}}
-                <section class="rounded-2xl bg-card" data-panel="hints">
+                <section class="border-b border-border" data-panel="hints" @if ($mode === 'guest' && $guestCount === 0) hidden @endif>
                     <div class="flex items-center gap-2 px-3 py-3 sm:px-4">
                         <button type="button" class="flex min-w-0 flex-1 items-center gap-2 text-left" x-on:click="panels.hints = ! panels.hints" x-bind:aria-expanded="panels.hints.toString()">
                             <flux:heading size="sm">{{ $mode === 'owner' ? 'Hints' : 'Suggestions' }}</flux:heading>
@@ -259,15 +259,10 @@
             </div>
 
             {{-- The decision. --}}
-            @if ($this->showDecisionNote() || $this->showDecisionCallout() || $this->showStatusCallout())
+            @if ($this->showDecisionCallout() || $this->showStatusCallout())
                 <div class="mt-auto space-y-3 pb-4 md:pb-6">
-                    @if ($this->showDecisionNote())
-                        <div class="hidden rounded-2xl bg-card p-3 sm:p-4 md:block">
-                            <flux:heading size="sm" class="mb-3">Note for your agent <span class="font-normal text-muted-foreground">(optional)</span></flux:heading>
-                            <flux:textarea wire:model="decisionNote" rows="2" placeholder="Anything else before you decide?" />
-                        </div>
-                    @elseif ($this->showDecisionCallout())
-                        <div class="rounded-2xl bg-card p-3 text-sm text-zinc-700 sm:p-4">
+                    @if ($this->showDecisionCallout())
+                        <div class="border-b border-border p-3 text-sm text-zinc-700 sm:p-4">
                             <span class="font-medium text-zinc-900">Your note:</span> {{ $review->decision_note }}
                         </div>
                     @endif

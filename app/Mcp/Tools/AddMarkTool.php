@@ -7,6 +7,7 @@ use App\Mcp\Resources\ReviewApp;
 use App\Models\Annotation;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
+use App\Support\ElementTarget;
 use App\Support\FeedbackText;
 use App\Support\NormalizedArea;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -66,6 +67,8 @@ class AddMarkTool extends Tool
             'snap' => 'nullable|boolean',
             'severity' => 'required|in:'.implode(',', Annotation::severities()),
             'body' => FeedbackText::bodyRules(),
+            'element_references' => 'sometimes|array|max:'.ElementTarget::MAX_REFERENCES,
+            'element_references.*' => 'regex:/^\d+(?::[A-Za-z ]{1,24})?$/D',
             'suggested_copy' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -83,6 +86,10 @@ class AddMarkTool extends Tool
 
         if (! $screenshot) {
             return Response::error('No screenshot with that id on this review.');
+        }
+
+        if ($screenshot->captureFailed()) {
+            return Response::error('Replace the failed screenshot before adding a mark.');
         }
 
         $body = FeedbackText::sanitizeBody($data['body']);
@@ -112,6 +119,7 @@ class AddMarkTool extends Tool
                 'source' => Annotation::SOURCE_HUMAN,
                 'element' => isset($data['element']) ? (int) $data['element'] : ($data['selector'] ?? null),
                 'snap' => (bool) ($data['snap'] ?? true),
+                'element_references' => ElementTarget::references($screenshot, $data['element_references'] ?? []),
             ],
         );
 
@@ -131,6 +139,7 @@ class AddMarkTool extends Tool
             'y' => $schema->number()->description('Normalized y of the mark point (0–1)')->required(),
             'area' => $schema->object()->description('Optional normalized rectangle {x, y, w, h} (top-left origin)'),
             'severity' => $schema->string()->enum(Annotation::severities())->description('must-fix, nit, question, or keep')->required(),
+            'element_references' => $schema->array()->items($schema->string())->description('Captured Inspect references in index:property format'),
             'body' => $schema->string()->description('The human note for this mark')->required(),
             'suggested_copy' => $schema->string()->description('Optional exact copy string for the agent to apply'),
             'element' => $schema->integer()->description('Optional index of the element the person picked, from get_shot_elements; the mark snaps to its box'),

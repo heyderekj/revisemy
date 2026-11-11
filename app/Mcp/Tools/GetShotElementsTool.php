@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Concerns\ResolvesWorkspace;
 use App\Mcp\Resources\ReviewApp;
+use App\Models\Annotation;
 use App\Services\ReviewService;
 use App\Support\ElementTarget;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -46,7 +47,8 @@ class GetShotElementsTool extends Tool
 
         $data = $request->validate([
             'review_id' => 'required|string',
-            'screenshot_id' => 'required|integer',
+            'screenshot_id' => 'required_without:mark_id|integer',
+            'mark_id' => 'sometimes|required|integer',
             'element' => 'nullable|integer|min:0',
             'area' => 'nullable|array',
             'area.x' => 'required_with:area|numeric|between:0,1',
@@ -56,6 +58,22 @@ class GetShotElementsTool extends Tool
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['review_id']);
+
+        if (isset($data['mark_id'])) {
+            $mark = $review ? Annotation::query()->whereKey($data['mark_id'])
+                ->whereHas('screenshot', fn ($query) => $query->whereIn('review_id', [$review->id, $review->parent_id]))
+                ->first() : null;
+
+            if (! $mark) {
+                return Response::error('No mark with that id on this review.');
+            }
+
+            return Response::structured(['target' => $mark->target ? [
+                'index' => $mark->target['index'] ?? null,
+                'rows' => ElementTarget::inspectRows($mark->target),
+            ] : null]);
+        }
+
         $shot = $review?->screenshots()->whereKey($data['screenshot_id'])->first();
 
         if (! $shot) {
@@ -69,7 +87,7 @@ class GetShotElementsTool extends Tool
             return Response::structured($content + ['elements' => $shot->pickList()]);
         }
 
-        $map = $shot->elementMap();
+        $map = $shot->hasElementTargets() ? $shot->elementMap() : null;
         $css = $shot->cssSize();
 
         if (isset($data['element'])) {
@@ -109,7 +127,8 @@ class GetShotElementsTool extends Tool
     {
         return [
             'review_id' => $schema->string()->description('The review public id')->required(),
-            'screenshot_id' => $schema->integer()->description('The screenshot id from the review payload')->required(),
+            'screenshot_id' => $schema->integer()->description('The screenshot id from the review payload, required when mark_id is omitted'),
+            'mark_id' => $schema->integer()->description('The existing mark to inspect, including marks on the previous pass'),
             'element' => $schema->integer()->description('Optional index of one element, for its chip and Inspect rows'),
             'area' => $schema->object()->description('Optional drawn box {x, y, w, h} (0–1): the element it covers, if any'),
         ];

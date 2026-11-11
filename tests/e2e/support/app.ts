@@ -62,7 +62,7 @@ export const FIXTURE_ELEMENTS = {
     ],
 };
 
-export async function seedReview(title = 'Pricing page', { elements = false }: { elements?: boolean } = {}): Promise<Seeded> {
+export async function seedReview(title = 'Pricing page', { elements = false, shots = 1 }: { elements?: boolean; shots?: number } = {}): Promise<Seeded> {
     const anon = await request.newContext({ baseURL: APP });
     const minted = await anon.post('/api/try-token');
     expect(minted.status()).toBe(201);
@@ -73,7 +73,7 @@ export async function seedReview(title = 'Pricing page', { elements = false }: {
         extraHTTPHeaders: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     });
     const created = await api.post('/api/reviews', {
-        data: { title, type: 'ui', images: [SHOT], ...(elements ? { image_details: [{ dpr: 1, elements: FIXTURE_ELEMENTS }] } : {}) },
+        data: { title, type: 'ui', images: Array(shots).fill(SHOT), ...(elements ? { image_details: Array.from({ length: shots }, () => ({ dpr: 1, elements: FIXTURE_ELEMENTS })) } : {}) },
     });
     expect(created.status(), await created.text()).toBe(201);
 

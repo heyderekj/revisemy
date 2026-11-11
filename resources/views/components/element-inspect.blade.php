@@ -1,24 +1,32 @@
-{{-- What the page says about the element: size, type, colours, spacing.
-     Rows come from ElementTarget::inspectRows. A colour is the page's own,
-     so its swatch takes it as a variable, never a class. --}}
-@props(['target', 'open' => false])
-@php($rows = \App\Support\ElementTarget::inspectRows($target))
+@props(['target', 'open' => false, 'screenshot' => null, 'referenceAction' => null, 'selectedReferences' => [], 'markId' => null])
+@php
+    $rows = \App\Support\ElementTarget::inspectRows($target);
+    $canReference = $referenceAction && $screenshot?->hasElementTargets() && isset($target['index']);
+    $selected = array_map(\App\Support\ElementTarget::referenceKey(...), $selectedReferences);
+@endphp
 @if ($rows !== [])
     <details {{ $attributes->class(['group rounded-lg bg-well text-xs']) }} @if ($open) open @endif data-element-inspect wire:ignore.self>
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1.5 font-medium text-zinc-600 [&::-webkit-details-marker]:hidden">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 font-medium text-zinc-700 hover:text-zinc-900 [&::-webkit-details-marker]:hidden">
             Inspect
             <flux:icon.chevron-down variant="micro" class="size-3.5 text-zinc-400 transition group-open:rotate-180" />
         </summary>
-        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 px-2.5 pb-2">
+        <div class="border-t border-border p-1">
             @foreach ($rows as $row)
-                <dt class="text-muted-foreground">{{ $row['label'] }}</dt>
-                <dd class="flex min-w-0 items-center gap-1.5 font-mono text-zinc-700">
-                    @isset($row['swatch'])
-                        <span class="size-3 shrink-0 rounded-sm bg-(--rm-swatch) ring-1 ring-black/10" style="--rm-swatch: {{ $row['swatch'] }}" aria-hidden="true"></span>
-                    @endisset
-                    <span class="truncate select-all">{{ $row['value'] }}</span>
-                </dd>
+                @continue(isset($row['group']))
+                @include('components.element-inspect-row')
             @endforeach
-        </dl>
+            @php($extra = collect($rows)->filter(fn ($row) => isset($row['group']))->groupBy('group'))
+            @if ($extra->isNotEmpty())
+                <details class="border-t border-border" data-inspect-more wire:ignore.self>
+                    <summary class="cursor-pointer rounded-md px-2 py-2 text-muted-foreground hover:bg-chip">More properties</summary>
+                    @foreach ($extra as $group => $groupRows)
+                        <p class="px-2 pt-2 pb-0.5 font-medium text-muted-foreground">{{ $group }}</p>
+                        @foreach ($groupRows as $row)
+                            @include('components.element-inspect-row')
+                        @endforeach
+                    @endforeach
+                </details>
+            @endif
+        </div>
     </details>
 @endif

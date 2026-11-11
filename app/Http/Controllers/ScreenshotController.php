@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FeedbackRequest;
 use App\Models\Review;
 use App\Models\Screenshot;
+use App\Services\PdfReviewService;
 use App\Services\ReviewPreview;
 use App\Support\LiveSnapshot;
 use Illuminate\Http\JsonResponse;
@@ -108,18 +110,18 @@ class ScreenshotController extends Controller
         $this->assertReviewToken($token, $screenshot);
         $review = $screenshot->review;
 
-        if (! hash_equals((string) $review->token, $token) && ! $review->allowsGuestAccess()) {
+        if ($review->isExpired() || (! hash_equals((string) $review->token, $token) && ! $review->allowsGuestAccess())) {
             abort(404);
         }
 
-        $html = $review->domHtml();
+        $html = $screenshot->previewHtml();
         abort_if($html === null || trim($html) === '', 404);
 
         $nonce = Str::random(24);
         $script = (string) file_get_contents(resource_path('js/live-pick.js'));
-        $base = $review->sourceKind() === Review::SOURCE_URL ? $review->page_url : null;
+        $base = $screenshot->meta['preview_base'] ?? ($review->sourceKind() === Review::SOURCE_URL ? $review->page_url : null);
 
-        return response(LiveSnapshot::prepare($html, $base, $nonce, $script), headers: [
+        return response(LiveSnapshot::prepare($html, $base, $nonce, $script, editable: $screenshot->canMarkPreview() && $review->isOpenForFeedback()), headers: [
             'Content-Type' => 'text/html; charset=utf-8',
             'Content-Security-Policy' => 'sandbox allow-scripts; '.LiveSnapshot::policy($nonce)."; frame-ancestors 'self'",
             'Referrer-Policy' => 'no-referrer',
@@ -145,8 +147,23 @@ class ScreenshotController extends Controller
         }
     }
 
+    public function showForFeedback(string $token, Screenshot $screenshot): StreamedResponse
+    {
+        $feedback = FeedbackRequest::accessible($token);
+        abort_unless($screenshot->review_id === $feedback->review_id && $screenshot->kind === Screenshot::KIND_SOURCE, 404);
+
+        $response = $this->stream($screenshot, $screenshot->path);
+        $response->headers->set('Cache-Control', 'private, no-store');
+
+        return $response;
+    }
+
     protected function stream(Screenshot $screenshot, string $path): StreamedResponse
     {
+        if ($screenshot->isPdfPage()) {
+            abort_if($screenshot->review->isExpired(), 404);
+            app(PdfReviewService::class)->ensurePageImage($screenshot, $path);
+        }
         $disk = Storage::disk($screenshot->disk);
 
         if (! $disk->exists($path)) {

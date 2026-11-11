@@ -7,6 +7,12 @@
       "runtimeArgs": ["-c", "php artisan serve --port=${PORT:-8765}"],
       "port": 8765,
       "autoPort": true
+    },
+    {
+      "name": "revisemy-connect-reliability",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/heyderekj/revisemy/.claude/worktrees/connect-reliability && php artisan serve --port=8769"],
+      "port": 8769
     }
   ]
 }

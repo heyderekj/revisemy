@@ -25,7 +25,7 @@ class MarkTimeline
     public const KIND_COMMENT = 'comment';
 
     /**
-     * @return list<array{kind: string, actor: string, author: ?string, verb: string, body: ?string, after_screenshot_id: ?int, after_screenshot_url: ?string, at: ?Carbon}>
+     * @return list<array{kind: string, comment_id?: int, reactions?: array<string, array{count: int, selected: bool}>, actor: string, author: ?string, verb: string, body: ?string, after_screenshot_id: ?int, after_screenshot_url: ?string, at: ?Carbon}>
      */
     public static function for(Annotation $mark): array
     {
@@ -71,15 +71,17 @@ class MarkTimeline
             /** @var AnnotationComment $comment */
             $entries[] = [
                 'kind' => self::KIND_COMMENT,
+                'comment_id' => $comment->id,
                 'actor' => $comment->author_type ?: ($comment->from_owner ? AnnotationComment::AUTHOR_OWNER : AnnotationComment::AUTHOR_GUEST),
                 'author' => $comment->author_type === AnnotationComment::AUTHOR_GUEST ? $comment->author : null,
                 'verb' => $comment->isAgent() ? 'replied' : 'commented',
                 'body' => $comment->body,
+                'element_references' => ElementTarget::referencesForAgent($comment->element_references),
                 'after_screenshot_id' => null,
                 'after_screenshot_url' => null,
                 'at' => $comment->created_at,
                 'rank' => 2,
-            ];
+            ] + ($comment->reactions ? ['reactions' => $comment->reactionSummary(AnnotationComment::AUTHOR_OWNER)] : []);
         }
 
         // The mark always opens it; then oldest first. Within the same second

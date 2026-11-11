@@ -164,6 +164,19 @@ class ScreenshotStorage
         return null;
     }
 
+    public function storePreview(Screenshot $shot, string $html, ?string $base): void
+    {
+        $path = preg_replace('/\.[a-z]+$/', '', $shot->path).'.preview.html';
+
+        try {
+            if (Storage::disk($shot->disk)->put($path, $html, ['visibility' => 'private'])) {
+                $shot->update(['meta' => [...$shot->meta, 'preview_path' => $path, 'preview_base' => $base]]);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
     /**
      * Keep the vision-sized copy the capture browser made (the top of the
      * page, small enough for a vision model to read as sent) next to the

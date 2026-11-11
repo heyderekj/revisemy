@@ -17,7 +17,8 @@ Every review moves the same way. Your agent sends the work. A person marks it an
 | `status` | `pending`, `changes_requested`, `approved` or `expired` |
 | `review_url` | The link for the person. Always share it. |
 | `board_url` | The same review as a board, grouped by where each mark stands |
-| `guest_share_url` | A link for other people, who leave suggestions rather than marks |
+| `guest_share_url` | A guest link for collaborators to leave suggestions and join comment threads |
+| `guest_access` | Whether the guest link works now (`open`) and when access ends (`until`) |
 | `pass` / `parent_id` | Which pass this is, and the one before it |
 | `next_action` | What your agent does now. See below. |
 | `work_packets` | The marks, sorted into work. See below. |
@@ -50,6 +51,7 @@ Every mark the person leaves is in `work_packets.pins`. The key says pins for co
 | `body` | What the person wrote |
 | `area` | The rectangle they drew: `x`, `y`, `w`, `h` as fractions of the screenshot, 0 to 1 |
 | `suggested_copy` | Exact words to use. When it's set, use them as they are. |
+| `pdf_anchor` | On a text selection in a PDF, the original quote, page number, markup kind, and selection rectangles. The page number belongs to the pass where the mark was made. |
 | `question_answer` | The answer to a question mark, once the person gives one |
 | `status` | `open`, `in_progress`, `resolved` or `verified` |
 | `comments` | The latest comments on the mark, each with `author_type`: `owner`, `guest` or `agent` |

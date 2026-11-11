@@ -14,13 +14,13 @@
        matches, Snap toggle, Wider, Inspect ↔ resources/js/element-pick.js (shared),
        ElementTarget, components/element-chip + element-inspect; chip colour
        ↔ Annotation::ELEMENT_CHIP
-     Intentionally web-only: share/guest, drag columns, second-opinion
+     Intentionally web-only: guest-link settings, drag columns, second-opinion
      accept/dismiss, pan, editable title.
 
      Styles and Alpine are compiled from resources/css/mcp-app.css and
      resources/js/mcp-app.js (the same tokens as the site) and inlined by
      App\Mcp\Resources\ReviewApp; nothing loads from a CDN. The bridge is inline.
-     App-only tools: add_mark / add_comment / decide_review / verify_mark /
+     App-only tools: add_mark / add_comment / set_comment_reaction / decide_review / verify_mark /
      get_shot_elements. --}}
 <style>{!! $styles !!}</style>
 
@@ -62,60 +62,35 @@
                 {{-- header: title + chips, matching the review page header line --}}
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     <h1 class="min-w-0 truncate text-lg font-semibold tracking-tight text-zinc-900" x-text="payload.title"></h1>
-                    <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600"
-                        x-text="'Pass ' + payload.pass"></span>
-                    <span class="inline-flex shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium text-zinc-600"
-                        x-show="payload.type" x-text="({ ui: 'UI', website: 'Website', presentation: 'Slides', email: 'Email' })[payload.type] || payload.type"></span>
-                    <span class="relative inline-flex shrink-0" x-data="{ tasteOpen: false }" x-show="payload.taste && payload.taste.label">
-                        <button type="button"
-                            class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800"
-                            @click="tasteOpen = ! tasteOpen"
-                            x-text="payload.taste.label"></button>
-                        <div class="absolute left-0 z-40 mt-8 w-64 rounded-xl bg-lift p-3 text-left shadow-lg ring-1 ring-black/[0.07]"
-                            x-show="tasteOpen" x-cloak @click.outside="tasteOpen = false">
-                            <p class="text-xs font-medium text-sky-950">Craft lenses for this review</p>
-                            <template x-for="lens in (payload.taste.lenses || [])" :key="lens.id">
-                                <div class="mt-2">
-                                    <p class="text-xs font-semibold text-zinc-800" x-text="lens.name"></p>
-                                    <p class="mt-0.5 text-[11px] leading-relaxed text-zinc-500" x-text="lens.blurb"></p>
-                                    <a class="mt-1 inline-block text-[11px] font-medium text-sky-700 underline"
-                                        :href="lens.source_url" target="_blank" rel="noopener noreferrer"
-                                        x-text="lens.source_label || lens.source_url" x-show="lens.source_url"></a>
-                                </div>
-                            </template>
-                            <p class="mt-3 text-xs leading-relaxed text-zinc-400"
-                                x-text="payload.taste.disclaimer"></p>
-                        </div>
-                    </span>
+                    <span class="text-xs text-muted-foreground" x-show="payload.pass > 1" x-text="'Pass ' + payload.pass"></span>
                     {{-- The review's state, in the same tones as the web header (Annotation::TONES). --}}
                     <template x-if="reviewTone()">
                         <span class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="tone(reviewTone()[0]).tag"><span class="size-1.5 shrink-0 rounded-full" :class="tone(reviewTone()[0]).dot" aria-hidden="true"></span><span x-text="reviewTone()[1]"></span></span>
                     </template>
                 </div>
 
-                {{-- toolbar: view toggle + verified progress + refresh --}}
-                <div class="mt-3 flex flex-wrap items-center gap-3">
+                {{-- View controls and sharing --}}
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
                     <div class="inline-flex rounded-full bg-trough p-0.5">
                         <button type="button" class="h-8 rounded-full px-3 text-xs font-medium transition-colors"
                             :class="view === 'screenshot' ? 'bg-raised text-zinc-900 shadow-xs' : 'text-zinc-600 hover:text-zinc-900'"
-                            @click="view = 'screenshot'">Screenshot</button>
+                            @click="view = 'screenshot'; reviewingFixes = false">Screenshot</button>
                         <button type="button" class="h-8 rounded-full px-3 text-xs font-medium transition-colors"
                             :class="view === 'board' ? 'bg-raised text-zinc-900 shadow-xs' : 'text-zinc-600 hover:text-zinc-900'"
                             @click="view = 'board'" x-text="'Board · ' + boardPins().length"></button>
                     </div>
-                    <div class="flex min-w-24 flex-1 items-center gap-2 sm:max-w-48">
-                        <span class="shrink-0 text-xs tabular-nums text-zinc-500"
-                            x-text="verifiedCount() + '/' + boardPins().length"></span>
-                        <div class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-chip" role="progressbar" aria-label="Marks verified">
-                            <div class="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out" :style="'width:' + verifiedPct() + '%'"></div>
-                        </div>
-                    </div>
-                    <button type="button" class="inline-flex h-8 items-center gap-1 rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover disabled:opacity-50"
-                        :disabled="busy" @click="refresh()">↻ Refresh</button>
+                    <button type="button" class="ml-auto inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover disabled:opacity-50"
+                        :disabled="busy" :aria-expanded="shareOpen.toString()" aria-controls="inline-share" @click="toggleShare()">Share</button>
+                    <button type="button" class="inline-flex size-8 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-chip disabled:opacity-50"
+                        :disabled="busy" @click="refresh()" aria-label="Refresh" title="Refresh">
+                        <flux:icon.arrow-path variant="micro" class="size-4" />
+                    </button>
                     <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition hover:bg-chip-hover"
                         x-show="canFullscreen" @click="toggleFullscreen()"
                         x-text="displayMode === 'fullscreen' ? 'Back to the chat' : 'Full screen'"></button>
                 </div>
+
+                @include('mcp.partials.share')
 
                 {{-- SCREENSHOT VIEW --}}
                 <div class="mt-3" x-show="view === 'screenshot'">
@@ -129,31 +104,81 @@
                         </template>
                     </div>
 
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs"
+                        x-show="activeShot()?.capture_quality || activeShot()?.comparison || activeShot()?.meta?.elements_source === 'separate_load' || (payload.screenshots.length === 1 && activeShot()?.meta?.state)">
+                        <div role="status" class="text-muted-foreground">
+                            <span class="font-semibold" x-show="payload.screenshots.length === 1" x-text="activeShot()?.meta?.state || ''"></span>
+                            <span x-text="({ failed: 'Capture failed', partial: 'Partial capture', unverified: 'Capture unverified', ready: 'Capture ready' })[activeShot()?.capture_quality?.status] || ''"></span>
+                            <span x-text="activeShot()?.capture_quality?.message || ''"></span>
+                            <span x-show="activeShot()?.meta?.elements_source === 'separate_load'">Element positions came from a separate page load. Mark an area directly.</span>
+                        </div>
+                        <button type="button" class="link font-medium" x-show="activeShot()?.comparison"
+                            @click="comparing = !comparing; closeComposer(); closeDetail()"
+                            :aria-pressed="comparing.toString()"
+                            x-text="comparing ? 'Back to screenshot' : 'Compare with previous pass'"></button>
+                    </div>
+                    <template x-if="comparing && activeShot()?.comparison">
+                        <div class="max-h-[min(70dvh,36rem)] overflow-auto rounded-2xl bg-well p-3">
+                            <p class="mb-2 text-xs text-problem-ink" x-show="activeShot().comparison.warning" x-text="activeShot().comparison.warning"></p>
+                            <div class="grid grid-cols-2 items-start gap-3">
+                                <figure class="min-w-0">
+                                    <figcaption class="sticky top-0 bg-well py-1 text-xs font-medium">Previous pass</figcaption>
+                                    <img class="block h-auto w-full rounded" :src="activeShot().comparison.url" alt="Previous pass screenshot">
+                                </figure>
+                                <figure class="min-w-0">
+                                    <figcaption class="sticky top-0 bg-well py-1 text-xs font-medium">This pass</figcaption>
+                                    <img class="block h-auto w-full rounded" :src="activeShot().url" alt="This pass screenshot">
+                                </figure>
+                            </div>
+                        </div>
+                    </template>
+
                     {{-- Canvas first, as on the review page: the brief floats over the
                          corner and the fit modes sit bottom right. --}}
-                    <div class="relative" x-show="activeShot()" @resize.window.debounce.100ms="layoutTick++">
+                    <div class="relative" x-show="activeShot() && activeShot().capture_quality?.status !== 'failed' && !comparing" @resize.window.debounce.100ms="layoutTick++">
                     <div class="pointer-events-auto absolute left-3 top-3 z-30 w-[min(18rem,calc(100%-1.5rem))] rounded-2xl bg-lift p-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07]"
-                        x-show="payload.context && brief" x-cloak>
+                        x-show="(payload.context || payload.taste?.label) && brief" x-cloak>
                         <div class="mb-1.5 flex items-center justify-between gap-2">
                             <h2 class="text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
                             <button type="button" class="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900" @click="brief = false">Hide</button>
                         </div>
-                        <p class="line-clamp-4 text-sm leading-relaxed text-pretty text-zinc-700" x-text="payload.context"></p>
+                        <p class="max-h-32 overflow-y-auto text-sm leading-relaxed text-pretty text-zinc-700" x-show="payload.context" x-text="payload.context"></p>
+                        <span class="relative mt-2 inline-flex" x-data="{ tasteOpen: false }" x-show="payload.taste && payload.taste.label">
+                            <button type="button"
+                                class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800"
+                                @click="tasteOpen = ! tasteOpen"
+                                x-text="payload.taste.label"></button>
+                            <div class="absolute left-0 z-40 mt-8 w-64 rounded-xl bg-lift p-3 text-left shadow-lg ring-1 ring-black/[0.07]"
+                                x-show="tasteOpen" x-cloak @click.outside="tasteOpen = false">
+                                <p class="text-xs font-medium text-sky-950">Craft lenses for this review</p>
+                                <template x-for="lens in (payload.taste.lenses || [])" :key="lens.id">
+                                    <div class="mt-2">
+                                        <p class="text-xs font-semibold text-zinc-800" x-text="lens.name"></p>
+                                        <p class="mt-0.5 text-[11px] leading-relaxed text-zinc-500" x-text="lens.blurb"></p>
+                                        <a class="mt-1 inline-block text-[11px] font-medium text-sky-700 underline"
+                                            :href="lens.source_url" target="_blank" rel="noopener noreferrer"
+                                            x-text="lens.source_label || lens.source_url" x-show="lens.source_url"></a>
+                                    </div>
+                                </template>
+                                <p class="mt-3 text-xs leading-relaxed text-zinc-400"
+                                    x-text="payload.taste.disclaimer"></p>
+                            </div>
+                        </span>
                     </div>
                     <div class="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07]">
                         <button type="button" class="h-7 rounded-full px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-chip"
-                            x-show="payload.context && !brief" @click="brief = true">Brief</button>
+                            x-show="(payload.context || payload.taste?.label) && !brief" @click="brief = true">Brief</button>
                         <button type="button" class="flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
                             x-show="isPending && elementsFor(activeShot())"
                             :class="pickOn ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
                             :aria-pressed="pickOn.toString()" @click="togglePick()"
                             title="When on, a click marks the whole part of the page under it">Snap</button>
-                        <template x-for="mode in [['width', 'Fit width'], ['page', 'Whole page'], ['actual', '100%']]" :key="mode[0]">
-                            <button type="button" class="h-7 rounded-full px-2.5 text-xs font-medium transition-colors"
-                                :class="fit === mode[0] ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
-                                :aria-pressed="(fit === mode[0]).toString()"
-                                @click="setFit(mode[0])" x-text="mode[1]"></button>
-                        </template>
+                        <select aria-label="Zoom preset" :value="fit" @change="setFit($event.target.value)"
+                            class="h-7 rounded-full bg-transparent px-2.5 text-xs font-medium text-zinc-700 hover:bg-chip">
+                            <option value="width">Fit width</option>
+                            <option value="page">Whole page</option>
+                            <option value="actual">Actual size</option>
+                        </select>
                     </div>
                     <button type="button" data-mark-toggle
                         class="absolute bottom-3 left-3 z-30 inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-md shadow-black/[0.12] transition-colors"
@@ -222,7 +247,7 @@
                     </p>
 
                     {{-- Mark detail --}}
-                    <div x-show="activePin" x-cloak>@include('mcp.partials.mark-detail')</div>
+                    <div x-show="activePin" x-cloak>@include('mcp.partials.mark-detail', ['detailView' => 'screenshot'])</div>
 
                     {{-- Second-opinion finding note --}}
                     <div class="mt-3 rounded-2xl bg-card p-3 shadow-[0_18px_50px_-24px_rgba(24,24,27,0.45)]" x-show="activeFinding" x-cloak>
@@ -244,26 +269,23 @@
                         {{-- What the mark is tied to; your agent gets the same. --}}
                         <div class="mb-2 space-y-1.5" x-show="composer.target" data-pending-element>
                             <div class="flex items-center gap-1">
-                                @include('mcp.partials.element-chip', ['source' => 'composer.target', 'class' => 'min-w-0 flex-1'])
+                                @include('mcp.partials.element-chip', ['source' => 'composer.target', 'class' => 'min-w-0 flex-1', 'quiet' => true])
                                 <button type="button" class="h-6 shrink-0 rounded-md px-1.5 text-[11px] font-medium text-zinc-500 transition hover:bg-chip hover:text-zinc-900"
                                     x-show="composer.target && composer.target.parent !== null && composer.element !== null" @click="widen()" title="Mark the part around it instead">Wider</button>
-                                <button type="button" class="flex size-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-chip hover:text-zinc-700"
-                                    @click="dropElement()" aria-label="Just this area, not the element" title="Just this area, not the element">×</button>
+                                <button type="button" class="h-6 shrink-0 rounded-md px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-chip hover:text-zinc-900"
+                                    @click="dropElement()" title="Keep the marked area and detach the element">Use area</button>
                             </div>
-                            @include('mcp.partials.element-inspect', ['source' => 'composer.target'])
+                            @include('mcp.partials.element-inspect', ['source' => 'composer.target', 'references' => 'composer.references'])
                         </div>
-                        {{-- One row, as on the review page: what kind of mark this is. --}}
-                        <div class="flex w-full max-w-md items-center gap-0.5 rounded-xl bg-chip p-0.5" role="radiogroup" aria-label="Kind of mark">
-                            <template x-for="sev in severities" :key="sev.value">
-                                <button type="button" role="radio"
-                                    class="h-7 min-w-0 flex-1 whitespace-nowrap rounded-[0.6rem] px-1.5 text-xs font-medium transition-colors"
-                                    :class="composer.severity === sev.value ? 'bg-raised text-zinc-900 shadow-xs ring-1 ring-black/[0.06]' : 'text-zinc-500 hover:text-zinc-900'"
-                                    :aria-checked="(composer.severity === sev.value).toString()"
-                                    @click="composer.severity = sev.value" x-text="sev.label"></button>
-                            </template>
+                        <div class="overflow-hidden rounded-xl border border-input bg-background focus-within:ring-2 focus-within:ring-key/40">
+                            @include('mcp.partials.element-reference-chips', ['references' => 'composer.references', 'removable' => true])
+                            <textarea x-model="composer.body" rows="3" aria-label="Mark note" placeholder="What should change here?"
+                                @input="if (!composer.manualType) composer.severity = window.rmSuggestMarkType($event.target.value)"
+                                class="block w-full resize-y border-0 bg-transparent px-3 py-2 text-sm text-zinc-800 outline-none placeholder:text-zinc-500"></textarea>
+                            <div class="flex items-center px-2 pb-2">
+                                <x-mark-type-picker x-model="composer.severity" x-on:change="composer.manualType = true" />
+                            </div>
                         </div>
-                        <textarea x-model="composer.body" rows="3" placeholder="What should change here?"
-                            class="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-key/40"></textarea>
                         <div class="mt-2 flex flex-wrap items-center gap-2">
                             <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-sm font-medium disabled:opacity-50"
                                 :disabled="busy || !composer.body.trim()" @click="saveMark()">Add mark</button>
@@ -325,34 +347,22 @@
 
                 {{-- BOARD VIEW --}}
                 <div class="mt-3" x-show="view === 'board'">
+                    <button type="button" class="btn-lit mb-3 h-8 rounded-full px-3 text-xs font-medium disabled:opacity-50"
+                        x-show="!reviewingFixes && readyFixes().length" :disabled="busy" @click="startFixReview()"
+                        x-text="'Review ' + readyFixes().length + (readyFixes().length === 1 ? ' fix' : ' fixes')"></button>
+                    <p class="mb-3 text-sm text-muted-foreground" role="status" x-show="fixesNotice" x-text="fixesNotice"></p>
                     <div class="hatch rounded-2xl px-6 py-8 text-center text-zinc-300" x-show="!boardPins().length">
                         <p class="text-sm font-semibold text-zinc-900">No marks yet</p>
                         <p class="mt-1 text-sm text-muted-foreground">Marks you make on the screenshot land here.</p>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" x-show="boardPins().length">
                     <template x-for="col in boardColumns" :key="col.status">
-                        <div class="flex min-h-[8rem] flex-col rounded-2xl bg-well p-3">
+                        <div class="flex flex-col rounded-xl bg-well p-3">
                             <div class="mb-3">
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="flex min-w-0 items-start gap-2">
-                                        <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-zinc-100" aria-hidden="true">
-                                            <svg x-show="col.status === 'open'" class="size-4 shrink-0 text-zinc-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                                <path d="M2.75 2a.75.75 0 0 0-.75.75v10.5a.75.75 0 0 0 1.5 0v-2.624l.33-.083A6.044 6.044 0 0 1 8 11c1.29.645 2.77.807 4.17.457l1.48-.37a.462.462 0 0 0 .35-.448V3.56a.438.438 0 0 0-.544-.425l-1.287.322C10.77 3.808 9.291 3.646 8 3a6.045 6.045 0 0 0-4.17-.457l-.34.085A.75.75 0 0 0 2.75 2Z"/>
-                                            </svg>
-                                            <svg x-show="col.status === 'in_progress'" class="size-4 shrink-0 text-zinc-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                                <path d="M6 6v4h4V6H6Z"/>
-                                                <path fill-rule="evenodd" d="M5.75 1a.75.75 0 0 0-.75.75V3a2 2 0 0 0-2 2H1.75a.75.75 0 0 0 0 1.5H3v.75H1.75a.75.75 0 0 0 0 1.5H3v.75H1.75a.75.75 0 0 0 0 1.5H3a2 2 0 0 0 2 2v1.25a.75.75 0 0 0 1.5 0V13h.75v1.25a.75.75 0 0 0 1.5 0V13h.75v1.25a.75.75 0 0 0 1.5 0V13a2 2 0 0 0 2-2h1.25a.75.75 0 0 0 0-1.5H13v-.75h1.25a.75.75 0 0 0 0-1.5H13V6.5h1.25a.75.75 0 0 0 0-1.5H13a2 2 0 0 0-2-2V1.75a.75.75 0 0 0-1.5 0V3h-.75V1.75a.75.75 0 0 0-1.5 0V3H6.5V1.75A.75.75 0 0 0 5.75 1ZM11 4.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5h6Z" clip-rule="evenodd"/>
-                                            </svg>
-                                            <svg x-show="col.status === 'resolved'" class="size-4 shrink-0 text-zinc-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                                <path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.844-8.791a.75.75 0 0 0-1.188-.918l-3.7 4.79-1.649-1.833a.75.75 0 1 0-1.114 1.004l2.25 2.5a.75.75 0 0 0 1.15-.043l4.25-5.5Z" clip-rule="evenodd"/>
-                                            </svg>
-                                            <svg x-show="col.status === 'verified'" class="size-4 shrink-0 text-zinc-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                                <path fill-rule="evenodd" d="M8.5 1.709a.75.75 0 0 0-1 0 8.963 8.963 0 0 1-4.84 2.217.75.75 0 0 0-.654.72 10.499 10.499 0 0 0 5.647 9.672.75.75 0 0 0 .694-.001 10.499 10.499 0 0 0 5.647-9.672.75.75 0 0 0-.654-.719A8.963 8.963 0 0 1 8.5 1.71Zm2.34 5.504a.75.75 0 0 0-1.18-.926L7.394 9.17l-1.156-.99a.75.75 0 1 0-.976 1.138l1.75 1.5a.75.75 0 0 0 1.078-.106l2.75-3.5Z" clip-rule="evenodd"/>
-                                            </svg>
-                                        </span>
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-zinc-900" x-text="col.label"></p>
-                                            <p class="mt-0.5 text-xs text-muted-foreground" x-text="col.owner"></p>
                                         </div>
                                     </div>
                                     <span class="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 px-2 text-sm font-semibold tabular-nums text-zinc-700"
@@ -384,7 +394,7 @@
                                         </div>
                                     </button>
                                 </template>
-                                <p class="hatch rounded-xl px-3 py-6 text-center text-xs text-muted-foreground"
+                                <p class="py-2 text-xs text-muted-foreground"
                                     x-show="!pinsByStatus(col.status).length" x-text="col.empty"></p>
                             </div>
                         </div>
@@ -393,13 +403,16 @@
                 </div>
 
                 {{-- Mark detail, opened from the board --}}
-                <div x-show="view === 'board' && activePin" x-cloak>@include('mcp.partials.mark-detail')</div>
+                <div x-show="view === 'board' && activePin" x-cloak>@include('mcp.partials.mark-detail', ['detailView' => 'board'])</div>
 
                 {{-- decision bar --}}
                 <div class="mt-4 rounded-2xl bg-card px-3 py-3 sm:px-4" x-show="isPending">
-                    <input type="text" x-model="decisionNote" placeholder="Optional note for the agent…"
+                    <details class="mb-2" x-show="!deciding">
+                        <summary class="w-fit cursor-pointer py-1 text-xs font-medium text-muted-foreground">Add a note</summary>
+                        <input type="text" x-model="decisionNote" placeholder="Optional note for the agent…"
                         class="h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-key/40">
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                    </details>
+                    <div class="flex flex-wrap items-center gap-2">
                         <template x-if="!deciding">
                             <div class="contents">
                                 <button type="button" class="inline-flex h-8 items-center btn-lit rounded-full px-3 text-sm font-medium disabled:opacity-50"
@@ -475,19 +488,16 @@
 
         function send(msg) { window.parent.postMessage(msg, '*'); }
 
-        function request(method, params) {
+        function request(method, params, timeout = 0) {
             const id = nextId++;
-            send({ jsonrpc: '2.0', id, method, params: params || {} });
-            return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
-        }
-
-        // A host that doesn't know a method may never answer. Give up after
-        // a few seconds so the caller can fall back.
-        function requestWithin(method, params, ms) {
-            return Promise.race([
-                request(method, params),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('No answer from the host')), ms)),
-            ]);
+            return new Promise((resolve, reject) => {
+                const timer = timeout ? setTimeout(() => {
+                    pending.delete(id);
+                    reject(new Error('No answer from the host. Try refreshing or open the full review.'));
+                }, timeout) : null;
+                pending.set(id, { resolve, reject, timer });
+                send({ jsonrpc: '2.0', id, method, params: params || {} });
+            });
         }
 
         function mergeHostContext(update) {
@@ -525,6 +535,7 @@
                 const p = pending.get(msg.id);
                 if (!p) return;
                 pending.delete(msg.id);
+                clearTimeout(p.timer);
                 if ('error' in msg) p.reject(new Error(msg.error?.message || 'Host error'));
                 else p.resolve(msg.result);
                 return;
@@ -596,15 +607,15 @@
             set ontoolresult(fn) { onToolResult = fn; if (fn && lastToolResult) fn(lastToolResult); },
             set ontoolinput(fn) { onToolInput = fn; if (fn && lastToolInput) fn(lastToolInput); },
             set ontoolcancelled(fn) { onToolCancelled = fn; if (fn && lastCancelReason !== null) fn(lastCancelReason); },
-            callTool: (name, args) => request('tools/call', { name, arguments: args || {} }),
-            openLink: (url) => request('ui/open-link', { url }),
+            callTool: (name, args) => request('tools/call', { name, arguments: args || {} }, 20000),
+            openLink: (url) => request('ui/open-link', { url }, 5000),
             // Post a message into the chat as the person, which starts the
             // agent's next turn. Rejects when the host doesn't take it.
-            sendMessage: (text) => requestWithin('ui/message', { role: 'user', content: [{ type: 'text', text }] }, 8000),
+            sendMessage: (text) => request('ui/message', { role: 'user', content: [{ type: 'text', text }] }, 8000),
             // Keep what the agent knows current without starting a turn.
             // Each call replaces the last; best-effort.
-            updateModelContext: (params) => requestWithin('ui/update-model-context', params, 5000).catch(() => null),
-            requestDisplayMode: (mode) => requestWithin('ui/request-display-mode', { mode }, 5000),
+            updateModelContext: (params) => request('ui/update-model-context', params, 5000).catch(() => null),
+            requestDisplayMode: (mode) => request('ui/request-display-mode', { mode }, 5000),
             get hostContext() { return hostContext; },
             get hostCapabilities() { return hostCapabilities; },
             set onhostcontext(fn) { onHostContext = fn; if (fn) fn(hostContext); },
@@ -657,15 +668,25 @@
         return {
             payload: null,
             view: 'screenshot',
+            reviewingFixes: false,
+            comparisonView: 'after',
+            fixesNotice: '',
+            comparing: false,
             activeIndex: 0,
             fit: 'width',
-            brief: true,
+            brief: false,
+            shareOpen: false,
+            shareReady: false,
+            shareStatus: '',
+            reactionOptions: @json(\App\Models\AnnotationComment::REACTIONS),
             layoutTick: 0,
             activePin: null,
+            pinInspection: null,
             activeFinding: null,
             busy: false,
             error: '',
             replyBody: '',
+            replyReferences: [],
             talkOnly: false,
             // Handing back to the agent and staying in step with the host.
             handoffNote: '',
@@ -692,7 +713,7 @@
             decidingTimer: null,
             previousOpen: false,
             draft: { drawing: false, x0: 0, y0: 0, x: 0, y: 0, w: 0, h: 0 },
-            composer: { open: false, x: 0, y: 0, area: null, severity: 'must-fix', body: '', element: null, snap: true, target: null },
+            composer: { references: [], open: false, x: 0, y: 0, area: null, severity: 'must-fix', manualType: false, body: '', element: null, snap: true, target: null },
             // Element picking: each shot's element list (from get_shot_elements),
             // the one under the pointer, a touch tap in progress, and whether
             // clicks snap. Hit-testing is window.rmPick, shared with the web.
@@ -704,12 +725,6 @@
             coarse: window.matchMedia('(pointer: coarse)').matches,
             marking: false,
             pickOn: (() => { try { return localStorage.getItem('rm-pick') !== 'off'; } catch (e) { return true; } })(),
-            severities: [
-                { value: 'must-fix', label: 'Must fix' },
-                { value: 'nit', label: 'Nice to have' },
-                { value: 'question', label: 'Question' },
-                { value: 'keep', label: 'Keep this' },
-            ],
             // Labels/owners mirror Annotation::boardColumnMeta(); empty copy is
             // button-flow (no drag columns in the MCP app).
             boardColumns: [
@@ -761,8 +776,8 @@
                         .observe(this.$el);
                 }
                 this.pollTimer = setInterval(() => {
-                    if (!this.payload || this.busy || this.superseded || document.hidden || !this.onScreen) return;
-                    if (this.payload.status === 'pending' || this.payload.status === 'changes_requested') {
+                    if (!this.payload || this.busy || this.deciding || this.superseded || document.hidden || !this.onScreen) return;
+                    if (this.shareOpen || this.payload.status === 'pending' || this.payload.status === 'changes_requested') {
                         this.refresh();
                     }
                 }, 12000);
@@ -854,6 +869,7 @@
             },
 
             apply(data) {
+                if (data.guest_share_url !== this.payload?.guest_share_url) this.shareStatus = '';
                 this.payload = data;
                 if (this.activeIndex >= data.screenshots.length) this.activeIndex = 0;
                 this.error = '';
@@ -882,7 +898,7 @@
             statusDot(status) { return TONES[STATUS_TONES[status] || 'neutral'].dot; },
             statusLabel(status) { return STATUS_LABELS[status] || status; },
             isSettled(pin) { return pin.status === 'resolved' || pin.status === 'verified'; },
-            canManagePin(pin) { return pin && pin.severity !== 'keep' && pin.status !== 'open'; },
+            canManagePin(pin) { return this.payload?.can_manage_marks && pin && pin.severity !== 'keep' && pin.status !== 'open'; },
 
             // The mark timeline (MarkTimeline on the server). "Talk only"
             // keeps the mark itself, comments, and steps that carry a note.
@@ -967,13 +983,6 @@
 
             // Counted over the same marks the board shows (this pass and the one
             // before), so a previous pass can't make the bar under-report.
-            verifiedCount() {
-                return this.boardPins().filter((p) => p.status === 'verified').length;
-            },
-            verifiedPct() {
-                const total = this.boardPins().length;
-                return total ? Math.round((this.verifiedCount() / total) * 100) : 0;
-            },
             tone(kind) { return TONES[kind] || TONES.neutral; },
             reviewTone() {
                 return { changes_requested: ['attention', 'Changes requested'], approved: ['done', 'Approved'], expired: ['neutral', 'Expired'] }[this.payload.status] || null;
@@ -1006,21 +1015,45 @@
                 if (!this.payload) return [];
                 return [...this.parentPins(), ...this.currentPins()].sort((a, b) => {
                     if (a._pass !== b._pass) return a._pass - b._pass;
+                    if (a.screenshot_index !== b.screenshot_index) return (a.screenshot_index || 0) - (b.screenshot_index || 0);
                     return a.number - b.number;
                 });
             },
 
             pinsByStatus(status) { return this.boardPins().filter((p) => p.status === status); },
 
-            showPin(pin) {
+            readyFixes() {
+                if (!this.payload?.can_manage_marks) return [];
+                return this.pinsByStatus('resolved').filter((pin) => pin.severity !== 'keep');
+            },
+
+            startFixReview() {
+                const first = this.readyFixes()[0];
+                if (!first) return;
+                this.fixesNotice = '';
+                this.showPin(first, true);
+            },
+
+            showPin(pin, reviewing = false) {
+                this.reviewingFixes = reviewing;
+                this.comparisonView = 'after';
                 this.activeFinding = null;
                 this.replyBody = '';
-                this.activePin = this.activePin && this.activePin.id === pin.id ? null : pin;
+                this.replyReferences = [];
+                this.pinInspection = null;
+                this.activePin = !reviewing && this.activePin?.id === pin.id ? null : pin;
                 // Bring the opened mark into view, like the popover on the web review.
                 if (this.activePin) {
+                    if (pin.element) {
+                        window.mcpBridge.callTool('get_shot_elements', { review_id: this.payload.id, mark_id: pin.id })
+                            .then((result) => {
+                                if (this.activePin?.id === pin.id) this.pinInspection = result?.structuredContent?.target ?? null;
+                            })
+                            .catch(() => {});
+                    }
                     this.$nextTick(() => {
                         const detail = Array.from(this.$root.querySelectorAll('[data-mark-detail]')).find((el) => el.offsetParent !== null);
-                        detail?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        detail?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'nearest' });
                     });
                 }
             },
@@ -1038,12 +1071,14 @@
             },
 
             closeDetail() {
+                this.reviewingFixes = false;
                 this.activePin = null;
                 this.activeFinding = null;
             },
 
 
             shotLabel(shot, i) {
+                if (shot.label) return shot.label;
                 const v = shot.meta && shot.meta.viewport;
                 const page = shot.meta && shot.meta.page;
                 if (page) return 'Page ' + page;
@@ -1052,7 +1087,7 @@
                 return 'Shot ' + (i + 1);
             },
 
-            setActive(i) { this.activeIndex = i; this.closeComposer(); this.closeDetail(); },
+            setActive(i) { this.activeIndex = i; this.comparing = false; this.closeComposer(); this.closeDetail(); },
             activeShot() { return this.payload ? this.payload.screenshots[this.activeIndex] : null; },
             // Mirrors the review page's fit modes and Screenshot::pixelRatio():
             // 100% is the size the page was drawn at, so 2× stays sharp and a
@@ -1110,8 +1145,8 @@
             },
             // Mirrors MarkFocus::backgroundStyle() — kept out of the payload so a
             // signed URL is not repeated on every copy of every mark.
-            bgStyle(pin) {
-                const w = pin && pin.focus_preview && pin.focus_preview.window;
+            bgStyle(pin, window = pin?.focus_preview?.window) {
+                const w = window;
                 const url = this.pinShotUrl(pin);
                 if (! w || ! url) return '';
                 const sizeX = 100 / Math.max(w.w, 0.02);
@@ -1196,7 +1231,7 @@
             elementsFor(shot) { return shot ? this.elementLists[shot.id] || null : null; },
             loadElements() {
                 const shot = this.activeShot();
-                if (!shot || !this.isPending || !(shot.meta && shot.meta.element_count) || shot.id in this.elementLists) return;
+                if (!shot || !this.isPending || !(shot.element_targeting ?? shot.meta?.element_count) || shot.id in this.elementLists) return;
                 this.elementLists[shot.id] = null;
                 window.mcpBridge.callTool('get_shot_elements', { review_id: this.payload.id, screenshot_id: shot.id })
                     .then((result) => {
@@ -1257,11 +1292,18 @@
             openComposer(x, y, area, opts = {}) {
                 this.closeDetail();
                 this.hover = null;
-                this.composer = { open: true, x, y, area, severity: 'must-fix', body: '', element: opts.element ?? null, snap: opts.snap ?? true, target: null };
+                this.composer = { open: true, x, y, area, severity: 'must-fix', manualType: false, body: '', element: opts.element ?? null, snap: opts.snap ?? true, target: null, references: [] };
                 // A phone caps the inline frame's height: mark in full screen.
                 if (this.platform === 'mobile' && this.canFullscreen && this.displayMode !== 'fullscreen') this.toggleFullscreen();
             },
             closeComposer() { this.composer.open = false; this.composer.body = ''; },
+
+            toggleElementReference(references, option) {
+                if (references.some(item => item.key === option.key)) {
+                    return references.filter(item => item.key !== option.key);
+                }
+                return references.length < {{ \App\Support\ElementTarget::MAX_REFERENCES }} ? [...references, option] : references;
+            },
 
             async saveMark() {
                 const shot = this.activeShot();
@@ -1277,6 +1319,7 @@
                     body: this.composer.body.trim(),
                     element: this.composer.element ?? undefined,
                     snap: this.composer.snap,
+                    element_references: this.composer.references.map(item => item.key),
                 }));
                 // Keep the note on screen if the server refused it, so nothing typed is lost.
                 if (ok) this.closeComposer();
@@ -1286,16 +1329,31 @@
                 const body = this.replyBody.trim();
                 if (!pin || !body) return;
                 const ok = await this.run(() => window.mcpBridge.callTool('add_comment', {
-                    review_id: this.payload.id, mark_id: pin.id, body,
+                    review_id: this.payload.id, mark_id: pin.id, body, element_references: this.replyReferences.map(item => item.key),
                 }));
                 // Keep what was typed if the server refused it.
-                if (ok) this.replyBody = '';
+                if (ok) { this.replyBody = ''; this.replyReferences = []; }
+            },
+
+            async react(entry, reaction, selected) {
+                if (this.busy || !entry.comment_id || !this.payload.comments_enabled) return;
+                await this.run(() => window.mcpBridge.callTool('set_comment_reaction', {
+                    review_id: this.payload.id, comment_id: entry.comment_id, reaction, selected,
+                }));
             },
 
             async verifyMark(pin, action) {
-                await this.run(() => window.mcpBridge.callTool('verify_mark', {
+                const ok = await this.run(() => window.mcpBridge.callTool('verify_mark', {
                     review_id: this.payload.id, mark_id: pin.id, action,
                 }));
+                if (!ok || !this.reviewingFixes || this.activePin?.id !== pin.id) return;
+                const next = this.readyFixes()[0];
+                if (next) {
+                    this.showPin(next, true);
+                } else {
+                    this.closeDetail();
+                    this.fixesNotice = 'All ready fixes reviewed.';
+                }
             },
 
             startDecision(decision) {
@@ -1333,11 +1391,52 @@
             },
 
             async refresh() {
-                await this.run(() => window.mcpBridge.callTool('get_review', { id: this.payload.id }));
+                return this.run(() => window.mcpBridge.callTool('get_review', { id: this.payload.id }));
             },
 
-            openFullReview() {
-                if (this.payload) window.mcpBridge.openLink(this.payload.review_url);
+            async toggleShare() {
+                this.shareOpen = !this.shareOpen;
+                if (!this.shareOpen) return;
+                this.shareReady = false;
+                this.shareStatus = '';
+                this.shareReady = await this.refresh();
+            },
+
+            get guestLinkAvailable() {
+                const access = this.payload?.guest_access;
+                return this.shareReady && access?.open && this.payload.guest_share_url
+                    && (!access.until || Date.parse(access.until) > Date.now());
+            },
+
+            guestLinkExpiry() {
+                const until = this.payload.guest_access?.until;
+                return until ? new Date(until).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '';
+            },
+
+            async copyGuestLink() {
+                if (!this.guestLinkAvailable) return;
+                const input = this.$refs.guestLink;
+                try {
+                    await navigator.clipboard.writeText(input.value);
+                    this.shareStatus = 'Guest link copied';
+                } catch {
+                    input.focus();
+                    input.select();
+                    this.shareStatus = 'Copy the selected link to share it.';
+                }
+            },
+
+            async openFullReview(sharing = false, feedback = false, mark = null) {
+                if (!this.payload) return;
+                const url = new URL(this.payload.review_url);
+                if (sharing) url.searchParams.set('share', '1');
+                if (feedback) url.searchParams.set('feedback', '1');
+                if (mark !== null) url.searchParams.set('mark', mark);
+                try {
+                    await window.mcpBridge.openLink(url.href);
+                } catch {
+                    this.error = 'Open the owner review link from the chat to continue on the web.';
+                }
             },
 
             // Resolves true on success. Tool errors (Response::error) arrive as a
@@ -1352,7 +1451,11 @@
                         return false;
                     }
                     const data = result && result.structuredContent;
-                    if (data && data.id) this.apply(data);
+                    if (!data?.id) {
+                        this.error = 'The host didn’t return the review. Try refreshing or open the full review.';
+                        return false;
+                    }
+                    this.apply(data);
                     return true;
                 } catch (e) {
                     this.error = e.message || 'Something went wrong. Try the full review page.';
@@ -1365,4 +1468,5 @@
     }
 </script>
 <script>{!! $picker ?? '' !!}</script>
+<script>{!! $markType ?? '' !!}</script>
 <script type="module">{!! $script !!}</script>

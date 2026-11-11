@@ -131,15 +131,18 @@ class CaptureSettleScript
         bool $hideChat = false,
         ?int $sweepBudgetMs = null,
         ?int $loadBudgetMs = null,
+        array $settings = [],
     ): string {
         $config = [
             'sweep' => $sweep,
-            'freeze' => (bool) config('revisemy.capture.freeze_animations', true),
+            'freeze' => $settings['freeze_animations'] ?? (bool) config('revisemy.capture.freeze_animations', true),
             'hideConsent' => $hideConsent,
             'hideChat' => $hideChat,
             'collectElements' => $collectElements,
             'embedElements' => $embedElements,
-            'placeFixed' => (bool) config('revisemy.capture.place_fixed', true),
+            'placeFixed' => ($settings['full_page'] ?? true)
+                && ($settings['place_fixed'] ?? (bool) config('revisemy.capture.place_fixed', true)),
+            'fullPage' => $settings['full_page'] ?? true,
             'stepMs' => self::stepMs(),
             'endSettleMs' => max(200, (int) config('revisemy.capture.scroll_end_settle_ms', 450)),
             'topSettleMs' => max(100, (int) config('revisemy.capture.scroll_top_settle_ms', 250)),
@@ -414,6 +417,9 @@ class CaptureSettleScript
       if (cs.lineHeight !== 'normal') {
         styles.lh = px(cs.lineHeight);
       }
+      if (cs.letterSpacing !== 'normal') {
+        styles.ls = parseFloat(cs.letterSpacing);
+      }
       styles.fw = parseInt(cs.fontWeight, 10) || 400;
       const family = (cs.fontFamily.split(',')[0] || '').replace(/["']/g, '').trim();
       if (family) {
@@ -432,6 +438,13 @@ class CaptureSettleScript
     if (padding.some((n) => n > 0)) {
       styles.p = padding;
     }
+    const margin = [cs.marginTop, cs.marginRight, cs.marginBottom, cs.marginLeft].map((value) => parseFloat(value) || 0);
+    if (margin.some((n) => n !== 0)) {
+      styles.m = margin;
+    }
+    if (cs.boxShadow !== 'none') {
+      styles.sh = cs.boxShadow.slice(0, 240);
+    }
     const corners = [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius].map(px);
     if (corners.some((n) => n > 0)) {
       styles.r = corners.every((n) => n === corners[0]) ? corners[0] : corners;
@@ -442,6 +455,12 @@ class CaptureSettleScript
     }
     if (/flex|grid/.test(cs.display)) {
       styles.d = cs.display;
+      styles.ai = cs.alignItems;
+      styles.jc = cs.justifyContent;
+      if (cs.display.includes('flex')) {
+        styles.fd = cs.flexDirection;
+        styles.fwra = cs.flexWrap;
+      }
       const gap = px(cs.rowGap) || px(cs.columnGap);
       if (gap > 0) {
         styles.g = gap;
@@ -639,8 +658,13 @@ async (hardMs) => {
     .filter((img) => !img.complete || img.naturalWidth === 0)
     .map((img) => capped(img.decode(), ms))), ms);
 
+  const isShown = (el) => {
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && getComputedStyle(el).visibility === 'visible'
+      && (cfg.fullPage || (rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth));
+  };
   const pendingImages = () => Array.from(document.images)
-    .filter((img) => (img.currentSrc || img.src) && !img.complete).length;
+    .filter((img) => (img.currentSrc || img.getAttribute('src')?.trim() || img.srcset) && (!img.complete || !img.naturalWidth) && isShown(img)).length;
 
   // Native lazy loading waits for the viewport, but the shot shows the whole
   // page: load everything now, including what the page adds later.
@@ -657,7 +681,7 @@ async (hardMs) => {
     const nodes = document.body ? document.body.getElementsByTagName('*') : [];
     for (let i = 0; i < nodes.length && i < 5000 && urls.size < cfg.maxBackgrounds; i++) {
       const value = getComputedStyle(nodes[i]).backgroundImage;
-      if (!value || value === 'none') {
+      if (!value || value === 'none' || !isShown(nodes[i])) {
         continue;
       }
       for (const match of value.matchAll(/url\(["']?(.*?)["']?\)/g)) {
@@ -669,15 +693,19 @@ async (hardMs) => {
     return Array.from(urls);
   };
 
+  const backgrounds = new Map();
   const loadUrl = (url) => new Promise((resolve) => {
     const img = new Image();
-    img.onload = img.onerror = () => resolve();
+    backgrounds.set(url, false);
+    img.onload = () => { backgrounds.set(url, true); resolve(); };
+    img.onerror = () => resolve();
     img.src = url;
   });
 
   // A visitor sees an autoplaying video's frames, not a black box.
-  const videoFrames = () => Promise.all(Array.from(document.querySelectorAll('video'))
-    .filter((video) => (video.autoplay || !video.paused) && video.readyState < 2)
+  const pendingVideos = () => Array.from(document.querySelectorAll('video'))
+    .filter((video) => (video.autoplay || !video.paused) && video.readyState < 2 && isShown(video));
+  const videoFrames = () => Promise.all(pendingVideos()
     .map((video) => new Promise((resolve) => {
       video.preload = 'auto';
       video.addEventListener('loadeddata', resolve, { once: true });
@@ -877,7 +905,7 @@ async (hardMs) => {
         return true;
       }
     }
-    return last === signature(inViewOnly);
+    return false;
   };
 
   const collectElements = () => (__RM_COLLECTOR__)(cfg);
@@ -956,7 +984,14 @@ async (hardMs) => {
     window.__rmSettleStable = await settleView(maxMs, cfg.stableMs, false);
     timed('still', since);
     window.__rmIncomplete = pendingImages();
-    window.__rmLoadComplete = window.__rmIncomplete === 0;
+    window.__rmQuality = {
+      incomplete_images: window.__rmIncomplete,
+      incomplete_backgrounds: backgroundUrls().filter((url) => backgrounds.get(url) !== true).length,
+      incomplete_videos: pendingVideos().length,
+      incomplete_fonts: document.fonts ? Array.from(document.fonts).filter((font) => font.status === 'loading' || font.status === 'error').length : 0,
+      sweep_complete: window.__rmSweepComplete ?? true,
+    };
+    window.__rmLoadComplete = Object.values(window.__rmQuality).every((value) => value === 0 || value === true);
     if (!cfg.collectElements) {
       return true;
     }
@@ -1030,21 +1065,23 @@ async (hardMs) => {
         lockOutOfView();
       }
       const sweepDeadline = deadlineIn(cfg.sweepBudgetMs);
-      const height = Math.max(
+      const height = () => Math.max(
         document.body ? document.body.scrollHeight : 0,
         document.documentElement ? document.documentElement.scrollHeight : 0,
         0
       );
       const view = Math.max(window.innerHeight || 800, 1);
       const step = Math.max(Math.floor(view * 0.85), 100);
-      for (let y = 0; y < height && Date.now() < sweepDeadline; y += step) {
+      let y = 0;
+      for (; y < height() && Date.now() < sweepDeadline; y += step) {
         window.scrollTo(0, y);
         loadEagerly();
         await sleep(cfg.stepMs);
         await settleView(Math.min(1500, Math.max(0, sweepDeadline - Date.now())), 150, true);
       }
-      window.scrollTo(0, height);
+      window.scrollTo(0, height());
       await sleep(cfg.endSettleMs);
+      window.__rmSweepComplete = y >= height();
       finishAnimations();
       window.scrollTo(0, 0);
       await sleep(cfg.topSettleMs);

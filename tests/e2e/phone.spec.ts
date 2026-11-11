@@ -14,10 +14,11 @@ async function shotBox(page: Page) {
 }
 
 /** A one-finger drag, as real touch events (Playwright's touchscreen only taps). */
-async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, onStart?: () => Promise<void>) {
     const cdp = await page.context().newCDPSession(page);
     const point = (p: { x: number; y: number }) => [{ x: Math.round(p.x), y: Math.round(p.y) }];
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(from) });
+    await onStart?.();
     for (let i = 1; i <= 8; i++) {
         const at = { x: from.x + ((to.x - from.x) * i) / 8, y: from.y + ((to.y - from.y) * i) / 8 };
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(at) });
@@ -47,7 +48,17 @@ test('a tap only marks once Mark is on, and a drag draws a box @phone', async ({
     // Mark, then drag: a box mark.
     await page.getByRole('button', { name: 'Mark', exact: true }).tap();
     await expect(page.locator('[data-marking-hint]')).toBeVisible();
-    await drag(page, { x: box.x + box.width * 0.1, y: box.y + box.height * 0.2 }, { x: box.x + box.width * 0.5, y: box.y + box.height * 0.6 });
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height + 20);
+    await expect(page.getByRole('dialog', { name: /Leave a note/ })).toHaveCount(0);
+
+    const lens = page.locator('[data-touch-lens]');
+    await drag(page,
+        { x: box.x + box.width * 0.1, y: box.y + box.height * 0.2 },
+        { x: box.x + box.width * 0.5, y: box.y + box.height * 0.6 },
+        async () => { await expect(lens).toBeVisible(); },
+    );
+    await expect(lens).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Mark note' })).not.toBeFocused();
     await saveNote(page, 'Hero copy is cramped.');
 
     const pins = (await (await api.get(`/api/reviews/${review.id}`)).json()).work_packets.pins;
@@ -72,6 +83,12 @@ test('tapping a mark opens it from the bottom, and the dock holds the list @phon
     await page.getByRole('button', { name: 'Open mark M1' }).first().tap();
     const sheet = page.getByRole('dialog', { name: 'Mark M1' });
     await expect(sheet.getByText('Price needs a period.')).toBeVisible();
+    const crop = sheet.getByRole('img', { name: 'Cropped screenshot focused on mark M1' });
+    await expect(crop).toBeHidden();
+    await sheet.getByText('Screenshot crop', { exact: true }).tap();
+    await expect(crop).toBeVisible();
+    await sheet.getByText('Screenshot crop', { exact: true }).tap();
+    await expect(crop).toBeHidden();
     await expect(page.locator('#rm-drawer')).toBeHidden();
     await sheet.getByRole('button', { name: 'Close mark' }).last().tap();
     await expect(sheet).toBeHidden();
@@ -97,6 +114,9 @@ test('the phone shows the shot, not chrome @phone', async ({ page }) => {
     const { review } = await seedReview('Room to see');
     await page.goto(path(review.review_url));
     const box = await shotBox(page);
+
+    await expect(page.locator('header time')).toHaveText(/Open until [A-Z][a-z]+ \d+/);
+    await expect(page.locator('header time')).toBeInViewport();
 
     // Header, folded brief and dock leave most of the screen to the shot's viewport.
     const viewport = page.viewportSize()!;
@@ -133,6 +153,23 @@ test('two fingers zoom the shot, never the page @phone', async ({ page }) => {
     await expect(page.getByRole('dialog', { name: /Leave a note/ })).toHaveCount(0);
 });
 
+test('previous and next switch screenshots without opening the picker @phone', async ({ page }) => {
+    const { review } = await seedReview('Three views', { shots: 3 });
+    await page.goto(path(review.review_url));
+
+    const previous = page.getByRole('button', { name: 'Previous screenshot' });
+    const next = page.getByRole('button', { name: 'Next screenshot' });
+    await expect(previous).toBeDisabled();
+    await next.tap();
+    await expect(page.getByRole('img', { name: 'Screenshot 2' })).toBeVisible();
+    await expect(previous).toBeEnabled();
+    await next.tap();
+    await expect(page.getByRole('img', { name: 'Screenshot 3' })).toBeVisible();
+    await expect(next).toBeDisabled();
+    await previous.tap();
+    await expect(page.getByRole('img', { name: 'Screenshot 2' })).toBeVisible();
+});
+
 test('the board reads one column at a time, and moves marks by its buttons @phone', async ({ page }) => {
     const { review, api } = await seedReview('Board in hand');
     const shot = (await (await api.get(`/api/reviews/${review.id}`)).json()).screenshots[0];
@@ -145,6 +182,14 @@ test('the board reads one column at a time, and moves marks by its buttons @phon
     await api.post(`/api/reviews/${review.id}/marks/resolve`, { data: { marks: [{ id: logo.id, status: 'resolved', note: 'Swapped in the SVG.' }] } });
 
     await page.goto(path(review.board_url));
+
+    const reviewFixes = page.getByRole('button', { name: 'Review 1 fix' });
+    const columns = page.getByRole('tablist', { name: 'Columns' });
+    await expect(reviewFixes).toBeInViewport();
+    const actionBounds = (await reviewFixes.boundingBox())!;
+    const columnBounds = (await columns.boundingBox())!;
+    expect(actionBounds.x).toBeGreaterThan(columnBounds.x + columnBounds.width);
+    expect(Math.abs(actionBounds.y + actionBounds.height / 2 - columnBounds.y - columnBounds.height / 2)).toBeLessThan(2);
 
     // Tabs name the columns; the one in view is lit, and tapping another goes there.
     const tabs = page.locator('[data-col-tab]');

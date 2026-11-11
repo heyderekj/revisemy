@@ -1,7 +1,7 @@
-@props(['mark', 'compact' => false])
+@props(['mark', 'compact' => false, 'imageUrl' => null])
 
 @php
-    $focus = \App\Support\MarkFocus::forMark($mark);
+    $focus = \App\Support\MarkFocus::forMark($mark, $imageUrl);
     $overlay = $focus['overlay'];
     $point = $focus['point'];
     $ratio = max($focus['ratio'], 0.01);

@@ -31,6 +31,7 @@ class Finding extends Model
     public const STATUS_DISMISSED = 'dismissed';
 
     protected $fillable = [
+        'element_references',
         'screenshot_id',
         'source',
         'author',
@@ -40,6 +41,7 @@ class Finding extends Model
         'y',
         'area',
         'target',
+        'pdf_anchor',
         'related_pin',
         'status',
     ];
@@ -47,10 +49,12 @@ class Finding extends Model
     protected function casts(): array
     {
         return [
+            'element_references' => 'array',
             'x' => 'float',
             'y' => 'float',
             'area' => 'array',
             'target' => 'array',
+            'pdf_anchor' => 'array',
             'related_pin' => 'integer',
         ];
     }

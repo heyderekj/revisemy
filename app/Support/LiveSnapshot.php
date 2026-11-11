@@ -21,7 +21,7 @@ class LiveSnapshot
     /** Elements removed whole: anything that runs, frames, or redirects. */
     protected const REMOVE = ['script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet', 'base', 'portal'];
 
-    public static function prepare(string $html, ?string $baseUrl, string $nonce, string $script): string
+    public static function prepare(string $html, ?string $baseUrl, string $nonce, string $script, bool $editable = true): string
     {
         $document = HTMLDocument::createFromString($html, LIBXML_NOERROR);
 
@@ -40,6 +40,9 @@ class LiveSnapshot
         }
 
         self::restoreMedia($document);
+        if (! $editable) {
+            $document->documentElement?->setAttribute('data-rm-preview-readonly', '');
+        }
 
         $head = $document->head;
 

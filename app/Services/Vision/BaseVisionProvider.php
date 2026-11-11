@@ -4,6 +4,7 @@ namespace App\Services\Vision;
 
 use App\Models\Finding;
 use App\Models\Screenshot;
+use App\Services\PdfReviewService;
 use App\Support\NormalizedArea;
 use Illuminate\Support\Facades\Storage;
 
@@ -30,6 +31,7 @@ abstract class BaseVisionProvider implements VisionProvider
             }
         }
 
+        app(PdfReviewService::class)->ensurePageImage($screenshot);
         $binary = $disk->get($screenshot->path);
         if ($binary === null || $binary === '') {
             return null;

@@ -81,7 +81,7 @@ final class CaptureDevice
      */
     public static function unmeasuredDpr(array $viewport): int
     {
-        $base = max(1, (int) config('revisemy.capture.url_device_scale_factor', 1));
+        $base = $viewport['base_dpr'] ?? max(1, (int) config('revisemy.capture.url_device_scale_factor', 1));
 
         if ($viewport['width'] > self::UNMEASURED_HIDPI_MAX_WIDTH) {
             return $base;

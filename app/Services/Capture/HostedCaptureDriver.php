@@ -112,7 +112,7 @@ export default async function ({ page, context }) {
   await page.setViewport(context.viewport);
   timed('setup');
   // A page that never goes quiet still has something to shoot.
-  await page.goto(context.url, { waitUntil: context.waitUntil, timeout: context.timeout }).catch((e) => {
+  const navigation = await page.goto(context.url, { waitUntil: context.waitUntil, timeout: context.timeout }).catch((e) => {
     if (!e || e.name !== 'TimeoutError') {
       throw e;
     }
@@ -151,6 +151,19 @@ export default async function ({ page, context }) {
   const dpr = context.viewport.deviceScaleFactor || 1;
   const width = doc.width;
   const height = context.fullPage ? doc.height : context.viewport.height;
+  const state = await page.evaluate(() => ({
+    elements: window.__rmElements || null,
+    stable: window.__rmSettleStable === true,
+    loaded: window.__rmLoadComplete === true,
+    incomplete: window.__rmIncomplete || 0,
+    quality: window.__rmQuality || {},
+    timings: window.__rmTimings || {},
+  }));
+  const snapshot = context.withHtml ? await page.evaluate(() => ({
+    html: (document.doctype ? new XMLSerializer().serializeToString(document.doctype) : '') + document.documentElement.outerHTML,
+    base: document.baseURI,
+  })) : null;
+  timed('read');
   const shoot = (type, clip, scale, extra) => page.screenshot({
     type,
     encoding: 'base64',
@@ -227,15 +240,6 @@ export default async function ({ page, context }) {
     timed('slices');
   }
 
-  const state = await page.evaluate(() => ({
-    elements: window.__rmElements || null,
-    stable: window.__rmSettleStable === true,
-    loaded: window.__rmLoadComplete === true,
-    incomplete: window.__rmIncomplete || 0,
-    timings: window.__rmTimings || {},
-  }));
-  const html = context.withHtml ? await page.content() : null;
-  timed('read');
   // The settle's own phases, inside 'settle' and 'again' above.
   for (const [key, ms] of Object.entries(state.timings)) {
     timings['settle_' + key] = ms;
@@ -250,11 +254,15 @@ export default async function ({ page, context }) {
       vision,
       slices,
       scale,
-      html,
+      html: snapshot && snapshot.html.length <= context.maxHtml ? snapshot.html : null,
+      snapshotBase: snapshot?.base ?? null,
       elements: context.collectElements ? state.elements : null,
       stable: state.stable,
       loaded: state.loaded,
       incomplete: state.incomplete,
+      quality: state.quality,
+      httpStatus: navigation?.status() ?? null,
+      browser: await page.browser().version().catch(() => null),
       timings,
     },
     type: 'application/json',
@@ -292,8 +300,10 @@ JS;
      */
     public function captureUrlVia(string $path, string $url, array $viewports): array
     {
-        $fullPage = (bool) config('revisemy.capture.url_full_page', true);
-        $sweep = $fullPage && CaptureSettleScript::enabled();
+        $viewports = array_map(CaptureProfile::viewport(...), $viewports);
+        $settings = $viewports[0]['settings'] ?? CaptureProfile::settings();
+        $fullPage = $settings['full_page'];
+        $sweep = $fullPage && $settings['scroll_page'];
         $baseMeta = ['origin' => 'capture', 'page_url' => $url];
 
         if ($path !== 'function') {
@@ -303,8 +313,8 @@ JS;
         $endpoint = $this->functionEndpoint() ?? throw new FunctionUnavailable(0, 'no /function endpoint is configured');
         $requests = [];
 
-        foreach (array_values($viewports) as $index => $viewport) {
-            $requests[$viewport['label']] = $this->functionRequest($endpoint, $url, $viewport, $fullPage, $sweep, withHtml: $index === 0);
+        foreach ($viewports as $viewport) {
+            $requests[$viewport['label']] = $this->functionRequest($endpoint, $url, $viewport, $fullPage, $sweep, withHtml: true);
         }
 
         ToolProgress::report('Capturing '.ToolProgress::viewports(array_keys($requests)), 'shoot');
@@ -315,11 +325,20 @@ JS;
         // worth of base64 never sits in memory beside its decoded copy.
         foreach ($viewports as $viewport) {
             $label = $viewport['label'];
-            $shots[] = $this->functionShot($replies[$label]['response'], $viewport, $requests[$label]['dpr'], $baseMeta, $replies[$label]['ms']);
+            $reply = $replies[$label];
+            try {
+                if ($reply['response'] === null) {
+                    throw ValidationException::withMessages(['capture' => $this->unreachableMessage($label)]);
+                }
+
+                $shots[] = $this->functionShot($reply['response'], $viewport, $requests[$label]['dpr'], $baseMeta, $reply['ms']);
+            } catch (ValidationException $e) {
+                $shots[] = CaptureQuality::failedShot($baseMeta + CaptureProfile::meta($viewport, 'function'), $e->validator->errors()->first('capture'));
+            }
             unset($replies[$label]);
         }
 
-        return $shots;
+        return CaptureQuality::requireSuccessfulShot($shots);
     }
 
     /**
@@ -339,7 +358,7 @@ JS;
         $elements = null;
 
         try {
-            $dom = $this->captureDom($url);
+            $dom = $this->captureDom($url, $viewports[0] ?? null);
         } catch (\Throwable $e) {
             Log::warning('Hosted DOM capture failed', ['url' => $url, 'error' => $e->getMessage()]);
             $dom = null;
@@ -359,14 +378,15 @@ JS;
             $baseMeta,
             fullPage: $fullPage,
             sweep: $sweep,
-            hideConsent: (bool) config('revisemy.capture.hide_consent', true),
+            hideConsent: $viewports[0]['settings']['hide_consent'] ?? true,
             measured: $measured,
         );
 
-        if ($shots !== [] && $html !== null) {
+        if ($shots !== []) {
             $shots[0]['html'] = $html;
+            $shots[0]['meta']['preview_source'] = 'separate_load';
 
-            if ($elements !== null) {
+            if ($elements !== null && $shots[0]['meta']['origin'] !== 'capture_failed') {
                 $shots[0]['elements'] = $elements;
                 $shots[0]['meta']['elements_source'] = 'separate_load';
             }
@@ -380,7 +400,7 @@ JS;
         return $this->captureViaScreenshot(['html' => $html], $viewports, ['origin' => 'html'], fullPage: true, sweep: false, hideConsent: false);
     }
 
-    public function captureDom(string $url): ?string
+    public function captureDom(string $url, ?array $viewport = null): ?string
     {
         $endpoint = (string) config('revisemy.capture.content_endpoint');
 
@@ -388,11 +408,11 @@ JS;
             return null;
         }
 
-        $sweep = (bool) config('revisemy.capture.url_full_page', true) && CaptureSettleScript::enabled();
+        $viewport = CaptureProfile::viewport($viewport ?? $this->primaryViewport());
+        $settings = $viewport['settings'];
+        $sweep = $settings['full_page'] && $settings['scroll_page'];
         $collect = (bool) config('revisemy.capture.collect_elements', true);
         $budgetMs = CaptureSettleScript::budgetMs($sweep, $collect);
-        $viewport = $this->primaryViewport();
-
         $response = Http::timeout($this->requestTimeout($budgetMs))
             ->post($this->authenticatedUrl($endpoint), [
                 'url' => $url,
@@ -406,10 +426,11 @@ JS;
                 'waitForFunction' => [
                     'fn' => CaptureSettleScript::functionBody(
                         sweep: $sweep,
-                        hideConsent: (bool) config('revisemy.capture.hide_consent', true),
+                        hideConsent: $settings['hide_consent'],
                         collectElements: $collect,
                         embedElements: $collect,
-                        hideChat: (bool) config('revisemy.capture.hide_chat', true),
+                        hideChat: $settings['hide_chat'],
+                        settings: $settings,
                     ),
                     'timeout' => $budgetMs + CaptureSettleScript::OUTER_HEADROOM_MS,
                 ],
@@ -446,17 +467,18 @@ JS;
                 'isMobile' => $viewport['mobile'],
                 'hasTouch' => $viewport['mobile'],
             ],
-            'userAgent' => CaptureDevice::userAgent($viewport),
+            'userAgent' => $viewport['user_agent'],
             'waitUntil' => $this->gotoOptions()['waitUntil'],
             'timeout' => $this->gotoOptions()['timeout'],
             'waitMs' => $this->waitMs(),
             'settle' => CaptureSettleScript::functionBody(
                 sweep: $sweep,
-                hideConsent: (bool) config('revisemy.capture.hide_consent', true),
+                hideConsent: $viewport['settings']['hide_consent'],
                 collectElements: $collect,
-                hideChat: (bool) config('revisemy.capture.hide_chat', true),
+                hideChat: $viewport['settings']['hide_chat'],
                 sweepBudgetMs: $budget['sweepMs'],
                 loadBudgetMs: $budget['loadMs'],
+                settings: $viewport['settings'],
             ),
             'sessionMs' => $budget['sessionMs'],
             // Kept back from stopAt for the shots and the reply.
@@ -478,6 +500,7 @@ JS;
             'maxSlices' => self::MAX_SLICES,
             'collectElements' => $collect,
             'withHtml' => $withHtml,
+            'maxHtml' => PageCaptureService::MAX_SNAPSHOT_BYTES,
         ];
 
         // Browserless ends a session at its own timeout, and turns the whole
@@ -534,7 +557,7 @@ JS;
 
         $binary = is_array($data) && is_string($data['image'] ?? null) ? base64_decode($data['image'], true) : false;
 
-        if ($binary === false || $binary === '') {
+        if ($binary === false || ! @getimagesizefromstring($binary)) {
             throw ValidationException::withMessages([
                 'capture' => $this->failureMessage($label, $response),
             ]);
@@ -551,24 +574,21 @@ JS;
 
         return [
             'binary' => $binary,
-            'meta' => $baseMeta + [
-                'viewport' => $label,
-                'css_width' => $viewport['width'],
+            'meta' => $baseMeta + CaptureProfile::meta($viewport, 'function') + [
                 // What the pixels hold per CSS px once the budget had its say.
                 'dpr' => $scale >= 0.995 ? $dpr : round($dpr * $scale, 2),
                 'requested_dpr' => $dpr,
-                'mobile' => $viewport['mobile'],
-                'settled' => (bool) ($data['stable'] ?? false),
-                'loaded' => (bool) ($data['loaded'] ?? false),
-                'incomplete_images' => (int) ($data['incomplete'] ?? 0),
                 'capture_ms' => $captureMs,
-            ] + ($timings !== [] ? ['timings' => $timings] : [])
+            ] + CaptureQuality::browserMeta($data)
+              + ['incomplete_images' => (int) ($data['incomplete'] ?? 0)]
+              + ($timings !== [] ? ['timings' => $timings] : [])
               + (is_array($data['elements'] ?? null) ? ['elements_source' => 'same_load'] : [])
               + (is_numeric($data['css']['width'] ?? null) && $cssHeight > 0
                   ? ['doc_width' => (int) $data['css']['width'], 'doc_height' => $cssHeight]
                   : []),
             'elements' => is_array($data['elements'] ?? null) ? $data['elements'] : null,
             'html' => is_string($data['html'] ?? null) && $data['html'] !== '' ? $data['html'] : null,
+            'snapshot_base' => is_string($data['snapshotBase'] ?? null) ? $data['snapshotBase'] : null,
             'thumb' => is_string($thumb) && $thumb !== '' ? $thumb : null,
             'vision' => is_string($vision) && $vision !== '' && $crop > 0 ? ['binary' => $vision, 'crop' => $crop] : null,
             'slices' => $this->decodeSlices($data['slices'] ?? null, $cssHeight),
@@ -676,7 +696,8 @@ JS;
             $dpr = $isUrl
                 ? CaptureDevice::measuredDpr($viewport, $measured)
                 : ($viewport['dpr'] ?? max(1, (int) config('revisemy.capture.device_scale_factor', 2)));
-            $userAgent = CaptureDevice::userAgent($viewport);
+            $settings = ['full_page' => $fullPage] + ($viewport['settings'] ?? CaptureProfile::settings());
+            $userAgent = $isUrl ? $viewport['user_agent'] : CaptureDevice::userAgent($viewport);
 
             $payload = $source + [
                 'viewport' => [
@@ -689,7 +710,7 @@ JS;
                 'waitForTimeout' => $this->waitMs(),
                 'waitForFunction' => [
                     // Chat launchers only float over pages, never over email.
-                    'fn' => CaptureSettleScript::functionBody(sweep: $sweep, hideConsent: $hideConsent, hideChat: $isUrl && (bool) config('revisemy.capture.hide_chat', true)),
+                    'fn' => CaptureSettleScript::functionBody(sweep: $sweep, hideConsent: $hideConsent, hideChat: $isUrl && $settings['hide_chat'], settings: $settings),
                     'timeout' => $budgetMs + CaptureSettleScript::OUTER_HEADROOM_MS,
                 ],
             ];
@@ -715,31 +736,35 @@ JS;
             $label = $viewport['label'];
             $request = $requests[$label];
             $response = $replies[$label]['response'];
+            $captureMs = $replies[$label]['ms'];
             unset($replies[$label]);
 
-            if ($request['userAgent'] !== null && $response->status() === 400 && str_contains($response->body(), 'userAgent')) {
+            if ($request['userAgent'] !== null && $response?->status() === 400 && str_contains($response->body(), 'userAgent')) {
                 $request['payload']['userAgent'] = $request['userAgent'];
+                $started = microtime(true);
                 $response = $this->send($endpoint, $request['payload'], $httpTimeout, $label);
+                $captureMs += (int) round((microtime(true) - $started) * 1000);
             }
 
-            if (! $response->successful() || $response->body() === '') {
-                throw ValidationException::withMessages([
-                    'capture' => $this->failureMessage($label, $response),
-                ]);
+            if (! $response?->successful() || ! @getimagesizefromstring($response->body())) {
+                $reason = $response ? $this->failureMessage($label, $response) : $this->unreachableMessage($label);
+                $shots[] = CaptureQuality::failedShot($baseMeta + CaptureProfile::meta($viewport, 'screenshot'), $reason);
+
+                continue;
             }
 
             $shots[] = [
                 'binary' => $response->body(),
-                'meta' => $baseMeta + [
+                'meta' => $baseMeta + ($isUrl ? CaptureProfile::meta($viewport, 'screenshot', $request['dpr']) : [
                     'viewport' => $label,
                     'css_width' => $viewport['width'],
                     'dpr' => $request['dpr'],
                     'mobile' => $viewport['mobile'],
-                ],
+                ]) + ['capture_ms' => $captureMs],
             ];
         }
 
-        return $shots;
+        return CaptureQuality::requireSuccessfulShot($shots);
     }
 
     /**
@@ -750,7 +775,7 @@ JS;
      * over its concurrent-browser limit (429) is asked again on its own.
      *
      * @param  array<string, array{endpoint: string, payload: array<string, mixed>, timeout: int}>  $requests  keyed by viewport label
-     * @return array<string, array{response: Response, ms: int}>
+     * @return array<string, array{response: Response|null, ms: int}>
      */
     protected function sendAll(array $requests): array
     {
@@ -784,15 +809,15 @@ JS;
                     'error' => $response instanceof \Throwable ? $response->getMessage() : 'no reply',
                 ]);
 
-                throw ValidationException::withMessages(['capture' => $this->unreachableMessage($label)]);
+                $response = null;
             }
 
-            if ($response->status() === 429) {
+            if ($response?->status() === 429) {
                 $again = microtime(true);
                 $response = $this->send($request['endpoint'], $request['payload'], $request['timeout'], $label);
                 $finished[$label] = (int) round((microtime(true) - $again) * 1000);
 
-                if ($response->successful()) {
+                if ($response?->successful()) {
                     ToolProgress::report('Captured '.ToolProgress::viewport($label), 'shot:'.$label);
                 }
             }
@@ -806,7 +831,7 @@ JS;
     /**
      * @param  array<string, mixed>  $payload
      */
-    protected function send(string $endpoint, array $payload, int $timeout, string $label): Response
+    protected function send(string $endpoint, array $payload, int $timeout, string $label): ?Response
     {
         try {
             return Http::timeout($timeout)->post($endpoint, $payload);
@@ -816,7 +841,7 @@ JS;
                 'error' => $e->getMessage(),
             ]);
 
-            throw ValidationException::withMessages(['capture' => $this->unreachableMessage($label)]);
+            return null;
         }
     }
 
@@ -903,6 +928,8 @@ JS;
         return [
             'width' => (int) ($first[0] ?? $first['width'] ?? 1280),
             'height' => (int) ($first[1] ?? $first['height'] ?? 800),
+            'mobile' => (bool) ($first['mobile'] ?? false),
+            'device' => $first['device'] ?? null,
         ];
     }
 

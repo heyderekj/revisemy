@@ -39,6 +39,8 @@ class AddScreenshotTool extends Tool
             'image' => 'required|string',
             'dpr' => 'nullable|numeric|between:0.5,4',
             'elements' => 'nullable',
+            'state' => 'nullable|string|max:80',
+            'replace_id' => 'nullable|integer|min:1',
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['id']);
@@ -53,6 +55,8 @@ class AddScreenshotTool extends Tool
                 $data['image'],
                 isset($data['dpr']) ? (float) $data['dpr'] : null,
                 ReviewService::elementsFrom($data['elements'] ?? null),
+                $data['state'] ?? null,
+                isset($data['replace_id']) ? (int) $data['replace_id'] : null,
             );
         } catch (ValidationException $e) {
             return Response::error(collect($e->errors())->flatten()->first() ?? 'Could not add that screenshot.');
@@ -76,6 +80,8 @@ class AddScreenshotTool extends Tool
             'image' => $schema->string()->description('Screenshot as https URL, data URL, or base64')->required(),
             'dpr' => $schema->number()->description('Optional device pixels per CSS px (2 for a retina screenshot)'),
             'elements' => $schema->object()->description('Optional element map from the script at '.url('/capture/elements.js').', run in the browser you screenshot. Lets the human mark a whole element and tells you its selector.'),
+            'state' => $schema->string()->description('Optional name for the captured UI state, such as Checkout form errors. Reuse the same name on the next pass.'),
+            'replace_id' => $schema->integer()->description('Optional screenshot id of a failed capture on this review. Replaces its placeholder in place.'),
         ];
     }
 }

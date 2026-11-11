@@ -4,8 +4,10 @@ use App\Http\Controllers\AlternativeController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ConnectController;
 use App\Http\Controllers\DocsController;
+use App\Http\Controllers\FeedbackRequestController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\PdfReviewController;
 use App\Http\Controllers\PolarWebhookController;
 use App\Http\Controllers\ScreenshotController;
 use App\Http\Controllers\SeoController;
@@ -48,7 +50,7 @@ Route::get('/guest-links', [GuideController::class, 'show'])
     ->defaults('slug', 'guest-links');
 Route::get('/skills', [SkillsController::class, 'index']);
 Route::get('/skills/{slug}', [SkillsController::class, 'show'])
-    ->where('slug', '[a-z]+');
+    ->where('slug', '[a-z]+(?:-[a-z]+)*');
 Route::get('/changelog', [GuideController::class, 'show'])
     ->defaults('slug', 'changelog');
 
@@ -113,6 +115,12 @@ Route::get('/reviews', function () {
     return view('recent-reviews');
 })->middleware('noindex')->name('reviews.index');
 
+Route::prefix('feedback/{token}')->middleware('noindex')->group(function () {
+    Route::get('/', [FeedbackRequestController::class, 'show'])->name('feedback.show');
+    Route::post('/', [FeedbackRequestController::class, 'reply'])->middleware('throttle:20,1')->name('feedback.reply');
+    Route::get('/shots/{screenshot}', [ScreenshotController::class, 'showForFeedback'])->name('feedback.screenshot');
+});
+
 // Review links carry their own title, state and first shot, so a link pasted
 // into Slack or iMessage previews the review (App\Services\ReviewPreview).
 Route::get('/r/{token}', function (string $token, ReviewPreview $preview) {
@@ -134,6 +142,16 @@ Route::get('/r/{token}/preview.jpg', [ScreenshotController::class, 'previewForRe
     ->middleware('noindex')
     ->name('reviews.preview');
 
+Route::get('/r/{token}/original.pdf', [PdfReviewController::class, 'original'])
+    ->middleware('noindex')->name('reviews.pdf.original');
+
+Route::get('/r/{token}/annotated.pdf', [PdfReviewController::class, 'annotated'])
+    ->middleware('noindex')->name('reviews.pdf.annotated');
+
+Route::get('/pdf-assets/{group}/{name}', [PdfReviewController::class, 'asset'])
+    ->where(['group' => 'cmaps|standard_fonts|wasm', 'name' => '[A-Za-z0-9_-]+\.(bcmap|ttf|pfb|wasm|js)'])
+    ->name('pdf.assets');
+
 Route::get('/r/{token}/shots/{screenshot}', [ScreenshotController::class, 'showForReview'])
     ->middleware('noindex')
     ->name('reviews.screenshot');
@@ -149,6 +167,12 @@ Route::get('/capture/elements.js', fn () => response(CaptureSettleScript::collec
     'Cache-Control' => 'public, max-age=3600',
     'Access-Control-Allow-Origin' => '*',
 ]))->middleware('noindex')->name('capture.elements');
+
+Route::get('/capture/states.mjs', fn () => response(file_get_contents(resource_path('js/capture-states.mjs')), headers: [
+    'Content-Type' => 'text/javascript; charset=utf-8',
+    'Cache-Control' => 'public, max-age=3600',
+    'Access-Control-Allow-Origin' => '*',
+]))->middleware('noindex')->name('capture.states');
 
 Route::get('/r/{token}/shots/{screenshot}/elements', [ScreenshotController::class, 'elementsForReview'])
     ->middleware('noindex')

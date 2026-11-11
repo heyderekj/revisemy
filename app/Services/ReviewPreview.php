@@ -78,6 +78,7 @@ class ReviewPreview
             return null;
         }
 
+        app(PdfReviewService::class)->ensurePageImage($shot);
         $disk = Storage::disk($shot->disk ?: ScreenshotStorage::diskName());
         $path = 'reviews/'.$review->public_id.'/preview-'.$shot->id.'.jpg';
 

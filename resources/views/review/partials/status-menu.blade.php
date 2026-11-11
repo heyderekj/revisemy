@@ -5,23 +5,38 @@
     $tag = $review->statusTag();
     $status = $review->effectiveStatus();
     $undoable ??= false;
+    $quiet ??= false;
     $decide = fn (string $kind, string $status) => $undoable
         ? "\$dispatch('rm-decide', { kind: '{$kind}' })"
         : "\$wire.setReviewStatus('{$status}')";
 @endphp
-<flux:dropdown position="bottom" align="start" class="shrink-0 {{ $class ?? '' }}">
+<flux:dropdown position="bottom" align="start" class="{{ $quiet ? 'min-w-0' : 'shrink-0' }} {{ $class ?? '' }}">
     <button
         type="button"
-        class="inline-flex items-center gap-0.5 rounded-md outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-zinc-300"
+        @class([
+            'inline-flex max-w-full items-center gap-0.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-zinc-300',
+            'h-6 px-0.5 text-muted-foreground transition-colors hover:text-foreground' => $quiet,
+            'text-done-ink' => $quiet && $status === \App\Models\Review::STATUS_APPROVED && ! $review->isArchived(),
+            'text-attention-ink' => $quiet && $status === \App\Models\Review::STATUS_CHANGES_REQUESTED && ! $review->isArchived(),
+            'transition hover:opacity-80' => ! $quiet,
+        ])
+        title="{{ $tag['label'] }}{{ $review->isArchived() ? ' · Archived' : '' }}"
         aria-label="Status: {{ $tag['label'] }}{{ $review->isArchived() ? ', archived' : '' }}"
     >
-        <x-signal-tag :tone="$tag['tone']">{{ $tag['label'] }}</x-signal-tag>
-        @if ($review->isArchived())
-            <x-signal-tag class="ms-1">Archived</x-signal-tag>
+        @if ($quiet)
+            @include('review.partials.status-icon')
+        @else
+            <x-signal-tag :tone="$tag['tone']">{{ $tag['label'] }}</x-signal-tag>
+            @if ($review->isArchived())
+                <x-signal-tag class="ms-1">Archived</x-signal-tag>
+            @endif
         @endif
-        <flux:icon.chevron-down variant="micro" class="size-3.5 text-zinc-400" />
+        <flux:icon.chevron-down variant="micro" class="size-3.5 shrink-0 text-zinc-400" />
     </button>
     <flux:menu class="min-w-52">
+        @if ($quiet)
+            <flux:menu.heading>{{ $tag['label'] }}{{ $review->isArchived() ? ' · Archived' : '' }}</flux:menu.heading>
+        @endif
         @if ($status === \App\Models\Review::STATUS_PENDING)
             <flux:menu.item icon="check" x-on:click="{{ $decide('approve', 'approved') }}">Approve</flux:menu.item>
             <flux:menu.item icon="arrow-uturn-left" x-on:click="{{ $decide('changes', 'changes_requested') }}">Request changes</flux:menu.item>

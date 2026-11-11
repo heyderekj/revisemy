@@ -34,7 +34,7 @@ class SecondOpinionService
 
             $this->syncChecklist($screenshot);
 
-            if ($this->visionProvider()) {
+            if ($this->visionProvider() && ! in_array($screenshot->captureQuality()['status'] ?? null, ['partial', 'failed'], true)) {
                 $screenshot->update([
                     'second_opinion_status' => Screenshot::OPINION_QUEUED,
                     'second_opinion_error' => null,
@@ -182,6 +182,7 @@ class SecondOpinionService
     {
         $review->loadMissing('screenshots');
         $shots = $review->screenshots->values();
+        $screenshotIndex ??= $review->pdf_path ? 0 : null;
 
         if ($screenshotIndex !== null) {
             $shot = $shots->get($screenshotIndex);
@@ -222,7 +223,7 @@ class SecondOpinionService
 
         $this->persistFindings(
             $screenshot,
-            $this->checklistFindings($review, $review->screenshots()->get()->all() ?: [$screenshot]),
+            $this->checklistFindings($review, $review->screenshots()->get()->reject(fn (Screenshot $shot) => $shot->captureFailed())->all()),
             Finding::SOURCE_CHECKLIST,
         );
     }

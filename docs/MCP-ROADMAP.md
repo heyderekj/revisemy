@@ -119,7 +119,7 @@ Checked 2026-10-15 against MCP 2026-07-28, MCP Apps 2026-01-26 and laravel/mcp 0
 ## Decided against
 
 - **Tickets, assignees, a backlog.** Positioning rules them out.
-- **Teammate @mentions as a feature.** It implies accounts. A guest link covers the same need.
+- **Teammate @mentions.** Personal feedback requests start with a reviewer’s name and an account-free link to a review or mark. A group request gives each person a separate link to the same question. Team mentions can build on the same request later.
 - **A new project object.** See item 7.
 - **Letting the agent verify.** Only the human verifies or reopens a mark.
 

@@ -1,0 +1,28 @@
+.rm-pdf-layer .textLayer {
+    position: absolute;
+    inset: 0;
+    overflow: clip;
+    line-height: 1;
+    text-align: initial;
+    transform-origin: 0 0;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+}
+
+.rm-pdf-layer .textLayer :is(span, br) {
+    position: absolute;
+    color: transparent;
+    white-space: pre;
+    transform-origin: 0 0;
+    cursor: text;
+}
+
+.rm-pdf-layer .textLayer > :not(.markedContent),
+.rm-pdf-layer .textLayer .markedContent span:not(.markedContent) {
+    font-size: calc(var(--total-scale-factor) * var(--font-height, 0));
+    transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1));
+}
+
+.rm-pdf-layer .textLayer .markedContent { display: contents; }
+.rm-pdf-layer .textLayer ::selection { background: rgb(37 99 235 / 35%); }

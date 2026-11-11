@@ -255,7 +255,7 @@ class MarkLifecycleService
      * AnnotationComment::AUTHOR_* value); a guest's name is their $author,
      * the owner and the agent have fixed names.
      */
-    public function addComment(Annotation $annotation, string $type, string $body, ?string $author = null): AnnotationComment
+    public function addComment(Annotation $annotation, string $type, string $body, ?string $author = null, array $elementReferences = []): AnnotationComment
     {
         $comment = $annotation->comments()->create([
             'author' => match ($type) {
@@ -266,6 +266,7 @@ class MarkLifecycleService
             'author_type' => $type,
             'from_owner' => $type === AnnotationComment::AUTHOR_OWNER,
             'body' => $body,
+            'element_references' => $elementReferences ?: null,
         ]);
 
         // Touch the mark so updated_at moves and pollers see something new;
@@ -291,7 +292,7 @@ class MarkLifecycleService
      * $options['target'] carries one already resolved (a guest's pick).
      *
      * @param  array{x: float, y: float, w: float, h: float}|null  $area
-     * @param  array{suggested_copy?: ?string, source?: string, promoted_from_finding_id?: ?int, element?: int|string|null, snap?: bool, target?: ?array<string, mixed>}  $options
+     * @param  array{suggested_copy?: ?string, source?: string, promoted_from_finding_id?: ?int, element?: int|string|null, snap?: bool, target?: ?array<string, mixed>, element_references?: array}  $options
      */
     public function createMark(
         Screenshot $screenshot,
@@ -337,9 +338,11 @@ class MarkLifecycleService
             'y' => max(0.0, min(1.0, $y)),
             'area' => $area,
             'target' => is_array($target) ? $target : null,
+            'element_references' => ($options['element_references'] ?? []) ?: null,
             'severity' => $severity,
             'body' => $body,
             'suggested_copy' => $suggestedCopy,
+            'pdf_anchor' => $options['pdf_anchor'] ?? null,
             'source' => $source,
             'promoted_from_finding_id' => $options['promoted_from_finding_id'] ?? null,
             'number' => $screenshot->review->nextMarkNumber(),

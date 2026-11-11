@@ -8,6 +8,7 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Models\Review;
 use App\Models\Screenshot;
 use App\Models\Workspace;
+use App\Services\Capture\CaptureQuality;
 use App\Services\Capture\HostedCaptureDriver;
 use App\Services\Capture\PageCaptureService;
 use App\Support\ElementMap;
@@ -17,6 +18,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -26,7 +28,7 @@ class ReviewService
         protected ScreenshotStorage $screenshots,
         protected SecondOpinionService $opinions,
         protected PageCaptureService $capture,
-        protected DocumentIngestionService $documents,
+        protected PdfReviewService $documents,
         protected CreditsService $credits,
     ) {}
 
@@ -62,8 +64,10 @@ class ReviewService
 
         // A follow-up pass inherits page_url in create(), but capture_url needs
         // it now — so "re-capture the same page" works without re-passing it.
-        if ($pageUrl === '' && ! empty($data['parent_id'])) {
-            $pageUrl = (string) $this->findForWorkspace($workspace, (string) $data['parent_id'])?->page_url;
+        $parent = null;
+        if (! empty($data['parent_id'])) {
+            $parent = $this->findForWorkspace($workspace, (string) $data['parent_id']);
+            $pageUrl = $pageUrl ?: (string) $parent?->page_url;
         }
 
         if (isset($sources['capture_url']) && ($pageUrl === '' || ! filter_var($pageUrl, FILTER_VALIDATE_URL))) {
@@ -78,7 +82,12 @@ class ReviewService
             $details = array_values((array) ($data['image_details'] ?? []));
             $images = array_map(
                 fn ($image, int $index) => is_array($details[$index] ?? null)
-                    ? ['upload' => $image, 'dpr' => $details[$index]['dpr'] ?? null, 'elements' => self::elementsFrom($details[$index]['elements'] ?? null)]
+                    ? [
+                        'upload' => $image,
+                        'dpr' => $details[$index]['dpr'] ?? null,
+                        'elements' => self::elementsFrom($details[$index]['elements'] ?? null),
+                        'state' => $details[$index]['state'] ?? null,
+                    ]
                     : $image,
                 array_values($images),
                 array_keys(array_values($images)),
@@ -104,18 +113,25 @@ class ReviewService
 
         $type = $data['type'] ?? null;
         $domHtml = null;
+        $pdfDocument = null;
         $captureMs = null;
 
         try {
             if (isset($sources['capture_url'])) {
                 ToolProgress::report('Opening '.(parse_url($pageUrl, PHP_URL_HOST) ?: $pageUrl).' to capture it', 'open');
                 $started = microtime(true);
-                ['shots' => $images, 'dom' => $domHtml] = $this->capture->capturePage($pageUrl);
+                ['shots' => $images, 'dom' => $domHtml] = $this->capture->capturePage($pageUrl, $parent);
                 $captureMs = (int) round((microtime(true) - $started) * 1000);
                 $type ??= Review::TYPE_WEBSITE;
+                foreach ($images as $shot) {
+                    if (($shot['meta']['origin'] ?? null) === 'capture_failed' && isset($shot['meta']['viewport'])) {
+                        $label = $shot['meta']['viewport'];
+                        ToolProgress::report('Could not capture '.ToolProgress::viewport($label), 'failed:shot:'.$label);
+                    }
+                }
             } elseif (isset($sources['pdf'])) {
-                ToolProgress::report('Rendering the slides', 'render');
-                $images = $this->documents->pdfToImages((string) $data['pdf']);
+                ToolProgress::report('Opening the PDF', 'render');
+                $pdfDocument = $this->documents->inspect((string) $data['pdf']);
                 $type ??= Review::TYPE_PRESENTATION;
             } elseif (isset($sources['html'])) {
                 ToolProgress::report('Rendering the email', 'render');
@@ -138,6 +154,7 @@ class ReviewService
                 $domHtml,
                 $data['webhook_url'] ?? null,
                 $origin,
+                $pdfDocument,
             );
             $settled = true;
 
@@ -155,15 +172,17 @@ class ReviewService
             }
 
             $reason = collect($e->errors())->flatten()->first() ?? 'Capture failed.';
+            foreach ($this->capture->viewports() as $viewport) {
+                $label = $viewport['label'];
+                ToolProgress::report('Could not capture '.ToolProgress::viewport($label), 'failed:shot:'.$label);
+            }
+            ToolProgress::report('Saving the review', 'save');
 
             return $this->create(
                 $workspace,
                 $data['title'],
                 trim("Capture failed, so this board has no page shot yet. Add a screenshot, or open the page from the link. {$reason}\n\n".($data['context'] ?? '')),
-                [[
-                    'binary' => base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
-                    'meta' => ['origin' => 'capture_failed', 'page_url' => $pageUrl],
-                ]],
+                [CaptureQuality::failedShot(['page_url' => $pageUrl], $reason)],
                 $pageUrl !== '' ? $pageUrl : null,
                 $data['parent_id'] ?? null,
                 $type ?? Review::TYPE_WEBSITE,
@@ -258,6 +277,7 @@ class ReviewService
         ?string $domHtml = null,
         ?string $webhookUrl = null,
         ?string $origin = null,
+        ?array $pdfDocument = null,
     ): Review {
         if ($type !== null && ! in_array($type, Review::types(), true)) {
             throw ValidationException::withMessages([
@@ -269,7 +289,7 @@ class ReviewService
             $this->assertValidWebhookUrl($webhookUrl);
         }
 
-        if ($images === []) {
+        if ($images === [] && $pdfDocument === null) {
             throw ValidationException::withMessages([
                 'images' => 'Add at least one screenshot so there is something to look at.',
             ]);
@@ -339,15 +359,29 @@ class ReviewService
 
         if ($domHtml !== null && trim($domHtml) !== '') {
             try {
-                $path = 'reviews/'.$review->public_id.'/dom.html';
-                Storage::disk(ScreenshotStorage::diskName())->put($path, substr($domHtml, 0, 2 * 1024 * 1024));
-                $review->update(['dom_path' => $path]);
+                $path = 'reviews/'.$review->public_id.'/'.Str::ulid().'.html';
+                if (Storage::disk(ScreenshotStorage::diskName())->put($path, substr($domHtml, 0, 2 * 1024 * 1024), ['visibility' => 'private'])) {
+                    $review->update(['dom_path' => $path]);
+                }
             } catch (Throwable $e) {
                 Log::warning('DOM snapshot persist failed', ['review' => $review->public_id, 'error' => $e->getMessage()]);
             }
         }
 
         $shots = [];
+        if ($pdfDocument !== null) {
+            try {
+                DB::transaction(fn () => $this->documents->store($review, $pdfDocument));
+            } catch (Throwable $e) {
+                $review->delete();
+                throw $e;
+            }
+            // Keep initial cost bounded on large documents. The reviewer can
+            // request an opinion on any later page when they open it.
+            $this->opinions->queue($review->screenshots()->firstOrFail());
+
+            return $review->fresh(['screenshots.annotations', 'screenshots.findings', 'parent']) ?? $review;
+        }
         foreach (array_values($images) as $index => $image) {
             $upload = self::uploadOf($image);
             $shot = $upload === null
@@ -355,7 +389,7 @@ class ReviewService
                 : $this->screenshots->store($review, $upload, $index, binary: $resolved[$index]);
 
             if ($upload !== null && is_array($image)) {
-                $this->applyUploadDetails($shot, $image['dpr'] ?? null, $image['elements'] ?? null);
+                $this->applyUploadDetails($shot, $image['dpr'] ?? null, $image['elements'] ?? null, $image['state'] ?? null);
             } elseif (is_array($image) && is_array($image['elements'] ?? null)) {
                 $this->screenshots->storeElements($shot, $image['elements']);
             }
@@ -364,6 +398,9 @@ class ReviewService
             }
             if (is_array($image) && ! empty($image['slices'])) {
                 $this->screenshots->storeSlices($shot, $image['slices']);
+            }
+            if (is_array($image) && is_string($image['html'] ?? null)) {
+                $this->screenshots->storePreview($shot, $image['html'], $image['snapshot_base'] ?? null);
             }
             $shots[] = $shot;
         }
@@ -379,24 +416,41 @@ class ReviewService
     /**
      * @param  array<string, mixed>|null  $elements
      */
-    public function addScreenshot(Review $review, string|UploadedFile $image, ?float $dpr = null, ?array $elements = null): Screenshot
+    public function addScreenshot(Review $review, string|UploadedFile $image, ?float $dpr = null, ?array $elements = null, ?string $state = null, ?int $replaceId = null): Screenshot
     {
-        if (! $review->isOpenForFeedback()) {
-            throw ValidationException::withMessages([
-                'review' => 'This review is closed — start a fresh pass with create_review (and parent_id if this is a follow-up).',
-            ]);
-        }
+        $binary = $this->screenshots->validateSource($image);
+        $shot = DB::transaction(function () use ($review, $image, $dpr, $elements, $state, $replaceId, $binary) {
+            $review = Review::query()->lockForUpdate()->findOrFail($review->id);
+            if (! $review->isOpenForFeedback()) {
+                throw ValidationException::withMessages([
+                    'review' => 'This review is closed — start a fresh pass with create_review (and parent_id if this is a follow-up).',
+                ]);
+            }
 
-        if ($review->screenshots()->count() >= 5) {
-            throw ValidationException::withMessages([
-                'images' => 'This review already has 5 screenshots.',
-            ]);
-        }
+            $replace = $replaceId === null ? null : $review->screenshots()->whereKey($replaceId)->first();
+            if ($replaceId !== null && (! $replace || ! $replace->captureFailed() || $replace->annotations()->exists())) {
+                throw ValidationException::withMessages(['replace_id' => 'Choose a failed screenshot without marks on this review to replace.']);
+            }
 
-        $sortOrder = (int) $review->screenshots()->max('sort_order') + 1;
+            if ($replace === null && $review->screenshots()->count() >= 5) {
+                throw ValidationException::withMessages([
+                    'images' => 'This review already has 5 screenshots.',
+                ]);
+            }
 
-        $shot = $this->screenshots->store($review, $image, $sortOrder);
-        $this->applyUploadDetails($shot, $dpr, $elements);
+            $sortOrder = $replace?->sort_order ?? ((int) $review->screenshots()->max('sort_order') + 1);
+            $shot = $this->screenshots->store($review, $image, $sortOrder, binary: $binary);
+            if ($replace !== null) {
+                $shot->update(['meta' => ['origin' => 'capture_replacement'] + array_intersect_key(
+                    $replace->meta,
+                    array_flip(['viewport', 'css_width', 'css_height', 'mobile', 'capture_profile']),
+                )]);
+            }
+            $this->applyUploadDetails($shot, $dpr, $elements, $state);
+            $replace?->delete();
+
+            return $shot;
+        });
         $this->opinions->queue($shot);
 
         return $shot;
@@ -411,7 +465,7 @@ class ReviewService
      *
      * @param  array<string, mixed>|null  $elements
      */
-    protected function applyUploadDetails(Screenshot $shot, mixed $dpr, ?array $elements): void
+    protected function applyUploadDetails(Screenshot $shot, mixed $dpr, ?array $elements, ?string $state = null): void
     {
         $dpr = is_numeric($dpr) && $dpr >= 0.5 && $dpr <= 4 ? round((float) $dpr, 2) : null;
         $docWidth = is_array($elements) && is_numeric($elements['docWidth'] ?? null) ? (float) $elements['docWidth'] : null;
@@ -422,8 +476,15 @@ class ReviewService
             $dpr = $guess >= 0.5 && $guess <= 4 ? round($guess, 2) : null;
         }
 
+        $meta = $shot->meta ?? [];
+        if ($state !== null && trim($state) !== '') {
+            $meta['state'] = trim($state);
+        }
         if ($dpr !== null) {
-            $shot->update(['meta' => [...($shot->meta ?? []), 'dpr' => $dpr]]);
+            $meta['dpr'] = $dpr;
+        }
+        if ($meta !== ($shot->meta ?? [])) {
+            $shot->update(['meta' => $meta]);
         }
 
         if (! is_array($elements)) {
@@ -440,6 +501,13 @@ class ReviewService
             return;
         }
 
+        if (is_numeric($elements['viewport']['width'] ?? null)) {
+            $shot->update(['meta' => [
+                ...($shot->meta ?? []),
+                'css_width' => (int) $elements['viewport']['width'],
+                'css_height' => (int) ($elements['viewport']['height'] ?? 0),
+            ]]);
+        }
         $this->screenshots->storeElements($shot, $elements, 'upload');
     }
 

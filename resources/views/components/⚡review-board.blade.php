@@ -6,6 +6,7 @@ use App\Models\Annotation;
 use App\Models\AnnotationComment;
 use App\Models\Review;
 use App\Services\MarkLifecycleService;
+use App\Support\ElementTarget;
 use App\Support\FeedbackText;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -23,7 +24,13 @@ new class extends Component
 
     public ?int $selectedMarkId = null;
 
+    #[Locked]
+    public bool $reviewingFixes = false;
+
     public string $commentBody = '';
+
+    #[Locked]
+    public array $commentBodyReferences = [];
 
     public function mount(string $token): void
     {
@@ -81,10 +88,10 @@ new class extends Component
         $marks = $reviews
             ->flatMap(fn (Review $review) => $review->screenshots->flatMap->annotations)
             ->unique('id')
-            ->sortBy([
-                fn (Annotation $mark) => $shotMeta[$mark->screenshot_id]['pass'] ?? 0,
-                fn (Annotation $mark) => $shotMeta[$mark->screenshot_id]['shot'] ?? 0,
-                fn (Annotation $mark) => $mark->number,
+            ->sortBy(fn (Annotation $mark) => [
+                $shotMeta[$mark->screenshot_id]['pass'] ?? 0,
+                $shotMeta[$mark->screenshot_id]['shot'] ?? 0,
+                $mark->number,
             ])
             ->values();
 
@@ -103,17 +110,76 @@ new class extends Component
             return;
         }
 
+        $this->reviewingFixes = false;
+        $this->showMark($annotationId);
+    }
+
+    protected function showMark(int $annotationId): void
+    {
         $this->selectedMarkId = $annotationId;
         $this->commentBody = '';
+        $this->commentBodyReferences = [];
+        $this->resetValidation(['commentBody']);
         $this->showMarkSheet = true;
     }
 
     public function closeMarkSheet(): void
     {
+        $this->reviewingFixes = false;
         $this->showMarkSheet = false;
         $this->selectedMarkId = null;
         $this->commentBody = '';
+        $this->commentBodyReferences = [];
         $this->resetValidation(['commentBody']);
+    }
+
+    public function fixesToReview(): \Illuminate\Support\Collection
+    {
+        if (! $this->review->allowsMarkManagement()) {
+            return collect();
+        }
+
+        return $this->marksByStatus()[Annotation::STATUS_RESOLVED]
+            ->reject(fn (Annotation $mark) => $mark->severity === Annotation::SEVERITY_KEEP);
+    }
+
+    public function reviewFixes(): void
+    {
+        $this->loadBoard();
+
+        if ($mark = $this->fixesToReview()->first()) {
+            $this->reviewingFixes = true;
+            $this->showMark($mark->id);
+        }
+    }
+
+    public function reviewNextFix(int $annotationId, string $decision, MarkLifecycleService $lifecycle): void
+    {
+        if (! $this->reviewingFixes || $this->selectedMarkId !== $annotationId || ! in_array($decision, ['verify', 'reopen'], true)) {
+            return;
+        }
+
+        $this->loadBoard();
+
+        if (! $this->reviewingFixes || ! $this->review->allowsMarkManagement()) {
+            return;
+        }
+
+        if ($mark = $this->fixesToReview()->firstWhere('id', $annotationId)) {
+            if ($decision === 'verify') {
+                $lifecycle->verify($mark);
+            } else {
+                $lifecycle->reopen($mark);
+            }
+            $this->loadBoard();
+        }
+
+        if ($next = $this->fixesToReview()->first()) {
+            $this->showMark($next->id);
+        } else {
+            $this->closeMarkSheet();
+            session()->flash('board_message', 'All ready fixes reviewed.');
+        }
     }
 
     public function updatedShowMarkSheet(bool $open): void
@@ -133,6 +199,13 @@ new class extends Component
             ?->loadMissing(['screenshot.review', 'afterScreenshot', 'comments', 'events.afterScreenshot']);
     }
 
+    public function toggleBoardElementReference(string $key): void
+    {
+        if ($this->review->allowsComments() && ($mark = $this->selectedMark)) {
+            $this->commentBodyReferences = ElementTarget::toggleReference($mark->screenshot, $this->commentBodyReferences, $key);
+        }
+    }
+
     /** The board is the owner's, so its comments are the owner's: same rule as the review page. */
     public function addComment(MarkLifecycleService $lifecycle): void
     {
@@ -150,10 +223,27 @@ new class extends Component
 
         $this->validate(['commentBody' => FeedbackText::bodyRules()]);
 
-        $lifecycle->addComment($annotation, AnnotationComment::AUTHOR_OWNER, $this->commentBody);
+        $lifecycle->addComment($annotation, AnnotationComment::AUTHOR_OWNER, $this->commentBody, elementReferences: $this->commentBodyReferences);
 
         $this->commentBody = '';
+        $this->commentBodyReferences = [];
         $this->loadBoard();
+    }
+
+    public function setCommentReaction(int $commentId, string $reaction, bool $selected): void
+    {
+        if (! $this->review->allowsComments()) {
+            return;
+        }
+
+        $comment = $this->selectedMarkId
+            ? $this->ownedAnnotation($this->selectedMarkId)?->comments()->find($commentId)
+            : null;
+
+        if ($comment) {
+            $comment->setReaction($reaction, AnnotationComment::reactionActor(true), $selected);
+            $this->loadBoard();
+        }
     }
 
     public function moveMark(int $annotationId, string $status, MarkLifecycleService $lifecycle): void
@@ -333,47 +423,57 @@ new class extends Component
     wire:poll.visible.20s="loadBoard"
 >
     @php($grouped = $this->marksByStatus())
+    @php($readyCount = $this->fixesToReview()->count())
+    @php($reviewFixesLabel = 'Review '.$readyCount.' '.Str::plural('fix', $readyCount))
     @php($total = collect($grouped)->sum(fn ($c) => $c->count()))
     @php($verified = $grouped[\App\Models\Annotation::STATUS_VERIFIED]->count())
     @php($verifiedPct = $total > 0 ? (int) round(($verified / $total) * 100) : 0)
 
     {{-- Koati's shell: the work sits on an inset panel over the desk. --}}
     <div class="rm-shell">
-    {{-- Sticky, and one row on a phone: back, what this is, and its status. --}}
+    {{-- Board identity and actions stay above the scrollable column navigation. --}}
     <header class="sticky top-0 z-30 shrink-0 border-b border-border bg-background">
-        <div class="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-2.5">
+        <div class="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:px-6 sm:py-2.5 lg:gap-4">
             <div class="flex shrink-0 items-center gap-2 sm:gap-3">
                 <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                     <x-revisemy-logo size="sm" />
                 </a>
                 <h1 class="sr-only shrink-0 text-lg font-semibold tracking-tight text-zinc-900 sm:not-sr-only">Board</h1>
                 @if (auth('web')->user()?->workspace_id === $review->workspace_id)
-                    <a href="/reviews" class="hidden shrink-0 items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-zinc-900 sm:inline-flex">
+                    <a href="/reviews" class="hidden shrink-0 items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-zinc-900 xl:inline-flex">
                         Your reviews
                     </a>
                 @endif
             </div>
 
             <div class="flex min-w-0 flex-1 items-center gap-x-2">
-                <span class="hidden shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600 sm:inline-flex">
+                <span class="hidden shrink-0 items-center rounded-md bg-chip px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-600 lg:inline-flex">
                     Pass {{ $review->pass }}
                 </span>
-                <span class="hidden shrink-0 items-center rounded-md bg-sky-50 px-1.5 py-0.5 text-xs font-medium text-sky-700 sm:inline-flex" title="{{ $review->typeGuidance() }}">
+                <span class="hidden shrink-0 items-center rounded-md bg-sky-50 px-1.5 py-0.5 text-xs font-medium text-sky-700 lg:inline-flex" title="{{ $review->typeGuidance() }}">
                     {{ $review->typeLabel() }}
                 </span>
-                <span class="hidden text-zinc-300 sm:inline" aria-hidden="true">·</span>
+                <span class="hidden text-zinc-300 lg:inline" aria-hidden="true">·</span>
                 <p class="min-w-0 truncate text-sm font-medium text-zinc-900 sm:font-normal sm:text-zinc-500" title="{{ $review->title }}">{{ $review->title }}</p>
                 @include('review.partials.status-menu', ['class' => 'shrink-0'])
             </div>
 
-            @if ($total > 0)
-                <div class="hidden min-w-0 items-center gap-2 sm:flex sm:w-40 md:w-48">
-                    <span class="shrink-0 text-xs tabular-nums text-zinc-500">{{ $verified }}/{{ $total }}</span>
-                    <div class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-chip" role="progressbar" aria-valuenow="{{ $verified }}" aria-valuemin="0" aria-valuemax="{{ $total }}" aria-label="Marks verified">
-                        <div class="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out" style="width: {{ $verifiedPct }}%"></div>
+            <div class="hidden shrink-0 items-center gap-2 md:flex lg:gap-3">
+                @if ($total > 0)
+                    <div class="flex items-center gap-2" role="progressbar" aria-valuenow="{{ $verified }}" aria-valuemin="0" aria-valuemax="{{ $total }}" aria-label="Marks verified">
+                        <span class="text-xs tabular-nums text-muted-foreground">{{ $verified }}/{{ $total }}</span>
+                        <div class="hidden h-1 w-20 overflow-hidden rounded-full bg-chip xl:block">
+                            <div class="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out" style="width: {{ $verifiedPct }}%"></div>
+                        </div>
                     </div>
-                </div>
-            @endif
+                @endif
+
+                @if ($readyCount > 0)
+                    <flux:button size="sm" variant="primary" icon="check-circle" wire:click="reviewFixes">
+                        {{ $reviewFixesLabel }}
+                    </flux:button>
+                @endif
+            </div>
 
             <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ $review->reviewUrl() }}" class="shrink-0 !bg-chip hover:!bg-chip-hover max-sm:!h-9">
                 Review
@@ -381,21 +481,28 @@ new class extends Component
         </div>
 
         @if ($total > 0)
-            {{-- Below xl one column at a time: these say which, and how many in each. --}}
-            <div class="overflow-x-auto px-3 pb-2 [scrollbar-width:none] sm:px-6 xl:hidden [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Columns">
-                <div class="flex w-max gap-1 rounded-xl bg-chip p-0.5">
-                    @foreach (\App\Models\Annotation::statusLabels() as $status => $label)
-                        <button
-                            type="button"
-                            role="tab"
-                            data-col-tab
-                            class="flex h-9 items-center gap-1.5 rounded-[0.6rem] px-3 text-sm font-medium whitespace-nowrap transition-colors"
-                            x-bind:class="inView({{ $loop->index }}) ? 'bg-raised text-zinc-900 shadow-xs ring-1 ring-black/[0.06]' : 'text-zinc-500 hover:text-zinc-900'"
-                            x-bind:aria-selected="inView({{ $loop->index }}).toString()"
-                            x-on:click="goTo({{ $loop->index }})"
-                        >{{ $label }} <span class="tabular-nums text-zinc-400">{{ $grouped[$status]->count() }}</span></button>
-                    @endforeach
+            {{-- Keep the review action visible while the column tabs scroll on phones. --}}
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 pb-2 sm:px-6 xl:hidden">
+                <div class="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Columns">
+                    <div class="flex w-max gap-1 rounded-xl bg-chip p-0.5">
+                        @foreach (\App\Models\Annotation::statusLabels() as $status => $label)
+                            <button
+                                type="button"
+                                role="tab"
+                                data-col-tab
+                                class="flex h-9 items-center gap-1.5 rounded-[0.6rem] px-3 text-sm font-medium whitespace-nowrap transition-colors"
+                                x-bind:class="inView({{ $loop->index }}) ? 'bg-raised text-zinc-900 shadow-xs ring-1 ring-black/[0.06]' : 'text-zinc-500 hover:text-zinc-900'"
+                                x-bind:aria-selected="inView({{ $loop->index }}).toString()"
+                                x-on:click="goTo({{ $loop->index }})"
+                            >{{ $label }} <span class="tabular-nums text-zinc-400">{{ $grouped[$status]->count() }}</span></button>
+                        @endforeach
+                    </div>
                 </div>
+                @if ($readyCount > 0)
+                    <flux:button size="sm" variant="primary" wire:click="reviewFixes" class="shrink-0 md:!hidden">
+                        {{ $reviewFixesLabel }}
+                    </flux:button>
+                @endif
             </div>
         @endif
     </header>
@@ -515,63 +622,65 @@ new class extends Component
     @php($selectedMark = $this->selectedMark)
     <flux:modal
         wire:model="showMarkSheet"
-        variant="flyout"
-        position="bottom"
-        class="!max-h-[min(92dvh,52rem)] !p-0 lg:!max-h-[min(94dvh,56rem)]"
+        :closable="false"
+        class="rm-board-dialog !fixed !inset-0 !m-auto !w-full !max-w-none !max-h-[92dvh] !overflow-y-auto !rounded-b-none !rounded-t-2xl !bg-background !p-0
+            max-md:!inset-x-0 max-md:!top-auto max-md:!bottom-0 max-md:!m-0
+            md:!w-[calc(100%-3rem)] md:!max-w-6xl md:!max-h-[calc(100dvh-3rem)] md:!rounded-2xl"
     >
         @if ($selectedMark)
             @php($shot = $selectedMark->screenshot)
             @php($markReview = $shot?->review)
 
-            <div class="grid min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] lg:items-stretch">
-                {{-- Mini review: screenshot + mark context --}}
-                <div class="flex min-w-0 flex-col gap-4 p-5 sm:p-6 lg:pr-7">
-                    <div class="flex flex-wrap items-start justify-between gap-3 pr-10">
-                        <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold {{ $selectedMark->markerClass() }}">M{{ $selectedMark->number }}</span>
-                                <span class="text-xs text-zinc-500">{{ $selectedMark->label() }}</span>
-                                <x-signal-tag :tone="$selectedMark->statusTone()">{{ $selectedMark->statusLabel() }}</x-signal-tag>
-                                @if ($selectedMark->changedByAgent())
-                                    <x-agent-tag />
-                                @endif
-                            </div>
-                            @if ($markReview)
-                                <p class="mt-2 text-xs text-zinc-400">Pass {{ $markReview->pass }} · {{ $markReview->title }}</p>
-                            @endif
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <div class="hidden flex-wrap items-center gap-2 lg:flex">
-                                @include('review.partials.board-mark-actions')
-                            </div>
-                            <flux:button size="sm" variant="ghost" icon="eye" href="{{ $review->reviewUrl() }}{{ $shot?->review_id === $review->id ? '?mark='.$selectedMark->id : '' }}" class="!bg-chip hover:!bg-chip-hover">
-                                On the review
-                            </flux:button>
-                        </div>
+            <div class="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-border bg-background px-4 py-3 sm:px-6 sm:py-4">
+                <div class="min-w-0 space-y-1">
+                    <flux:heading size="lg">{{ $reviewingFixes ? 'Review fix' : 'Mark details' }}</flux:heading>
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                        <span class="font-semibold text-zinc-800">M{{ $selectedMark->number }}</span>
+                        <span>{{ $selectedMark->label() }}</span>
+                        <x-signal-tag :tone="$selectedMark->statusTone()">{{ $selectedMark->statusLabel() }}</x-signal-tag>
+                        @if ($reviewingFixes && $readyCount > 0)
+                            <span>{{ $readyCount }} {{ Str::plural('fix', $readyCount) }} left to review</span>
+                        @endif
+                        @if ($markReview && ! $markReview->is($review))
+                            <span>Pass {{ $markReview->pass }}</span>
+                        @endif
                     </div>
+                </div>
+                <flux:modal.close>
+                    <flux:button size="sm" variant="ghost" icon="x-mark" aria-label="Close modal" class="!size-8 !shrink-0 !px-0" />
+                </flux:modal.close>
+            </div>
 
-                    @unless ($shot)
-                        <div class="hatch rounded-xl bg-well px-4 py-10 text-center text-sm text-muted-foreground">
-                            No screenshot for this mark.
-                        </div>
-                    @endunless
+            <div class="grid min-h-0 md:grid-cols-[minmax(0,1fr)_minmax(14rem,28%)]">
+                <div class="min-w-0 space-y-4 p-4 sm:p-6">
+                    <x-mark-detail :mark="$selectedMark" compare :context="$markReview?->context" :reference-action="$review->allowsComments() ? 'toggleBoardElementReference' : null" :selected-references="$commentBodyReferences" />
 
-                    <x-mark-detail :mark="$selectedMark" :context="$markReview?->context" />
+                    <div class="flex flex-wrap items-center gap-2">
+                        <flux:button size="sm" variant="ghost" icon="arrow-top-right-on-square" href="{{ $review->reviewUrl() }}{{ $shot?->review_id === $review->id ? '?mark='.$selectedMark->id : '' }}">
+                            On the review
+                        </flux:button>
+                        @if ($markReview?->is($review) && ! $review->isExpired() && $review->allowsComments())
+                            <flux:button size="sm" variant="ghost" href="{{ $review->reviewUrl() }}?feedback=1&amp;mark={{ $selectedMark->id }}">
+                                Request feedback
+                            </flux:button>
+                        @endif
+                    </div>
                 </div>
 
                 {{-- What happened: every step and comment, who took it, and the composer at the bottom --}}
-                <div class="flex min-h-0 flex-col bg-well p-5 sm:p-6 lg:h-full">
+                <div class="flex min-h-0 flex-col border-t border-border bg-well/60 p-4 sm:p-5 md:border-t-0 md:border-s">
                     <div class="mb-3 flex shrink-0 items-center gap-2">
                         <flux:heading size="sm">What happened</flux:heading>
                         <span class="flex h-5 min-w-5 items-center justify-center rounded-md bg-chip px-1.5 text-[11px] font-medium tabular-nums text-zinc-600">{{ $selectedMark->comments->count() }}</span>
                     </div>
 
-                    <div class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-                        <x-mark-timeline :mark="$selectedMark" wire:key="mark-timeline-{{ $selectedMark->id }}-{{ $selectedMark->updated_at?->timestamp }}" />
+                    <div class="min-w-0">
+                        <x-mark-timeline :mark="$selectedMark" :can-react="$review->allowsComments()" wire:key="mark-timeline-{{ $selectedMark->id }}-{{ $selectedMark->updated_at?->timestamp }}" />
                     </div>
 
                     @if ($review->allowsComments())
-                        <div class="mt-4 shrink-0 space-y-2 lg:mt-auto">
+                        <div class="mt-4 space-y-2">
+                            <x-element-reference-chips :references="$commentBodyReferences" action="toggleBoardElementReference" />
                             <flux:textarea
                                 wire:model="commentBody"
                                 rows="3"
@@ -580,7 +689,7 @@ new class extends Component
                                 x-on:keydown.ctrl.enter.prevent="$wire.addComment()"
                             />
                             <flux:error name="commentBody" />
-                            <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="!h-8 w-full">
+                            <flux:button size="sm" variant="ghost" icon="chat-bubble-left-ellipsis" wire:click="addComment" class="!h-8 !bg-chip hover:!bg-chip-hover">
                                 Reply
                             </flux:button>
                         </div>
@@ -593,7 +702,7 @@ new class extends Component
             </div>
 
             @if ($review->allowsMarkManagement() && $selectedMark->severity !== \App\Models\Annotation::SEVERITY_KEEP && ($selectedMark->awaitsVerification() || $selectedMark->canOwnerResolve() || $selectedMark->status !== \App\Models\Annotation::STATUS_OPEN))
-                <div data-sheet-actions class="material-chrome sticky bottom-0 flex items-center gap-2 border-t border-border px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden [&>*]:flex-1 [&>*]:justify-center">
+                <div data-sheet-actions class="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 max-sm:[&>*]:flex-1 max-sm:[&>*]:justify-center">
                     @include('review.partials.board-mark-actions')
                 </div>
             @endif

@@ -1,141 +1,19 @@
         <section class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-well">
-            @if ($review->context || ($this->isOwner() && $review->isOpenForFeedback()))
-                {{-- The brief floats over the shot's corner: there when you want it, gone with Hide. --}}
-                {{-- On a phone it folds to one line until tapped, so the shot keeps its top. --}}
-                <div
-                    class="absolute left-3 top-3 z-20 rounded-2xl bg-lift shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07] md:left-4 md:top-4"
-                    x-bind:class="open ? 'w-[min(20rem,calc(100%-1.5rem))] p-3' : '{{ $review->screenshots->count() > 1 ? 'max-w-[calc(100%-9.5rem)]' : 'max-w-[calc(100%-1.5rem)]' }}'"
-                    x-show="$store.rmPanel?.brief ?? true"
-                    x-transition.opacity.duration.120ms
-                    data-brief
-                    x-data="{
-                        open: window.innerWidth >= 768,
-                        more: false,
-                        clamped: false,
-                        measure() {
-                            const text = this.$refs.text;
-                            this.clamped = !! text && text.scrollHeight > text.clientHeight + 1;
-                        },
-                    }"
-                    x-init="$nextTick(() => measure())"
-                    x-on:resize.window.debounce.100ms="measure()"
-                >
-                    <button
-                        type="button"
-                        data-brief-fold
-                        x-show="! open"
-                        x-cloak
-                        class="flex h-9 w-full min-w-0 items-center gap-1.5 px-3 text-left text-sm"
-                        x-on:click="open = true; $nextTick(() => measure())"
-                        aria-label="Show what to look at"
-                    >
-                        <flux:icon.document-text variant="micro" class="size-4 shrink-0 text-zinc-500" />
-                        <span class="shrink-0 font-medium text-zinc-900">Brief</span>
-                        <span class="min-w-0 truncate text-zinc-500">{{ $review->context ? \Illuminate\Support\Str::limit($review->context, 80) : ($this->isOwner() ? 'Add what to look at' : '') }}</span>
-                    </button>
-                    <div x-show="open">
-                    <div class="mb-1.5 flex items-center gap-3">
-                        <h2 class="min-w-0 flex-1 text-base font-semibold tracking-tight text-zinc-900">What to look at</h2>
-                        @if ($review->context && ! $editingContext)
-                            <button
-                                type="button"
-                                class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900"
-                                x-show="clamped || more"
-                                x-cloak
-                                x-on:click="more = ! more; $nextTick(() => measure())"
-                                x-text="more ? 'Show less' : 'Show all'"
-                            ></button>
-                        @endif
-                        <button type="button" class="text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900 md:hidden" x-on:click="open = false">Less</button>
-                        <button type="button" class="hidden text-xs font-medium text-muted-foreground transition-colors hover:text-zinc-900 md:inline" x-on:click="$store.rmPanel.brief = false">Hide</button>
-                    </div>
-
-                    {{-- Clamped so the shot stays in view; Show all, up by Hide, opens the rest. --}}
-                    <div>
-                        @if ($editingContext && $this->isOwner() && $review->isOpenForFeedback())
-                            <textarea
-                                wire:key="context-editor"
-                                wire:model="contextDraft"
-                                rows="5"
-                                maxlength="5000"
-                                placeholder="What should they look at on this pass?"
-                                class="block w-full resize-y rounded-lg border-0 bg-well px-2.5 py-2 text-base leading-relaxed sm:text-sm text-pretty text-zinc-800 outline-none ring-1 ring-black/[0.06] placeholder:text-zinc-400 focus:ring-2 focus:ring-key/50"
-                                x-data
-                                x-init="$el.focus(); $el.setSelectionRange($el.value.length, $el.value.length)"
-                                x-on:keydown.meta.enter.prevent="$wire.saveContext()"
-                                x-on:keydown.ctrl.enter.prevent="$wire.saveContext()"
-                                x-on:keydown.escape.prevent="$wire.cancelEditContext()"
-                                x-on:blur="$wire.blurSaveContext()"
-                            ></textarea>
-                            <div class="mt-2 flex items-center justify-end gap-1.5">
-                                <button
-                                    type="button"
-                                    wire:click="cancelEditContext"
-                                    x-on:mousedown.prevent
-                                    class="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-chip hover:text-zinc-900"
-                                    title="Cancel · Esc"
-                                >
-                                    <flux:icon.x-mark variant="micro" class="size-3.5" /> Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    wire:click="saveContext"
-                                    x-on:mousedown.prevent
-                                    class="inline-flex h-7 items-center gap-1 rounded-full bg-foreground px-2.5 text-xs font-medium text-background transition-opacity hover:opacity-90"
-                                    title="Save · ⌘Enter"
-                                >
-                                    <flux:icon.check variant="micro" class="size-3.5" /> Save
-                                </button>
-                            </div>
-                        @elseif ($this->isOwner() && $review->isOpenForFeedback())
-                            <button
-                                type="button"
-                                wire:click="startEditContext"
-                                class="w-full text-left transition hover:text-zinc-800"
-                                title="Click to edit"
-                            >
-                                @if ($review->context)
-                                    <p
-                                        x-ref="text"
-                                        x-bind:class="more ? 'max-h-[50svh] overflow-y-auto' : 'line-clamp-4'"
-                                        class="text-sm leading-relaxed text-pretty text-zinc-700"
-                                    >{{ $review->context }}</p>
-                                @else
-                                    <p class="text-sm text-zinc-400">
-                                        Add what to look at on this pass…
-                                    </p>
-                                @endif
-                            </button>
-                        @elseif ($review->context)
-                            <p
-                                x-ref="text"
-                                x-on:click="more = ! more"
-                                x-bind:class="more ? 'max-h-[50svh] overflow-y-auto' : 'line-clamp-4'"
-                                class="cursor-pointer text-sm leading-relaxed text-pretty text-zinc-700"
-                            >{{ $review->context }}</p>
-                        @endif
-
-                    </div>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Phones: which shot, as a picker over the shot's corner rather than a row of its own. --}}
-            @if ($review->screenshots->count() > 1)
-                <label class="absolute right-3 top-3 z-20 md:hidden">
-                    <span class="sr-only">Screenshot</span>
-                    <select
-                        data-shot-picker
-                        class="h-9 max-w-[8.5rem] appearance-none truncate rounded-full bg-lift py-0 pl-3 pr-8 text-base font-medium text-zinc-900 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/[0.07] outline-none focus-visible:ring-2 focus-visible:ring-key/60"
-                        x-on:change="$store.rmFocus?.close(); $wire.selectScreenshot(Number($event.target.value))"
-                    >
-                        @foreach ($review->screenshots as $index => $shotOption)
-                            <option value="{{ $index }}" @selected($activeScreenshotIndex === $index)>{{ $shotOption->railLabel($index) }}</option>
-                        @endforeach
-                    </select>
-                    <flux:icon.chevron-down variant="micro" class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-zinc-500" />
-                </label>
-            @endif
+            @php
+                $multipleShots = $review->screenshots->count() > 1;
+                $hasBrief = $review->context || ($this->isOwner() && $review->isOpenForFeedback());
+                $previewSource = $shot?->previewSource();
+                $liveUrl = $previewSource && ! $review->isExpired() ? route('reviews.screenshot.live', [$token, $shot]) : null;
+                $canMarkPreview = $shot?->canMarkPreview() && $review->isOpenForFeedback();
+                $websiteUrl = $review->sourceKind() === \App\Models\Review::SOURCE_URL && preg_match('#^https?://#i', $review->page_url ?? '')
+                    ? $review->page_url : null;
+                $quality = $shot?->captureQuality();
+                $approximate = ($shot?->meta['elements_source'] ?? null) === 'separate_load';
+                $previousShot = $shot && $this->isOwner() ? $review->previousScreenshotFor($shot) : null;
+                $pdfPage = $shot?->isPdfPage() && $review->pdf_path && ! $review->isExpired();
+                $pdfChange = $pdfPage && $previousShot
+                    ? \App\Support\PdfPageMatch::changes($previousShot->meta['pdf_text'] ?? '', $shot->meta['pdf_text'] ?? '') : null;
+            @endphp
 
             <div class="relative flex min-h-0 flex-1 flex-col">
 
@@ -143,14 +21,56 @@
 
             @if ($shot)
                 <div
-                    wire:key="shot-viewer-{{ $activeScreenshotIndex }}"
+                    wire:key="shot-viewer-{{ $shot->id }}"
                     class="relative flex min-h-0 min-w-0 flex-1 flex-col"
                     x-data="{
                         zoom: 1,
                         fit: 'width',
                         zoomMin: 1,
-                        zoomMax: 3,
+                        zoomMax: {{ $pdfPage ? 5 : 3 }},
                         zoomStep: 0.25,
+                        comparing: false,
+                        viewerInitialized: false,
+                        disposePdf: null,
+                        @if ($pdfPage)
+                            pdfReady: false,
+                            pdfSelectText: true,
+                            pdfSelection: null,
+                            pdfJump: {{ $activeScreenshotIndex + 1 }},
+                            pdfQuery: '',
+                            pdfResults: [],
+                            pdfSearchOpen: false,
+                            pdfSearchStatus: '',
+                            pdfUrl: @js(route('reviews.pdf.original', $token)),
+                            goToPdfPage(number) {
+                                const index = Number(number) - 1;
+                                if (!Number.isInteger(index) || index < 0 || index >= {{ $review->screenshots->count() }}) return;
+                                this.pdfSearchOpen = false;
+                                return this.changeShot(index);
+                            },
+                            async findPdfText() {
+                                this.pdfSearchOpen = true;
+                                this.pdfResults = [];
+                                const query = this.pdfQuery.trim();
+                                this.pdfSearchStatus = query ? 'Searching…' : 'Enter words to search for.';
+                                if (!query) return;
+                                try {
+                                    const results = await (await window.rmPdfViewer()).search(this.pdfUrl, query);
+                                    if (query !== this.pdfQuery.trim()) return;
+                                    this.pdfResults = results;
+                                    this.pdfSearchStatus = results.length ? results.length + (results.length === 1 ? ' matching page' : ' matching pages') : 'No matching text.';
+                                } catch (error) {
+                                    this.pdfSearchStatus = 'Could not search this PDF.';
+                                }
+                            },
+                            markPdfSelection(kind) {
+                                if (!this.pdfSelection) return;
+                                const { quote, rects } = this.pdfSelection;
+                                this.pdfSelection = null;
+                                window.getSelection()?.removeAllRanges();
+                                return $wire.startPdfPin({{ $shot->id }}, kind, quote, rects);
+                            },
+                        @endif
                         naturalWidth: {{ (int) ($shot->width ?: 0) }},
                         naturalHeight: {{ (int) ($shot->height ?: 0) }},
                         pixelRatio: {{ $shot->pixelRatio() }},
@@ -178,9 +98,15 @@
                         marking: false,
                         lastTouch: 0,
                         pinch: null,
+                        touchLens: null,
+                        lensSize: 88,
+                        changeShot(index) {
+                            $store.rmFocus.finding = null;
+                            return $wire.selectScreenshot(index).then(() => $nextTick(() => document.querySelector('[data-shot-picker]')?.focus({ preventScroll: true })));
+                        },
                         toggleMarking() {
                             this.marking = ! this.marking;
-                            this.hover = null;
+                            this.cancelDraw();
                             if (this.marking) this.$store.rmFocus?.close();
                         },
                         touchedRecently() {
@@ -193,9 +119,13 @@
                                 this.startPinch(e);
                                 return;
                             }
-                            if (e.touches.length !== 1 || ! this.marking || this.pinch) return;
-                            const p = this.norm(e.touches[0]);
+                            if (e.touches.length !== 1 || ! this.marking || this.pinch || $wire.pendingX !== null) return;
+                            const touch = e.touches[0];
+                            const image = this.$refs.shotImg?.getBoundingClientRect();
+                            if (! image || touch.clientX < image.left || touch.clientX > image.right || touch.clientY < image.top || touch.clientY > image.bottom) return;
+                            const p = this.norm(touch);
                             if (! p) return;
+                            this.updateTouchLens(touch, p);
                             this.drawing = true;
                             this.hover = null;
                             this.startX = p.x;
@@ -210,7 +140,9 @@
                             }
                             if (this.drawing && this.marking) {
                                 e.preventDefault();
-                                this.moveDraw(e.touches[0]);
+                                const touch = e.touches[0];
+                                this.moveDraw(touch);
+                                this.updateTouchLens(touch, this.norm(touch));
                             }
                         },
                         onTouchEnd(e) {
@@ -223,7 +155,10 @@
                             {{-- No emulated mouse events or click after: this tap was a mark. --}}
                             e.preventDefault();
                             this.marking = false;
-                            this.endDraw(e.changedTouches[0], 14);
+                            this.touchLens = null;
+                            const touch = e.changedTouches[0];
+                            this.moveDraw(touch);
+                            this.endDraw(touch, 8);
                         },
                         startPinch(e) {
                             const [a, b] = e.touches;
@@ -235,26 +170,52 @@
                             const [a, b] = e.touches;
                             const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
                             const next = Math.min(this.zoomMax, Math.max(this.zoomMin, +(this.pinch.zoom * d / this.pinch.d).toFixed(3)));
+                            this.zoomAt(next, (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+                        },
+                        zoomAt(next, clientX, clientY) {
                             if (next === this.zoom) return;
-                            {{-- Keep the point between the fingers where it is. --}}
-                            const rect = vp.getBoundingClientRect();
-                            const mx = (a.clientX + b.clientX) / 2 - rect.left;
-                            const my = (a.clientY + b.clientY) / 2 - rect.top;
-                            const r = next / this.zoom;
-                            const left = (vp.scrollLeft + mx) * r - mx;
-                            const top = (vp.scrollTop + my) * r - my;
+                            const vp = this.$refs.viewport;
+                            const image = this.$refs.shotImg;
+                            const point = this.norm({ clientX, clientY });
                             this.zoom = next;
-                            this.$nextTick(() => { vp.scrollLeft = left; vp.scrollTop = top; });
+                            if (! vp || ! image || ! point) return;
+
+                            this.$nextTick(() => {
+                                const rect = image.getBoundingClientRect();
+                                vp.scrollLeft += rect.left + point.x * rect.width - clientX;
+                                vp.scrollTop += rect.top + point.y * rect.height - clientY;
+                            });
+                        },
+                        updateTouchLens(touch, point) {
+                            const image = this.$refs.shotImg;
+                            const viewport = this.$refs.viewport?.getBoundingClientRect();
+                            if (! point || ! image || ! viewport) return;
+
+                            const { width, height } = image.getBoundingClientRect();
+                            const size = this.lensSize;
+                            const magnification = 2.5;
+                            const x = touch.clientX - viewport.left;
+                            const y = touch.clientY - viewport.top;
+                            this.touchLens = {
+                                left: Math.max(6, Math.min(viewport.width - size - 6, x - size / 2)) + 'px',
+                                top: Math.max(4, Math.min(viewport.height - size - 4, y >= size + 26 ? y - size - 22 : y + 30)) + 'px',
+                                width: size + 'px',
+                                height: size + 'px',
+                                backgroundImage: 'url(' + image.currentSrc + ')',
+                                backgroundSize: width * magnification + 'px ' + height * magnification + 'px',
+                                backgroundPosition: (size / 2 - point.x * width * magnification) + 'px ' + (size / 2 - point.y * height * magnification) + 'px',
+                            };
                         },
                         {{-- Live: the page's code as captured, framed so a click picks the real element (LiveSnapshot). --}}
-                        liveUrl: @js($review->isOpenForFeedback() && $review->dom_path ? route('reviews.screenshot.live', [$token, $shot]) : null),
+                        liveUrl: @js($liveUrl),
                         live: false,
                         liveLoaded: false,
-                        liveWidth: {{ (int) round($shot->cssSize()['w']) ?: 1280 }},
-                        liveHeight: {{ (int) round($shot->cssSize()['h']) ?: 800 }},
+                        liveWidth: {{ max(1, (int) ($shot->meta['css_width'] ?? (round($shot->cssSize()['w']) ?: 1280))) }},
+                        liveHeight: {{ max(1, (int) ($shot->meta['css_height'] ?? 800)) }},
                         liveScale: 1,
                         toggleLive() {
                             this.live = ! this.live;
+                            this.$store.rmFocus.previewMode = this.live;
                             this.hover = null;
                             if (this.live) {
                                 this.liveLoaded = true;
@@ -266,20 +227,29 @@
                              The frame's sandbox and the CSP inside the page still hold. --}}
                         liveFetched: false,
                         liveFailed: false,
-                        loadLive() {
-                            if (this.liveFetched || ! this.$refs.liveFrame) return;
-                            this.liveFetched = true;
+                        liveLoading: false,
+                        liveMarkError: false,
+                        loadLive(frame = this.$refs.liveFrame) {
+                            if (this.liveFetched || this.liveLoading || !frame) return;
+                            this.liveLoading = true;
+                            this.liveFailed = false;
                             fetch(this.liveUrl, { credentials: 'same-origin', headers: { Accept: 'text/html' } })
                                 .then((response) => (response.ok ? response.text() : Promise.reject(response.status)))
-                                .then((html) => { this.$refs.liveFrame.srcdoc = html; })
-                                .catch(() => { this.liveFailed = true; this.liveFetched = false; });
+                                .then((html) => {
+                                    if (!frame.isConnected) return;
+                                    frame.srcdoc = html;
+                                    this.liveFetched = true;
+                                })
+                                .catch(() => { this.liveFailed = true; })
+                                .finally(() => { this.liveLoading = false; });
                         },
                         measureLive() {
                             const box = this.$refs.liveViewport;
                             if (! box) return;
                             const cs = getComputedStyle(box);
                             const avail = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-                            this.liveScale = Math.min(1, Math.max(0.1, avail / this.liveWidth));
+                            const height = box.clientHeight - parseFloat(cs.paddingTop) - (this.$refs.snapshotNotice?.offsetHeight || 0) - 16;
+                            this.liveScale = Math.min(1, Math.max(0.1, Math.min(avail / this.liveWidth, height / this.liveHeight)));
                             this.tellLiveScale();
                         },
                         {{-- The picker draws its bar at 1 / scale, so it reads at full size. --}}
@@ -289,16 +259,21 @@
                         onLiveMessage(e) {
                             const data = e.data;
                             if (! this.$refs.liveFrame || e.source !== this.$refs.liveFrame.contentWindow || ! data || data.source !== 'rm-live') return;
-                            if (data.type === 'size' && data.height > 0) {
-                                this.liveHeight = Math.min(data.height, 40000);
+                            if (data.type === 'size') {
                                 this.tellLiveScale();
-                            } else if (data.type === 'pick' || data.type === 'edit') {
-                                this.live = false;
-                                $wire.markLiveElement(String(data.selector || ''), data.box || {}, data.type === 'edit' ? String(data.after || '') : null)
-                                    .then(() => this.$nextTick(() => this.$root.querySelector('[data-pending-mark]')?.scrollIntoView({ block: 'center', behavior: 'smooth' })));
+                            } else if (this.live && (data.type === 'pick' || data.type === 'edit')) {
+                                $wire.markLiveElement(String(data.selector || ''), data.box || {}, data.type === 'edit' ? String(data.after || '') : null, {{ $shot->id }})
+                                    .then((marked) => {
+                                        this.liveMarkError = !marked;
+                                        if (!marked) return;
+                                        this.toggleLive();
+                                        this.$nextTick(() => this.$root.querySelector('[data-pending-mark]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+                                    });
                             }
                         },
                         init() {
+                            if (this.viewerInitialized) return;
+                            this.viewerInitialized = true;
                             this.$nextTick(() => {
                                 this.measureLayout();
                                 const img = this.$refs.shotImg;
@@ -311,6 +286,21 @@
                                 if (this.$refs.viewport) {
                                     this.resizeObserver.observe(this.$refs.viewport);
                                 }
+                                if (this.liveUrl && this.$store.rmFocus?.previewMode) this.toggleLive();
+                                @if ($pdfPage)
+                                    const host = this.$refs.pdfLayer;
+                                    window.rmPdfViewer?.().then((viewer) => {
+                                        if (!host?.isConnected) return;
+                                        const search = viewer.searchState(this.pdfUrl);
+                                        this.pdfQuery = search.query;
+                                        this.pdfResults = search.results;
+                                        this.disposePdf = viewer.mount(this.pdfUrl, {{ $shot->meta['page'] }}, host, {
+                                            ready: () => { this.pdfReady = true; },
+                                            failed: () => { this.pdfReady = false; },
+                                            selection: (selection) => { this.pdfSelection = selection; },
+                                        });
+                                    }).catch(() => { this.pdfReady = false; });
+                                @endif
                             });
                             window.rmPick?.load(this.elementsUrl).then((list) => { this.elements = list; });
                         },
@@ -347,6 +337,7 @@
                         },
                         destroy() {
                             this.resizeObserver?.disconnect();
+                            this.disposePdf?.();
                         },
                         onImageLoad() {
                             const img = this.$refs.shotImg;
@@ -411,10 +402,24 @@
                             return this.viewportCanScroll();
                         },
                         zoomIn() {
-                            this.zoom = Math.min(this.zoomMax, +(this.zoom + this.zoomStep).toFixed(2));
+                            this.zoomStepBy(this.zoomStep);
                         },
                         zoomOut() {
-                            this.zoom = Math.max(this.zoomMin, +(this.zoom - this.zoomStep).toFixed(2));
+                            this.zoomStepBy(-this.zoomStep);
+                        },
+                        zoomStepBy(step) {
+                            const next = Math.max(this.zoomMin, Math.min(this.zoomMax, +(this.zoom + step).toFixed(2)));
+                            const viewport = this.$refs.viewport?.getBoundingClientRect();
+                            const image = this.$refs.shotImg?.getBoundingClientRect();
+                            if (! this.coarse || ! viewport || ! image) {
+                                this.zoom = next;
+                                return;
+                            }
+                            this.zoomAt(
+                                next,
+                                (Math.max(viewport.left, image.left) + Math.min(viewport.right, image.right)) / 2,
+                                (Math.max(viewport.top, image.top) + Math.min(viewport.bottom, image.bottom)) / 2,
+                            );
                         },
                         setFit(mode) {
                             this.fit = mode;
@@ -578,6 +583,7 @@
                             }
                         },
                         cancelDraw() {
+                            this.touchLens = null;
                             this.drawing = false;
                             this.draft = null;
                             this.panning = false;
@@ -590,41 +596,167 @@
                     x-on:message.window="onLiveMessage($event)"
                     x-on:resize.window.debounce.100ms="live && measureLive()"
                 >
-                    <div @class([
-                        'relative flex min-h-0 flex-1 flex-col',
-                    ])>
-                        {{-- Which view: the screenshot, or the page's code as captured. A
-                             segmented switch of its own, apart from the tools for the view. --}}
-                        <template x-if="liveUrl">
-                            <div
-                                data-view-switch
-                                role="tablist"
-                                aria-label="View"
-                                class="absolute left-1/2 top-3 z-30 hidden -translate-x-1/2 items-center gap-0.5 rounded-full bg-raised/95 p-0.5 md:flex shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur"
-                            >
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    class="flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
-                                    x-bind:class="! live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
-                                    x-bind:aria-selected="(! live).toString()"
-                                    x-on:click="live && toggleLive()"
-                                    title="The captured screenshot"
-                                ><flux:icon.photo variant="micro" class="size-3.5" />Screenshot</button>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    data-live-toggle
-                                    class="flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
-                                    x-bind:class="live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
-                                    x-bind:aria-selected="live.toString()"
-                                    x-on:click="live || toggleLive()"
-                                    title="The page’s code as captured: click a part to mark it, or change its words"
-                                ><flux:icon.code-bracket variant="micro" class="size-3.5" />Live</button>
+                    @if ($hasBrief || $liveUrl || $multipleShots)
+                        <div class="@container relative z-30 flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 pt-2 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:px-4" data-canvas-toolbar>
+                            @if ($hasBrief)
+                                <div class="min-w-0 md:col-start-1 md:row-start-1 md:justify-self-start">
+                                    @include('review.partials.brief')
+                                </div>
+                            @endif
+
+                            @if ($liveUrl || $multipleShots)
+                                <div class="ml-auto inline-flex min-w-0 items-center gap-1 rounded-full bg-raised p-0.5 md:col-start-2 md:row-start-1 md:ml-0 md:justify-self-center"
+                                    role="group" aria-label="Preview controls">
+                                    @if ($liveUrl)
+                                        <div data-view-switch role="tablist" aria-label="View" class="hidden items-center gap-0.5 @min-[28rem]:flex">
+                                            <button
+                                                type="button"
+                                                role="tab"
+                                                class="flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
+                                                x-bind:class="! live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                                x-bind:aria-selected="(! live).toString()"
+                                                x-on:click="live && toggleLive()"
+                                                title="The captured screenshot"
+                                            ><flux:icon.photo variant="micro" class="size-3.5" />Screenshot</button>
+                                            <button
+                                                type="button"
+                                                role="tab"
+                                                data-live-toggle
+                                                class="flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
+                                                x-bind:class="live ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
+                                                x-bind:aria-selected="live.toString()"
+                                                x-on:click="live || toggleLive()"
+                                                title="The page’s code as captured: click a part to mark it, or change its words"
+                                            ><flux:icon.code-bracket variant="micro" class="size-3.5" />Page preview</button>
+                                        </div>
+                                        <div class="min-w-0 @min-[28rem]:hidden">
+                                            <flux:dropdown position="bottom" align="start">
+                                                <button type="button" aria-label="Preview mode"
+                                                    class="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-chip focus-visible:outline-key">
+                                                    <span x-text="live ? 'Page preview' : 'Screenshot'"></span>
+                                                    <flux:icon.chevron-down variant="micro" class="size-3.5 shrink-0 text-muted-foreground" />
+                                                </button>
+                                                <flux:menu class="min-w-36">
+                                                    <flux:menu.item icon="photo" x-on:click="if (live) toggleLive()" x-bind:aria-current="(! live).toString()">Screenshot</flux:menu.item>
+                                                    <flux:menu.item icon="code-bracket" x-on:click="if (! live) toggleLive()" x-bind:aria-current="live.toString()">Page preview</flux:menu.item>
+                                                </flux:menu>
+                                            </flux:dropdown>
+                                        </div>
+                                    @endif
+
+                                    @if ($multipleShots)
+                                        @if ($liveUrl)
+                                            <span class="h-4 w-px shrink-0 bg-border" aria-hidden="true"></span>
+                                        @endif
+                                        <button type="button" aria-label="Previous screenshot"
+                                            class="inline-flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-chip disabled:opacity-30 md:hidden"
+                                            @disabled($activeScreenshotIndex === 0)
+                                            wire:loading.attr="disabled" wire:target="selectScreenshot"
+                                            x-on:click="changeShot({{ $activeScreenshotIndex - 1 }})">
+                                            <flux:icon.chevron-left variant="micro" class="size-4" />
+                                        </button>
+                                        <flux:dropdown position="bottom" align="end" class="min-w-0">
+                                            <button type="button" data-shot-picker
+                                                aria-label="{{ isset($shot->meta['viewport']) ? 'Viewport' : 'Screenshot' }}: {{ $shot->railLabel($activeScreenshotIndex) }}"
+                                                class="inline-flex h-10 max-w-full items-center gap-1 rounded-full px-1.5 md:px-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-chip focus-visible:outline-key md:h-7 md:text-xs">
+                                                <span class="truncate">{{ $shot->railLabel($activeScreenshotIndex) }}</span>
+                                                <flux:icon.chevron-down variant="micro" class="size-3.5 shrink-0 text-muted-foreground" />
+                                            </button>
+                                            <flux:menu class="min-w-36 {{ $pdfPage ? 'max-h-80 overflow-y-auto' : '' }}">
+                                                @foreach ($review->screenshots as $index => $shotOption)
+                                                    <flux:menu.item
+                                                        wire:key="shot-option-{{ $shotOption->id }}"
+                                                        aria-current="{{ $activeScreenshotIndex === $index ? 'true' : 'false' }}"
+                                                        x-on:click="
+                                                            if ({{ $activeScreenshotIndex }} === {{ $index }}) return;
+                                                            changeShot({{ $index }});
+                                                        "
+                                                    >
+                                                        @if ($pdfPage)
+                                                            <img src="{{ $shotOption->thumbUrl() }}" alt="" loading="lazy" class="h-8 w-12 shrink-0 rounded border border-border object-contain">
+                                                        @endif
+                                                        <span class="size-4 shrink-0" aria-hidden="true">
+                                                            @if ($activeScreenshotIndex === $index)
+                                                                <flux:icon.check variant="micro" class="size-4 text-zinc-800" />
+                                                            @endif
+                                                        </span>
+                                                        {{ $shotOption->railLabel($index) }}
+                                                        @if (isset($shotOption->meta['css_width'], $shotOption->meta['css_height']))
+                                                            <span class="ml-auto text-xs text-muted-foreground">{{ $shotOption->meta['css_width'] }} × {{ $shotOption->meta['css_height'] }}</span>
+                                                        @endif
+                                                    </flux:menu.item>
+                                                @endforeach
+                                            </flux:menu>
+                                        </flux:dropdown>
+                                        <button type="button" aria-label="Next screenshot"
+                                            class="inline-flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-chip disabled:opacity-30 md:hidden"
+                                            @disabled($activeScreenshotIndex === $review->screenshots->count() - 1)
+                                            wire:loading.attr="disabled" wire:target="selectScreenshot"
+                                            x-on:click="changeShot({{ $activeScreenshotIndex + 1 }})">
+                                            <flux:icon.chevron-right variant="micro" class="size-4" />
+                                        </button>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if ($pdfPage)
+                        @include('review.partials.pdf-tools')
+                    @endif
+
+                    @if (($quality['message'] ?? null) || $approximate || $previousShot || $websiteUrl)
+                        <div class="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 pt-2 text-xs md:px-6">
+                            @if (($quality['message'] ?? null) || $approximate)
+                                <p class="{{ ($quality['message'] ?? null) ? 'text-problem-ink' : 'text-muted-foreground' }}" role="status" x-show="!live">
+                                    {{ $quality['message'] ?? '' }}
+                                    @if ($approximate)
+                                        <span>Element positions came from a separate page load. Mark an area directly.</span>
+                                    @endif
+                                </p>
+                            @endif
+                            @if ($previousShot)
+                                <button type="button" data-compare-capture class="link ml-auto font-medium" x-show="!live"
+                                    x-on:click="comparing = !comparing; cancelDraw(); marking = false"
+                                    x-bind:aria-pressed="comparing.toString()"
+                                    x-text="comparing ? 'Back to screenshot' : 'Compare with previous pass'">Compare with previous pass</button>
+                            @endif
+                            @if ($websiteUrl)
+                                <a href="{{ $websiteUrl }}" target="_blank" rel="noopener noreferrer" class="ml-auto inline-flex items-center gap-1 link">
+                                    Open live site <flux:icon.arrow-top-right-on-square variant="micro" class="size-3.5" />
+                                </a>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if ($previousShot)
+                        <template x-if="comparing && !live">
+                            <div class="min-h-0 flex-1 overflow-auto px-3 py-3 md:px-6">
+                                @if ($warning = $shot->comparisonWarning($previousShot))
+                                    <p class="mb-2 text-xs text-problem-ink">{{ $warning }}</p>
+                                @endif
+                                @if ($pdfChange)
+                                    <div class="mb-2 flex flex-wrap gap-2 text-sm" aria-label="Changed text">
+                                        @if ($pdfChange['before'] !== '') <del class="rounded bg-red-50 px-1 text-red-800">{{ $pdfChange['before'] }}</del> @endif
+                                        @if ($pdfChange['after'] !== '') <ins class="rounded bg-green-50 px-1 text-green-800">{{ $pdfChange['after'] }}</ins> @endif
+                                    </div>
+                                @endif
+                                <div class="grid grid-cols-2 items-start gap-3">
+                                    @foreach (['Previous pass' => $previousShot, 'This pass' => $shot] as $label => $comparisonShot)
+                                        <figure class="min-w-0">
+                                            <figcaption class="sticky top-0 bg-well py-1 text-xs font-medium text-muted-foreground">{{ $label }} @if ($pdfPage) · Page {{ $comparisonShot->meta['page'] }} @endif</figcaption>
+                                            <img class="block h-auto w-full rounded bg-raised" src="{{ $comparisonShot->url() }}" alt="{{ $label }} screenshot" loading="lazy">
+                                        </figure>
+                                    @endforeach
+                                </div>
                             </div>
                         </template>
+                    @endif
 
-                        <div data-zoom-controls x-show="! live" class="absolute bottom-3 left-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur md:left-auto md:right-3">
+                    <div x-show="!comparing || live" @class([
+                        'relative flex min-h-0 flex-1 flex-col',
+                    ])>
+                        <div data-zoom-controls x-show="!live && @js(! $shot->captureFailed())" class="absolute bottom-3 left-3 z-30 flex items-center gap-0.5 rounded-full bg-raised/95 p-0.5 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.07] backdrop-blur md:left-1/2 md:-translate-x-1/2">
                             <template x-if="elements">
                                 <div class="flex items-center">
                                     <button
@@ -646,19 +778,21 @@
                                 x-bind:disabled="zoom <= zoomMin"
                                 aria-label="Zoom out"
                             >−</button>
-                            {{-- Phones keep Fit; pinch and −/+ do the rest. --}}
-                            @foreach (['width' => ['Fit width', 'Fit'], 'page' => ['Whole page', 'Page'], 'actual' => ['100%', '100%']] as $fitMode => [$fitLabel, $fitShort])
+                            <flux:dropdown position="top" align="center">
                                 <button
                                     type="button"
-                                    @class([
-                                        'h-9 rounded-full px-2.5 text-xs font-medium transition-colors md:h-7',
-                                        'hidden sm:block' => $fitMode !== 'width',
-                                    ])
-                                    x-bind:class="fit === '{{ $fitMode }}' && zoom === 1 ? 'bg-foreground text-background' : 'text-zinc-600 hover:bg-chip'"
-                                    x-bind:aria-pressed="(fit === '{{ $fitMode }}' && zoom === 1).toString()"
-                                    x-on:click="setFit('{{ $fitMode }}')"
-                                ><span class="hidden sm:inline">{{ $fitLabel }}</span><span class="sm:hidden">{{ $fitShort }}</span></button>
-                            @endforeach
+                                    class="inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-chip md:h-7"
+                                    aria-label="Zoom preset"
+                                >
+                                    <span x-text="fit === 'width' ? 'Fit width' : (fit === 'page' ? 'Whole page' : 'Actual size')">Fit width</span>
+                                    <flux:icon.chevron-down variant="micro" class="size-3.5" />
+                                </button>
+                                <flux:menu>
+                                    <flux:menu.item x-on:click="setFit('width')">Fit width</flux:menu.item>
+                                    <flux:menu.item x-on:click="setFit('page')">Whole page</flux:menu.item>
+                                    <flux:menu.item x-on:click="setFit('actual')">Actual size</flux:menu.item>
+                                </flux:menu>
+                            </flux:dropdown>
                             <button
                                 type="button"
                                 class="flex size-9 items-center justify-center rounded-full text-sm text-zinc-600 transition hover:bg-chip disabled:opacity-40 md:size-7"
@@ -669,11 +803,16 @@
                         </div>
 
                         @if ($review->isOpenForFeedback() && ($mode === 'owner' || $review->allowsGuestAccess()))
+                            @if ($this->activeMarks->isEmpty() && $this->openGuestSuggestions->isEmpty())
+                                <p x-show="! coarse && ! live" class="pointer-events-none absolute bottom-4 left-4 z-20 hidden text-xs text-muted-foreground xl:block">
+                                    {{ $mode === 'guest' ? 'Click the preview to suggest a change' : 'Click the preview to leave a mark' }}
+                                </p>
+                            @endif
                             {{-- Touch: the way in to marking, so a scroll or a stray tap never leaves a mark. --}}
                             <button
                                 type="button"
                                 data-mark-toggle
-                                x-show="coarse && ! live"
+                                x-show="coarse && !live && @js(! $shot->captureFailed())"
                                 x-cloak
                                 class="absolute right-3 bottom-3 z-30 inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-md shadow-black/[0.12] transition-colors"
                                 x-bind:class="marking ? 'bg-foreground text-background' : 'bg-key text-accent-contrast'"
@@ -686,23 +825,42 @@
                             </button>
                             <p
                                 data-marking-hint
-                                x-show="marking"
+                                x-show="marking && ! drawing"
                                 x-cloak
                                 x-transition.opacity.duration.120ms
                                 class="pointer-events-none absolute inset-x-3 bottom-[4.25rem] z-30 mx-auto w-fit max-w-[calc(100%-1.5rem)] rounded-full bg-foreground px-3 py-1.5 text-center text-xs font-medium text-background shadow-md"
-                                x-text="elements && pickOn ? 'Drag over an area, or tap a part of the page' : 'Drag over an area, or tap a spot'"
+                                x-text="elements && pickOn ? 'Tap an element or drag to outline it' : 'Tap a spot or drag to outline an area'"
                             ></p>
                         @endif
+
+                    <template x-if="touchLens">
+                        <div data-touch-lens aria-hidden="true"
+                            class="pointer-events-none absolute z-40 rounded-xl bg-well bg-no-repeat shadow-lg ring-2 ring-key"
+                            x-bind:style="touchLens">
+                            <span class="absolute left-1/2 top-1/2 h-5 w-px -translate-x-1/2 -translate-y-1/2 bg-key shadow-sm"></span>
+                            <span class="absolute left-1/2 top-1/2 h-px w-5 -translate-x-1/2 -translate-y-1/2 bg-key shadow-sm"></span>
+                        </div>
+                    </template>
 
                     <template x-if="liveLoaded">
                         <div
                             x-show="live"
                             x-ref="liveViewport"
                             data-live-view
-                            class="absolute inset-0 z-20 overflow-auto overscroll-contain bg-well px-3 pt-14 pb-20 md:px-6"
+                            class="absolute inset-0 z-20 overflow-auto overscroll-contain bg-well px-3 pt-3 pb-20 md:px-6"
                         >
-                            <p class="mx-auto mb-2 max-w-full text-xs text-muted-foreground" x-bind:style="'width:' + (liveWidth * liveScale) + 'px'">
-                                The page’s code as captured. Click a part, then mark it or change its words. Fonts and images may differ from the screenshot.
+                            <p x-ref="snapshotNotice" class="mx-auto mb-2 max-w-full text-xs text-muted-foreground" x-bind:style="'width:' + (liveWidth * liveScale) + 'px'">
+                                @if ($previewSource === 'separate_load')
+                                    Preview from a separate page load. Use the screenshot to mark it.
+                                @elseif ($canMarkPreview)
+                                    Saved page preview. Scroll to explore, or click an element to leave feedback.
+                                @else
+                                    Saved page preview. Use the screenshot to mark it.
+                                @endif
+                            </p>
+                            <p x-show="liveLoading" x-cloak class="mx-auto mb-2 text-center text-xs text-muted-foreground" role="status">Loading page preview…</p>
+                            <p x-show="liveMarkError" x-cloak class="mx-auto mb-2 text-center text-xs text-problem-ink" role="alert">
+                                This element couldn’t be matched to the screenshot. <button type="button" class="link" x-on:click="toggleLive()">Mark it on the screenshot</button>
                             </p>
                             <p x-show="liveFailed" x-cloak class="mx-auto mb-2 text-sm text-problem-ink" role="alert" x-bind:style="{ width: (liveWidth * liveScale) + 'px' }">
                                 The page’s code didn’t load. <button type="button" class="link" x-on:click="liveFailed = false; loadLive()">Try again</button>
@@ -710,9 +868,10 @@
                             <div class="relative mx-auto overflow-hidden rounded-lg bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.05)]" x-bind:style="'width:' + (liveWidth * liveScale) + 'px;height:' + (liveHeight * liveScale) + 'px'">
                                 <iframe
                                     x-ref="liveFrame"
+                                    x-init="$nextTick(() => { measureLive(); loadLive($el) })"
                                     sandbox="allow-scripts"
                                     referrerpolicy="no-referrer"
-                                    title="Live page"
+                                    title="Saved page preview"
                                     class="absolute left-0 top-0 origin-top-left border-0"
                                     x-bind:style="'width:' + liveWidth + 'px;height:' + liveHeight + 'px;transform:scale(' + liveScale + ')'"
                                 ></iframe>
@@ -722,9 +881,9 @@
 
                     <div
                         x-ref="viewport"
-                        class="relative min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-14 pb-20 md:px-6 md:pt-6"
+                        @if ($shot->captureFailed()) hidden @endif
+                        class="relative min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-3 pb-20 md:px-6 md:pt-4"
                         x-bind:class="{
-                            'md:!pt-14': liveUrl,
                             '[touch-action:none]': marking,
                             '[touch-action:pan-x_pan-y]': ! marking,
                             'cursor-grab': canPan() && spaceHeld && !panning,
@@ -765,9 +924,24 @@
                                 @if ($shot->width) width="{{ $shot->width }}" @endif
                                 @if ($shot->height) height="{{ $shot->height }}" @endif
                                 class="pointer-events-none block h-auto w-full max-w-full rounded-lg"
+                                @if ($pdfPage) x-bind:class="pdfReady ? 'opacity-0' : ''" @endif
                                 draggable="false"
                                 x-on:load="onImageLoad()"
                             />
+                            @if ($pdfPage)
+                                <div wire:ignore x-ref="pdfLayer" data-pdf-layer class="rm-pdf-layer absolute inset-0"
+                                    x-bind:class="!pdfReady ? 'pointer-events-none opacity-0' : pdfSelectText && !marking ? 'select-text' : 'pointer-events-none select-none'"
+                                    x-on:mousedown.stop x-on:touchstart.stop x-on:touchmove.stop>
+                                    <canvas aria-hidden="true" class="pointer-events-none block size-full rounded-lg"></canvas>
+                                    <div class="textLayer" aria-label="PDF page text"></div>
+                                </div>
+                                @foreach ($shot->annotations as $mark)
+                                    @foreach ($mark->pdf_anchor['rects'] ?? [] as $rect)
+                                        <span aria-hidden="true" class="pointer-events-none absolute z-[4] {{ $mark->pdf_anchor['kind'] === 'strikeout' ? 'bg-red-600/60' : 'bg-yellow-300/40' }}"
+                                            style="left:{{ $rect['x'] * 100 }}%;top:{{ ($rect['y'] + ($mark->pdf_anchor['kind'] === 'strikeout' ? $rect['h'] / 2 : 0)) * 100 }}%;width:{{ $rect['w'] * 100 }}%;height:{{ $mark->pdf_anchor['kind'] === 'strikeout' ? '2px' : ($rect['h'] * 100).'%' }}"></span>
+                                    @endforeach
+                                @endforeach
+                            @endif
 
                             @php($openFindings = $this->openSecondOpinion)
                             @php($guestFindings = $this->openGuestSuggestions)
@@ -954,18 +1128,11 @@
                     </div>
                     </div>
 
-                @if ($review->isOpenForFeedback())
-                    {{-- Pinned left beside the zoom bar, never under it: it gives way first. --}}
-                    @php($canvasHint = $shot->elementsUrl() ? ($mode === 'guest' ? 'Click a part to suggest a change · drag for an area · Alt-click for a spot · Space+drag pans' : 'Click a part to mark it · drag for an area · Alt-click for a spot · Space+drag pans') : ($mode === 'guest' ? 'Drag to suggest a change · click for a point · Space+drag pans' : 'Drag to mark · click for a point · Space+drag pans'))
-                    <p
-                        data-canvas-hint
-                        x-show="! live"
-                        class="pointer-events-none absolute bottom-3 left-3 z-20 hidden max-w-[calc(100%-26rem)] truncate rounded-full bg-raised/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.05] lg:block"
-                        title="{{ $canvasHint }}"
-                    >{{ $canvasHint }}</p>
-                @endif
                 </div>
             @else
+                @if ($hasBrief)
+                    <div class="relative z-30 px-3 py-2 md:px-4">@include('review.partials.brief')</div>
+                @endif
                 <flux:callout variant="warning">No screenshots on this review yet.</flux:callout>
             @endif
 
@@ -982,6 +1149,8 @@
                 wire:key="pending-note-{{ $pendingX }}-{{ $pendingY }}-{{ $pendingW }}-{{ $pendingH }}"
                 class="pointer-events-none fixed inset-0 z-50"
                 x-data="{
+                    manualType: false,
+                    copyOpen: false,
                     left: null,
                     top: null,
                     origin: 'left center',
@@ -1052,6 +1221,7 @@
                         this.place();
                     },
                     focusNote() {
+                        if (this.mobile()) return;
                         this.$nextTick(() => {
                             this.$refs.note?.focus?.();
                             const el = this.$refs.note?.querySelector?.('textarea') || this.$refs.note;
@@ -1083,40 +1253,36 @@
                     x-on:keydown.escape.window="$wire.cancelPin()"
                 >
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-zinc-200 md:hidden" aria-hidden="true"></div>
-                    <div class="mb-3 flex items-start justify-between gap-3">
-                        <flux:heading size="sm">
-                            @if ($pendingTarget)
-                                @php($thing = 'this '.strtolower($pendingTarget['kind'] ?? 'element'))
-                                {{ $mode === 'guest' ? "Suggest a change to {$thing}" : "Leave a note on {$thing}" }}
-                            @elseif ($pendingW !== null && $pendingH !== null && $pendingW >= \App\Support\NormalizedArea::MIN_MARK_SIDE && $pendingH >= \App\Support\NormalizedArea::MIN_MARK_SIDE)
-                                {{ $mode === 'guest' ? 'Suggest a change here' : 'Leave a note here' }}
-                            @else
-                                {{ $mode === 'guest' ? 'Suggest a change on this spot' : 'Leave a note on this spot' }}
-                            @endif
-                        </flux:heading>
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <flux:heading size="sm">{{ $mode === 'guest' ? 'Suggest a change' : 'Leave a note' }}</flux:heading>
                         <button
                             type="button"
                             class="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 md:size-7"
                             wire:click="cancelPin"
-                            aria-label="Cancel"
+                            aria-label="Close note"
                         >
                             <flux:icon.x-mark class="size-4" />
                         </button>
                     </div>
                     <div class="space-y-3">
+                        @if ($pendingPdfAnchor)
+                            <blockquote class="border-l-2 border-key px-2 text-sm text-zinc-700">{{ $pendingPdfAnchor['quote'] }}</blockquote>
+                        @endif
                         @if ($pendingTarget)
                             {{-- What the mark is tied to; the agent gets the same. --}}
                             <div class="space-y-1.5" data-pending-element>
                                 <div class="flex items-center gap-1">
-                                    <x-element-chip :target="$pendingTarget" class="min-w-0 flex-1" />
+                                    <x-element-chip :target="$pendingTarget" quiet class="min-w-0 flex-1" />
                                     @if ($pendingParent !== null)
                                         <button type="button" class="h-9 shrink-0 rounded-md px-2 text-xs font-medium text-zinc-500 transition hover:bg-chip hover:text-zinc-900 md:h-6 md:px-1.5 md:text-[11px]" wire:click="widenPendingElement" title="Mark the part around it instead">Wider</button>
                                     @endif
-                                    <button type="button" class="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-chip hover:text-zinc-700 md:size-6" wire:click="dropPendingElement" aria-label="Just this area, not the element" title="Just this area, not the element">
-                                        <flux:icon.x-mark variant="micro" class="size-3.5" />
+                                    <button type="button"
+                                        class="h-8 shrink-0 rounded-md px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-chip hover:text-zinc-900 md:h-6"
+                                        wire:click="dropPendingElement" title="Keep the marked area and detach the element">
+                                        Use area
                                     </button>
                                 </div>
-                                <x-element-inspect :target="$pendingTarget" />
+                                <x-element-inspect :target="$pendingTarget" :screenshot="$shot" reference-action="toggleDraftElementReference" :selected-references="$draftBodyReferences" />
                             </div>
                         @endif
                         @if ($mode === 'guest')
@@ -1131,33 +1297,43 @@
                             <flux:error name="guestName" />
                         @endif
                         <div x-ref="note">
-                            <flux:textarea wire:model="draftBody" rows="3" placeholder="Be specific — what feels off, and what would be better?" x-on:keydown.meta.enter.prevent="$wire.savePin()" x-on:keydown.ctrl.enter.prevent="$wire.savePin()" />
-                            <flux:error name="draftBody" />
-                        </div>
-                        @if ($mode === 'owner')
-                        {{-- One row, like the viewport switch: what kind of mark this is. --}}
-                        <div class="flex w-full items-center gap-0.5 rounded-xl bg-chip p-0.5" role="radiogroup" aria-label="Kind of mark">
-                            @foreach (\App\Models\Annotation::severityLabels() as $value => $label)
-                                <label class="flex h-7 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-[0.6rem] px-1.5 text-xs font-medium whitespace-nowrap text-zinc-500 transition-colors hover:text-zinc-900 has-[:checked]:bg-raised has-[:checked]:text-zinc-900 has-[:checked]:shadow-xs has-[:checked]:ring-1 has-[:checked]:ring-black/[0.06] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-zinc-400">
-                                    <input type="radio" wire:model.live="draftSeverity" value="{{ $value }}" class="sr-only">
-                                    {{ $label }}
-                                </label>
-                            @endforeach
-                        </div>
-                        @if (in_array($draftSeverity, [\App\Models\Annotation::SEVERITY_MUST_FIX, \App\Models\Annotation::SEVERITY_NIT], true))
-                            <div>
-                                <flux:textarea wire:model="draftSuggestedCopy" rows="2" placeholder="Suggested copy (optional) — exact string for the agent" />
-                                <flux:error name="draftSuggestedCopy" />
+                            <div class="overflow-hidden rounded-xl border border-input bg-background focus-within:ring-2 focus-within:ring-key/40">
+                                <x-element-reference-chips :references="$draftBodyReferences" action="toggleDraftElementReference" class="px-2 pt-2" />
+                                <textarea wire:model="draftBody" rows="3" aria-label="Mark note" placeholder="Be specific — what feels off, and what would be better?"
+                                    class="block w-full resize-y border-0 bg-transparent px-3 py-2 text-base text-zinc-800 outline-none placeholder:text-zinc-500 sm:text-sm"
+                                    @if ($mode === 'owner')
+                                        x-on:input="if (! manualType) $wire.draftSeverity = window.rmSuggestMarkType($event.target.value)"
+                                    @endif
+                                    x-on:keydown.meta.enter.prevent="$wire.savePin()" x-on:keydown.ctrl.enter.prevent="$wire.savePin()"></textarea>
+                                @if ($mode === 'owner')
+                                    <div class="flex flex-wrap items-center justify-between gap-x-2 px-2 pb-2">
+                                        <x-mark-type-picker x-model="$wire.draftSeverity" x-on:change="manualType = true" />
+                                        <button type="button"
+                                            class="inline-flex h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-chip hover:text-zinc-900 focus-visible:outline-key"
+                                            x-cloak x-show="! copyOpen && ! $wire.draftSuggestedCopy && ['must-fix', 'nit'].includes($wire.draftSeverity)"
+                                            aria-controls="mark-suggested-copy"
+                                            x-on:click="copyOpen = true; $nextTick(() => $refs.suggestedCopy.querySelector('textarea').focus())">
+                                            <flux:icon.plus variant="micro" class="size-3.5" />
+                                            Add copy
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
-                        @endif
-                        @endif
+                            <flux:error name="draftBody" />
+                            @if ($mode === 'owner')
+                                <div id="mark-suggested-copy" class="mt-2" x-ref="suggestedCopy" x-cloak x-show="copyOpen || $wire.draftSuggestedCopy || @js(($pendingPdfAnchor['kind'] ?? null) === 'replace')">
+                                    <flux:textarea wire:model="draftSuggestedCopy" rows="2" label="Suggested copy" placeholder="Enter the exact replacement text" />
+                                    <flux:error name="draftSuggestedCopy" />
+                                </div>
+                            @endif
+                        </div>
                         <div class="flex flex-col gap-2 sm:flex-row">
                             @if ($mode === 'guest')
-                                <flux:button variant="primary" icon="chat-bubble-left-ellipsis" wire:click="savePin" class="w-full sm:w-auto">Suggest</flux:button>
+                                <flux:button size="sm" variant="primary" icon="chat-bubble-left-ellipsis" wire:click="savePin" class="w-full !rounded-full max-md:!h-11 sm:w-auto">Suggest</flux:button>
                             @else
-                                <flux:button variant="primary" icon="check" wire:click="savePin" class="w-full sm:w-auto">Save mark</flux:button>
+                                <flux:button size="sm" variant="primary" icon="check" wire:click="savePin" class="w-full !rounded-full max-md:!h-11 sm:w-auto">Save mark</flux:button>
                             @endif
-                            <flux:button variant="ghost" icon="x-mark" wire:click="cancelPin" class="w-full sm:w-auto">Cancel</flux:button>
+                            <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="cancelPin" class="w-full !rounded-full max-md:!h-11 sm:w-auto">Cancel</flux:button>
                         </div>
                     </div>
                 </div>

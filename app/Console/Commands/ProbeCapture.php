@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Capture\BrowsershotCaptureDriver;
+use App\Services\Capture\CaptureQuality;
 use App\Services\Capture\FunctionUnavailable;
 use App\Services\Capture\HostedCaptureDriver;
 use App\Services\Capture\PageCaptureService;
@@ -26,6 +27,7 @@ class ProbeCapture extends Command
     protected $signature = 'revisemy:probe-capture
         {url : The page to capture}
         {--path=both : function, screenshot or both (hosted driver only)}
+        {--report= : Write capture metrics and element boxes to a JSON file}
         {--out= : Folder for the images (defaults to storage/app/capture-probe)}';
 
     protected $description = 'Capture a page through each path and say what came back';
@@ -55,6 +57,7 @@ class ProbeCapture extends Command
         $phases = [];
         $totals = [];
         $failed = false;
+        $report = [];
 
         foreach ($paths as $path) {
             // Every viewport in one go, the way create_review shoots them,
@@ -65,11 +68,14 @@ class ProbeCapture extends Command
                 $shots = $this->shoot($path, $url, $capture->viewports());
             } catch (FunctionUnavailable $e) {
                 $rows[] = [$path, 'all', 'turned down', '', '', '', '', $this->seconds($started), $e->getMessage()];
+                $report[] = ['path' => $path, 'quality' => ['status' => 'unavailable'], 'error' => $e->getMessage()];
                 $failed = true;
 
                 continue;
             } catch (ValidationException $e) {
-                $rows[] = [$path, 'all', 'failed', '', '', '', '', $this->seconds($started), collect($e->errors())->flatten()->first()];
+                $error = collect($e->errors())->flatten()->first();
+                $rows[] = [$path, 'all', 'failed', '', '', '', '', $this->seconds($started), $error];
+                $report[] = ['path' => $path, 'quality' => ['status' => 'failed'], 'error' => $error];
                 $failed = true;
 
                 continue;
@@ -80,6 +86,14 @@ class ProbeCapture extends Command
             foreach ($shots as $shot) {
                 $meta = $shot['meta'];
                 $label = (string) ($meta['viewport'] ?? 'shot');
+                $quality = CaptureQuality::describe($meta);
+                if (($quality['status'] ?? null) === 'failed') {
+                    $failed = true;
+                    $rows[] = [$path, $label, 'failed', '', '', '', '', '—', $meta['capture_error']];
+                    $report[] = ['path' => $path, 'viewport' => $label, 'quality' => $quality, 'error' => $meta['capture_error']];
+
+                    continue;
+                }
                 $info = @getimagesizefromstring($shot['binary']) ?: [0, 0, 'mime' => 'image/png'];
                 [$width, $height] = $info;
                 $format = (string) Str::after((string) ($info['mime'] ?? 'image/png'), 'image/');
@@ -99,6 +113,19 @@ class ProbeCapture extends Command
                 }
 
                 $elements = is_array($shot['elements'] ?? null) ? $shot['elements'] : null;
+                if ($this->option('report')) {
+                    $report[] = [
+                        'path' => $path,
+                        'viewport' => $label,
+                        'image' => "{$base}.{$format}",
+                        'width' => $width,
+                        'height' => $height,
+                        'bytes' => strlen($shot['binary']),
+                        'quality' => $quality,
+                        'meta' => $meta,
+                        'elements' => $elements,
+                    ];
+                }
 
                 if (is_array($meta['timings'] ?? null) && $meta['timings'] !== []) {
                     $phases[] = "{$path} {$label}: ".collect($meta['timings'])
@@ -139,6 +166,10 @@ class ProbeCapture extends Command
 
         $this->line('Peak PHP memory: '.round(memory_get_peak_usage(true) / 1_048_576).'MB');
         $this->line("Images are in {$out}");
+
+        if ($reportPath = $this->option('report')) {
+            File::put($reportPath, json_encode($report, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR)."\n");
+        }
 
         return $failed ? self::FAILURE : self::SUCCESS;
     }

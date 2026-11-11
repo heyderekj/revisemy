@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Capture\CaptureQuality;
 use App\Support\ElementMap;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,7 +30,7 @@ class Screenshot extends Model
      * Meta keys that point at the app's own storage. The agent can't fetch
      * them, so its payload leaves them out.
      */
-    public const INTERNAL_META = ['elements_path', 'elements_pick_path', 'vision_path', 'slices'];
+    public const INTERNAL_META = ['elements_path', 'elements_pick_path', 'vision_path', 'slices', 'pdf_lazy', 'pdf_text', 'preview_path', 'preview_base'];
 
     /** @var array{path: string, map: array<string, mixed>|null}|null */
     protected ?array $elementMapCache = null;
@@ -168,7 +169,7 @@ class Screenshot extends Model
      */
     public function elementsUrl(): ?string
     {
-        if (! is_string($this->meta['elements_path'] ?? null)) {
+        if (! $this->hasElementTargets()) {
             return null;
         }
 
@@ -190,6 +191,10 @@ class Screenshot extends Model
      */
     public function pickList(): ?array
     {
+        if (! $this->hasElementTargets()) {
+            return null;
+        }
+
         $path = $this->meta['elements_pick_path'] ?? null;
 
         if (is_string($path)) {
@@ -210,6 +215,93 @@ class Screenshot extends Model
         $clean = ElementMap::sanitize($map, $css)['map'];
 
         return $clean === null ? null : ElementMap::pickList($clean, $css);
+    }
+
+    public function hasElementTargets(): bool
+    {
+        return is_string($this->meta['elements_path'] ?? null)
+            && ($this->meta['elements_source'] ?? null) !== 'separate_load'
+            && ($this->meta['settled'] ?? null) !== false;
+    }
+
+    public function captureQuality(): ?array
+    {
+        return CaptureQuality::describe($this->meta);
+    }
+
+    public function captureFailed(): bool
+    {
+        return ($this->meta['origin'] ?? null) === 'capture_failed';
+    }
+
+    public function previewSource(): ?string
+    {
+        if ($this->captureFailed()) {
+            return null;
+        }
+        if (is_string($this->meta['preview_path'] ?? null)) {
+            return $this->meta['preview_source'] ?? 'same_load';
+        }
+
+        // Older captures and email have one review-wide snapshot. It belongs
+        // to the first shot and must never be reused at another breakpoint.
+        if (isset($this->meta['preview_source']) || (int) $this->sort_order !== 0) {
+            return null;
+        }
+
+        return $this->review?->dom_path ? 'legacy' : null;
+    }
+
+    public function previewHtml(): ?string
+    {
+        return match ($this->previewSource()) {
+            null => null,
+            'legacy' => $this->review->domHtml(),
+            default => rescue(fn () => Storage::disk($this->disk)->get($this->meta['preview_path']), report: false),
+        };
+    }
+
+    public function canMarkPreview(): bool
+    {
+        return match ($this->previewSource()) {
+            'legacy' => true,
+            'same_load' => $this->hasElementTargets(),
+            default => false,
+        };
+    }
+
+    public function isPdfPage(): bool
+    {
+        return ($this->meta['pdf_lazy'] ?? false) === true;
+    }
+
+    public function comparisonKey(): ?string
+    {
+        $viewport = $this->meta['viewport'] ?? null;
+        $state = $this->meta['state'] ?? null;
+
+        if (is_string($state)) {
+            return json_encode(['state', mb_strtolower($state), (int) ($this->meta['css_width'] ?? round($this->cssSize()['w']))]);
+        }
+
+        return is_string($viewport) ? 'viewport:'.$viewport : null;
+    }
+
+    public function comparisonWarning(self $previous): ?string
+    {
+        if ($this->captureQuality()['message'] ?? $previous->captureQuality()['message'] ?? null) {
+            return 'Capture quality may explain some differences.';
+        }
+
+        if (($this->meta['capture_profile'] ?? null) !== ($previous->meta['capture_profile'] ?? null)
+            || ($this->meta['capture_path'] ?? null) !== ($previous->meta['capture_path'] ?? null)
+            || ($this->meta['browser'] ?? null) !== ($previous->meta['browser'] ?? null)
+            || ($this->meta['css_height'] ?? null) !== ($previous->meta['css_height'] ?? null)
+            || abs($this->pixelRatio() - $previous->pixelRatio()) > 0.02) {
+            return 'Capture settings or image sharpness differ between passes.';
+        }
+
+        return null;
     }
 
     /**
@@ -262,6 +354,10 @@ class Screenshot extends Model
     public function railLabel(int $index): string
     {
         $meta = $this->meta ?? [];
+
+        if (is_string($meta['state'] ?? null)) {
+            return $meta['state'];
+        }
 
         if (is_string($viewport = $meta['viewport'] ?? null) && $viewport !== '') {
             return Str::of($viewport)->before('-')->ucfirst()->toString();

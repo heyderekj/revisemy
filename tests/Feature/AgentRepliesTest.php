@@ -193,6 +193,7 @@ class AgentRepliesTest extends TestCase
 
         foreach ([$review->token, $review->share_token] as $token) {
             Livewire::test('review-page', ['token' => $token])
+                ->call('openMark', $mark->id)
                 ->assertSee('The old one was a placeholder.')
                 ->assertSee('Swapped the logo.')
                 ->assertSeeHtml('>Agent</span>')

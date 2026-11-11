@@ -53,6 +53,7 @@ Built with Laravel, Livewire, [Flux](https://fluxui.dev/), Sanctum, and Laravel 
 - **Second opinion (hints only)** — Free type-aware checklist in the sidebar on every screenshot; optional Claude/OpenAI vision when keyed draws dashed regions on the capture. Sky S-markers never override your marks — accept or dismiss them in the review UI.
 - **Review types** — `ui`, `website`, `presentation` (Slide in the UI), or `email`: each gets its own checklist and vision lens (emails get CTA/dark-mode/client checks, slides get slide-density checks, sites get above-the-fold/responsive checks).
 - **Four ways to ingest** — `images` (https URL, data URL, or base64), `capture_url` + `page_url` (desktop, mobile and tablet screenshots), `pdf` (one shot per page), or raw `html` (email at ~600px). URL capture also stores a DOM snapshot for grounding.
+- **PDF review** — Search and mark text in the original document, compare matching pages across passes, and export a marked-up PDF. New PDF reviews accept up to 150 pages and 20 MB.
 - **Before/after evidence** — agents attach an `after_image` when resolving a mark; the review page and board show a before/after crop next to the resolution note.
 - **Mark lifecycle + board** — `/r/{token}/board` groups marks Open → In progress → Resolved → Verified. Agents call `resolve_marks` as they fix code; only the human verifies or reopens. When marks await verify, the review page surfaces an **Awaiting your verify** focus (with verify-all).
 - **Thread comments** — reply on a mark without moving it on the canvas; recent comments land in `get_review` work packets for the agent.
@@ -182,7 +183,11 @@ Key suites for contributors:
 
 MCP tests use `ReviseMyServer::actingAs($user)->tool(...)` — no Cursor config required.
 
+Run the Chromium capture benchmark with `node --test tests/capture/benchmark.test.mjs` after installing Playwright's Chromium. It reports screenshot size, readiness, and time per viewport. It runs the local driver and the hosted function in Chromium with fixtures for responsive layout, scroll reveals, missing assets, element alignment, and named states. Set `REVISEMY_CAPTURE_BENCHMARK_URL` to a public fixture URL to also measure both hosted capture paths using your configured provider.
+
 ## Deploy on Laravel Cloud
+
+PDF ingestion, page images, and annotation export require Node.js 22.13 or later and the installed npm dependencies at runtime.
 
 1. Push this repo to GitHub.
 2. In [Laravel Cloud](https://cloud.laravel.com): **New application** → import the repo.

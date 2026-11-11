@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Responsive scroll reveal</title>
+<style>
+    body { margin: 0; font: 18px system-ui; }
+    main { padding: 16px; }
+    .spacer { height: 110vh; }
+    #reveal { opacity: 0; transition: opacity 600ms; background: rgb(24 120 60); width: 160px; height: 90px; }
+    #reveal.visible { opacity: 1; }
+    #dock { position: fixed; bottom: 0; background: #343c99; color: white; padding: 8px; }
+    #menu[hidden] { display: none; }
+    @media (min-width: 700px) { main { padding: 48px; } }
+</style>
+<main>
+    <h1>Capture fixture</h1>
+    <button id="open">Open menu</button>
+    <nav id="menu" hidden><a href="#reveal">Jump to the reveal</a></nav>
+    <div class="spacer"></div>
+    <section id="reveal" aria-label="Scroll reveal"></section>
+    <img id="lazy" loading="lazy" width="64" height="48" alt="Lazy asset"
+        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='48'%3E%3Crect width='64' height='48' fill='orange'/%3E%3C/svg%3E">
+</main>
+<div id="dock">Fixed dock</div>
+<script>
+    document.querySelector('#open').addEventListener('click', () => document.querySelector('#menu').hidden = false);
+    const reveal = document.querySelector('#reveal');
+    new IntersectionObserver(([entry], observer) => {
+        if (entry.isIntersecting) {
+            reveal.classList.add('visible');
+            observer.disconnect();
+        }
+    }).observe(reveal);
+</script>
+</html>

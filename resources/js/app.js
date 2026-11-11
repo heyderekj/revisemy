@@ -1,9 +1,11 @@
+import './mark-type';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import './element-pick';
 import './anchor-place';
 
 window.Pusher = Pusher;
+window.rmPdfViewer = () => import('./pdf-viewer');
 
 // Only wire up Echo when a Reverb key is present. Without it, Livewire quietly
 // falls back to its polling heartbeat, so the app is never broken by a missing
