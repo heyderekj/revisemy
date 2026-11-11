@@ -147,7 +147,7 @@ test('the inline review marks the element under a click, as the web does', async
     await expect(newer.locator('[data-element-chip]:visible', { hasText: 'Buy now' }).first()).toBeVisible();
     await newer.locator('button', { hasText: /^M2$/ }).first().click();
     const detail = newer.locator('[data-mark-detail]:visible');
-    await detail.getByText('Inspect', { exact: true }).click();
+    await detail.locator('[data-element-inspect] > summary').click();
     await expect(detail.getByRole('button', { name: /Reference Background #2563eb/ })).toBeVisible();
 });
 
