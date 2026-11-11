@@ -18,7 +18,7 @@ new class extends Component
     @endphp
 
     {{-- Hero — bottom padding tightened so it reads with How it works below --}}
-    <x-home-section first class="@container/hero rm-fade-up !pb-8 sm:!pb-10">
+    <x-home-section first data-rm-desktop-hero class="@container/hero rm-fade-up !pb-8 sm:!pb-10">
         <div class="grid gap-8 @min-[44rem]/hero:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] @min-[44rem]/hero:items-center">
             <div class="min-w-0">
                 <h1 class="max-w-xl text-[clamp(2.25rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900 max-[359px]:text-[2rem] @min-[44rem]/hero:text-[min(5.5vw,6.4cqw,3.75rem)]">

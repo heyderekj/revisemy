@@ -18,16 +18,23 @@
     x-data="{
         mobileNav: false,
         pastHero: false,
+        pastDesktopHero: false,
         atEnd: false,
         get showHeaderCta() { return {{ $cta ? 'true' : 'false' }} && this.pastHero && ! this.atEnd },
         init() {
             const hero = document.querySelector('[data-rm-hero-cta]');
+            const desktopHero = document.querySelector('[data-rm-desktop-hero]');
             const end = document.querySelector('[data-rm-end-cta]');
             if (hero) {
                 // Flips only once the page's own button has fully left the viewport.
                 new IntersectionObserver(([e]) => { this.pastHero = ! e.isIntersecting }).observe(hero);
             } else {
                 this.pastHero = true;
+            }
+            if (desktopHero) {
+                new IntersectionObserver(([entry]) => {
+                    this.pastDesktopHero = entry.boundingClientRect.bottom <= 0;
+                }).observe(desktopHero);
             }
             if (end) {
                 new IntersectionObserver(
@@ -132,7 +139,8 @@
                                 @if ($showReviewsButton)
                                     <x-your-reviews-button />
                                 @endif
-                                <x-try-token-cta :href="$ctaHref" :fathom-event="$stickyEvent ?? $fathom.' sticky'" variant="filled" />
+                                <x-try-token-cta :href="$ctaHref" :fathom-event="$stickyEvent ?? $fathom.' sticky'" variant="filled" x-show="! pastDesktopHero" />
+                                <x-try-token-cta :href="$ctaHref" :fathom-event="$stickyEvent ?? $fathom.' sticky'" x-show="pastDesktopHero" x-cloak />
                             </div>
                         </div>
                     </div>
