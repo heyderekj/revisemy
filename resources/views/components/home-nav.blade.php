@@ -24,7 +24,7 @@
             ['/for', 'Use cases'],
             ['/skills', 'Skills'],
             ['/guest-links', 'Guest links'],
-            ['/reviews', 'Your reviews'],
+            ...($home ? [] : [['/reviews', 'Your reviews']]),
             ['/alternatives', 'Alternatives'],
             ['/docs', 'Developer docs'],
             ['https://github.com/heyderekj/revisemy', 'GitHub ↗'],
@@ -37,6 +37,18 @@
 @endphp
 
 <nav {{ $attributes->class('flex flex-col gap-8 text-[14px]') }} aria-label="Site">
+    @if ($home)
+        <a
+            href="/reviews"
+            class="-mx-2.5 flex items-center gap-2.5 rounded-lg bg-well px-2.5 py-2 font-medium text-zinc-800 transition-colors hover:bg-chip-hover"
+            @if (auth('web')->user()?->workspace_id) onclick="if(window.fathom)fathom.trackEvent('Your reviews')" @endif
+            @if ($drawer) x-on:click="mobileNav = false" @endif
+        >
+            <flux:icon.queue-list variant="micro" class="size-4 shrink-0 text-zinc-500" />
+            Your reviews
+        </a>
+    @endif
+
     @foreach ($groups as $label => $links)
         <div>
             <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{{ $label }}</p>
