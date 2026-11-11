@@ -84,6 +84,7 @@ test('a 30-page PDF preserves a text mark through export and a moved, revised sl
     const jump = page.getByRole('spinbutton', { name: 'PDF page number' });
     await jump.fill('4');
     await jump.press('Enter');
+    await expect(page.getByRole('button', { name: 'Screenshot: Page 4' })).toBeVisible();
     await page.getByRole('button', { name: 'Compare with previous pass' }).click();
     await expect(page.getByText('Previous pass · Page 18')).toBeVisible();
     await expect(page.getByText('This pass · Page 4')).toBeVisible();
