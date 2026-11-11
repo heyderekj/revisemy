@@ -15,6 +15,17 @@ return [
     'entries' => [
 
         [
+            'version' => '2.0.0',
+            'date' => '2026-11-11',
+            'title' => 'A simpler way to start a review',
+            'highlights' => [
+                'The homepage puts the annotated Fieldnote review directly below the introduction',
+                'Connector setup, technical handoff and pricing expand when you need them',
+                'Your reviews has a shortcut at the top of the homepage sidebar and mobile menu',
+            ],
+        ],
+
+        [
             'version' => '1.13.0',
             'date' => '2026-10-29',
             'title' => 'Mark the part, not just the pixels',

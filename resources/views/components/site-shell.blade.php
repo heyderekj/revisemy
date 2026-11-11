@@ -10,6 +10,7 @@
     'fathom' => 'Connect',
     'stickyEvent' => null,
     'headerEvent' => null,
+    'showReviewsButton' => true,
 ])
 
 <div
@@ -42,11 +43,11 @@
     }"
 >
     {{-- The page column, inset from the viewport. --}}
-    <div class="relative z-10 mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 sm:pt-12 lg:px-8 lg:pt-16">
+    <div class="relative z-10 mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 sm:pt-12 lg:px-8 lg:pt-[var(--rm-site-top)] lg:[--rm-site-top:4rem]">
         <div class="relative flex min-h-screen gap-6">
 
         {{-- Sidebar --}}
-        <aside class="hidden w-[220px] shrink-0 flex-col rounded-2xl bg-card px-6 pb-8 pt-8 lg:flex lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto">
+        <aside class="hidden w-[220px] shrink-0 flex-col rounded-2xl bg-card px-6 pb-8 pt-8 lg:flex lg:sticky lg:top-[var(--rm-site-top)] lg:h-[calc(100dvh-var(--rm-site-top)-1rem)] lg:self-start lg:overflow-y-auto">
             <a href="/" class="inline-flex shrink-0 items-center hover:opacity-90" aria-label="ReviseMy home">
                 <x-revisemy-logo variant="wordmark" size="lg" />
             </a>
@@ -128,7 +129,9 @@
                             x-transition:leave-end="opacity-0"
                         >
                             <div class="pointer-events-auto flex items-center gap-2">
-                                <x-your-reviews-button />
+                                @if ($showReviewsButton)
+                                    <x-your-reviews-button />
+                                @endif
                                 <x-try-token-cta :href="$ctaHref" :fathom-event="$stickyEvent ?? $fathom.' sticky'" />
                             </div>
                         </div>

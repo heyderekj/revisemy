@@ -11,7 +11,7 @@ new class extends Component
 };
 ?>
 
-<x-site-shell cta-href="#setup" fathom="Try token" sticky-event="Try token sidebar">
+<x-site-shell cta-href="#setup" fathom="Try token" sticky-event="Try token sidebar" :show-reviews-button="false">
     {{-- Agents the headline cycles through; the hero chat follows the same
          names on the same clock. Values are x-host-icon names. --}}
     @php
@@ -38,11 +38,6 @@ new class extends Component
                     </span>
                 </span>
             </h1>
-            {{-- Mobile: hero CTA while in view. Header picks it up once this scrolls away. --}}
-            <div class="flex flex-wrap items-center gap-2 self-start lg:hidden">
-                <x-try-token-button id="rm-hero-cta" data-rm-hero-cta fathom-event="Try token hero" />
-                <x-your-reviews-button />
-            </div>
             {{-- Holds the room the sticky Connect button takes on desktop. --}}
             <div class="hidden h-8 w-48 shrink-0 lg:block" aria-hidden="true"></div>
         </div>
@@ -54,16 +49,23 @@ new class extends Component
         {{-- Start a review here instead, and hand its link to an agent later.
              /new takes a link, screenshots, a PDF or an email. --}}
         <div class="rm-fade-up-delay mt-6 flex w-full max-w-xl flex-col items-start gap-2">
-            <a href="{{ route('reviews.new') }}" class="btn-lit inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-medium">
-                Start a review
-                <flux:icon.arrow-right variant="micro" class="size-4" />
-            </a>
-            <p class="px-1 text-xs text-muted-foreground">No agent needed to start. Paste a link, or add screenshots, a PDF or an email.</p>
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ route('reviews.new') }}" class="btn-lit inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-medium">
+                    Start a review
+                    <flux:icon.arrow-right variant="micro" class="size-4" />
+                </a>
+                <a
+                    href="#setup"
+                    id="rm-hero-cta"
+                    data-rm-hero-cta
+                    class="link inline-flex min-h-11 items-center px-1 text-sm font-medium lg:hidden"
+                    onclick="if(window.fathom)fathom.trackEvent('Try token hero')"
+                >Connect your agent</a>
+            </div>
+            <p class="px-1 text-xs text-muted-foreground">Paste a link or add a file. No agent needed.</p>
         </div>
 
-        <x-pitch-video class="rm-fade-up-delay mt-6" />
-
-        <div class="rm-fade-up-delay-2 relative mt-10 sm:mt-12">
+        <div class="rm-fade-up-delay-2 relative mt-8 sm:mt-10">
             <x-hero-loop-preview :agents="$heroAgents" />
         </div>
     </x-home-section>
@@ -76,63 +78,73 @@ new class extends Component
             Capture, marks, fixes and approval in one place, so nothing gets lost between passes.
         </p>
 
-        <div class="relative mt-10">
-            <div class="grid grid-cols-1 gap-3 min-[30rem]:grid-cols-2 lg:grid-cols-3">
-                <article class="rounded-2xl bg-card p-7 lg:row-start-1">
-                    <div class="flex size-9 items-center justify-center rounded-lg bg-chip text-zinc-600">
-                        <flux:icon.photo variant="micro" class="size-[18px]" />
-                    </div>
-                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Capture anything visual</h3>
+        <div class="mt-6 grid gap-x-8 min-[38rem]:grid-cols-2">
+            <article class="flex items-start gap-3 border-b border-border py-4">
+                <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-chip text-zinc-600">
+                    <flux:icon.photo variant="micro" class="size-[18px]" />
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-zinc-900">Capture anything visual</h3>
                     <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Screenshots, a live page on desktop and phone, PDF slides or email HTML. Each kind gets its own checklist.</p>
-                </article>
+                </div>
+            </article>
 
-                <article class="rounded-2xl bg-card p-7 lg:row-start-1">
-                    <x-mark-type-icon type="s" />
-                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Second opinion</h3>
+            <article class="flex items-start gap-3 border-b border-border py-4">
+                <x-mark-type-icon type="s" class="shrink-0" />
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-zinc-900">Second opinion</h3>
                     <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">A checklist on every capture, and vision hints when a key is set. Suggestions, never decisions.</p>
                     <a
                         href="/second-opinion"
                         class="mt-2 inline-block text-sm link"
                     >Learn more</a>
-                </article>
+                </div>
+            </article>
 
-                <article class="rounded-2xl bg-card p-7 lg:row-start-1">
-                    <x-mark-type-icon type="m" />
-                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Precise marks</h3>
+            <article class="flex items-start gap-3 border-b border-border py-4">
+                <x-mark-type-icon type="m" class="shrink-0" />
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-zinc-900">Precise marks</h3>
                     <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Outline the exact area and say what it is: must fix, nice to have, question or keep. Suggested copy goes straight to the agent.</p>
-                </article>
+                </div>
+            </article>
 
-                <article class="rounded-2xl bg-card p-7 lg:row-start-2">
-                    <x-mark-type-icon type="g" />
-                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Guest links</h3>
+            <article class="flex items-start gap-3 border-b border-border py-4">
+                <x-mark-type-icon type="g" class="shrink-0" />
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-zinc-900">Guest links</h3>
                     <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Send a private link for another set of eyes. No accounts, and your marks still decide.</p>
                     <a
                         href="/guest-links"
                         class="mt-2 inline-block text-sm link"
                     >Learn more</a>
-                </article>
+                </div>
+            </article>
 
-                <article class="rounded-2xl bg-card p-7 lg:row-start-2">
-                    <x-use-case-icon name="queue-list" />
-                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Board to done</h3>
+            <article class="flex items-start gap-3 border-b border-border py-4">
+                <x-use-case-icon name="queue-list" />
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-zinc-900">Board to done</h3>
                     <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Marks go open, resolved, verified, with a before and after for each fix, across every pass.</p>
                     <a
                         href="/board"
                         class="mt-2 inline-block text-sm link"
                     >Learn more</a>
-                </article>
+                </div>
+            </article>
 
-                <article class="rounded-2xl bg-card p-7 lg:row-start-2">
-                    <div class="flex size-9 items-center justify-center rounded-lg bg-chip text-zinc-600">
-                        <flux:icon.arrow-path variant="micro" class="size-[18px]" />
-                    </div>
-                    <h3 class="mt-3 text-sm font-semibold text-zinc-900">Approve and loop</h3>
+            <article class="flex items-start gap-3 border-b border-border py-4">
+                <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-chip text-zinc-600">
+                    <flux:icon.arrow-path variant="micro" class="size-[18px]" />
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-zinc-900">Approve and loop</h3>
                     <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Approve or ask for changes. Your agent reads what’s next and keeps going. <a href="/reviews" class="link">Your reviews</a> lists every one.</p>
-                </article>
-            </div>
+                </div>
+            </article>
         </div>
 
-        <div class="mt-12 flex flex-wrap items-center gap-2">
+        <div class="mt-6 flex flex-wrap items-center gap-2">
             <span class="mr-1 text-sm text-muted-foreground">Built for</span>
             @foreach (config('use-cases.pages', []) + config('use-cases.audiences', []) as $slug => $page)
                 <a href="{{ url('/for/'.$slug) }}" class="inline-flex h-8 items-center gap-1.5 rounded-full bg-chip px-3 text-sm text-zinc-700 transition-colors hover:bg-chip-hover hover:text-zinc-900">
@@ -141,31 +153,28 @@ new class extends Component
                 </a>
             @endforeach
         </div>
+        <x-pitch-video class="mt-6" />
     </x-home-section>
 
     {{-- How agents use it --}}
-    <x-home-section id="agents">
-        <x-section-eyebrow number="02" label="For agents" />
-        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">The technical handoff</h2>
-        <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+    <x-home-disclosure id="agents" number="02" label="For agents" heading="The technical handoff">
+        <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
             <code class="font-mono text-[13px] text-zinc-900">create_review</code> takes screenshots, a URL, a PDF or email HTML.
             <code class="font-mono text-[13px] text-zinc-900">get_review</code> returns your marks as work and one <code class="font-mono text-[13px] text-zinc-900">next_action</code>: wait, fix, open the next pass, or stop.
             The full tool list is in <a href="/llms.txt" class="link">llms.txt</a>.
         </p>
-    </x-home-section>
+    </x-home-disclosure>
 
     {{-- Setup: the one list of ways to connect (shared with /connect and /connectors). --}}
-    <x-home-section id="setup" data-rm-end-cta>
-        <x-section-eyebrow number="03" label="Connect" />
-        <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Connect your agent</h2>
-        <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
+    <x-home-disclosure id="setup" number="03" label="Connect" heading="Connect your agent" data-rm-end-cta>
+        <p class="max-w-2xl text-[15px] leading-relaxed text-pretty text-zinc-600">
             Pick the one you use. Most connect by pasting one address and clicking Connect — no account, no token to copy.
         </p>
 
         <div class="mt-8">
             <livewire:connect-hub />
         </div>
-    </x-home-section>
+    </x-home-disclosure>
 
     {{-- Credits / Pricing --}}
     @php
@@ -178,26 +187,28 @@ new class extends Component
         $freeRenews = (bool) config('billing.plans.free.renews', true);
         $pack = collect(config('billing.packs', []))->first();
     @endphp
-    <x-home-section id="pricing" x-data x-intersect.once.threshold.25="window.fathom && fathom.trackEvent('Pricing viewed')">
-        <x-section-eyebrow number="04" :label="$pricingEnabled ? 'Pricing' : 'Credits'" />
+    <x-home-disclosure
+        id="pricing"
+        number="04"
+        :label="$pricingEnabled ? 'Pricing' : 'Credits'"
+        :heading="$pricingEnabled ? 'Try it free. Keep it with Plus.' : 'Free for now'"
+        x-data
+        x-intersect.once.threshold.25="window.fathom && fathom.trackEvent('Pricing viewed')"
+    >
         @if ($pricingEnabled)
-            <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
-                Try it free. Keep it with Plus.
-            </h2>
-            <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+            <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                 No account to start. Same capture quality on every plan.
                 When you like it, your agent opens checkout with
                 <span class="font-mono text-[13px] text-zinc-900">create_checkout</span>
                 without leaving the chat. Heavy month? Top up with a credit pack.
             </p>
         @else
-            <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Free for now</h2>
-            <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-600">
+            <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                 No account. {{ $freeCredits }} credits a month at full capture quality. Paid plans are paused while we work out pricing.
             </p>
         @endif
 
-        <div class="relative mt-10">
+        <div class="relative mt-6">
 
             <div @class([
                 'grid grid-cols-1 gap-3',
@@ -318,7 +329,7 @@ new class extends Component
                 </p>
             </div>
         </flux:modal>
-    </x-home-section>
+    </x-home-disclosure>
 
     {{-- FAQ --}}
     <x-home-section id="faq">
