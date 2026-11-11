@@ -93,7 +93,7 @@ final class PageMarkdown
         $md .= "## What you can start from\n\n"
             .'- A public page, captured at desktop, tablet and phone sizes ('.$costs['capture_url']." credits)\n"
             .'- Up to 5 screenshots, PNG, JPG or WebP ('.$costs['images']." credit)\n"
-            .'- Slides as a PDF, first 5 pages ('.$costs['pdf']." credit)\n"
+            .'- PDF documents or slides, up to 150 pages and 20 MB ('.$costs['pdf']." credit)\n"
             .'- An email as an .html file, rendered 600px wide ('.$costs['html']." credits)\n\n";
 
         $md .= "## Then hand it to your agent\n\n"
@@ -258,7 +258,25 @@ final class PageMarkdown
             $md .= "\n";
         }
 
-        return $md."## Install them\n\n- Claude Code: `/plugin marketplace add heyderekj/revisemy`, then `/plugin install revisemy@revisemy`.\n- Cursor, Codex and other agents: `npx skills add heyderekj/revisemy`.\n\n";
+        $example = config('skills.review_example');
+        $md .= '## '.$example['title']."\n\n".$example['brief']."\n\n";
+        $md .= '**Ask your agent:** '.$example['request']."\n\n";
+        $md .= '**A useful mark:** '.$example['mark']."\n\n";
+        $md .= '**What to check on the next pass:** '.$example['verify']."\n\n";
+
+        $md .= "## Community skills\n\nEach skill is maintained by its original author and installed separately.\n\n";
+        foreach (config('skills.community', []) as $skill) {
+            $md .= '- ['.$skill['name'].']('.$skill['source'].') by '.$skill['author'].' ('.$skill['focus'].'). '.$skill['line'];
+            if (isset($skill['install'])) {
+                $md .= ' Install with `'.$skill['install'].'`.';
+            }
+            if (isset($skill['setup'])) {
+                $md .= ' '.$skill['setup'];
+            }
+            $md .= "\n  - **Example prompt:** ".$skill['prompt']."\n";
+        }
+
+        return $md."\n## Install the ReviseMy packs\n\n- Claude Code: `/plugin marketplace add heyderekj/revisemy`, then `/plugin install revisemy@revisemy`.\n- Cursor, Codex and other agents: `npx skills add heyderekj/revisemy`.\n\n";
     }
 
     protected static function alternativeIndex(): string

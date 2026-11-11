@@ -8,11 +8,18 @@
             <span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4" :class="statusBadge(activePin ? activePin.status : '')" x-show="activePin"><span class="size-1.5 shrink-0 rounded-full" :class="statusDot(activePin ? activePin.status : '')" aria-hidden="true"></span><span x-text="activePin && statusLabel(activePin.status)"></span></span>
             <span class="inline-flex" x-show="agentSet(activePin)"><x-agent-tag /></span>
             <span class="text-xs text-zinc-400" x-show="activePin && activePin._from_parent" x-text="activePin && ('From pass ' + activePin._pass)"></span>
+            <span class="text-xs text-muted-foreground" x-show="reviewingFixes && readyFixes().length"
+                x-text="readyFixes().length + (readyFixes().length === 1 ? ' fix left to review' : ' fixes left to review')"></span>
         </div>
         <button type="button" class="inline-flex size-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-chip hover:text-zinc-700" @click="closeDetail()" aria-label="Close">×</button>
     </div>
 
-    <template x-if="activePin && activePin.focus_preview">
+    @if ($detailView === 'board')
+        <template x-if="activePin?.after_screenshot_url && activePin?.comparison_preview">
+            @include('mcp.partials.mark-comparison')
+        </template>
+    @endif
+    <template x-if="activePin && activePin.focus_preview{{ $detailView === 'board' ? ' && !(activePin.after_screenshot_url && activePin.comparison_preview)' : '' }}">
         <div class="w-full max-h-[min(40dvh,22rem)] overflow-hidden bg-well">
             <div class="relative w-full bg-no-repeat"
                 :style="'aspect-ratio:' + Math.max(activePin.focus_preview.ratio || 1.6, 0.01) + ';' + bgStyle(activePin)"
@@ -32,6 +39,10 @@
         <div class="mb-1.5" x-show="activePin && activePin.element">@include('mcp.partials.element-chip', ['source' => 'activePin && activePin.element'])</div>
         <p class="text-sm leading-relaxed text-pretty whitespace-pre-line text-zinc-800" x-text="activePin && activePin.body"></p>
         {{-- Same as the web detail (components/mark-detail). --}}
+        <div x-show="activePin?.pdf_anchor">
+            <p class="text-xs font-medium text-muted-foreground" x-text="'Selected text · Page ' + (activePin?.pdf_anchor?.page || '')"></p>
+            <blockquote class="mt-1 border-l-2 border-key px-2 text-sm text-zinc-700" x-text="activePin?.pdf_anchor?.quote"></blockquote>
+        </div>
         <div x-show="activePin && activePin.suggested_copy">
             <p class="text-xs text-muted-foreground">Suggested copy</p>
             <p class="mt-1 rounded-lg bg-well px-2.5 py-1.5 font-mono text-xs leading-relaxed text-zinc-700" x-text="activePin && activePin.suggested_copy"></p>
@@ -40,23 +51,37 @@
             <p class="text-xs text-muted-foreground">Answer</p>
             <p class="mt-1 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs leading-relaxed text-sky-900" x-text="activePin && activePin.question_answer"></p>
         </div>
-        @include('mcp.partials.before-after', ['pin' => 'activePin'])
+        @if ($detailView === 'board')
+            <div x-show="!activePin?.comparison_preview">
+                @include('mcp.partials.before-after', ['pin' => 'activePin'])
+            </div>
+        @else
+            @include('mcp.partials.before-after', ['pin' => 'activePin'])
+        @endif
+        @include('mcp.partials.element-reference-chips', ['references' => '(activePin?.element_references || [])'])
+        @include('mcp.partials.element-inspect', ['source' => 'pinInspection', 'references' => 'replyReferences', 'requiresComments' => true])
         {{-- Who did what on this mark, then your reply. --}}
         @include('mcp.partials.mark-timeline', ['pin' => 'activePin'])
+        <div x-show="activePin && payload.comments_enabled">
+            @include('mcp.partials.element-reference-chips', ['references' => 'replyReferences', 'removable' => true])
+        </div>
         <form class="flex items-center gap-2" x-show="activePin && payload.comments_enabled" @submit.prevent="sendReply(activePin)">
-            <label class="sr-only" for="rm-reply">Reply on this mark</label>
-            <input id="rm-reply" type="text" maxlength="2000" class="h-8 min-w-0 flex-1 rounded-lg bg-well px-3 text-sm text-zinc-900 ring-1 ring-inset ring-zinc-200 placeholder:text-zinc-400 focus:ring-2 focus:ring-zinc-900 focus:outline-none"
+            <label class="sr-only" for="rm-reply-{{ $detailView }}">Reply on this mark</label>
+            <input id="rm-reply-{{ $detailView }}" type="text" maxlength="2000" class="h-8 min-w-0 flex-1 rounded-lg bg-well px-3 text-sm text-zinc-900 ring-1 ring-inset ring-zinc-200 placeholder:text-zinc-400 focus:ring-2 focus:ring-zinc-900 focus:outline-none"
                 x-model="replyBody" placeholder="Reply to your agent…">
             <button type="submit" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover disabled:opacity-50"
                 :disabled="busy || !replyBody.trim()">Send</button>
         </form>
         <p class="text-xs text-zinc-400" x-show="activePin && payload.comments_enabled && activePin.awaiting_reply">Your agent sees this the next time it checks the review.</p>
+        <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 hover:bg-chip-hover"
+            x-show="activePin && !activePin._from_parent && payload.comments_enabled"
+            @click="openFullReview(false, true, activePin.id)">Request feedback</button>
         <div class="flex flex-wrap items-center gap-2" x-show="activePin && canManagePin(activePin)">
             <div class="ml-auto flex flex-wrap gap-2" x-show="activePin && canManagePin(activePin)">
                 <button type="button" class="inline-flex h-8 items-center rounded-full bg-done-soft px-3 text-xs font-medium text-done-ink transition-colors hover:bg-emerald-200 disabled:opacity-50"
-                    x-show="activePin && activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')">Verify</button>
+                    x-show="activePin && activePin.status === 'resolved'" :disabled="busy" @click="verifyMark(activePin, 'verify')"x-text="reviewingFixes ? 'Verify & next' : 'Verify'"></button>
                 <button type="button" class="inline-flex h-8 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover disabled:opacity-50"
-                    x-show="activePin && activePin.status !== 'open'" :disabled="busy" @click="verifyMark(activePin, 'reopen')">Reopen</button>
+                    x-show="activePin && activePin.status !== 'open'" :disabled="busy" @click="verifyMark(activePin, 'reopen')"x-text="reviewingFixes ? 'Reopen & next' : 'Reopen'"></button>
             </div>
         </div>
     </div>

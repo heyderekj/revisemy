@@ -52,14 +52,20 @@ curl -s -X POST https://revisemy.com/api/reviews \
 | `context` | What the person should look at on this pass |
 | `type` | `ui` (default), `website`, `presentation` or `email`. It sets the second opinion's checklist. |
 | `images` | 1 to 5 screenshots: https image URLs, data URLs or base64 |
-| `image_details` | Optional, one per image in the same order: `dpr` (device pixels per CSS px, 0.5 to 4) and `elements`, the element map for that shot. See [Element maps](#element-maps). |
+| `image_details` | Optional, one per image in the same order: `dpr` (device pixels per CSS px, 0.5 to 4), `elements` (the shot's element map), and `state` (a name up to 80 characters). See [Element maps](#element-maps). |
 | `capture_url` + `page_url` | `true` and a public URL: ReviseMy captures desktop and mobile |
-| `pdf` | An https URL or base64. One shot per page, up to 5. |
+| `pdf` | An HTTPS URL or base64. Up to 20 MB and 150 pages. The original is retained and page images render on demand. |
 | `html` | An email's HTML, rendered at mail-client width |
 | `parent_id` | The previous pass, when opening the next one |
 | `webhook_url` | An https URL to POST to when the person decides. See [Webhooks](/docs/webhooks). |
 
 Returns `201` with the review.
+
+New PDF reviews open a searchable document with page navigation and selectable text. Marks attached to text carry `pdf_anchor` with the exact quote, one-based page number, markup kind, and normalized selection rectangles. Follow-up PDFs can match moved pages by text and show the changed passage. The owner can download a copy with standard PDF annotations from the review. Search and text markup require a text layer. Scanned pages can still be marked by area.
+
+URL captures report `screenshots[].capture_quality.status` as `ready`, `partial`, `failed`, or `unverified`. Inspect the message before critiquing affected areas. Successful viewports stay on the review when another viewport fails. Follow-up URL captures of the same page reuse the previous pass's capture profile when available. Matching shots include a `comparison` with the previous image URL and any comparability warning.
+
+When the capture provider returns the rendered page for each device, the web review offers a **Page preview** at that viewport’s width and height. It is a saved snapshot. Choose **Open live site** to use the current site.
 
 ## GET /reviews/{id}
 
@@ -79,7 +85,7 @@ curl -s https://revisemy.com/api/reviews -H "Authorization: Bearer $REVISEMY_TOK
 
 ## POST /reviews/{id}/screenshots
 
-Adds a shot to an open review. Returns the review.
+Adds a shot to an open review. Returns the review. Send `state` to name the shot, or `replace_id` with the ID of a failed screenshot to replace it in place.
 
 ```bash
 curl -s -X POST https://revisemy.com/api/reviews/$REVIEW_ID/screenshots \
@@ -103,6 +109,25 @@ const elements = await page.evaluate(script);
 It's the same code ReviseMy runs on its own captures, also served to MCP clients as the `revisemy://capture/elements.js` resource. It returns up to 2,500 elements in under 3 seconds and sends nothing anywhere. In a multipart request, send `elements` as JSON text.
 
 A map is checked before it's kept: sizes are capped, boxes are clamped to the shot, and colours must be hex. When it doesn't match the image (its page width times `dpr` should be the image width, within 2%), the shot is kept without it and `meta.elements_skipped` says why. Without a `dpr`, the map's page width works it out.
+
+To review a menu, dialog, or authenticated page, load `/capture/states.mjs` as a Node module and pass an existing Playwright or Puppeteer page. The helper returns the `images` and `image_details` fields for this endpoint. Actions run in order in that browser. Use `wait_for` with a selector for an element that only appears when the state is ready.
+
+```js
+const base = 'https://revisemy.com';
+const source = await (await fetch(base + '/capture/states.mjs')).text();
+const { captureStates } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const collector = await (await fetch(base + '/capture/elements.js')).text();
+const captures = await captureStates(page, collector, [
+  { name: 'Menu closed' },
+  { name: 'Menu open', actions: [
+    { action: 'click', selector: '#menu-toggle' },
+    { action: 'wait_for', selector: '#main-menu[data-open]' },
+  ] },
+]);
+// POST /reviews with { title: 'Navigation', ...captures }.
+```
+
+The helper supports `click`, `hover`, `fill` (with a `value`), and `wait_for`. The action list and browser session stay local. On the next pass, repeat the actions with the same state names and viewport and send `parent_id` to compare the images.
 
 ## POST /reviews/{id}/marks/resolve
 

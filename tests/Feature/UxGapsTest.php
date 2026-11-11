@@ -50,7 +50,7 @@ class UxGapsTest extends TestCase
         $review = $this->review(['expires_at' => now()->addDays(5)]);
 
         Livewire::test('review-page', ['token' => $review->token])
-            ->assertSee('open until '.$review->expires_at->timezone(config('app.timezone'))->format('M j'));
+            ->assertSee('Open until '.$review->expires_at->timezone(config('app.timezone'))->format('M j'));
     }
 
     public function test_the_next_pass_keeps_how_the_last_was_shared(): void

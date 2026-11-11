@@ -226,7 +226,7 @@ new class extends Component
             'type_label' => $review->typeLabel(),
             'domain' => $review->sourceDomain(),
             'thumb_url' => $shot?->thumbUrl(),
-            'share_url' => $review->shareUrl(),
+            'share_url' => $review->allowsGuestAccess() ? $review->shareUrl() : null,
             'mark_count' => $marks->count(),
             'guest_mark_count' => $marks->where('source', Annotation::SOURCE_GUEST)->count(),
             'updated_at' => $updated?->toIso8601String(),
@@ -433,7 +433,9 @@ new class extends Component
                                         <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" class="!size-8 !px-0" aria-label="More for {{ $item['title'] }}" />
                                         <flux:menu class="min-w-48">
                                             <flux:menu.item icon="clipboard-document" x-on:click="copy({{ \Illuminate\Support\Js::from($item['review_url']) }}, 'Review link copied')">Copy review link</flux:menu.item>
-                                            <flux:menu.item icon="link" x-on:click="copy({{ \Illuminate\Support\Js::from($item['share_url']) }}, 'Guest link copied')">Copy guest link</flux:menu.item>
+                                            @if ($item['share_url'])
+                                                <flux:menu.item icon="link" x-on:click="copy({{ \Illuminate\Support\Js::from($item['share_url']) }}, 'Guest link copied')">Copy guest link</flux:menu.item>
+                                            @endif
                                             <flux:menu.separator />
                                             <flux:menu.item icon="view-columns" href="{{ $item['board_url'] }}">Open board</flux:menu.item>
                                             @if ($item['raw_status'] === 'pending' && $item['status'] !== 'expired')

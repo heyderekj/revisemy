@@ -7,13 +7,14 @@ use App\Models\Screenshot;
 use App\Services\Capture\CaptureDevice;
 use App\Services\Capture\CaptureSettleScript;
 use App\Services\Capture\HostedCaptureDriver;
-use App\Services\DocumentIngestionService;
+use App\Services\PdfReviewService;
 use App\Services\ScreenshotStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -101,10 +102,12 @@ class CaptureQualityTest extends TestCase
 
         $this->capture($token);
 
-        Http::assertSent(function ($request) {
+        $budget = app(HostedCaptureDriver::class)->functionBudget(sweep: true, collect: true);
+        Http::assertSent(function ($request) use ($budget) {
             $settle = (string) ($request->data()['context']['settle'] ?? '');
 
-            return str_contains($settle, '"sweepBudgetMs":41000') && str_contains($settle, '"loadBudgetMs":8000');
+            return str_contains($settle, '"sweepBudgetMs":'.$budget['sweepMs'])
+                && str_contains($settle, '"loadBudgetMs":'.$budget['loadMs']);
         });
     }
 
@@ -149,7 +152,7 @@ class CaptureQualityTest extends TestCase
         $this->assertSame('tablet-768', Review::query()->sole()->screenshots()->orderBy('sort_order')->get()[2]->meta['viewport']);
     }
 
-    public function test_a_viewport_that_never_answers_opens_the_review_without_a_shot(): void
+    public function test_a_viewport_that_never_answers_can_be_replaced_without_losing_other_shots(): void
     {
         $token = $this->setUpEnv();
 
@@ -161,11 +164,78 @@ class CaptureQualityTest extends TestCase
             return Http::response(['image' => base64_encode($this->encoded('png', 4, 4))]);
         });
 
-        $shot = $this->capture($token);
+        $desktop = $this->capture($token);
+        $review = Review::query()->sole();
+        $phone = $review->screenshots()->get()[1];
 
-        $this->assertSame('capture_failed', $shot->meta['origin']);
-        $this->assertStringContainsString('capture_provider_failed', (string) Review::query()->sole()->context);
-        $this->assertStringContainsString('mobile-375', (string) Review::query()->sole()->context);
+        $this->assertSame('capture', $desktop->meta['origin']);
+        $this->assertSame('failed', $phone->captureQuality()['status']);
+        $this->assertSame('mobile-375', $phone->meta['viewport']);
+        $this->get($review->reviewUrl())->assertOk();
+        $this->withToken($token)->postJson('/api/reviews/'.$review->public_id.'/screenshots', [
+            'image' => base64_encode($this->encoded('png', 375, 812)),
+            'replace_id' => $phone->id,
+        ])->assertOk()
+            ->assertJsonPath('screenshots.0.id', $desktop->id)
+            ->assertJsonPath('screenshots.1.meta.viewport', 'mobile-375')
+            ->assertJsonPath('screenshots.1.capture_quality', null)
+            ->assertJsonCount(3, 'screenshots');
+        $this->assertModelMissing($phone);
+    }
+
+    public function test_a_follow_up_reuses_the_previous_viewports_and_capture_choices(): void
+    {
+        $token = $this->setUpEnv();
+        Http::fake([
+            'capture.test/function*' => Http::response([
+                'image' => base64_encode($this->encoded('png', 4, 4)),
+                'loaded' => true,
+                'stable' => true,
+            ]),
+        ]);
+        $desktop = $this->capture($token);
+        config([
+            'revisemy.capture.viewports' => ['desktop' => [1000, 600]],
+            'revisemy.capture.url_full_page' => false,
+            'revisemy.capture.hide_consent' => false,
+        ]);
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Follow-up',
+            'parent_id' => $desktop->review->public_id,
+            'capture_url' => true,
+        ])->assertCreated()
+            ->assertJsonCount(3, 'screenshots')
+            ->assertJsonPath('screenshots.0.capture_quality.status', 'ready')
+            ->assertJsonPath('screenshots.0.meta.capture_profile', $desktop->meta['capture_profile'])
+            ->assertJsonPath('screenshots.0.comparison.url', $desktop->url())
+            ->assertJsonPath('screenshots.0.comparison.warning', null);
+    }
+
+    public function test_a_missing_phone_asset_is_visible_before_the_reviewer_marks_the_capture(): void
+    {
+        $token = $this->setUpEnv();
+        Http::fake(function ($request) {
+            $missing = $request->data()['context']['viewport']['width'] === 375 ? 1 : 0;
+
+            return Http::response([
+                'image' => base64_encode($this->encoded('png', 4, 4)),
+                'loaded' => $missing === 0,
+                'stable' => true,
+                'quality' => ['incomplete_images' => $missing],
+            ]);
+        });
+
+        $review = $this->capture($token)->review;
+        $this->withToken($token)->getJson('/api/reviews/'.$review->public_id)
+            ->assertJsonPath('screenshots.0.capture_quality.status', 'ready')
+            ->assertJsonPath('screenshots.1.capture_quality.status', 'partial');
+
+        Livewire::test('review-page', ['token' => $review->token])
+            ->assertSee('Capture ready')
+            ->call('selectScreenshot', 1)
+            ->assertSee('Partial capture')
+            ->assertSee('Images did not load (1).');
     }
 
     public function test_bottom_bars_are_placed_at_the_end_of_the_page_unless_turned_off(): void
@@ -291,15 +361,49 @@ class CaptureQualityTest extends TestCase
         $this->assertSame(2, CaptureDevice::measuredDpr($phone, ['width' => 1280, 'height' => 20000]));
     }
 
-    public function test_pdf_pages_render_at_2x_screen_density_within_the_pixel_cap(): void
+    public function test_pdf_capture_preserves_distinct_page_contents_and_sizes(): void
     {
-        // A 16:9 slide (960×540pt) and US Letter keep 192 DPI; an A2 poster drops.
-        $this->assertSame(192, DocumentIngestionService::renderDpi(960, 540));
-        $this->assertSame(192, DocumentIngestionService::renderDpi(612, 792));
-        $poster = DocumentIngestionService::renderDpi(1191, 1684);
-        $this->assertLessThan(192, $poster);
-        $this->assertLessThanOrEqual(4_000_000, ($poster * 1191 / 72) * ($poster * 1684 / 72));
-        $this->assertSame(72, DocumentIngestionService::renderDpi(5000, 5000), 'never under 72');
+        $token = $this->setUpEnv();
+
+        // A three-page PDF with differently sized, solid red, green and blue pages.
+        $objects = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>'];
+        foreach ([[240, 120, '1 0 0'], [120, 240, '0 1 0'], [180, 180, '0 0 1']] as $index => [$w, $h, $color]) {
+            $stream = "$color rg 0 0 $w $h re f\n";
+            $contents = 4 + $index * 2;
+            $objects[] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 $w $h] /Resources <<>> /Contents $contents 0 R >>";
+            $objects[] = '<< /Length '.strlen($stream)." >>\nstream\n".$stream.'endstream';
+        }
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = '';
+        foreach ($objects as $index => $object) {
+            $offsets .= sprintf("%010d 00000 n \n", strlen($pdf));
+            $pdf .= ($index + 1)." 0 obj\n".$object."\nendobj\n";
+        }
+        $xref = strlen($pdf);
+        $count = count($objects) + 1;
+        $pdf .= "xref\n0 $count\n0000000000 65535 f \n".$offsets."trailer\n<< /Size $count /Root 1 0 R >>\nstartxref\n$xref\n%%EOF\n";
+
+        $this->withToken($token)->postJson('/api/reviews', [
+            'title' => 'Mixed page sizes',
+            'pdf' => base64_encode($pdf),
+        ])->assertCreated()->assertJsonCount(3, 'screenshots');
+        $review = Review::query()->sole();
+        $shots = $review->screenshots()->get();
+        $disk = Storage::disk($review->pdf_disk);
+        foreach ($shots as $shot) {
+            $disk->assertMissing($shot->path);
+        }
+
+        $this->assertSame([1, 2, 3], $shots->pluck('meta.page')->all());
+        foreach ([[640, 320, [255, 0, 0]], [320, 640, [0, 255, 0]], [480, 480, [0, 0, 255]]] as $index => [$width, $height, $rgb]) {
+            $shot = $shots[$index];
+            app(PdfReviewService::class)->ensurePageImage($shot);
+            $image = imagecreatefromstring($disk->get($shot->path));
+            $this->assertSame([$width, $height], [imagesx($image), imagesy($image)]);
+            $pixel = imagecolorsforindex($image, imagecolorat($image, 20, 20));
+            $this->assertSame($rgb, [$pixel['red'], $pixel['green'], $pixel['blue']]);
+        }
     }
 
     public function test_a_capture_shrunk_to_fit_the_cap_says_what_its_pixels_hold(): void

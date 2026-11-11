@@ -7,7 +7,7 @@
         <button type="button" class="h-6 rounded-full px-2.5 text-[11px] font-medium transition-colors" :class="talkOnly ? 'bg-raised text-zinc-900 shadow-xs' : 'text-muted-foreground hover:text-zinc-900'" @click="talkOnly = true" :aria-pressed="talkOnly">Talk only</button>
     </div>
     <ol class="min-w-0">
-        <template x-for="(entry, i) in timelineFor({{ $pin }})" :key="i">
+        <template x-for="(entry, i) in timelineFor({{ $pin }})" :key="entry.comment_id ? 'comment-' + entry.comment_id : 'step-' + i">
             <li class="flex gap-2.5">
                 <span class="flex w-3 shrink-0 flex-col items-center" aria-hidden="true">
                     <span class="shrink-0 rounded-full" :class="[actorDot(entry.actor), isTalk(entry) ? 'mt-1.5 size-2.5' : 'mt-2 size-1.5']"></span>
@@ -25,6 +25,10 @@
                         <time class="text-zinc-400" :datetime="entry.at" x-show="entry.at" x-text="'· ' + ago(entry.at)"></time>
                     </p>
                     <p class="mt-1 rounded-xl px-2.5 py-1.5 text-sm leading-relaxed text-pretty whitespace-pre-line text-zinc-800" :class="entry.actor === 'agent' ? 'bg-sky-50' : 'bg-well'" x-show="entry.body" x-text="entry.body"></p>
+                    @include('mcp.partials.element-reference-chips', ['references' => '(entry.element_references || [])'])
+                    <template x-if="entry.comment_id && (payload.comments_enabled || entry.reactions)">
+                        @include('mcp.partials.comment-reactions')
+                    </template>
                     <template x-if="entry.after_screenshot_url && entry.after_screenshot_url !== {{ $pin }}.after_screenshot_url">
                         <img class="mt-1.5 h-12 w-20 rounded-lg object-cover ring-1 ring-emerald-300" :src="entry.after_screenshot_url" alt="After image from your agent" loading="lazy">
                     </template>

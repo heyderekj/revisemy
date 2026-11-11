@@ -129,11 +129,115 @@ test('the inline review marks the element under a click, as the web does', async
     await expect(pending.locator('[data-element-chip]')).toContainText('Button');
     await pending.getByText('Inspect').click();
     await expect(pending.locator('[data-element-inspect]')).toContainText('#2563eb');
+    await pending.getByRole('button', { name: /Reference Background #2563eb/ }).click();
+    await pending.getByText('More properties', { exact: true }).click();
+    await pending.getByRole('button', { name: 'Reference Line height 24px' }).click();
+    await expect(newer.getByRole('button', { name: /Remove reference to Background/ })).toBeVisible();
 
+    await newer.getByPlaceholder('What should change here?').fill('Optional: make the button more specific.');
+    await expect(newer.getByRole('combobox', { name: 'Kind of mark' })).toHaveValue('nit');
     await newer.getByPlaceholder('What should change here?').fill('Make the button say what you get.');
     await newer.getByRole('button', { name: 'Add mark' }).click();
 
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).work_packets.pins
-        .find((p: any) => p.body === 'Make the button say what you get.')?.element?.selector).toBe('#buy');
+        .find((p: any) => p.body === 'Make the button say what you get.')).toMatchObject({
+        element: { selector: '#buy' },
+        element_references: [{ selector: '#buy', property: { label: 'Background', value: '#2563eb' } }, { selector: '#buy', property: { label: 'Line height', value: '24px' } }],
+    });
     await expect(newer.locator('[data-element-chip]:visible', { hasText: 'Buy now' }).first()).toBeVisible();
+    await newer.locator('button', { hasText: /^M2$/ }).first().click();
+    const detail = newer.locator('[data-mark-detail]:visible');
+    await detail.getByText('Inspect', { exact: true }).click();
+    await expect(detail.getByRole('button', { name: /Reference Background #2563eb/ })).toBeVisible();
+});
+
+test('inline Share checks the latest guest link and works without clipboard access', async ({ page, context }) => {
+    await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+    });
+    const { newer, review, sent } = await openInHost(page, 'Share from chat');
+
+    const share = newer.getByRole('button', { name: 'Share', exact: true });
+    await share.click();
+    const guestLink = newer.getByRole('textbox', { name: 'Guest link' });
+    await expect(guestLink).toBeVisible();
+    const previous = await guestLink.inputValue();
+    expect(previous).not.toBe(review.review_url);
+
+    await newer.getByRole('button', { name: 'Copy link' }).click();
+    await expect(newer.getByText('Copy the selected link to share it.')).toBeVisible();
+    await expect(guestLink).toBeFocused();
+    expect((await page.request.get(previous)).ok()).toBeTruthy();
+
+    await newer.getByRole('button', { name: 'Manage sharing on the web' }).click();
+    await expect.poll(async () => (await sent('newer', 'ui/open-link')).at(-1)?.params.url).toBe(review.review_url + '?share=1');
+    await share.click();
+
+    const web = await context.newPage();
+    try {
+        await web.goto(review.review_url + '?share=1');
+        await expect(web.getByRole('button', { name: 'Copy link' })).toBeVisible();
+        web.once('dialog', (dialog) => dialog.accept());
+        await web.getByRole('button', { name: 'New link' }).click();
+        await expect(web.getByText('New guest link ready')).toBeVisible();
+    } finally {
+        await web.close();
+    }
+
+    await share.click();
+    await expect(guestLink).not.toHaveValue(previous);
+    expect((await page.request.get(await guestLink.inputValue())).ok()).toBeTruthy();
+    expect((await page.request.get(previous)).status()).toBe(404);
+});
+
+test('an inline reaction also appears on the web review', async ({ page, context }) => {
+    const { newer, review } = await openInHost(page, 'React from chat');
+    await newer.getByRole('button', { name: 'M1', exact: true }).first().click();
+    const detail = newer.locator('[data-mark-detail]:visible');
+    await detail.getByRole('textbox', { name: 'Reply on this mark' }).fill('Try the shorter label.');
+    await detail.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(detail.getByText('Try the shorter label.')).toBeVisible();
+
+    await detail.getByRole('button', { name: 'Add reaction' }).click();
+    await detail.getByRole('button', { name: 'Like', exact: true }).click();
+    await expect(detail.getByRole('button', { name: 'Like (1)' })).toHaveAttribute('aria-pressed', 'true');
+
+    const web = await context.newPage();
+    try {
+        await web.goto(review.review_url);
+        await web.locator('[data-mark-id]').first().click();
+        const reaction = web.getByRole('dialog', { name: 'Mark M1' }).getByRole('button', { name: 'Like (1)' });
+        await expect(reaction).toHaveAttribute('aria-pressed', 'true');
+    } finally {
+        await web.close();
+    }
+
+    await detail.getByRole('button', { name: 'Like (1)' }).click();
+    await expect(detail.getByRole('button', { name: 'Like (1)' })).toHaveCount(0);
+});
+
+
+test('the inline board reviews a fix with before and after evidence', async ({ page }) => {
+    const { newer, api, review } = await openInHost(page, 'Inline fix review');
+    const snapshot = (await (await api.get(`/api/reviews/${review.id}`)).json());
+    const mark = snapshot.work_packets.pins[0];
+    await mcp(api, 'tools/call', {
+        name: 'decide_review',
+        arguments: { review_id: review.id, decision: 'changes_requested' },
+    });
+    const after = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
+    const result = await api.post(`/api/reviews/${review.id}/marks/resolve`, {
+        data: { marks: [{ id: mark.id, status: 'resolved', after_image: after }] },
+    });
+    expect(result.ok(), await result.text()).toBeTruthy();
+
+    await newer.getByRole('button', { name: 'Refresh' }).click();
+    await newer.getByRole('button', { name: 'Board · 1' }).click();
+    await newer.getByRole('button', { name: 'Review 1 fix' }).click();
+    const detail = newer.locator('[data-mark-detail]:visible');
+    await detail.getByRole('button', { name: 'Side by side' }).click();
+    await expect(detail.getByRole('img', { name: 'Before — marked area' })).toBeVisible();
+    await expect(detail.getByRole('img', { name: 'After — submitted screenshot of the fix' })).toBeVisible();
+    await detail.getByRole('button', { name: 'Verify & next' }).click();
+    await expect(newer.getByText('All ready fixes reviewed.')).toBeVisible();
 });

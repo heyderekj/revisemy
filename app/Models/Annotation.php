@@ -374,11 +374,13 @@ class Annotation extends Model
     }
 
     protected $fillable = [
+        'element_references',
         'screenshot_id',
         'x',
         'y',
         'area',
         'target',
+        'pdf_anchor',
         'severity',
         'body',
         'suggested_copy',
@@ -397,10 +399,12 @@ class Annotation extends Model
     protected function casts(): array
     {
         return [
+            'element_references' => 'array',
             'x' => 'float',
             'y' => 'float',
             'area' => 'array',
             'target' => 'array',
+            'pdf_anchor' => 'array',
             'resolved_at' => 'datetime',
             'verified_at' => 'datetime',
         ];

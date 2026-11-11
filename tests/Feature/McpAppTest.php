@@ -9,6 +9,7 @@ use App\Mcp\Tools\AddMarkTool;
 use App\Mcp\Tools\CreateReviewTool;
 use App\Mcp\Tools\DecideReviewTool;
 use App\Mcp\Tools\GetReviewTool;
+use App\Mcp\Tools\SetCommentReactionTool;
 use App\Mcp\Tools\VerifyMarkTool;
 use App\Models\Annotation;
 use App\Models\Review;
@@ -73,7 +74,7 @@ class McpAppTest extends TestCase
 
     public function test_app_only_tools_are_hidden_from_the_model(): void
     {
-        foreach ([AddMarkTool::class, AddCommentTool::class, DecideReviewTool::class, VerifyMarkTool::class] as $tool) {
+        foreach ([AddMarkTool::class, AddCommentTool::class, SetCommentReactionTool::class, DecideReviewTool::class, VerifyMarkTool::class] as $tool) {
             $meta = app($tool)->toArray()['_meta'] ?? [];
             $this->assertSame('ui://revisemy/review-app', $meta['ui']['resourceUri'] ?? null, $tool);
             $this->assertSame(['app'], $meta['ui']['visibility'] ?? null, $tool);
@@ -192,6 +193,59 @@ class McpAppTest extends TestCase
         ])->assertHasErrors();
 
         $this->assertSame(0, Annotation::query()->count());
+    }
+
+    public function test_inline_reactions_return_counts_and_owner_state(): void
+    {
+        [$user, $review] = $this->setUpReview();
+        [$otherUser] = $this->setUpReview();
+        $mark = $review->screenshots()->firstOrFail()->annotations()->create([
+            'x' => 0.5, 'y' => 0.5, 'severity' => 'nit', 'body' => 'Fix', 'number' => 1,
+        ]);
+        $comment = $mark->comments()->create(['author' => 'Alex', 'body' => 'Good catch.', 'from_owner' => false]);
+        $comment->setReaction('like', 'guest-fingerprint', true);
+        $args = ['review_id' => $review->public_id, 'comment_id' => $comment->id, 'reaction' => 'like', 'selected' => true];
+
+        ReviseMyServer::actingAs($otherUser)->tool(SetCommentReactionTool::class, $args)->assertHasErrors();
+
+        ReviseMyServer::actingAs($user)->tool(SetCommentReactionTool::class, $args)
+            ->assertHasNoErrors()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('screenshots.0.pins.0.timeline.1.comment_id', $comment->id)
+                ->where('screenshots.0.pins.0.timeline.1.reactions.like', ['count' => 2, 'selected' => true])
+                ->etc()
+            )->assertDontSee('guest-fingerprint');
+
+        $args['selected'] = false;
+        ReviseMyServer::actingAs($user)->tool(SetCommentReactionTool::class, $args)
+            ->assertHasNoErrors()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('screenshots.0.pins.0.timeline.1.reactions.like', ['count' => 1, 'selected' => false])
+                ->etc()
+            );
+
+        $review->update(['comments_enabled' => false]);
+        ReviseMyServer::actingAs($user)->tool(SetCommentReactionTool::class, $args)->assertHasErrors();
+    }
+
+    public function test_inline_review_reports_when_the_guest_link_really_expires(): void
+    {
+        [$user, $review] = $this->setUpReview();
+        $review->update(['expires_at' => now()->addDay(), 'share_expires_at' => now()->addDays(14)]);
+
+        ReviseMyServer::actingAs($user)->tool(GetReviewTool::class, ['id' => $review->public_id])
+            ->assertHasNoErrors()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('guest_share_url', $review->shareUrl())
+                ->where('guest_access.open', true)
+                ->where('guest_access.until', $review->expires_at->toIso8601String())
+                ->etc()
+            );
+
+        $this->travel(2)->days();
+        ReviseMyServer::actingAs($user)->tool(GetReviewTool::class, ['id' => $review->public_id])
+            ->assertHasNoErrors()
+            ->assertStructuredContent(fn ($json) => $json->where('guest_access.open', false)->etc());
     }
 
     public function test_decide_review_approve_verifies_resolved_marks_including_parent(): void

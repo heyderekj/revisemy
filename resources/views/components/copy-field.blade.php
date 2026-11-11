@@ -4,6 +4,7 @@
     'value',
     'label' => null,
     'mono' => true,
+    'connect' => true,
 ])
 
 <div {{ $attributes->class('min-w-0') }} x-data="{ copied: false }">
@@ -19,7 +20,7 @@
         <button
             type="button"
             class="inline-flex h-7 shrink-0 items-center rounded-full bg-chip px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover"
-            x-on:click="navigator.clipboard.writeText($refs.value.textContent); copied = true; setTimeout(() => copied = false, 1600); $dispatch('rm-connect-started')"
+            x-on:click="navigator.clipboard.writeText($refs.value.textContent); copied = true; setTimeout(() => copied = false, 1600); if (@js($connect)) $dispatch('rm-connect-started')"
             x-text="copied ? 'Copied' : 'Copy'"
         >Copy</button>
     </div>

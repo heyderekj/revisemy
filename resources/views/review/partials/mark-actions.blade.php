@@ -20,6 +20,7 @@
             />
             <flux:error name="guestName" />
         @endif
+        <x-element-reference-chips :references="$markCommentBodyReferences" action="toggleCommentElementReference" :mark-id="$pin->id" />
         <flux:textarea wire:model="markCommentBody" rows="2" placeholder="Add a comment…" x-on:keydown.meta.enter.prevent="$wire.addMarkComment({{ $pin->id }})" x-on:keydown.ctrl.enter.prevent="$wire.addMarkComment({{ $pin->id }})" />
         <flux:error name="markCommentBody" />
         <div class="flex gap-2">
@@ -49,6 +50,10 @@
         @endif
         @if (! $previous && $mode === 'owner' && $pin->severity === \App\Models\Annotation::SEVERITY_QUESTION && $review->isOpenForFeedback())
             <button type="button" class="inline-flex h-9 items-center md:h-7 rounded-full bg-chip px-2.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-chip-hover" wire:click="startAnswerQuestion({{ $pin->id }})">{{ $pin->question_answer ? 'Edit answer' : 'Answer' }}</button>
+        @endif
+        @if (! $previous && $mode === 'owner' && ! $review->isExpired() && $review->allowsComments())
+            <button type="button" class="inline-flex h-9 items-center rounded-full px-2 text-xs font-medium text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900 md:h-7"
+                wire:click="startFeedbackRequest({{ $pin->id }})">Request feedback</button>
         @endif
         @if (! $previous && $review->allowsComments())
             <button type="button" class="inline-flex h-9 items-center md:h-7 gap-1 rounded-full px-2 text-xs font-medium text-zinc-500 transition-colors hover:bg-chip hover:text-zinc-900" wire:click="startMarkComment({{ $pin->id }})">

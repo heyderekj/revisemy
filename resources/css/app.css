@@ -106,6 +106,52 @@
     }
 }
 
+[data-flux-modal] > dialog.rm-board-dialog {
+    --rm-board-modal-ease: cubic-bezier(0.23, 1, 0.32, 1);
+    --rm-board-modal-duration: 140ms;
+    transform: none;
+    transition:
+        opacity var(--rm-board-modal-duration) var(--rm-board-modal-ease),
+        transform var(--rm-board-modal-duration) var(--rm-board-modal-ease),
+        display var(--rm-board-modal-duration) allow-discrete,
+        overlay var(--rm-board-modal-duration) allow-discrete;
+}
+
+[data-flux-modal] > dialog.rm-board-dialog[open] {
+    --rm-board-modal-duration: 220ms;
+    box-shadow: 0 24px 80px hsl(0 0% 0% / 0.35), 0 0 0 1px var(--border);
+}
+
+[data-flux-modal] > dialog.rm-board-dialog::backdrop {
+    background-color: hsl(0 0% 0% / 0.58);
+    transition:
+        opacity 140ms cubic-bezier(0.23, 1, 0.32, 1),
+        display 140ms allow-discrete,
+        overlay 140ms allow-discrete;
+}
+
+[data-flux-modal] > dialog.rm-board-dialog[open]::backdrop {
+    transition-duration: 220ms;
+}
+
+@media (min-width: 768px) {
+    @starting-style {
+        [data-flux-modal] > dialog.rm-board-dialog[open] {
+            transform: scale(0.985);
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-flux-modal] > dialog.rm-board-dialog,
+    [data-flux-modal] > dialog.rm-board-dialog[open],
+    [data-flux-modal] > dialog.rm-board-dialog::backdrop,
+    [data-flux-modal] > dialog.rm-board-dialog[open]::backdrop {
+        transform: none;
+        transition: none;
+    }
+}
+
 /*
  * Flux's primary button, lit. Flux gives the variant no attribute of its own,
  * so it is found by the accent fill it always carries.
@@ -329,6 +375,22 @@
     }
 }
 
+.rm-status-icon {
+    animation: rm-status-appear 160ms var(--ease-snap) both;
+}
+
+@keyframes rm-status-appear {
+    from {
+        opacity: 0;
+        transform: translateY(2px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes rm-note-popover {
     from {
         opacity: 0;
@@ -381,6 +443,7 @@
     .rm-review-mock-pop,
     .rm-board-preview-col,
     .rm-note-composer,
+    .rm-status-icon,
     .rm-agent-cycle-item {
         animation: none !important;
     }

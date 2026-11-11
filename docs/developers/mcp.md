@@ -59,7 +59,7 @@ Two tools keep your agent from guessing:
 
 When a shot comes with an element map, the person can click a button, a heading or a card to mark the whole thing, see its size, type, colours and spacing, and step out to the part around it. Each of those marks reaches your agent with an `element` (see [Marks](/docs/review-loop#marks)).
 
-`capture_url` reviews have one already. For screenshots your agent takes itself, read the `revisemy://capture/elements.js` resource (or fetch `/capture/elements.js`), run it with `page.evaluate` in the same browser right after a full-page shot, and pass the result as `image_details[].elements` on `create_review`, or `elements` on `add_screenshot`, with the shot's `dpr`. A large map costs tokens to send through a tool call; the [REST API](/docs/rest-api#element-maps) takes it without that cost.
+URL capture can include an element map from the same browser page as the screenshot. If the provider only returns image bytes, a map from a separate load is approximate and can't drive element marks. For screenshots your agent takes itself, read the `revisemy://capture/elements.js` resource (or fetch `/capture/elements.js`), run it with `page.evaluate` in the same browser right after a full-page shot, and pass the result as `image_details[].elements` on `create_review`, or `elements` on `add_screenshot`, with the shot's `dpr`. For signed-in pages and interactions, use `/capture/states.mjs` with your existing browser and pass the returned `images` and `image_details` to `create_review`. The [REST API examples](/docs/rest-api#element-maps) show how to capture a menu before and after opening it.
 
 ## Reviews started on the site
 
@@ -76,7 +76,7 @@ The inline review also talks to the host:
 - It opens full screen for marking where the host offers it, and on a phone it does so when a mark is started.
 - Each `get_review` leaves another copy of the review in the chat. Only the newest stays live; older copies fold away and stop checking for changes.
 
-Five tools exist only for that inline view: `add_mark`, `add_comment`, `decide_review`, `verify_mark` and `get_shot_elements`. They're hidden from the model, and an agent must never call them, because marking, approving and verifying stay with the person.
+Six tools exist only for that inline view: `add_mark`, `add_comment`, `set_comment_reaction`, `decide_review`, `verify_mark` and `get_shot_elements`. They're hidden from the model, and an agent must never call them, because marking, approving and verifying stay with the person.
 
 ## Tool reference
 
@@ -96,6 +96,6 @@ A tool that can't do what was asked answers with an MCP error whose message star
 | `[capture_provider_failed]` | Rendering failed. Retry once with `images`. |
 | `[insufficient_credits]` | Out of credits. Call `get_billing` for when they refill. |
 
-A failed `capture_url` doesn't error. The review still opens, so there's always a link, but its shot is a blank placeholder (`meta.origin` is `capture_failed`) and the reply names the failure. Your agent should add the page with `add_screenshot`, desktop and mobile, before it shares the link.
+A failed `capture_url` still opens the review. The reply names failed viewports and keeps the successful shots. Before sharing, replace failed placeholders via `add_screenshot` with the review `id` and the failed shot's `replace_id`. For partial captures, use the quality message to decide what to verify or recapture before marking it.
 
 Anything else is a plain sentence meant for your agent to read and act on.

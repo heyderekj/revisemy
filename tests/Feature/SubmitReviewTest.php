@@ -122,13 +122,8 @@ class SubmitReviewTest extends TestCase
             'pdf' => UploadedFile::fake()->createWithContent('launch-deck.pdf', $pdf),
         ]);
 
-        $review = Review::query()->first();
-
-        if (! $review) {
-            // No Imagick PDF coder here: the reason comes back on the form.
-            $response->assertRedirect(route('reviews.new', ['kind' => 'pdf']))->assertSessionHasErrors('pdf');
-            $this->markTestSkipped('This host cannot render PDFs.');
-        }
+        $response->assertSessionHasNoErrors();
+        $review = Review::query()->sole();
 
         $this->assertSame(Review::TYPE_PRESENTATION, $review->type);
         $this->assertSame('launch-deck', $review->title);
@@ -277,7 +272,7 @@ class SubmitReviewTest extends TestCase
         $this->get(route('reviews.show', $review->token))
             ->assertOk()
             ->assertSee('Hand this to your agent')
-            ->assertSeeInOrder(['Mark what matters', 'Mark something on the page', 'Ask for changes', 'Send it to your agent'])
+            ->assertSee('The first agent to open this link gets the review and its marks.')
             ->assertSee($prompt)
             ->assertSee(e('https://claude.ai/new?q='.rawurlencode($prompt)), false)
             ->assertSee(e('https://chatgpt.com/?q='.rawurlencode($prompt)), false)

@@ -38,24 +38,44 @@ test('a click marks the element under it, and the agent is told which', async ({
     // A click on its label picks the button, not the words inside it.
     await page.mouse.click(button.x, button.y);
     const note = page.getByRole('dialog', { name: 'Leave a note' });
-    await expect(note.getByText('Leave a note on this button', { exact: true })).toBeVisible();
+    await expect(note.getByText('Leave a note', { exact: true })).toBeVisible();
     await expect(note.locator('[data-element-chip]')).toContainText('Button');
     await note.getByText('Inspect').click();
     await expect(note.locator('[data-element-inspect]')).toContainText('200 × 60');
     await expect(note.locator('[data-element-inspect]')).toContainText('#2563eb');
+    await note.getByRole('button', { name: /Reference Background #2563eb/ }).click();
+    await note.getByText('More properties', { exact: true }).click();
+    await note.getByRole('button', { name: 'Reference Line height 24px' }).click();
+    await expect(note.locator('[aria-label="Referenced elements"]').getByRole('button', { name: /Remove reference to Background/ })).toBeVisible();
 
     // Wider steps out to the hero around it.
     await note.getByRole('button', { name: 'Wider' }).click();
-    await expect(note.getByText('Leave a note on this box', { exact: true })).toBeVisible();
+    await expect(note.locator('[data-element-chip]')).toContainText('Box');
 
     await note.getByPlaceholder(/Be specific/).fill('The hero needs more air.');
     await note.getByRole('button', { name: 'Save mark' }).click();
     await expect(note).toBeHidden();
-    await expect(page.locator('#fb-mark-' + (await pins(api, review.id))[0].id).locator('[data-element-chip]')).toContainText('Box');
+    await page.locator('#fb-mark-' + (await pins(api, review.id))[0].id).getByRole('button').click();
+    await expect(page.getByRole('dialog', { name: 'Mark M1' }).locator('[data-element-chip]')).toContainText('Box');
 
     const [pin] = await pins(api, review.id);
     expect(pin.element).toMatchObject({ selector: '#hero', kind: 'Box', via: 'picked', box: { x: 60, y: 60, w: 600, h: 300 } });
     expect(pin.area).toMatchObject({ x: 0.05, y: 0.075, w: 0.5, h: 0.375 });
+    expect(pin.body).toBe('The hero needs more air.');
+    expect(pin.element_references).toMatchObject([{ selector: '#buy', property: { label: 'Background', value: '#2563eb' } }, { selector: '#buy', property: { label: 'Line height', value: '24px' } }]);
+
+    const mark = page.getByRole('dialog', { name: 'Mark M1' });
+    await mark.getByText('Inspect', { exact: true }).click();
+    await mark.getByRole('button', { name: /Reference Size/ }).click();
+    const chip = mark.locator('[aria-label="Referenced elements"]').getByRole('button', { name: /Remove reference to Size/ });
+    await expect(chip).toBeVisible();
+    await chip.click();
+    await expect(chip).toHaveCount(0);
+    await mark.getByRole('button', { name: /Reference Size/ }).click();
+    await mark.getByPlaceholder('Add a comment…').fill('Keep the button as it is.');
+    await mark.getByRole('button', { name: 'Post', exact: true }).click();
+    await expect.poll(async () => (await pins(api, review.id))[0].comments[0]?.element_references)
+        .toMatchObject([{ selector: '#hero', property: { label: 'Size', value: '600 × 300 px' } }]);
 });
 
 test('Alt-click drops a spot, a drag matches what it covers, and Snap off keeps clicks free', async ({ page }) => {
@@ -68,7 +88,7 @@ test('Alt-click drops a spot, a drag matches what it covers, and Snap off keeps 
     await page.keyboard.down('Alt');
     await page.mouse.click(heading.x, heading.y);
     await page.keyboard.up('Alt');
-    await expect(note.getByText('Leave a note on this spot', { exact: true })).toBeVisible();
+    await expect(note).toBeVisible();
     await expect(note.locator('[data-pending-element]')).toHaveCount(0);
     await note.getByPlaceholder(/Be specific/).fill('Spot');
     await note.getByRole('button', { name: 'Save mark' }).click();
@@ -91,7 +111,7 @@ test('Alt-click drops a spot, a drag matches what it covers, and Snap off keeps 
     await expect(page.locator('[data-pick-toggle]')).toHaveAttribute('aria-pressed', 'false');
     const free = await at(page, 450, 124);
     await page.mouse.click(free.x, free.y);
-    await expect(note.getByText('Leave a note on this spot', { exact: true })).toBeVisible();
+    await expect(note).toBeVisible();
     await note.getByPlaceholder(/Be specific/).fill('Free');
     await note.getByRole('button', { name: 'Save mark' }).click();
     await expect(note).toBeHidden();
@@ -111,7 +131,7 @@ test('a tap on a phone marks the element under it @phone', async ({ page }) => {
     const button = await at(page, 200, 230);
     await page.touchscreen.tap(button.x, button.y);
     const note = page.getByRole('dialog', { name: 'Leave a note' });
-    await expect(note.getByText('Leave a note on this button', { exact: true })).toBeVisible();
+    await expect(note.getByText('Leave a note', { exact: true })).toBeVisible();
     await note.getByPlaceholder(/Be specific/).fill('Bigger tap target.');
     await note.getByRole('button', { name: 'Save mark' }).click();
     await expect(note).toBeHidden();

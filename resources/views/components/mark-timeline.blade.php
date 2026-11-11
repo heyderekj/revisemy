@@ -3,9 +3,10 @@
      changes away and leaves the conversation. The inline review draws the
      same list from pin.timeline in mcp/partials/mark-timeline. A mark with
      nothing on it yet but itself draws nothing. --}}
-@props(['mark', 'ownerView' => true])
+@props(['mark', 'ownerView' => true, 'canReact' => false])
 @php
     $entries = \App\Support\MarkTimeline::for($mark);
+    $comments = $mark->comments->keyBy('id');
     $hasSteps = collect($entries)->contains(fn ($e) => ! \App\Support\MarkTimeline::isTalk($e) && $e['kind'] !== \App\Support\MarkTimeline::KIND_MARKED);
 @endphp
 @if (count($entries) > 1)
@@ -41,6 +42,10 @@
                             'bg-sky-50' => $entry['actor'] === 'agent',
                             'bg-well' => $entry['actor'] !== 'agent',
                         ])>{{ $entry['body'] }}</p>
+                    @endif
+                    <x-element-reference-chips :references="$entry['element_references'] ?? []" class="mt-1.5" />
+                    @if (isset($entry['comment_id']) && $comment = $comments->get($entry['comment_id']))
+                        <x-comment-reactions :comment="$comment" :owner-view="$ownerView" :can-react="$canReact" />
                     @endif
                     {{-- The card's before/after already shows the latest one. --}}
                     @if ($entry['after_screenshot_url'] && $entry['after_screenshot_id'] !== $mark->after_screenshot_id)

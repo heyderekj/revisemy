@@ -229,6 +229,27 @@ class ElementMap
             }
         }
 
+        if (($tracking = self::number($styles['ls'] ?? null, -100, 100)) !== null) {
+            $clean['ls'] = round($tracking, 2);
+        }
+
+        if (is_array($styles['m'] ?? null) && count($styles['m']) === 4) {
+            $margin = array_map(fn ($n) => self::number($n, -2_000, 2_000), array_values($styles['m']));
+            if (! in_array(null, $margin, true)) {
+                $clean['m'] = array_map(fn (float $n) => round($n, 1), $margin);
+            }
+        }
+
+        foreach (['ai', 'jc', 'fd', 'fwra'] as $key) {
+            if (is_string($styles[$key] ?? null) && preg_match('/^[a-z -]{1,32}$/D', $styles[$key])) {
+                $clean[$key] = $styles[$key];
+            }
+        }
+
+        if (is_string($styles['sh'] ?? null) && preg_match('/^[a-z0-9#.,()% +\/-]{1,240}$/iD', $styles['sh'])) {
+            $clean['sh'] = $styles['sh'];
+        }
+
         $radius = $styles['r'] ?? null;
         if (($single = self::number($radius, 0, 10_000)) !== null) {
             $clean['r'] = round($single, 1);

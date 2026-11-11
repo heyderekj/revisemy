@@ -13,7 +13,8 @@ test('a mark keeps a timeline of who did what, for the owner and a guest', async
     await note.getByPlaceholder(/Be specific/).fill('Button label is vague.');
     await note.getByRole('button', { name: 'Save mark' }).click();
     await expect(note).toBeHidden();
-    await page.getByRole('button', { name: 'Changes' }).first().click();
+    await page.getByRole('button', { name: 'More review actions' }).click();
+    await page.getByRole('menuitem', { name: 'Request changes' }).click();
     await page.getByRole('button', { name: 'Send now' }).click();
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('changes_requested');
 
@@ -66,9 +67,11 @@ test('a mark keeps a timeline of who did what, for the owner and a guest', async
     // A guest sees the same timeline, with the owner named as such.
     const guest = (await (await api.get(`/api/reviews/${review.id}`)).json()).guest_share_url;
     await page.goto(path(guest));
+    await page.getByRole('button', { name: 'Feedback', exact: true }).click();
     const card = page.locator(`#fb-mark-${mark.id}`);
-    await expect(card.getByText('Yes, give the hover the same label.')).toBeVisible();
-    const guestTimeline = card.locator('ol');
+    await expect(card.getByText('3 replies')).toBeVisible();
+    await card.getByRole('button').click();
+    const guestTimeline = page.getByRole('dialog', { name: 'Mark M1' }).locator('ol');
     await expect(guestTimeline.locator('li', { hasText: 'Yes, give the hover the same label.' }).getByText('Owner', { exact: true })).toBeVisible();
     await expect(guestTimeline.locator('li', { hasText: 'Say if the hover state needs the same.' }).getByText('Agent', { exact: true })).toBeVisible();
     await expect(guestTimeline.getByText('You', { exact: true })).toHaveCount(0);

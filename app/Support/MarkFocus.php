@@ -35,11 +35,11 @@ class MarkFocus
      *     bg_style: string
      * }
      */
-    public static function forMark(Annotation $mark): array
+    public static function forMark(Annotation $mark, ?string $imageUrl = null): array
     {
         $shot = $mark->screenshot;
         $region = $mark->region();
-        $url = $shot?->url() ?? '';
+        $url = $imageUrl ?? $shot?->url() ?? '';
         $focusX = (float) $mark->x;
         $focusY = (float) $mark->y;
 
@@ -67,6 +67,14 @@ class MarkFocus
             'ratio' => $ratio,
             'bg_style' => self::backgroundStyle($url, $window),
         ];
+    }
+
+    /** @return array{window: array{x: float, y: float, w: float, h: float}, ratio: float} */
+    public static function forComparison(Annotation $mark): array
+    {
+        $window = $mark->region() ?? self::windowFromPoint((float) $mark->x, (float) $mark->y, $mark->screenshot);
+
+        return ['window' => $window, 'ratio' => max(0.01, self::trueAspectRatio($window, $mark->screenshot))];
     }
 
     /**

@@ -106,6 +106,54 @@ class AnnotationCommentTest extends TestCase
         ]);
     }
 
+    public function test_reactions_are_shared_with_the_board_and_can_be_removed(): void
+    {
+        [$review, $mark] = $this->reviewWithMark();
+        $comment = $mark->comments()->create(['author' => 'Owner', 'from_owner' => true, 'body' => 'Try a shorter title.']);
+
+        $guest = Livewire::test('review-page', ['token' => $review->share_token])
+            ->call('openMark', $mark->id)
+            ->call('setCommentReaction', $comment->id, 'like', true)
+            ->call('setCommentReaction', $comment->id, 'like', true)
+            ->assertSee('Like (1)');
+
+        Livewire::test('review-board', ['token' => $review->token])
+            ->call('openMark', $mark->id)
+            ->assertSee('Like (1)')
+            ->call('setCommentReaction', $comment->id, 'like', true)
+            ->assertSee('Like (2)');
+
+        $guest->call('setCommentReaction', $comment->id, 'like', false)->assertSee('Like (1)');
+        $this->assertSame(['like' => ['owner' => true]], $comment->fresh()->reactions);
+    }
+
+    public function test_guest_reactions_respect_link_and_comment_permissions(): void
+    {
+        [$review, $mark] = $this->reviewWithMark();
+        [, $otherMark] = $this->reviewWithMark();
+        $attributes = ['author' => 'Owner', 'from_owner' => true, 'body' => 'Try a shorter title.'];
+        $comment = $mark->comments()->create($attributes);
+        $other = $otherMark->comments()->create($attributes);
+        $guest = Livewire::test('review-page', ['token' => $review->share_token]);
+
+        $guest->call('setCommentReaction', $other->id, 'like', true);
+        $guest->call('setCommentReaction', $comment->id, 'unknown', true);
+        $this->assertNull($other->fresh()->reactions);
+        $this->assertNull($comment->fresh()->reactions);
+
+        $review->update(['comments_enabled' => false]);
+        $guest->call('setCommentReaction', $comment->id, 'like', true);
+        $this->assertNull($comment->fresh()->reactions);
+
+        $review->update(['comments_enabled' => true, 'share_expires_at' => now()->subMinute()]);
+        $guest->call('setCommentReaction', $comment->id, 'like', true);
+        $this->assertNull($comment->fresh()->reactions);
+
+        $review->regenerateShareToken();
+        $guest->call('setCommentReaction', $comment->id, 'like', true)->assertStatus(404);
+        $this->assertNull($comment->fresh()->reactions);
+    }
+
     public function test_guest_comment_requires_a_name(): void
     {
         [$review, $mark] = $this->reviewWithMark();

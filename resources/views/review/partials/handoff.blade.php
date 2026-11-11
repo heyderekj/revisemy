@@ -1,64 +1,18 @@
-{{-- A review started on the site at /new: getting it to an agent. Three
-     steps that tick themselves off as the owner works, then the ways to send
-     it (x-handoff-actions). Asking for changes opens the same actions in a
-     dialog, since that's the moment to send it. Once an agent has opened the
-     link, one line names it. Web-only, like guest link management
-     (docs/CONNECTORS.md). --}}
+{{-- The handoff stays tucked away until the owner needs it. Asking for
+     changes also opens the same actions in a dialog. --}}
 @if ($mode === 'owner' && $review->origin === \App\Models\Review::ORIGIN_WEB)
     @if ($review->isAwaitingAgent())
         @php($markCount = $review->screenshots->flatMap->annotations->filter(fn ($mark) => in_array($mark->source ?: \App\Models\Annotation::SOURCE_HUMAN, [\App\Models\Annotation::SOURCE_HUMAN, \App\Models\Annotation::SOURCE_GUEST], true))->count())
-        @php($decided = $review->effectiveStatus())
-        @php($steps = [
-            [
-                'label' => 'Mark what matters',
-                'detail' => $markCount > 0 ? $markCount.' '.\Illuminate\Support\Str::plural('mark', $markCount) : 'Mark something on the page',
-                'done' => $markCount > 0,
-            ],
-            [
-                'label' => $decided === \App\Models\Review::STATUS_APPROVED ? 'Approved' : 'Ask for changes',
-                'detail' => in_array($decided, [\App\Models\Review::STATUS_CHANGES_REQUESTED, \App\Models\Review::STATUS_APPROVED], true) ? null : 'Or approve it as it is',
-                'done' => in_array($decided, [\App\Models\Review::STATUS_CHANGES_REQUESTED, \App\Models\Review::STATUS_APPROVED], true),
-            ],
-            [
-                'label' => 'Send it to your agent',
-                'detail' => 'The first agent to open the link keeps the review',
-                'done' => false,
-            ],
-        ])
-        @php($current = collect($steps)->search(fn ($step) => ! $step['done']))
 
-        <section class="rounded-2xl bg-card px-3 py-3 sm:px-4 sm:py-4" data-panel="handoff" data-handoff="waiting">
-            <flux:heading size="sm">Hand this to your agent</flux:heading>
-
-            <ol class="mt-3 space-y-2">
-                @foreach ($steps as $i => $step)
-                    <li class="flex gap-2.5">
-                        <span @class([
-                            'mt-px flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums',
-                            'bg-done-soft text-done-ink' => $step['done'],
-                            'bg-zinc-900 text-white night:bg-white night:text-zinc-900' => ! $step['done'] && $i === $current,
-                            'bg-chip text-zinc-500' => ! $step['done'] && $i !== $current,
-                        ]) aria-hidden="true">
-                            @if ($step['done'])
-                                <flux:icon.check variant="micro" class="size-3.5" />
-                            @else
-                                {{ $i + 1 }}
-                            @endif
-                        </span>
-                        <div class="min-w-0">
-                            <p @class(['text-sm', 'text-zinc-500' => $step['done'], 'font-medium text-zinc-900' => ! $step['done']])>
-                                {{ $step['label'] }}<span class="sr-only">{{ $step['done'] ? ', done' : '' }}</span>
-                            </p>
-                            @if ($step['detail'])
-                                <p class="text-xs text-muted-foreground">{{ $step['detail'] }}</p>
-                            @endif
-                        </div>
-                    </li>
-                @endforeach
-            </ol>
-
-            <x-handoff-actions :review="$review" class="mt-3.5" />
-        </section>
+        <details class="group rounded-xl bg-well px-3" data-panel="handoff" data-handoff="waiting">
+            <summary class="flex cursor-pointer list-none items-center gap-2 py-3 text-sm font-medium text-zinc-900 [&::-webkit-details-marker]:hidden">
+                <flux:icon.paper-airplane variant="micro" class="size-4 text-muted-foreground" />
+                <span class="flex-1">Hand this to your agent</span>
+                <flux:icon.chevron-down variant="micro" class="size-4 text-muted-foreground group-open:rotate-180" />
+            </summary>
+            <p class="text-xs text-muted-foreground">The first agent to open this link gets the review and its marks.</p>
+            <x-handoff-actions :review="$review" class="mt-3 pb-3" />
+        </details>
 
         {{-- Right after Ask for changes: send it while it's on your mind. --}}
         <template x-teleport="body">

@@ -2,11 +2,14 @@
 
 namespace App\Services\Capture;
 
+use App\Models\Review;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class PageCaptureService
 {
+    public const MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024;
+
     public function enabled(): bool
     {
         return $this->driver()?->enabled() ?? false;
@@ -23,21 +26,23 @@ class PageCaptureService
      *
      * @return array{shots: list<array{binary: string, meta: array<string, mixed>, elements?: array<string, mixed>|null, html?: string|null}>, dom: string|null}
      */
-    public function capturePage(string $url): array
+    public function capturePage(string $url, ?Review $parent = null): array
     {
-        $shots = $this->requireDriver()->captureUrl($url, $this->viewports());
+        $viewports = $this->viewports();
+        if ($parent && ! $parent->isExpired() && $parent->page_url === $url) {
+            $profiles = $parent->screenshots->pluck('meta.capture_profile')->filter()->values()->all();
+            $viewports = $profiles ?: $viewports;
+        }
+        $shots = $this->requireDriver()->captureUrl($url, $viewports);
 
         $dom = null;
-        foreach ($shots as $index => $shot) {
-            $dom ??= $shot['html'] ?? null;
-            unset($shots[$index]['html']);
-        }
+        $attempted = collect($shots)->contains(fn (array $shot) => array_key_exists('html', $shot));
+        if (! $attempted && $shots !== []) {
+            $fallback = $this->captureDom($url);
 
-        if ($dom === null) {
-            $dom = $this->captureDom($url);
-
-            if ($dom !== null) {
-                [$dom, $elements] = self::extractEmbeddedElements($dom);
+            if ($fallback !== null) {
+                [$shots[0]['html'], $elements] = self::extractEmbeddedElements($fallback);
+                $shots[0]['meta']['preview_source'] = 'separate_load';
 
                 if ($elements !== null && $shots !== [] && empty($shots[0]['elements'])) {
                     $shots[0]['elements'] = $elements;
@@ -45,6 +50,22 @@ class PageCaptureService
                 }
             }
         }
+
+        foreach ($shots as &$shot) {
+            $html = $shot['html'] ?? null;
+            $usable = is_string($html) && trim($html) !== '' && strlen($html) <= self::MAX_SNAPSHOT_BYTES;
+            if ($usable) {
+                $dom ??= $html;
+            }
+
+            if ($usable && ($shot['meta']['origin'] ?? null) !== 'capture_failed') {
+                $shot['meta']['preview_source'] ??= 'same_load';
+            } else {
+                $shot['meta']['preview_source'] = 'unavailable';
+                unset($shot['html']);
+            }
+        }
+        unset($shot);
 
         if ($dom !== null) {
             // The settle script's own style tags are capture plumbing, not page.
@@ -136,14 +157,14 @@ class PageCaptureService
 
             $mobile = (bool) ($viewport['mobile'] ?? false);
 
-            $viewports[] = [
+            $viewports[] = CaptureProfile::viewport([
                 'width' => $width,
                 'height' => $height,
                 'label' => $label.'-'.$width,
-                'dpr' => isset($viewport['dpr']) ? max(1, (int) $viewport['dpr']) : null,
+                'dpr' => isset($viewport['dpr']) ? max(1, (int) $viewport['dpr']) : max(1, (int) config('revisemy.capture.url_device_scale_factor', 1)),
                 'mobile' => $mobile,
                 'device' => (string) ($viewport['device'] ?? ($mobile ? 'phone' : 'desktop')),
-            ];
+            ]);
         }
 
         return $viewports;

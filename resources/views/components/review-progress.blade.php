@@ -76,9 +76,12 @@
                                 <template x-if="row.state === 'waiting'">
                                     <span class="size-2 rounded-full ring-1 ring-zinc-300"></span>
                                 </template>
+                                <template x-if="row.state === 'failed'">
+                                    <flux:icon.exclamation-circle variant="micro" class="size-4 text-problem-ink" />
+                                </template>
                             </span>
                             <span x-text="row.label" :class="row.state === 'waiting' ? 'text-zinc-400' : 'text-zinc-800'"></span>
-                            <span class="sr-only" x-text="row.state === 'done' ? 'done' : (row.state === 'working' ? 'in progress' : 'waiting')"></span>
+                            <span class="sr-only" x-text="({done: 'done', working: 'in progress', waiting: 'waiting', failed: 'capture failed'})[row.state]"></span>
                         </li>
                     </template>
                 </ol>
@@ -247,13 +250,14 @@
                         return true;
                     }
 
-                    const row = this.rows.find((r) => r.key === event.step);
+                    const failed = event.step?.startsWith('failed:');
+                    const row = this.rows.find((r) => r.key === (failed ? event.step.slice(7) : event.step));
                     if (event.step === 'save') {
                         // Whatever hadn't reported has landed by now.
-                        this.rows.forEach((r) => { if (r.key !== 'save') r.state = 'done'; });
+                        this.rows.forEach((r) => { if (r.key !== 'save' && r.state !== 'failed') r.state = 'done'; });
                     }
                     if (row) {
-                        row.state = event.step === 'save' || event.step === 'render' ? 'working' : 'done';
+                        row.state = failed ? 'failed' : (event.step === 'save' || event.step === 'render' ? 'working' : 'done');
                     }
                     return false;
                 },

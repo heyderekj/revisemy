@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broken assets</title>
+<style>
+    @font-face { font-family: FixtureFont; src: url("data:font/woff2,broken"); }
+    h1 { font-family: FixtureFont, sans-serif; }
+    div { width: 200px; height: 80px; background-image: url("missing-background.png"); }
+    @media (min-width: 700px) { img { display: none; } }
+</style>
+<h1>Unavailable resources</h1>
+<img id="broken" src="data:image/png,broken" alt="Product image" width="240" height="160">
+<div>Background asset</div>
+</html>

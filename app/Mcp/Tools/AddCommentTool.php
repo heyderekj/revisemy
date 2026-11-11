@@ -8,6 +8,7 @@ use App\Models\Annotation;
 use App\Models\AnnotationComment;
 use App\Services\MarkLifecycleService;
 use App\Services\ReviewService;
+use App\Support\ElementTarget;
 use App\Support\FeedbackText;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -54,6 +55,8 @@ class AddCommentTool extends Tool
             'review_id' => 'required|string',
             'mark_id' => 'required|integer',
             'body' => FeedbackText::bodyRules(),
+            'element_references' => 'sometimes|array|max:'.ElementTarget::MAX_REFERENCES,
+            'element_references.*' => 'regex:/^\d+(?::[A-Za-z ]{1,24})?$/D',
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['review_id']);
@@ -81,7 +84,12 @@ class AddCommentTool extends Tool
             return Response::error('Write something to send.');
         }
 
-        $this->lifecycle->addComment($mark, AnnotationComment::AUTHOR_OWNER, $body);
+        $this->lifecycle->addComment(
+            $mark,
+            AnnotationComment::AUTHOR_OWNER,
+            $body,
+            elementReferences: ElementTarget::references($mark->screenshot, $data['element_references'] ?? []),
+        );
 
         return Response::structured($review->refresh()->toAgentPayload());
     }
@@ -94,6 +102,7 @@ class AddCommentTool extends Tool
         return [
             'review_id' => $schema->string()->description('The review public id')->required(),
             'mark_id' => $schema->integer()->description('The mark (annotation) id')->required(),
+            'element_references' => $schema->array()->items($schema->string())->description('Captured Inspect references in index:property format'),
             'body' => $schema->string()->description('The owner\'s comment')->required(),
         ];
     }

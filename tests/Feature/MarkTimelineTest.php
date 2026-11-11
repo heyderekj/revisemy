@@ -260,6 +260,7 @@ class MarkTimelineTest extends TestCase
         $lifecycle->replyAsAgent($review, [['id' => $mark->id, 'body' => 'Agent answer.']]);
 
         Livewire::test('review-page', ['token' => $review->share_token])
+            ->call('openMark', $mark->id)
             ->assertSee('Agent answer.')
             ->assertSee('Agent')
             ->assertSee('Owner')

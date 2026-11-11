@@ -9,6 +9,7 @@
     'canonical' => null,
     'robots' => 'index, follow',
     'schema' => 'page',
+    'analytics' => true,
 ])
 
 <!DOCTYPE html>
@@ -45,7 +46,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    @if (config('seo.fathom_site_id'))
+    @if ($analytics && config('seo.fathom_site_id'))
         <!-- Fathom - beautiful, simple website analytics -->
         <script src="https://cdn.usefathom.com/script.js" data-site="{{ config('seo.fathom_site_id') }}" data-auto="false" defer></script>
         <script>

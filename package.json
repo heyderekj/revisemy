@@ -18,7 +18,10 @@
         "vite": "^8.0.0"
     },
     "dependencies": {
+        "@napi-rs/canvas": "0.1.100",
         "laravel-echo": "^2.3.7",
+        "pdf-lib": "1.17.1",
+        "pdfjs-dist": "5.7.284",
         "pusher-js": "^8.5.0"
     }
 }

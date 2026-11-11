@@ -6,15 +6,15 @@ use App\Support\ToolProgress;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Spatie\Browsershot\Browsershot;
+use Symfony\Component\Process\Process;
 
 /**
  * Optional self-host driver for installs that have Chrome available.
  * Requires `composer require spatie/browsershot` plus a local Chrome/Chromium;
  * guarded so the class never hard-depends on the package.
  *
- * Browsershot can't hand back pixels and page data from one call, so the
- * element map and DOM come from a second, identically emulated and settled
- * load of each viewport.
+ * URL capture uses Puppeteer directly so the screenshot, element map and
+ * load diagnostics all come from one browser page.
  */
 class BrowsershotCaptureDriver implements CaptureDriver
 {
@@ -25,46 +25,77 @@ class BrowsershotCaptureDriver implements CaptureDriver
 
     public function captureUrl(string $url, array $viewports): array
     {
-        $fullPage = (bool) config('revisemy.capture.url_full_page', true);
-        $sweep = $fullPage && CaptureSettleScript::enabled();
-        $hideConsent = (bool) config('revisemy.capture.hide_consent', true);
-        $hideChat = (bool) config('revisemy.capture.hide_chat', true);
-        $collect = (bool) config('revisemy.capture.collect_elements', true);
+        $shots = [];
+        foreach ($viewports as $viewport) {
+            $viewport = CaptureProfile::viewport($viewport);
+            $label = $viewport['label'];
+            $settings = $viewport['settings'];
+            $fullPage = $settings['full_page'];
+            $sweep = $fullPage && $settings['scroll_page'];
+            $collect = (bool) config('revisemy.capture.collect_elements', true);
+            $dpr = CaptureDevice::unmeasuredDpr($viewport);
+            $timeout = (int) config('revisemy.capture.timeout', 30);
+            $waitMs = (int) config('revisemy.capture.wait_ms', 1000);
+            $budget = CaptureSettleScript::budgetMs($sweep, $collect);
+            $meta = ['origin' => 'capture', 'page_url' => $url] + CaptureProfile::meta($viewport, 'browsershot', $dpr);
+            $started = microtime(true);
+            ToolProgress::report('Capturing '.ToolProgress::viewport($label));
 
-        // Browsershot can't measure the page before the shot, so wide
-        // viewports stay at 1×, as on the hosted /screenshot path.
-        $shots = $this->capture(
-            fn () => Browsershot::url($url),
-            array_map(fn (array $viewport) => ['dpr' => CaptureDevice::unmeasuredDpr($viewport)] + $viewport, $viewports),
-            ['origin' => 'capture', 'page_url' => $url],
-            fullPage: $fullPage,
-            sweep: $sweep,
-            hideConsent: $hideConsent,
-            hideChat: $hideChat,
-        );
-
-        if (! $collect) {
-            return $shots;
+            try {
+                $process = new Process(
+                    ['node', __DIR__.'/local-browser.cjs'],
+                    base_path(),
+                    ['NODE_PATH' => (string) config('revisemy.capture.node_modules')],
+                    json_encode([
+                        'url' => $url,
+                        'executablePath' => config('revisemy.capture.chrome_path'),
+                        'viewport' => [
+                            'width' => $viewport['width'],
+                            'height' => $viewport['height'],
+                            'deviceScaleFactor' => $dpr,
+                            'isMobile' => $viewport['mobile'],
+                            'hasTouch' => $viewport['mobile'],
+                        ],
+                        'userAgent' => $viewport['user_agent'],
+                        'goto' => ['waitUntil' => config('revisemy.capture.wait_until', 'networkidle2'), 'timeout' => $timeout * 1000],
+                        'waitMs' => $waitMs,
+                        'settle' => '('.CaptureSettleScript::functionBody(
+                            sweep: $sweep,
+                            hideConsent: $settings['hide_consent'],
+                            collectElements: $collect,
+                            hideChat: $settings['hide_chat'],
+                            settings: $settings,
+                        ).')()',
+                        'fullPage' => $fullPage,
+                        'maxHtml' => PageCaptureService::MAX_SNAPSHOT_BYTES,
+                    ], JSON_THROW_ON_ERROR),
+                    $timeout + (int) ceil(($waitMs + $budget) / 1000) + 15,
+                );
+                $process->mustRun();
+                $data = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+                $binary = base64_decode($data['image'], true);
+                if ($binary === false || ! @getimagesizefromstring($binary)) {
+                    throw new \RuntimeException('Chrome did not return an image.');
+                }
+                $elements = $data['elements'] ?? null;
+                $shots[] = [
+                    'binary' => $binary,
+                    'meta' => $meta + CaptureQuality::browserMeta($data) + [
+                        'capture_ms' => (int) round((microtime(true) - $started) * 1000),
+                        'timings' => $data['timings'] ?? [],
+                    ] + (is_array($elements) ? ['elements_source' => 'same_load'] : []),
+                    'elements' => $elements,
+                    'html' => $data['html'] ?? null,
+                    'snapshot_base' => $data['snapshotBase'] ?? null,
+                ];
+                ToolProgress::report('Captured '.ToolProgress::viewport($label), 'shot:'.$label);
+            } catch (\Exception $e) {
+                Log::warning('Local URL capture failed', ['viewport' => $label, 'error' => $e->getMessage()]);
+                $shots[] = CaptureQuality::failedShot($meta, "[capture_provider_failed] Local Chrome could not capture {$label}.");
+            }
         }
 
-        foreach ($viewports as $index => $viewport) {
-            $page = $this->pageData($url, $viewport, $sweep, $hideConsent, $hideChat);
-
-            if ($page === null) {
-                continue;
-            }
-
-            if (is_array($page['elements'] ?? null)) {
-                $shots[$index]['elements'] = $page['elements'];
-                $shots[$index]['meta']['elements_source'] = 'separate_load';
-            }
-
-            if ($index === 0 && is_string($page['html'] ?? null)) {
-                $shots[$index]['html'] = $page['html'];
-            }
-        }
-
-        return $shots;
+        return CaptureQuality::requireSuccessfulShot($shots);
     }
 
     public function captureHtml(string $html, array $viewports): array
@@ -93,29 +124,6 @@ class BrowsershotCaptureDriver implements CaptureDriver
             return $shot->bodyHtml();
         } catch (\Throwable $e) {
             Log::warning('Browsershot DOM capture failed', ['url' => $url, 'error' => $e->getMessage()]);
-
-            return null;
-        }
-    }
-
-    /**
-     * Element map + DOM from a settled load of one viewport. Best-effort.
-     *
-     * @param  array{width: int, height: int, label: string, dpr: int|null, mobile: bool, device?: string}  $viewport
-     * @return array{elements: array<string, mixed>|null, html: string|null}|null
-     */
-    protected function pageData(string $url, array $viewport, bool $sweep, bool $hideConsent, bool $hideChat = false): ?array
-    {
-        try {
-            $shot = $this->configure(Browsershot::url($url), $sweep, $hideConsent, collectElements: true, hideChat: $hideChat);
-            $this->emulate($shot, $viewport, 1);
-
-            $json = $shot->evaluate('JSON.stringify({ elements: window.__rmElements || null, html: document.documentElement.outerHTML })');
-            $data = json_decode($json, true);
-
-            return is_array($data) ? $data : null;
-        } catch (\Throwable $e) {
-            Log::warning('Browsershot element map failed', ['url' => $url, 'viewport' => $viewport['label'], 'error' => $e->getMessage()]);
 
             return null;
         }

@@ -42,7 +42,7 @@ class RequestSecondOpinionTool extends Tool
 
         $data = $request->validate([
             'id' => 'required|string',
-            'screenshot_index' => 'nullable|integer|min:0|max:4',
+            'screenshot_index' => 'nullable|integer|min:0',
         ]);
 
         $review = $this->reviews->findForWorkspace($workspace, $data['id']);

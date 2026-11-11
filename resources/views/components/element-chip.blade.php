@@ -1,10 +1,13 @@
 {{-- The element a mark is on, as the page named it: its kind and its words.
-     Colours live in Annotation::ELEMENT_CHIP; the inline review draws the
+     Colors live in Annotation::ELEMENT_CHIP; the inline review draws the
      same chip in mcp/partials/element-chip. --}}
-@props(['target'])
+@props(['target', 'quiet' => false])
 @php($words = (string) (($target['label'] ?? '') !== '' ? $target['label'] : ($target['text'] ?? '')))
 <span
-    {{ $attributes->class(['inline-flex min-w-0 max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] leading-4', \App\Models\Annotation::ELEMENT_CHIP]) }}
+    {{ $attributes->class(['inline-flex min-w-0 max-w-full items-center gap-1 text-[11px] leading-4',
+        'rounded-md px-1.5 py-0.5' => ! $quiet,
+        \App\Models\Annotation::ELEMENT_CHIP => ! $quiet,
+        'text-muted-foreground' => $quiet]) }}
     title="{{ $target['selector'] ?? '' }}"
     data-element-chip
 >

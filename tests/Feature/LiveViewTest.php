@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Review;
+use App\Models\Screenshot;
 use App\Services\TryTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -124,5 +126,72 @@ class LiveViewTest extends TestCase
         $this->assertEqualsWithDelta(0.6, $page->get('pendingX'), 0.001);
         $this->assertEqualsWithDelta(0.55, $page->get('pendingY'), 0.001);
         $this->assertSame('', $page->get('draftSuggestedCopy'));
+    }
+
+    public function test_each_captured_viewport_gets_its_own_preview_and_marks_only_known_elements(): void
+    {
+        config([
+            'revisemy.capture.driver' => 'hosted',
+            'revisemy.capture.endpoint' => 'https://capture.test/screenshot',
+        ]);
+        $png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+        Http::fake(function ($request) use ($png) {
+            $viewport = $request->data()['context']['viewport'];
+            $width = $viewport['width'];
+            $height = $viewport['height'];
+
+            return Http::response([
+                'image' => $png,
+                'stable' => true,
+                'loaded' => true,
+                'html' => "<!doctype html><h1 id=\"headline\">View {$width}</h1><style data-rm-capture>h1{color:red}</style>",
+                'snapshotBase' => 'https://example.com/redirected/',
+                'css' => compact('width', 'height'),
+                'elements' => [
+                    'docWidth' => $width,
+                    'docHeight' => $height,
+                    'elements' => [
+                        ['selector' => '#headline', 'tag' => 'h1', 'kind' => 'Heading', 'text' => "View {$width}", 'box' => ['x' => 10, 'y' => 10, 'w' => 80, 'h' => 24]],
+                    ],
+                ],
+            ]);
+        });
+
+        $try = app(TryTokenService::class)->create();
+        $this->withToken($try['token'])->postJson('/api/reviews', [
+            'title' => 'Responsive site',
+            'page_url' => 'https://example.com',
+            'capture_url' => true,
+        ])->assertCreated();
+        $review = Review::query()->sole();
+        $this->assertStringNotContainsString('data-rm-capture', $review->domHtml());
+
+        foreach ($review->screenshots as $shot) {
+            $this->get(route('reviews.screenshot.live', [$review->token, $shot]))->assertOk()
+                ->assertSee('View '.$shot->meta['css_width'])
+                ->assertSee('data-rm-capture', false)
+                ->assertSee('<base href="https://example.com/redirected/">', false);
+            $this->assertArrayNotHasKey('preview_path', $shot->agentMeta());
+        }
+
+        $phone = $review->screenshots[1];
+        Livewire::test('review-page', ['token' => $review->token])
+            ->call('selectScreenshot', 1)
+            ->call('markLiveElement', '#unknown', ['x' => 60, 'y' => 20, 'w' => 40, 'h' => 15], null, $phone->id)
+            ->assertSet('pendingX', null)
+            ->call('markLiveElement', '#headline', [], null, $phone->id)
+            ->assertSet('pendingTarget.text', 'View 375');
+    }
+
+    public function test_an_old_shared_snapshot_is_never_used_as_a_phone_preview(): void
+    {
+        $review = $this->review();
+        $phone = $review->screenshots()->create([
+            'path' => 'unused.png', 'disk' => 'public', 'sort_order' => 1,
+            'kind' => Screenshot::KIND_SOURCE,
+            'meta' => ['viewport' => 'mobile-375'],
+        ]);
+
+        $this->get(route('reviews.screenshot.live', [$review->token, $phone]))->assertNotFound();
     }
 }

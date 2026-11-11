@@ -43,7 +43,7 @@ class AddFindingsTool extends Tool
             'findings' => 'required|array|min:1|max:20',
             'findings.*.body' => 'required|string|max:2000',
             'findings.*.severity' => 'nullable|string|in:suggestion,a11y,polish',
-            'findings.*.screenshot_index' => 'nullable|integer|min:0|max:4',
+            'findings.*.screenshot_index' => 'nullable|integer|min:0',
             'findings.*.related_pin' => 'nullable|integer|min:1',
             'findings.*.area' => 'nullable|array',
             'findings.*.area.x' => 'nullable|numeric',

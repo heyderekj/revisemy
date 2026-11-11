@@ -147,7 +147,8 @@ class ElementMarksTest extends TestCase
             ->assertSet('pendingTarget.selector', '#buy')
             ->assertSet('pendingTarget.via', 'picked')
             ->assertSet('pendingParent', 0)
-            ->assertSee('Leave a note on this button');
+            ->assertSee('Leave a note')
+            ->assertSee('Use area');
 
         // Wider: the hero around it.
         $page->call('widenPendingElement')
@@ -297,7 +298,7 @@ class ElementMarksTest extends TestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->where('target.kind', 'Button')
                 ->where('target.parent', 0)
-                ->where('target.rows.0', ['label' => 'Size', 'value' => '200 × 60'])
+                ->where('target.rows.0', ['label' => 'Size', 'value' => '200 × 60 px'])
                 ->etc());
 
         ReviseMyServer::actingAs($user)->tool(GetShotElementsTool::class, ['review_id' => $review->public_id, 'screenshot_id' => $shot->id, 'area' => ['x' => 96 / 1200, 'y' => 196 / 800, 'w' => 208 / 1200, 'h' => 68 / 800]])

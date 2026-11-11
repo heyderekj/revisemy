@@ -20,6 +20,7 @@
     // Opened on its own there's no review to hear a pick, so the bar says so
     // instead of quietly closing.
     const framed = parent !== window;
+    const readOnly = document.documentElement.hasAttribute('data-rm-preview-readonly');
 
     const isStableId = (id) => id.length > 0 && id.length < 64 && !/\d{4,}|^[a-f0-9-]{16,}$|^(ember|react|radix|headlessui|:r)/i.test(id);
     const unique = (selector, el) => {
@@ -309,7 +310,7 @@
 
     document.addEventListener('mousemove', (e) => {
         const target = targetAt(e);
-        if (editing || ours(e.target) || !pickable(target)) {
+        if (readOnly || editing || ours(e.target) || !pickable(target)) {
             hoverBox.hidden = true;
             return;
         }
@@ -322,6 +323,7 @@
         if (editing && editing.el.contains(e.target)) return;
         e.preventDefault();
         e.stopPropagation();
+        if (readOnly) return;
         if (editing) finishEdit();
         const target = targetAt(e);
         if (!pickable(target)) return clear();

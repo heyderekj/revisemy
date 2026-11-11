@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Review;
-use App\Services\DocumentIngestionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -163,7 +162,7 @@ class CaptureIngestionTest extends TestCase
                 && ($context['viewport']['isMobile'] ?? null) === true
                 && ($context['viewport']['hasTouch'] ?? null) === true
                 && str_contains((string) ($context['userAgent'] ?? ''), 'iPhone')
-                && ($context['withHtml'] ?? null) === false;
+                && ($context['withHtml'] ?? null) === true;
         });
 
         // The tablet renders as an iPad at 2×, not a stretched phone.
@@ -172,6 +171,7 @@ class CaptureIngestionTest extends TestCase
 
             return ($context['viewport']['width'] ?? null) === 768
                 && ($context['viewport']['deviceScaleFactor'] ?? null) === 2
+                && ($context['withHtml'] ?? null) === true
                 && str_contains((string) ($context['userAgent'] ?? ''), 'iPad');
         });
 
@@ -538,7 +538,7 @@ class CaptureIngestionTest extends TestCase
         ])->assertCreated()->assertJsonPath('type', 'ui');
     }
 
-    public function test_pdf_ingestion_renders_pages_or_reports_missing_imagick(): void
+    public function test_pdf_ingestion_registers_document_pages(): void
     {
         $token = $this->setUpEnv();
 
@@ -550,23 +550,6 @@ class CaptureIngestionTest extends TestCase
             'title' => 'Deck',
             'pdf' => $pdf,
         ]);
-
-        // Not every host can rasterise a PDF: the extension may be missing, or
-        // present with the PDF coder revoked by ImageMagick policy (the
-        // Debian/Ubuntu default, and what CI runners ship). Branch on what
-        // actually happened rather than predicting the environment — the
-        // contract is that an unsupported host says so actionably.
-        if (! DocumentIngestionService::supportsPdf() || $response->status() === 422) {
-            $response->assertUnprocessable();
-            $message = (string) collect($response->json('errors'))->flatten()->first();
-
-            $this->assertTrue(
-                str_contains($message, 'Imagick') || str_contains($message, 'policy'),
-                "PDF failure should name Imagick or the policy, got: {$message}"
-            );
-
-            return;
-        }
 
         $response->assertCreated();
         $this->assertSame('presentation', $response->json('type'));
@@ -683,6 +666,8 @@ class CaptureIngestionTest extends TestCase
         $desktop = $review->screenshots()->orderBy('sort_order')->firstOrFail();
         $this->assertSame('separate_load', $desktop->meta['elements_source']);
         $this->assertSame('h1', $desktop->elementMap()['elements'][0]['selector']);
+        $this->assertNull($desktop->elementsUrl(), 'A map from another page load cannot drive pixel-aligned marks.');
+        $this->assertNull($desktop->pickList());
 
         Http::assertSent(function ($request) {
             $fn = (string) ($request->data()['waitForFunction']['fn'] ?? '');

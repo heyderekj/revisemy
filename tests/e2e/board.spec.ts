@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { path, seedReview } from './support/app';
+import { mcp, path, seedReview } from './support/app';
 
 test('what the agent resolved waits on the board until a person verifies it', async ({ page }) => {
     const { review, api } = await seedReview('Board pass');
@@ -14,7 +14,8 @@ test('what the agent resolved waits on the board until a person verifies it', as
     await note.getByPlaceholder(/Be specific/).fill('Button label is vague.');
     await note.getByRole('button', { name: 'Save mark' }).click();
     await expect(note).toBeHidden();
-    await page.getByRole('button', { name: 'Changes' }).first().click();
+    await page.getByRole('button', { name: 'More review actions' }).click();
+    await page.getByRole('menuitem', { name: 'Request changes' }).click();
     await page.getByRole('button', { name: 'Send now' }).click();
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('changes_requested');
 
@@ -47,7 +48,8 @@ test('a mark moves on the board without dragging', async ({ page }) => {
     await note.getByPlaceholder(/Be specific/).fill('Logo is blurry.');
     await note.getByPlaceholder(/Be specific/).press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
     await expect(note).toBeHidden();
-    await page.getByRole('button', { name: 'Changes' }).first().click();
+    await page.getByRole('button', { name: 'More review actions' }).click();
+    await page.getByRole('menuitem', { name: 'Request changes' }).click();
     await page.getByRole('button', { name: 'Send now' }).click();
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).status).toBe('changes_requested');
 
@@ -60,3 +62,74 @@ test('a mark moves on the board without dragging', async ({ page }) => {
     await expect.poll(async () => (await (await api.get(`/api/reviews/${review.id}`)).json()).loop.verified_count).toBe(1);
 });
 
+
+
+test('review fixes compares evidence and advances after each decision', async ({ page }) => {
+    const { review, api } = await seedReview('Review fixes');
+    const snapshot = await (await api.get(`/api/reviews/${review.id}`)).json();
+    const shot = snapshot.screenshots[0];
+    for (const [index, body] of ['Tighten the heading.', 'Fix the contrast.'].entries()) {
+        await mcp(api, 'tools/call', {
+            name: 'add_mark',
+            arguments: { review_id: review.id, screenshot_id: shot.id, x: 0.3, y: 0.3 + index * 0.3, severity: 'must-fix', body },
+        });
+    }
+    await mcp(api, 'tools/call', {
+        name: 'decide_review',
+        arguments: { review_id: review.id, decision: 'changes_requested' },
+    });
+    const marked = await (await api.get(`/api/reviews/${review.id}`)).json();
+    const [first, second] = marked.work_packets.pins;
+    const afterImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
+    const resolved = await api.post(`/api/reviews/${review.id}/marks/resolve`, {
+        data: { marks: [{ id: first.id, after_image: afterImage }, { id: second.id }] },
+    });
+    expect(resolved.ok(), await resolved.text()).toBeTruthy();
+
+    await page.goto(path(review.board_url));
+    const reviewFixes = page.getByRole('button', { name: 'Review 2 fixes' });
+    const progress = page.getByRole('progressbar', { name: 'Marks verified' });
+    await expect(reviewFixes).toBeVisible();
+    const actionBounds = (await reviewFixes.boundingBox())!;
+    const progressBounds = (await progress.boundingBox())!;
+    expect(actionBounds.x).toBeGreaterThan(progressBounds.x + progressBounds.width);
+    expect(Math.abs(actionBounds.y + actionBounds.height / 2 - progressBounds.y - progressBounds.height / 2)).toBeLessThan(2);
+    await reviewFixes.click();
+    const sheet = page.getByRole('dialog');
+    await expect(sheet.getByText('Tighten the heading.', { exact: true })).toBeVisible();
+    const backdrop = await sheet.evaluate((dialog) => {
+        const style = getComputedStyle(dialog, '::backdrop');
+        return { color: style.backgroundColor, transition: style.transitionProperty };
+    });
+    expect(backdrop.color).toBe('rgba(0, 0, 0, 0.58)');
+    expect(backdrop.transition).toContain('opacity');
+
+    const bounds = (await sheet.boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(bounds.width).toBeGreaterThan(viewport.width * 0.7);
+    expect(bounds.x).toBeGreaterThan(0);
+    expect(Math.abs(bounds.x + bounds.width / 2 - viewport.width / 2)).toBeLessThan(3);
+    expect(Math.abs(bounds.y + bounds.height / 2 - viewport.height / 2)).toBeLessThan(3);
+
+    const comparison = sheet.getByRole('group', { name: 'Compare the fix' });
+    const before = sheet.getByRole('img', { name: 'Before — marked area' });
+    const after = sheet.getByRole('img', { name: 'After — submitted screenshot of the fix' });
+    await expect(after).toBeVisible();
+    await expect(before).toBeHidden();
+    await comparison.getByRole('button', { name: 'Before', exact: true }).click();
+    await expect(before).toBeVisible();
+    await expect(after).toBeHidden();
+    await comparison.getByRole('button', { name: 'Side by side' }).click();
+    await expect(before).toBeVisible();
+    await expect(after).toBeVisible();
+
+    await sheet.getByRole('button', { name: 'Verify & next' }).click();
+    await expect(sheet.getByText('Fix the contrast.', { exact: true })).toBeVisible();
+    await expect(sheet.getByText('1 fix left to review')).toBeVisible();
+    await sheet.getByRole('button', { name: 'Reopen & next' }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByText('All ready fixes reviewed.')).toBeVisible();
+
+    const checked = await (await api.get(`/api/reviews/${review.id}`)).json();
+    expect(checked.work_packets.pins.map((pin: { status: string }) => pin.status)).toEqual(['verified', 'open']);
+});
