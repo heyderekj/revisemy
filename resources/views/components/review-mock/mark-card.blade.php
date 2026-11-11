@@ -15,9 +15,15 @@
         <span class="flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold {{ (new Annotation)->markerClass() }}">M{{ $number }}</span>
         <span class="text-xs text-muted-foreground">{{ Annotation::severityLabels()[$mark['severity']] }}</span>
         <x-signal-tag :tone="$tone">{{ Annotation::statusLabels()[$mark['status']] }}</x-signal-tag>
+        @if ($mark['guest'] ?? false)
+            <x-signal-tag tone="neutral">Guest</x-signal-tag>
+        @endif
     </div>
 
     <p class="text-sm leading-relaxed text-zinc-700">{{ $mark['note'] }}</p>
+    @isset($mark['element'])
+        <p class="mt-1.5 font-mono text-[11px] text-muted-foreground">{{ $mark['element'] }}</p>
+    @endisset
 
     {{-- Only the controls that say something about this mark's state. --}}
     @if ($verify || $reopen || $answer)

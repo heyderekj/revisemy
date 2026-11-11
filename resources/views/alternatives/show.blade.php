@@ -5,7 +5,7 @@
                 <a href="{{ $page['competitor_url'] }}" class="link text-sm" @if (str_starts_with($page['competitor_url'], 'http')) target="_blank" rel="noreferrer" @endif>Visit {{ $page['competitor'] }} ↗</a>
             </x-slot:actions>
         @endif
-        <x-alternative-compare :page="$page" class="mt-10 sm:mt-12 lg:-mx-32" />
+        <x-alternative-compare :page="$page" class="mt-10 sm:mt-12" />
     </x-marketing-hero>
 
     <x-list-section :heading="'Why people look for a '.$page['competitor'].' alternative'" :items="$page['why_look']" />

@@ -1,43 +1,47 @@
-{{-- The home hero: a fictional review and the exchange that opened it.
-     The agent's mark uses the headline's rm-agent-cycle classes, so it
-     changes in step with "with ChatGPT / Claude / …" above. --}}
-@props([
-    // Name => x-host-icon name, in the headline's order. Only the icons show.
-    'agents' => ['Claude' => 'claude'],
-])
-
-<section class="rm-hero-loop relative" aria-label="Preview of ReviseMy: your agent sends a review, you mark it">
-    <x-review-mock sample="website" animate />
-    <div class="mx-auto mt-5 flex max-w-2xl flex-col gap-3" aria-hidden="true">
-        {{-- You --}}
-        <div class="rm-hero-loop-bubble max-w-[85%] self-end rounded-2xl rounded-br-md bg-zinc-900 px-3.5 py-2 text-sm leading-relaxed text-zinc-50 sm:max-w-md">
-            Check the new home page before we ship.
+{{-- The home hero: a fictional review and its video tour. --}}
+<section
+    class="rm-hero-loop relative"
+    aria-label="Fieldnote review preview"
+    x-data="{
+        view: 'review',
+        get nextView() { return this.view === 'review' ? 'board' : 'review' },
+        select(view, focus = false) {
+            this.view = view;
+            if (focus) this.$refs[view].focus();
+        },
+    }"
+>
+    <div class="relative">
+        <div
+            role="tablist"
+            aria-label="Fieldnote preview views"
+            class="absolute top-3 left-3 z-20 inline-flex gap-0.5 rounded-full bg-chip p-1 shadow-xs ring-1 ring-border sm:top-4 sm:left-5"
+            x-cloak
+            x-on:keydown.left.prevent="select(nextView, true)"
+            x-on:keydown.right.prevent="select(nextView, true)"
+            x-on:keydown.home.prevent="select('review', true)"
+            x-on:keydown.end.prevent="select('board', true)"
+        >
+            @foreach (['review' => 'Review', 'board' => 'Board'] as $key => $label)
+                <button
+                    type="button"
+                    role="tab"
+                    id="rm-preview-tab-{{ $key }}"
+                    aria-controls="rm-preview-panel-{{ $key }}"
+                    x-ref="{{ $key }}"
+                    x-on:click="select('{{ $key }}')"
+                    x-bind:aria-selected="(view === '{{ $key }}').toString()"
+                    x-bind:tabindex="view === '{{ $key }}' ? 0 : -1"
+                    class="min-h-7 rounded-full px-3 text-xs font-medium text-zinc-600 hover:text-zinc-900 aria-selected:bg-raised aria-selected:text-zinc-900 aria-selected:shadow-xs"
+                >{{ $label }}</button>
+            @endforeach
         </div>
-
-        {{-- Your agent --}}
-        <div class="rm-hero-loop-bubble rm-hero-loop-bubble-delay flex max-w-[95%] gap-3 self-start sm:max-w-lg">
-            <span class="rm-agent-cycle mt-0.5 size-7 shrink-0 place-items-center rounded-full bg-raised text-zinc-800 shadow-xs ring-1 ring-black/[0.06]">
-                @foreach (array_values($agents) as $i => $icon)
-                    <span class="rm-agent-cycle-item" style="--i: {{ $i }}"><x-host-icon :name="$icon" size="md" /></span>
-                @endforeach
-            </span>
-            <div class="min-w-0 space-y-2">
-                <p class="inline-flex items-center gap-1.5 rounded-md bg-raised/80 px-2 py-1 font-mono text-[11px] text-zinc-500 ring-1 ring-black/[0.05]">
-                    <flux:icon.check variant="micro" class="size-3.5 text-done" />
-                    revisemy · create_review
-                </p>
-                <p class="text-sm leading-relaxed text-zinc-800">Captured fieldnote.coffee on desktop and mobile and opened a review. Mark what matters, and I’ll pick it up from there.</p>
-                <div class="flex items-center gap-3 rounded-xl bg-raised p-2.5 pr-3 shadow-xs ring-1 ring-black/[0.06]">
-                    <x-revisemy-logo size="sm" />
-                    <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-medium text-zinc-900">Fieldnote Coffee home page</p>
-                        <p class="text-xs text-zinc-500">Review · Pass 1<span class="hidden sm:inline"> · waiting on you</span></p>
-                    </div>
-                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-key px-2.5 py-1 text-xs font-medium text-accent-foreground">
-                        Open <flux:icon.arrow-up-right variant="micro" class="size-3.5" />
-                    </span>
-                </div>
-            </div>
+        <div role="tabpanel" id="rm-preview-panel-review" aria-labelledby="rm-preview-tab-review" tabindex="0" x-show="view === 'review'">
+            <x-review-mock id="rm-fieldnote-preview" sample="website" demo class="!pt-11 pb-8 sm:!pt-12" />
         </div>
+        <div role="tabpanel" id="rm-preview-panel-board" aria-labelledby="rm-preview-tab-board" tabindex="0" x-show="view === 'board'" x-cloak>
+            <x-review-mock sample="website" demo board class="!pt-11 pb-8 sm:!pt-12" />
+        </div>
+        <x-pitch-video class="absolute bottom-2 left-3 z-20 rounded-full shadow-xs ring-1 ring-border sm:bottom-3 sm:left-5" />
     </div>
 </section>

@@ -347,6 +347,70 @@ return [
             ],
         ],
 
+        'precise-marks' => [
+            'slug' => 'precise-marks',
+            'path' => '/precise-marks',
+            'label' => 'Precise marks',
+            'icon' => 'cursor-arrow-rays',
+            'mark_icon' => 'm',
+            'title' => 'Mark and inspect page elements with ReviseMy',
+            'description' => 'Pin a spot, draw a region, or mark a whole element and send its captured styles to your agent.',
+            'keywords' => ['design annotation', 'element inspection', 'design feedback'],
+            'headline' => 'Show your agent exactly what to change',
+            'subheadline' => 'Attach feedback to a spot, an area, or a captured element so your agent can find the right part of the page.',
+            'problem' => 'A note like “give the button more space” can leave your agent guessing which button you mean and what spacing it starts with.',
+            'loop_steps' => [
+                ['text' => 'Open a review and click a spot or drag around an area. When the capture includes an element map, you can select the whole button, heading, or card.'],
+                ['text' => 'Use Inspect to see captured values like font size, colour, and padding. Attach the relevant value to your mark or reply.'],
+                ['text' => 'Ask for changes. Your agent gets your note and, when available, the element’s selector, text, and styles.'],
+            ],
+            'faq' => [
+                ['q' => 'Can I mark a plain screenshot?', 'a' => 'Yes. Spot and area marks work on screenshots. Element selection and style inspection require a capture with a matching element map.'],
+            ],
+        ],
+
+        'live-page-review' => [
+            'slug' => 'live-page-review',
+            'path' => '/live-page-review',
+            'label' => 'Live page review',
+            'icon' => 'computer-desktop',
+            'title' => 'Review a captured web page in Live view — ReviseMy',
+            'description' => 'Switch from a screenshot to Live view and inspect or mark elements on a captured web page.',
+            'keywords' => ['live page review', 'website feedback', 'element markup'],
+            'headline' => 'Review the page in Live view',
+            'subheadline' => 'Open the captured page inside the review and place feedback directly on its elements.',
+            'problem' => 'A screenshot shows what the page looked like. Sometimes you also need to scroll through the captured layout and identify the exact part you want changed.',
+            'loop_steps' => [
+                ['text' => 'Start a review from a public page link and open a capture with Live available.'],
+                ['text' => 'Switch from Screenshot to Live, then select an element and leave a mark.'],
+                ['text' => 'Ask your agent for changes and use the next pass to check the result.'],
+            ],
+            'faq' => [
+                ['q' => 'Does Live run the original website?', 'a' => 'Live shows the captured page in the web review. The site’s scripts and form submissions are disabled, so workflows like sign-in and checkout belong in separate captured states.'],
+            ],
+        ],
+
+        'pdf-markup' => [
+            'slug' => 'pdf-markup',
+            'path' => '/pdf-markup',
+            'label' => 'PDF markup and export',
+            'icon' => 'document',
+            'title' => 'Mark up and export annotated PDFs — ReviseMy',
+            'description' => 'Leave layout and text feedback on a PDF, then download a copy with your marks.',
+            'keywords' => ['PDF markup', 'annotated PDF export', 'slide review'],
+            'headline' => 'Review a PDF down to the sentence',
+            'subheadline' => 'Mark a layout issue, suggest a text edit, or download a copy with your feedback attached.',
+            'problem' => 'Page numbers can get someone to the right slide, but they still have to find the line, chart, or caption your note refers to.',
+            'loop_steps' => [
+                ['text' => 'Add a PDF to a review and open the page you want to mark.'],
+                ['text' => 'Draw around an area or select text to comment, highlight, strike out, or suggest a replacement.'],
+                ['text' => 'Hand the review to your agent or use Download PDF to save the original or a PDF with marks.'],
+            ],
+            'faq' => [
+                ['q' => 'What if my PDF is scanned?', 'a' => 'Use spot or area marks on scanned pages. Text markup requires selectable text in the PDF.'],
+            ],
+        ],
+
         'changelog' => [
             'slug' => 'changelog',
             'path' => '/changelog',

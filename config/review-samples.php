@@ -27,6 +27,11 @@ return [
             ['x' => 0.84, 'y' => 0.09, 'severity' => Finding::SEVERITY_SUGGESTION, 'text' => 'Nav has five links and no clear current page.'],
             ['x' => 0.66, 'y' => 0.36, 'severity' => Finding::SEVERITY_A11Y, 'text' => 'Light grey body text over the photo may miss AA contrast.'],
         ],
+        'demo_marks' => [
+            ['element' => 'Heading · h1'],
+            ['guest' => true],
+            ['severity' => Annotation::SEVERITY_MUST_FIX, 'status' => Annotation::STATUS_RESOLVED, 'note' => 'Make the roast names easier to read on each product card.'],
+        ],
     ],
 
     'ui' => [

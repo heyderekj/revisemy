@@ -236,51 +236,21 @@
         background-position: -1px -1px;
     }
 
-    .rm-hero-mark {
-        position: relative;
-        display: inline-block;
-        background: rgb(56 189 248 / 0.1);
-        padding: 0.02em 0.22em 0.06em;
-        box-decoration-break: clone;
-        -webkit-box-decoration-break: clone;
-    }
-
-    .rm-hero-mark-frame {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        overflow: visible;
-        pointer-events: none;
-    }
-
-    .rm-hero-mark-frame rect {
-        fill: none;
-        stroke: rgb(56 189 248 / 0.8);
-        stroke-width: 2px;
-        stroke-dasharray: 8px 8px;
-        stroke-linecap: butt;
-        x: 1px;
-        y: 1px;
-        width: calc(100% - 2px);
-        height: calc(100% - 2px);
-        rx: 0;
-        ry: 0;
-    }
-
     .rm-agent-cycle {
         display: inline-grid;
         align-items: center;
         vertical-align: top;
+        overflow: clip;
     }
 
     .rm-agent-cycle-item {
         grid-area: 1 / 1;
+        display: flex;
+        align-self: stretch;
+        align-items: center;
         white-space: nowrap;
-        opacity: 0;
-        transform: translateY(0.06em);
-        animation: rm-agent-cycle 10s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
-        animation-delay: calc(var(--i) * 2s - 0.12s);
+        animation: rm-agent-cycle 20s cubic-bezier(0.65, 0, 0.35, 1) infinite both;
+        animation-delay: calc(var(--i) * 4s - 0.56s);
     }
 
     .rm-note {
@@ -303,19 +273,6 @@
 
     .rm-fade-up-delay-2 {
         animation: rm-fade-up 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
-    }
-
-    .rm-hero-loop-bubble {
-        animation: rm-hero-loop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
-    }
-
-    .rm-hero-loop-bubble-delay {
-        animation-delay: 0.5s;
-    }
-
-    /* Review panel enters after agent chat bubbles settle (~1.05s). */
-    .rm-hero-loop-review {
-        animation: rm-hero-loop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.95s both;
     }
 
     /* The stage under <x-review-mock>: a card with a quiet dot grid. */
@@ -415,22 +372,18 @@
 
 @keyframes rm-agent-cycle {
     0% {
-        opacity: 0;
-        transform: translateY(0.06em);
+        transform: translateY(100%);
+        visibility: hidden;
     }
-    1.5%,
-    18.5% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    2.8%,
     20% {
-        opacity: 0;
-        transform: translateY(-0.05em);
+        transform: translateY(0);
+        visibility: visible;
     }
-    20.01%,
+    22.8%,
     100% {
-        opacity: 0;
-        transform: translateY(0.06em);
+        transform: translateY(-100%);
+        visibility: hidden;
     }
 }
 
@@ -438,8 +391,6 @@
     .rm-fade-up,
     .rm-fade-up-delay,
     .rm-fade-up-delay-2,
-    .rm-hero-loop-bubble,
-    .rm-hero-loop-review,
     .rm-review-mock-pop,
     .rm-board-preview-col,
     .rm-note-composer,
