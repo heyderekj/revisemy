@@ -18,7 +18,7 @@ new class extends Component
     @endphp
 
     {{-- Hero — bottom padding tightened so it reads with How it works below --}}
-    <x-home-section first data-rm-desktop-hero class="@container/hero rm-fade-up !pb-8 sm:!pb-10">
+    <x-home-section first class="@container/hero rm-fade-up !pb-8 sm:!pb-10">
         <div class="grid gap-8 @min-[44rem]/hero:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] @min-[44rem]/hero:items-center">
             <div class="min-w-0">
                 <h1 class="max-w-xl text-[clamp(2.25rem,5.5vw,3.75rem)] font-semibold leading-[1.05] tracking-tight text-zinc-900 max-[359px]:text-[2rem] @min-[44rem]/hero:text-[min(5.5vw,6.4cqw,3.75rem)]">
@@ -40,7 +40,7 @@ new class extends Component
                 {{-- Start a review here instead, and hand its link to an agent later.
                      /new takes a link, screenshots, a PDF or an email. --}}
                 <div class="rm-fade-up-delay mt-6 flex w-full max-w-xl flex-col items-start gap-2">
-                    <div class="flex flex-wrap items-center gap-3">
+                    <div data-rm-desktop-hero class="flex flex-wrap items-center gap-3">
                         <a href="{{ route('reviews.new') }}" class="btn-lit inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-medium">
                             Start a review
                             <flux:icon.arrow-right variant="micro" class="size-4" />
@@ -158,7 +158,7 @@ new class extends Component
     </x-home-section>
 
     <x-home-section joined class="!pb-8" aria-labelledby="rm-built-for">
-        <x-home-carousel track-id="rm-home-use-cases" label="Use cases" item-name="use case">
+        <x-home-carousel track-id="rm-home-use-cases" label="Use cases" item-name="use case" edge-fade>
             <x-slot:heading>
                 <h2 id="rm-built-for" class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Built for</h2>
             </x-slot:heading>

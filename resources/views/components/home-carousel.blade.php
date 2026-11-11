@@ -1,4 +1,4 @@
-@props(['trackId', 'label', 'itemName'])
+@props(['trackId', 'label', 'itemName', 'edgeFade' => false])
 
 <div
     {{ $attributes }}
@@ -52,7 +52,13 @@
         x-on:scroll.passive="update()"
         x-on:keydown.left.self.prevent="move(-1)"
         x-on:keydown.right.self.prevent="move(1)"
-        class="relative -mr-[var(--rm-pad)] mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pr-[var(--rm-pad)] motion-safe:scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        @if ($edgeFade)
+            x-bind:style="{ '--rm-carousel-start': atStart ? '0px' : '24px', '--rm-carousel-end': atEnd ? '0px' : '40px' }"
+        @endif
+        @class([
+            'relative -mr-[var(--rm-pad)] mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pr-[var(--rm-pad)] motion-safe:scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            'lg:[mask-image:linear-gradient(90deg,transparent,black_var(--rm-carousel-start),black_calc(100%_-_var(--rm-carousel-end)),transparent)]' => $edgeFade,
+        ])
     >
         {{ $slot }}
     </div>
