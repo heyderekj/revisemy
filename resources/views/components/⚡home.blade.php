@@ -178,7 +178,7 @@ new class extends Component
     <x-home-section id="how" joined class="!pb-8">
         <x-section-eyebrow number="01" label="How it works" />
         <h2 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">One feedback loop for anything visual</h2>
-        <x-home-carousel track-id="rm-home-workflow" label="Review workflow" item-name="step" class="@container/workflow mt-4">
+        <x-home-carousel track-id="rm-home-workflow" label="Review workflow" item-name="step" class="@container/workflow mt-2">
             <x-slot:heading>
                 <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">
                     Capture, marks, fixes and approval in one place, so nothing gets lost between passes.
