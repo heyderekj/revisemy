@@ -33,7 +33,7 @@ class ReviseMyCheck extends Command
 
     protected $description = 'Say what this install still needs before reviews, Connect and webhooks work for real';
 
-    /** Stamped each minute by the scheduler (routes/console.php), so a scheduler that isn't running shows. */
+    /** Stamped each hour by the scheduler (routes/console.php), so a scheduler that isn't running shows. */
     public const HEARTBEAT = 'revisemy:scheduler-heartbeat';
 
     private bool $missing = false;
@@ -74,8 +74,8 @@ class ReviseMyCheck extends Command
         $this->queue();
         $beat = Cache::get(self::HEARTBEAT);
         $this->check(
-            $beat !== null && Carbon::parse($beat)->gt(now()->subMinutes(3)),
-            'The scheduler ran in the last few minutes.',
+            $beat !== null && Carbon::parse($beat)->gt(now()->subMinutes(90)),
+            'The scheduler ran in the last hour.',
             'The scheduler hasn’t run lately, so expired reviews and their files are never pruned. Run php artisan schedule:run every minute.',
         );
 
