@@ -54,10 +54,10 @@ return [
     */
 
     'packs' => [
-        'credits_50' => [
-            'name' => '50 credits',
-            'credits' => 50,
-            'price_usd' => 5,
+        'credits_100' => [
+            'name' => '100 credits',
+            'credits' => 100,
+            'price_usd' => 10,
         ],
     ],
 
@@ -77,7 +77,9 @@ return [
         'webhook_secret' => env('POLAR_WEBHOOK_SECRET'),
         'products' => [
             'plus' => env('POLAR_PRODUCT_PLUS'),
-            'credits_50' => env('POLAR_PRODUCT_CREDITS_50'),
+            // The same Polar product as the old 50-credit pack, repriced to
+            // $10 on 2026-11-12, so either variable name finds it.
+            'credits_100' => env('POLAR_PRODUCT_CREDITS_100', env('POLAR_PRODUCT_CREDITS_50')),
         ],
     ],
 

@@ -15,6 +15,20 @@ return [
     'entries' => [
 
         [
+            'version' => '2.1.0',
+            'date' => '2026-11-12',
+            'title' => 'Credit packs are now 100 credits for $10',
+            'highlights' => [
+                'A credit pack is now 100 credits for $10, up from 50 for $5: the same price a credit, with less of it lost to card fees',
+                'Pack credits still never expire and are spent only after your monthly credits',
+                'create_checkout sells it as credits_100; agents that still ask for credits_50 get the new pack',
+            ],
+            'links' => [
+                ['label' => 'Pricing', 'href' => '/upgrade'],
+            ],
+        ],
+
+        [
             'version' => '2.0.0',
             'date' => '2026-11-11',
             'title' => 'A simpler way to start a review',

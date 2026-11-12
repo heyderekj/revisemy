@@ -25,7 +25,7 @@ class FathomEventsTest extends TestCase
             'billing.polar.access_token' => 'polar_oat_test',
             'billing.polar.webhook_secret' => 'whsec_'.base64_encode('test'),
             'billing.polar.products.plus' => 'prod_plus',
-            'billing.polar.products.credits_50' => 'prod_pack',
+            'billing.polar.products.credits_100' => 'prod_pack',
         ]);
     }
 
@@ -39,9 +39,9 @@ class FathomEventsTest extends TestCase
 
     public function test_a_pack_purchase_reports_the_pack_price(): void
     {
-        $this->get('/billing/success?checkout_id='.self::CHECKOUT.'&product=credits_50')
+        $this->get('/billing/success?checkout_id='.self::CHECKOUT.'&product=credits_100')
             ->assertOk()
-            ->assertSee("fathom.trackEvent('Credit pack purchased', { _value: 500 })", false);
+            ->assertSee("fathom.trackEvent('Credit pack purchased', { _value: 1000 })", false);
     }
 
     public function test_the_value_comes_from_config_not_the_url(): void
@@ -83,9 +83,9 @@ class FathomEventsTest extends TestCase
         ]);
 
         $workspace = app(TryTokenService::class)->create()['workspace'];
-        $this->get(app(BillingService::class)->createCheckoutUrl($workspace, 'credits_50'))->assertRedirect();
+        $this->get(app(BillingService::class)->createCheckoutUrl($workspace, 'credits_100'))->assertRedirect();
 
-        Http::assertSent(fn ($request) => str_ends_with($request['success_url'], '?checkout_id={CHECKOUT_ID}&product=credits_50'));
+        Http::assertSent(fn ($request) => str_ends_with($request['success_url'], '?checkout_id={CHECKOUT_ID}&product=credits_100'));
     }
 
     public function test_a_canceled_checkout_and_a_broken_one_each_say_so(): void
