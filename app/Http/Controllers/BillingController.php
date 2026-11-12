@@ -20,7 +20,7 @@ class BillingController extends Controller
     public function checkout(Request $request, string $workspace, BillingService $billing): View|RedirectResponse|Response
     {
         $model = Workspace::query()->where('public_id', $workspace)->firstOrFail();
-        $product = (string) $request->query('product', BillingService::PRODUCT_PLUS);
+        $product = $billing->normalizeProduct((string) $request->query('product', BillingService::PRODUCT_PLUS));
 
         if ($product === BillingService::PRODUCT_PLUS && $model->isPlusActive()) {
             return view('billing.success', [

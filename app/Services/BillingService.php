@@ -35,6 +35,17 @@ class BillingService
      *
      * @return list<string>
      */
+    /**
+     * Product names agents and old links may still send. The 50-credit pack
+     * became 100 credits for $10 on 2026-11-12; `credits_50` means that pack.
+     */
+    public const LEGACY_PRODUCTS = ['credits_50' => 'credits_100'];
+
+    public function normalizeProduct(string $product): string
+    {
+        return self::LEGACY_PRODUCTS[$product] ?? $product;
+    }
+
     public function productKeys(): array
     {
         return [self::PRODUCT_PLUS, ...array_keys((array) config('billing.packs', []))];
@@ -164,6 +175,8 @@ class BillingService
             return null;
         }
 
+        $product = $this->normalizeProduct($product);
+
         if ($product === self::PRODUCT_PLUS) {
             return [
                 'name' => 'Plus purchased',
@@ -211,7 +224,7 @@ class BillingService
         if ($product === self::PRODUCT_PLUS && $workspace->isPlusActive()) {
             throw new RuntimeException(
                 '[already_subscribed] This workspace is already on Plus. Buy a credit pack with product: "'.
-                (array_key_first((array) config('billing.packs', [])) ?? 'credits_50').
+                (array_key_first((array) config('billing.packs', [])) ?? 'credits_100').
                 '" for more credits, or call create_portal to manage billing.',
             );
         }

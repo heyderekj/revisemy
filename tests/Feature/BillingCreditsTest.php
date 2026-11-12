@@ -37,7 +37,7 @@ class BillingCreditsTest extends TestCase
             'billing.polar.access_token' => 'polar_oat_test',
             'billing.polar.webhook_secret' => 'whsec_'.base64_encode('test-secret'),
             'billing.polar.products.plus' => 'prod_plus',
-            'billing.polar.products.credits_50' => 'prod_pack',
+            'billing.polar.products.credits_100' => 'prod_pack',
             ...$overrides,
         ]);
     }
@@ -417,14 +417,31 @@ class BillingCreditsTest extends TestCase
 
         $result = app(TryTokenService::class)->create();
 
-        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, ['product' => 'credits_50'])
+        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, ['product' => 'credits_100'])
             ->assertHasNoErrors()
             ->assertSee('Credit pack checkout ready')
             ->assertStructuredContent(fn ($json) => $json
-                ->where('product', 'credits_50')
-                ->where('price_usd', 5)
-                ->where('credits_grant', 50)
+                ->where('product', 'credits_100')
+                ->where('price_usd', 10)
+                ->where('credits_grant', 100)
                 ->where('recurring', false)
+                ->etc()
+            );
+    }
+
+    public function test_the_old_pack_name_still_buys_the_pack(): void
+    {
+        $this->configurePolar();
+
+        $result = app(TryTokenService::class)->create();
+
+        // Agents learned `credits_50` before the pack became 100 credits for $10.
+        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, ['product' => 'credits_50'])
+            ->assertHasNoErrors()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('product', 'credits_100')
+                ->where('price_usd', 10)
+                ->where('credits_grant', 100)
                 ->etc()
             );
     }
@@ -443,7 +460,7 @@ class BillingCreditsTest extends TestCase
         ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, [])
             ->assertHasErrors(['already_subscribed']);
 
-        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, ['product' => 'credits_50'])
+        ReviseMyServer::actingAs($result['user'])->tool(CreateCheckoutTool::class, ['product' => 'credits_100'])
             ->assertHasNoErrors();
     }
 
@@ -458,7 +475,7 @@ class BillingCreditsTest extends TestCase
         ]);
 
         $workspace = app(TryTokenService::class)->create()['workspace'];
-        $url = app(BillingService::class)->createCheckoutUrl($workspace, 'credits_50');
+        $url = app(BillingService::class)->createCheckoutUrl($workspace, 'credits_100');
 
         $this->get($url)->assertRedirect('https://sandbox.polar.sh/checkout/chk_1');
 
@@ -553,7 +570,7 @@ class BillingCreditsTest extends TestCase
             ->assertOk()
             ->assertSee('$9', false)
             ->assertSee('Credit pack')
-            ->assertSee('credits_50')
+            ->assertSee('credits_100')
             ->assertSee('Polar');
     }
 
@@ -562,7 +579,7 @@ class BillingCreditsTest extends TestCase
         $this->configurePolar();
 
         ReviseMyServer::prompt(DesignCheckupLoop::class, [])
-            ->assertSee(['create_checkout', 'credits_50', 'Plus ($9/mo, 150 credits/mo)']);
+            ->assertSee(['create_checkout', 'credits_100', 'Plus ($9/mo, 150 credits/mo)']);
     }
 
     public function test_checkup_prompt_says_checkout_is_off_when_paused(): void
@@ -571,7 +588,7 @@ class BillingCreditsTest extends TestCase
 
         ReviseMyServer::prompt(DesignCheckupLoop::class, [])
             ->assertSee('Paid checkout is off on this server')
-            ->assertDontSee('credits_50');
+            ->assertDontSee('credits_100');
     }
 
     public function test_sitemap_lists_pricing_only_when_enabled(): void

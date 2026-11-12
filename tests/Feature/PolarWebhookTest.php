@@ -33,7 +33,7 @@ class PolarWebhookTest extends TestCase
             'billing.polar.access_token' => 'polar_oat_test',
             'billing.polar.webhook_secret' => 'whsec_'.base64_encode(self::SECRET_KEY),
             'billing.polar.products.plus' => 'prod_plus',
-            'billing.polar.products.credits_50' => 'prod_pack',
+            'billing.polar.products.credits_100' => 'prod_pack',
         ]);
 
         $this->workspace = app(TryTokenService::class)->create()['workspace']->fresh();
@@ -107,7 +107,7 @@ class PolarWebhookTest extends TestCase
 
         $this->deliver('order.paid', $this->order('ord_legacy', 'prod_pack'), key: $legacyKey)->assertStatus(202);
 
-        $this->assertSame(50, (int) $this->workspace->fresh()->purchased_credits);
+        $this->assertSame(100, (int) $this->workspace->fresh()->purchased_credits);
     }
 
     public function test_webhook_route_skips_sessions_and_csrf(): void
@@ -166,7 +166,7 @@ class PolarWebhookTest extends TestCase
         $this->deliver('order.paid', $this->order('ord_p', 'prod_pack'))->assertStatus(202);
 
         $fresh = $this->workspace->fresh();
-        $this->assertSame(50, (int) $fresh->purchased_credits);
+        $this->assertSame(100, (int) $fresh->purchased_credits);
         $this->assertSame(40, (int) $fresh->credits_balance);
         $this->assertSame(Workspace::PLAN_FREE, $fresh->plan);
     }

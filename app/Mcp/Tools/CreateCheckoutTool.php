@@ -19,7 +19,7 @@ use RuntimeException;
 
 #[Name('create_checkout')]
 #[Title('Buy credits or Plus')]
-#[Description('Start a checkout link for the human: product "plus" (default — Plus subscription, monthly credits) or "credits_50" (one-time 50-credit pack that never expires; works on Try or Plus). If the workspace is already on Plus, use credits_50. Immediately paste share_markdown / checkout_url into chat (never only say “finish payment in the browser”).')]
+#[Description('Start a checkout link for the human: product "plus" (default — Plus subscription, monthly credits) or "credits_100" (one-time 100-credit pack for $10 that never expires; works on Try or Plus). If the workspace is already on Plus, use credits_100. Immediately paste share_markdown / checkout_url into chat (never only say “finish payment in the browser”).')]
 #[IsDestructive(false)]
 #[IsOpenWorld]
 class CreateCheckoutTool extends Tool
@@ -36,7 +36,7 @@ class CreateCheckoutTool extends Tool
             return $workspace;
         }
 
-        $product = (string) ($request->get('product') ?: BillingService::PRODUCT_PLUS);
+        $product = $this->billing->normalizeProduct((string) ($request->get('product') ?: BillingService::PRODUCT_PLUS));
 
         try {
             $url = $this->billing->createCheckoutUrl($workspace, $product);
@@ -71,7 +71,7 @@ class CreateCheckoutTool extends Tool
         return [
             'product' => $schema->string()
                 ->enum($this->billing->productKeys())
-                ->description('plus (default): monthly subscription. credits_50: one-time 50-credit pack, never expires.'),
+                ->description('plus (default): monthly subscription. credits_100: one-time 100-credit pack, never expires.'),
         ];
     }
 }
