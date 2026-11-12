@@ -12,7 +12,7 @@ Repo: https://github.com/heyderekj/revisemy
 4. Environment variables:
    - `APP_NAME=ReviseMy`
    - `APP_URL=https://YOUR-APP.laravel.cloud` (set after first deploy if needed)
-   - `DB_CONNECTION=pgsql`
+   - `DB_CONNECTION=mysql` for Laravel MySQL (production), or `pgsql` for Serverless Postgres. The Postgres notes below apply only to Postgres.
      - Cloud injects `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_DATABASE`. **Custom env vars override injected ones** — delete any manual `DB_USERNAME`, `DB_PASSWORD`, or `DB_URL` you added while debugging.
      - **Do not set `DB_URL` on Cloud** unless you really mean to; a stale URL can force the wrong username (e.g. `laravel`) over the injected credentials.
      - Add **`DB_SSLMODE=require`** (belt-and-suspenders; the app also defaults SSL for Cloud/Neon hosts).
@@ -22,7 +22,7 @@ Repo: https://github.com/heyderekj/revisemy
      - Optional: **`DB_CONNECT_TIMEOUT=60`** (default for serverless hosts) if you need a longer wake window.
    - `CACHE_STORE` / `SESSION_DRIVER` → `database` or Cloud Redis (not file/sqlite-backed paths)
    - `REVISEMY_DISK` / `FILESYSTEM_DISK` → Cloud object storage disk name
-   - `QUEUE_CONNECTION` → optional (Cloud queue or `database` if you want workers for webhooks)
+   - Queue → a Cloud **managed queue** (§ Production setup); Cloud sets `QUEUE_CONNECTION=cloud`. Review webhooks are the only queued work.
    - `REVISEMY_SECOND_OPINION=true` (default)
    - Optional: `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` — vision second opinion with regions on the capture (checklist alone is sidebar text only). No queue worker required.
    - Optional (required for `capture_url`): `REVISEMY_CAPTURE_DRIVER=hosted` (must be the literal string `hosted`, not blank) + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for URL/email capture on Cloud
@@ -90,6 +90,14 @@ Paste the output as `PASSPORT_PRIVATE_KEY="…"`. A leftover `PASSPORT_PUBLIC_KE
 - With Browser Integrity Check on, the edge answers `403` to the default `Python-urllib` user agent before the app sees it. Most MCP clients send their own user agent and pass.
 - `www.revisemy.com` redirects to `revisemy.com`. Hosts drop the bearer token on a cross-host redirect, so the address to paste is always `https://revisemy.com/mcp/revisemy`.
 - Claude's limits: 10 seconds for discovery, registration and the token swap; 30 for a refresh. The probe times each step against them.
+
+## Production setup (since 2026-11-12)
+
+What revisemy.com runs on Laravel Cloud, and why:
+
+- **Database: Laravel MySQL 8.4, always on (about $7/month).** Chosen on 2026-07-11, after Serverless Postgres failed deploys with “still waking up” and needed Neon endpoint-routing and credential workarounds (§ below). Revisited 2026-11-12: with revisemy.com's traffic a sleeping Postgres would sleep only half to two thirds of the day, so it would cost about the same. Stay on MySQL.
+- **App: Flex 512 MiB, scale to zero after 5 minutes.** It wakes in under a second, inside Claude's 10-second limit for discovery, registration and the token swap. The scheduler wakes it for each task that's due, so nothing in `routes/console.php` runs more often than hourly.
+- **Queue: one Flex managed queue,** not a background `queue:work`. A background worker stops while the app sleeps, so a review webhook would wait for the next visitor; the managed queue wakes on its own. Worker options: `--timeout=60`, `--tries=1` (each job sets its own). Failed jobs show in Cloud's dashboard, not `queue:failed`.
 
 ## “Still waking up” / 30s deploy timeout
 

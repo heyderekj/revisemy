@@ -22,7 +22,10 @@ Schedule::command('revisemy:probe-connect', ['--report'])
     ->withoutOverlapping()
     ->onOneServer();
 
-// So revisemy:check can tell a scheduler that isn't running.
-Schedule::call(fn () => Cache::put(ReviseMyCheck::HEARTBEAT, now()->toIso8601String(), now()->addHour()))
-    ->everyMinute()
+// So revisemy:check can tell a scheduler that isn't running. Hourly, like
+// everything here: on Laravel Cloud the app sleeps after 5 quiet minutes and
+// the scheduler wakes it for each task that's due, so a task every minute
+// kept it awake all month (2026-11-12). Keep new tasks hourly or slower.
+Schedule::call(fn () => Cache::put(ReviseMyCheck::HEARTBEAT, now()->toIso8601String(), now()->addHours(3)))
+    ->hourly()
     ->name('scheduler-heartbeat');

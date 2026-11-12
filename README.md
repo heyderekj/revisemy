@@ -191,12 +191,12 @@ PDF ingestion, page images, and annotation export require Node.js 22.13 or later
 
 1. Push this repo to GitHub.
 2. In [Laravel Cloud](https://cloud.laravel.com): **New application** → import the repo.
-3. Attach **Postgres** and **object storage** (do not use SQLite on Cloud — it does not persist across deploys).
+3. Attach a **database** and **object storage** (do not use SQLite on Cloud — it does not persist across deploys). Production runs Laravel MySQL 8.4.
 4. Set env:
    - `APP_NAME=ReviseMy`
    - `FILESYSTEM_DISK` / `REVISEMY_DISK` to the Cloud object storage disk
    - `APP_URL` to your `https://….laravel.cloud` URL
-   - Queue worker optional (`QUEUE_CONNECTION`) — not required for vision second opinion
+   - A managed queue for review webhooks (Cloud sets `QUEUE_CONNECTION=cloud`) — not required for vision second opinion
    - Optional `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) for the vision second opinion — `REVISEMY_VISION_PROVIDER=auto` prefers Claude when both are set. Just the key; no worker needed.
    - Optional free local vision: run Ollama, set `REVISEMY_VISION_PROVIDER=openai`, `REVISEMY_OPENAI_BASE_URL=http://localhost:11434/v1`, and `REVISEMY_OPENAI_MODEL=llama3.2-vision` (blank key is fine). Local/OSS models give helpful hints, not Claude/GPT-4o quality.
    - Optional `REVISEMY_CAPTURE_DRIVER=hosted` + `REVISEMY_CAPTURE_ENDPOINT`/`REVISEMY_CAPTURE_KEY` (Browserless-compatible API) for server-side URL/email/PDF capture — Cloud containers have no Chrome, so use the hosted driver there
@@ -204,7 +204,7 @@ PDF ingestion, page images, and annotation export require Node.js 22.13 or later
    - Optional Reverb (`BROADCAST_CONNECTION=reverb` + `REVERB_*`/`VITE_REVERB_*`) for live updates — without it the UI polls
 5. Deploy. Run migrations from Cloud commands: `php artisan migrate --force`
 
-See [docs/DEPLOY.md](docs/DEPLOY.md) for Postgres pooler tips, Neon wake timeouts, and contest checklist.
+See [docs/DEPLOY.md](docs/DEPLOY.md) for what production runs and why, Connect checks, and Postgres notes.
 
 ## Self-host
 
@@ -218,7 +218,7 @@ For free pixel vision without a cloud API key, point `REVISEMY_OPENAI_BASE_URL` 
 - Livewire 4 + Flux UI
 - Laravel MCP (HTTP at `/mcp/revisemy`)
 - Laravel Sanctum try tokens
-- SQLite (local) / Postgres (production) + object storage
+- SQLite (local) / MySQL (production) + object storage
 - Laravel Reverb (optional realtime)
 
 ## Docs
