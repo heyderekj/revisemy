@@ -29,7 +29,7 @@ class SecondOpinionChecklistTest extends TestCase
         return 'data:image/png;base64,'.base64_encode($binary);
     }
 
-    protected function makeReview(string $type = Review::TYPE_WEBSITE): Review
+    protected function makeReview(string $type = Review::TYPE_WEBSITE, array $attributes = []): Review
     {
         Storage::fake('public');
         Queue::fake();
@@ -48,6 +48,7 @@ class SecondOpinionChecklistTest extends TestCase
                 $this->pngDataUrl(375, 812),
                 $this->pngDataUrl(768, 1024),
             ],
+            ...$attributes,
         ])->assertCreated();
 
         return Review::query()->with('screenshots.findings')->firstOrFail();
@@ -66,22 +67,50 @@ class SecondOpinionChecklistTest extends TestCase
     public function test_a_multi_shot_review_gets_one_checklist_on_the_first_shot(): void
     {
         $this->withoutVision();
-        $review = $this->makeReview();
+        $review = $this->makeReview(attributes: [
+            'page_url' => 'https://example.com',
+            'context' => 'Review the signup CTA and pricing.',
+        ]);
         [$desktop, $mobile, $tablet] = $review->screenshots->all();
 
         $checklist = $desktop->findings->where('source', Finding::SOURCE_CHECKLIST);
-        $this->assertNotEmpty($checklist);
+        $this->assertCount(8, $checklist);
         $this->assertSame(0, $mobile->findings->count());
         $this->assertSame(0, $tablet->findings->count());
 
-        // Viewport notes come from every shot: the mobile shot counts, so no nudge to add one.
+        // The craft checks survive the cap even with a signup focus and live URL.
         $bodies = $checklist->pluck('body')->implode("\n");
-        $this->assertStringContainsString('Mobile viewport', $bodies);
-        $this->assertStringNotContainsString('also review a mobile capture', $bodies);
+        $this->assertStringContainsString('who it’s for', $bodies);
+        $this->assertStringContainsString('clearest view of what people came for', $bodies);
+        $this->assertStringContainsString('merge sections that make the same point', $bodies);
+        $this->assertStringContainsString('optional signup steps could wait', $bodies);
+        $this->assertStringContainsString('Compare heading sizes, alignment, and gaps', $bodies);
+        $this->assertStringContainsString('Open the link preview', $bodies);
+
+        // The uploaded mobile shot counts even though the checklist lives on desktop.
+        $this->assertStringContainsString('On the mobile viewport', $bodies);
+        $this->assertStringNotContainsString('Review a mobile capture too', $bodies);
 
         foreach ($review->screenshots as $shot) {
             $this->assertSame('ready', $shot->second_opinion_status);
         }
+    }
+
+    public function test_a_tall_desktop_or_tablet_capture_does_not_count_as_a_phone_capture(): void
+    {
+        $this->withoutVision();
+        $review = $this->makeReview();
+        [$desktop, $mobile, $tablet] = $review->screenshots->all();
+
+        $desktop->update(['height' => 4800, 'meta' => ['css_width' => 1280]]);
+        $mobile->update(['meta' => ['origin' => 'capture_failed', 'css_width' => 375]]);
+        $tablet->update(['height' => 3000, 'meta' => ['capture_profile' => ['device' => 'tablet']]]);
+
+        app(SecondOpinionService::class)->requestForReview($review, 0);
+
+        $bodies = $desktop->findings()->pluck('body')->implode("\n");
+        $this->assertStringContainsString('Review a mobile capture too', $bodies);
+        $this->assertStringNotContainsString('On the mobile viewport', $bodies);
     }
 
     public function test_a_later_shot_points_the_owner_to_the_checklist(): void

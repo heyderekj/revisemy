@@ -152,10 +152,7 @@ class ReviewTypeTest extends TestCase
         $this->assertStringNotContainsString('Craft check:', $craftBodies);
 
         $websiteBodies = collect($bodiesByType['website'])->implode("\n");
-        $this->assertTrue(
-            str_contains($websiteBodies, 'scanned') || str_contains($websiteBodies, 'clickable') || str_contains($websiteBodies, 'measure'),
-            'Website checklist should include A List Apart web-craft heuristics'
-        );
+        $this->assertStringContainsString('Scan the section headings in order', $websiteBodies);
 
         $emailBodies = collect($bodiesByType['email'])->implode("\n");
         $this->assertTrue(

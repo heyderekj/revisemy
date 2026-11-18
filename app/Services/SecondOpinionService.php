@@ -234,7 +234,7 @@ class SecondOpinionService
      * vision findings may point at a region. Taste credits are not stored on
      * findings; disclosure lives on the craft chip / taste payload.
      *
-     * Viewport notes come from every shot's shape, so one set covers a
+     * Viewport notes come from the review's captures, so one set covers a
      * multi-viewport capture.
      *
      * @param  list<Screenshot>  $shots
@@ -253,18 +253,22 @@ class SecondOpinionService
         $haystack = $context.' '.$title;
 
         $findings = match ($type) {
-            Review::TYPE_WEBSITE => $this->websiteChecklist($review, $ratios, $haystack),
+            Review::TYPE_WEBSITE => $this->websiteChecklist($shots),
             Review::TYPE_PRESENTATION => $this->presentationChecklist(),
             Review::TYPE_EMAIL => $this->emailChecklist(),
             default => $this->uiChecklist($ratios, $haystack),
         };
 
-        $findings = array_merge($findings, TasteLenses::checklistItems($type, $haystack));
+        if ($type !== Review::TYPE_WEBSITE) {
+            $findings = array_merge($findings, TasteLenses::checklistItems($type, $haystack));
+        }
 
         if ($review->page_url) {
             $findings[] = [
                 'severity' => Finding::SEVERITY_POLISH,
-                'body' => 'A live page URL was provided — when implementing, ground these notes against the real DOM (roles/selectors), not the PNG alone.',
+                'body' => $type === Review::TYPE_WEBSITE
+                    ? 'Check the live page title, description, and favicon. Open the link preview to see how the page will look when someone shares it.'
+                    : 'A live page URL was provided — when implementing, ground these notes against the real DOM (roles/selectors), not the PNG alone.',
                 'area' => null,
             ];
         }
@@ -332,59 +336,54 @@ class SecondOpinionService
     }
 
     /**
-     * @param  list<float>  $ratios  width / height of each shot
+     * @param  list<Screenshot>  $shots
      * @return list<array{severity: string, body: string, area: array<string, float>|null}>
      */
-    protected function websiteChecklist(Review $review, array $ratios, string $haystack): array
+    protected function websiteChecklist(array $shots): array
     {
         $findings = [
             [
                 'severity' => Finding::SEVERITY_SUGGESTION,
-                'body' => 'Above the fold: can a first-time visitor tell what this site offers and what to do next without scrolling?',
+                'body' => 'Read the first screen on its own. Can you tell what this is, who it’s for, and why it matters? Keep the clearest heading and cut copy that repeats it.',
                 'area' => null,
             ],
             [
                 'severity' => Finding::SEVERITY_SUGGESTION,
-                'body' => 'Navigation clarity: check that the primary nav labels are plain-language and the current section is obvious.',
+                'body' => 'Find the clearest view of what people came for, such as the actual product, a finished example, or what they’ll receive. Can you show it sooner?',
                 'area' => null,
             ],
             [
+                'severity' => Finding::SEVERITY_SUGGESTION,
+                'body' => 'Scan the section headings in order. Move the strongest explanation or example earlier and merge sections that make the same point.',
+                'area' => null,
+            ],
+            ...TasteLenses::checklistItems(Review::TYPE_WEBSITE),
+            [
                 'severity' => Finding::SEVERITY_A11Y,
-                'body' => 'Verify heading structure and text contrast — hero text over imagery is a common WCAG AA failure.',
+                'body' => 'Check that headings follow a clear order and text has enough contrast. Look closely at small labels and text placed over images or gradients.',
                 'area' => null,
             ],
         ];
 
-        // The mobile note when any shot is phone-shaped; otherwise ask for one.
-        if (collect($ratios)->contains(fn (float $ratio) => $ratio < 0.7)) {
-            $findings[] = [
-                'severity' => Finding::SEVERITY_SUGGESTION,
-                'body' => 'Mobile viewport — confirm the hero still leads with the value proposition, tap targets are ~44×44px, and nothing overflows horizontally.',
-                'area' => null,
-            ];
-        } elseif ($ratios !== []) {
-            $findings[] = [
-                'severity' => Finding::SEVERITY_SUGGESTION,
-                'body' => 'Desktop viewport — also review a mobile capture; most traffic will see the narrow breakpoint first.',
-                'area' => null,
-            ];
-        }
+        $hasPhone = collect($shots)->contains(function (Screenshot $shot): bool {
+            $width = (int) ($shot->meta['css_width'] ?? 0);
 
-        if (str_contains($haystack, 'cta') || str_contains($haystack, 'signup') || str_contains($haystack, 'sign up') || str_contains($haystack, 'pricing')) {
-            $findings[] = [
-                'severity' => Finding::SEVERITY_SUGGESTION,
-                'body' => 'Context mentions conversion — confirm one dominant CTA per view and that the label states the outcome.',
-                'area' => null,
-            ];
-        }
+            return match (data_get($shot->meta, 'capture_profile.device')) {
+                'phone' => true,
+                'desktop', 'tablet' => false,
+                default => $width > 0
+                    ? $width <= 600
+                    : $shot->width > 0 && $shot->height > 0 && $shot->width / $shot->height < 0.7,
+            };
+        });
 
-        if ($review->page_url) {
-            $findings[] = [
-                'severity' => Finding::SEVERITY_POLISH,
-                'body' => 'Live URL present — remember the parts a screenshot can’t show: title/meta description, Open Graph card, favicon, and load performance.',
-                'area' => null,
-            ];
-        }
+        $findings[] = [
+            'severity' => Finding::SEVERITY_SUGGESTION,
+            'body' => $hasPhone
+                ? 'On the mobile viewport, check that the heading wraps cleanly, the main action is easy to tap, and the page fits without sideways scrolling.'
+                : 'Review a mobile capture too. Check the first screen, navigation, and main action at phone width.',
+            'area' => null,
+        ];
 
         return $findings;
     }

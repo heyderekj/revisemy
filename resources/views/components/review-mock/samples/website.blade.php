@@ -15,9 +15,9 @@
     {{-- Hero copy --}}
     <div class="absolute left-[9%] top-[20%] w-[46%]">
         <p class="text-[1.2cqw] font-medium uppercase tracking-[0.14em] text-attention-ink">Small-batch roasters</p>
-        <p class="mt-[0.8cqw] text-[3.9cqw] font-semibold leading-[1.05] tracking-tight">We roast coffee in Des&nbsp;Moines.</p>
+        <p class="mt-[0.8cqw] text-[3.9cqw] font-semibold leading-[1.05] tracking-tight">{{ $websiteHeading ?? "We roast coffee in Des\u{00A0}Moines." }}</p>
     </div>
-    <p class="absolute left-[9%] top-[43%] w-[44%] text-[1.4cqw] leading-snug text-zinc-500">Fresh beans every two weeks, roasted the morning they ship.</p>
+    <p class="absolute left-[9%] top-[43%] w-[44%] text-[1.4cqw] leading-snug text-zinc-500">{{ $websiteDescription ?? 'Fresh beans every two weeks, roasted the morning they ship.' }}</p>
     <div class="absolute left-[9%] top-[50%] flex items-center gap-[1.6cqw]">
         <span class="rounded-full bg-zinc-200 px-[1.8cqw] py-[0.9cqw] text-[1.3cqw] font-medium text-zinc-700">Start a subscription</span>
         <span class="text-[1.3cqw] font-medium text-zinc-900 underline underline-offset-2">Browse beans</span>
