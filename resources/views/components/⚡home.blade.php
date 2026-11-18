@@ -208,6 +208,8 @@ new class extends Component
         </x-home-carousel>
     </x-home-section>
 
+    <x-home-review-skills />
+
     {{-- How agents use it --}}
     <x-home-disclosure id="agents" number="02" label="For agents" heading="The technical handoff">
         <p class="max-w-2xl text-[15px] leading-relaxed text-zinc-600">

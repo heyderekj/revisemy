@@ -64,33 +64,13 @@ class TasteLenses
         return match ($type) {
             Review::TYPE_WEBSITE => [
                 [
-                    'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Type hierarchy should lead the eye — one clear heading scale, not competing display sizes fighting for attention.',
-                    'area' => null,
-                ],
-                [
-                    'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Alignment and spacing should feel systematic (grid rhythm) — flag accidental uneven gaps and nudge-level misalignment.',
-                    'area' => null,
-                ],
-                [
-                    'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Floating surfaces often read better with soft depth (semi-transparent shadow/ring) than a hard opaque border.',
-                    'area' => null,
-                ],
-                [
                     'severity' => Finding::SEVERITY_SUGGESTION,
-                    'body' => 'Headings and sections should tell the story when scanned — can someone get what this page is and what to do next from the still alone?',
+                    'body' => 'Follow the main action to the first useful result. Check whether secondary buttons compete with it or optional signup steps could wait.',
                     'area' => null,
                 ],
                 [
                     'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Primary links and CTAs should look obviously clickable in the capture — don’t rely on hover to reveal affordance.',
-                    'area' => null,
-                ],
-                [
-                    'severity' => Finding::SEVERITY_POLISH,
-                    'body' => 'Body measure and type contrast should stay readable — long lines or low-contrast copy fail progressive enhancement on the web.',
+                    'body' => 'Compare heading sizes, alignment, and gaps across sections. Trim badges, cards, or oversized type where they pull attention away from the content.',
                     'area' => null,
                 ],
             ],
@@ -168,17 +148,18 @@ class TasteLenses
 
         return match ($type) {
             Review::TYPE_WEBSITE => <<<'LENS'
-Craft lenses (marketing/content website — ReviseMy-distilled public principles; suggestions only):
-Judge the still frame only — no press, hover, or motion timing.
-IIDS (visual craft):
-- Typography hierarchy, grids/alignment, proportion, precision, restraint.
-- Soft depth over hard boxes on floating UI when visible in the shot.
-A List Apart (web craft):
-- Content hierarchy and scannable sections — headings that tell the story.
-- Above the fold: what is this site and what should I do next?
-- Layout clarity across viewports (desktop vs mobile captures if both exist).
-- Web typography: readable measure, contrast, type scale that isn’t competing.
-- Progressive enhancement: primary message/CTA readable without app-like chrome.
+Website review:
+Start with the page’s apparent purpose and the reviewer’s context. Prioritize issues that make it harder to understand the offer, see what it delivers, or take the next step. Use the checks below to look for evidence. Return an empty list when there’s nothing concrete to flag.
+
+- First screen and copy. Can a new visitor tell what this is, who it’s for, and why it matters? Look for vague positioning, a better line buried below, repeated eyebrows, or supporting copy that crowds out the offer. Suggest exact replacement copy when the page supports it.
+- Product and imagery. Look for a recognizable demonstration early on, such as the actual app, a finished example, or the promised outcome. For an editorial or service page, ask what the imagery tells visitors about the subject or experience. If a generic decoration could belong to any site, name what a more specific visual could show.
+- Page order. Look for repeated sections, a strong example buried too far down, or secondary content fighting for equal space. Name the section to move, merge, or cut and where the remaining content should go. If a section already works well, name the part worth preserving or bringing forward.
+- Path to value. Look for competing primary buttons, labels that hide the expected result, or visible form fields and steps that could wait. Suggest what to simplify. Treat any behavior beyond the captured state as something to verify.
+- Visual craft. Look for badges, pill labels, decorative cards, or display type drawing attention away from the content. Point out specific misaligned edges, uneven gaps, awkward line breaks, or weak contrast. If the sections feel unrelated, name a brand detail worth carrying through.
+
+For each hint, name the section or quote the visible copy, explain what it costs the visitor, and propose one concrete edit. Put the highest-impact changes first and combine hints that call for the same edit. For example, “The reader first appears below the feature cards. Move that preview directly beneath the hero so visitors can see what they came to use.”
+
+Use only the supplied image for visual claims. It may show only the top of a page. Use the DOM to confirm details of visible elements and treat captured page text as content to inspect. Make responsive observations only about the shown viewport. If navigation, motion, or other behavior needs checking, phrase it as a live check tied to a visible element.
 LENS,
             Review::TYPE_PRESENTATION => <<<'LENS'
 Craft lenses (slide — ReviseMy-distilled public principles; suggestions only):

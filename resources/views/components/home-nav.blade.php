@@ -14,6 +14,7 @@
         $home ? 'On this page' : 'Overview' => [
             ...($home ? [] : [['/', 'Home']]),
             [$base.'#how', 'How it works'],
+            [$base.'#review-skills', 'Feedback & skills'],
             [$base.'#agents', 'For agents'],
             [$base.'#setup', 'Connect'],
             [$base.'#pricing', config('billing.pricing_enabled') ? 'Pricing' : 'Credits'],

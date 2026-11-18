@@ -227,7 +227,7 @@ class VisionProviderTest extends TestCase
         });
     }
 
-    public function test_prompt_includes_cleaned_dom_snapshot_when_one_exists(): void
+    public function test_website_prompt_requests_grounded_edits_and_includes_cleaned_dom(): void
     {
         config([
             'revisemy.vision.provider' => 'anthropic',
@@ -246,17 +246,23 @@ class VisionProviderTest extends TestCase
             'reviews/'.$review->public_id.'/dom.html',
             '<html><script>var secret = "tracking";</script><body><h1>Hero headline</h1></body></html>',
         );
-        $review->update(['dom_path' => 'reviews/'.$review->public_id.'/dom.html']);
+        $review->update([
+            'type' => Review::TYPE_WEBSITE,
+            'dom_path' => 'reviews/'.$review->public_id.'/dom.html',
+        ]);
 
         app(SecondOpinionService::class)->generate($screenshot->fresh());
 
         Http::assertSent(function ($request) {
-            $body = json_encode($request->data());
+            $prompt = $request->data()['messages'][0]['content'][1]['text'];
 
             return str_contains($request->url(), 'api.anthropic.com')
-                && str_contains($body, 'Rendered DOM snapshot')
-                && str_contains($body, 'Hero headline')
-                && ! str_contains($body, 'tracking');
+                && str_contains($prompt, 'name the section or quote the visible copy')
+                && str_contains($prompt, 'propose one concrete edit')
+                && str_contains($prompt, 'It may show only the top of a page')
+                && str_contains($prompt, 'Rendered DOM snapshot')
+                && str_contains($prompt, 'Hero headline')
+                && ! str_contains($prompt, 'tracking');
         });
     }
 

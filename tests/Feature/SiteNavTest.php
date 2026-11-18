@@ -19,6 +19,7 @@ class SiteNavTest extends TestCase
                 ->assertOk()
                 ->assertSee('aria-label="Site"', false)
                 ->assertSee('href="/#how"', false)
+                ->assertSee('href="/#review-skills"', false)
                 ->assertSee('href="/connectors"', false);
         }
     }
@@ -29,6 +30,8 @@ class SiteNavTest extends TestCase
             ->assertOk()
             ->assertSeeText('On this page')
             ->assertSee('href="#how"', false)
+            ->assertSee('href="#review-skills"', false)
+            ->assertSeeInOrder(['id="how"', 'id="review-skills"', 'id="agents"'], false)
             ->assertDontSee('href="/#how"', false);
     }
 

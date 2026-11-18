@@ -65,7 +65,7 @@
 
         <ul class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             @foreach ($community as $skill)
-                <li class="flex min-w-0 flex-col rounded-xl bg-card p-4">
+                <li @isset($skill['mcp']) id="skill-{{ $skill['mcp']['id'] }}" @endisset class="flex min-w-0 scroll-mt-20 flex-col rounded-xl bg-card p-4 lg:scroll-mt-8">
                     <p class="text-xs font-medium text-muted-foreground">{{ $skill['focus'] }}</p>
                     <h3 class="mt-1 text-base font-semibold text-zinc-900">{{ $skill['name'] }}</h3>
                     <p class="mt-0.5 text-sm text-zinc-600">By {{ $skill['author'] }}</p>
